@@ -103,6 +103,7 @@ let nationalTasks = [
 ];
 
 const regionFilter = document.querySelector("#regionFilter");
+const accessLevel = document.querySelector("#accessLevel");
 const refreshButton = document.querySelector("#refreshButton");
 const approvalQueue = document.querySelector("#approvalQueue");
 const assetList = document.querySelector("#assetList");
@@ -121,6 +122,11 @@ const stockUrgency = document.querySelector("#stockUrgency");
 const stockNotes = document.querySelector("#stockNotes");
 const stockList = document.querySelector("#stockList");
 const clearCompletedStock = document.querySelector("#clearCompletedStock");
+const directorSummary = document.querySelector("#directorSummary");
+const directorHealthScore = document.querySelector("#directorHealthScore");
+const directorHealthText = document.querySelector("#directorHealthText");
+const directorSignals = document.querySelector("#directorSignals");
+const directorBrief = document.querySelector("#directorBrief");
 const opsMap = document.querySelector("#opsMap");
 const briefStack = document.querySelector("#briefStack");
 const localTasksNode = document.querySelector("#localTasks");
@@ -131,6 +137,10 @@ const todoList = document.querySelector("#todoList");
 
 function selectedRegion() {
   return regionFilter.value;
+}
+
+function selectedAccess() {
+  return accessLevel.value;
 }
 
 function isVisible(item) {
@@ -218,6 +228,80 @@ function renderBrief() {
       </div>
     `)
     .join("");
+}
+
+function average(values) {
+  return values.length ? values.reduce((total, value) => total + value, 0) / values.length : 0;
+}
+
+function healthState(score) {
+  if (score >= 85) return { label: "Green", className: "green", text: "Business is broadly healthy. Keep watching isolated exceptions." };
+  if (score >= 65) return { label: "Watch", className: "amber", text: "Business is stable, with a few areas needing management attention." };
+  return { label: "Attention", className: "red", text: "Business needs director awareness. Several core health signals are not green." };
+}
+
+function renderDirectorSummary() {
+  const visibleRegions = selectedRegion() === "national"
+    ? regions
+    : regions.filter((region) => region.name === selectedRegion());
+  const visibleAssets = assets.filter(isVisible);
+  const visibleWashes = washes.filter(isVisible);
+  const visibleCompliance = complianceItems.filter(isVisible);
+  const openApprovals = approvals.filter((item) => !item.done && isVisible(item)).length;
+  const openStockOrders = getStockOrders().filter((order) => order.status !== "Ordered" && isVisible(order)).length;
+
+  const operationsScore = Math.round(average(visibleRegions.map((region) => region.readiness)));
+  const productivityScore = Math.round(average(visibleWashes.map((wash) => Math.min(100, Math.round((wash.actual / wash.target) * 100)))));
+  const complianceScore = visibleCompliance.length
+    ? Math.round(average(visibleCompliance.map((item) => {
+      if (item.severity === "green") return 100;
+      if (item.severity === "amber") return 70;
+      return 35;
+    })))
+    : 100;
+  const assetScore = visibleAssets.length
+    ? Math.round((visibleAssets.filter((asset) => asset.state === "Online").length / visibleAssets.length) * 100)
+    : 100;
+  const riskLoad = visibleRegions.reduce((total, region) => total + region.risks, 0);
+  const riskScore = Math.max(0, 100 - riskLoad * 8 - openApprovals * 2);
+  const totalScore = Math.round(operationsScore * 0.25 + productivityScore * 0.25 + complianceScore * 0.2 + assetScore * 0.15 + riskScore * 0.15);
+  const state = healthState(totalScore);
+
+  directorSummary.textContent = `${state.label} - ${totalScore}%`;
+  directorSummary.className = `pill director-pill ${state.className}`;
+  directorHealthScore.textContent = `${state.label} ${totalScore}%`;
+  directorHealthText.textContent = state.text;
+
+  const signals = [
+    { label: "Operations", value: operationsScore, note: "Regional readiness", state: operationsScore >= 85 ? "green" : operationsScore >= 72 ? "amber" : "red" },
+    { label: "Productivity", value: productivityScore, note: "Wash output vs target", state: productivityScore >= 92 ? "green" : productivityScore >= 82 ? "amber" : "red" },
+    { label: "Compliance", value: complianceScore, note: "Current safety position", state: complianceScore >= 80 ? "green" : complianceScore >= 55 ? "amber" : "red" },
+    { label: "Asset availability", value: assetScore, note: "Fleetio online assets", state: assetScore >= 85 ? "green" : assetScore >= 70 ? "amber" : "red" }
+  ];
+
+  directorSignals.innerHTML = signals.map((signal) => `
+    <article class="director-signal ${signal.state}">
+      <span>${signal.label}</span>
+      <strong>${signal.value}%</strong>
+      <small>${signal.note}</small>
+    </article>
+  `).join("");
+
+  const redSignals = signals.filter((signal) => signal.state === "red").length;
+  const amberSignals = signals.filter((signal) => signal.state === "amber").length;
+  const brief = [
+    redSignals === 0 ? "No major red executive signals in this view." : `${redSignals} executive signal${redSignals === 1 ? "" : "s"} need attention.`,
+    `${amberSignals} area${amberSignals === 1 ? "" : "s"} should be watched this week.`,
+    `${openApprovals} approvals and ${openStockOrders} stock orders remain open nationally.`,
+    riskLoad <= 4 ? "Risk load is contained." : "Risk load is elevated and should stay visible to national operations."
+  ];
+
+  directorBrief.innerHTML = brief.map((item) => `
+    <div class="director-brief-item">
+      <span class="brief-dot"></span>
+      <strong>${item}</strong>
+    </div>
+  `).join("");
 }
 
 function renderApprovals() {
@@ -412,9 +496,11 @@ function renderTodos() {
 }
 
 function renderAll() {
+  document.body.dataset.access = selectedAccess();
   renderMetrics();
   renderMap();
   renderBrief();
+  renderDirectorSummary();
   renderApprovals();
   renderAssets();
   renderWashes();
@@ -512,6 +598,13 @@ clearCompletedStock.addEventListener("click", () => {
 });
 
 regionFilter.addEventListener("change", renderAll);
+accessLevel.addEventListener("change", () => {
+  if (selectedAccess() === "director") {
+    regionFilter.value = "national";
+    window.location.hash = "director";
+  }
+  renderAll();
+});
 
 refreshButton.addEventListener("click", () => {
   document.querySelector("#lastUpdated").textContent = `Updated ${new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`;

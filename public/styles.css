@@ -544,6 +544,9 @@ textarea {
 .task-card,
 .compliance-card,
 .compliance-stat,
+.director-scorecard,
+.director-signal,
+.director-brief-item,
 .stock-card,
 .todo-item {
   padding: 12px;
@@ -561,6 +564,102 @@ textarea {
   margin-top: 4px;
   border-radius: 50%;
   background: var(--blue);
+}
+
+.director-panel {
+  border-top-color: var(--teal);
+}
+
+.director-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.7fr) minmax(0, 1.3fr);
+  gap: 14px;
+}
+
+.director-scorecard,
+.director-signal,
+.director-brief-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.director-scorecard {
+  min-height: 100%;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 18px;
+  border-color: rgba(37, 161, 189, 0.35);
+  background:
+    linear-gradient(135deg, rgba(37, 161, 189, 0.12), transparent),
+    #fff;
+}
+
+.director-scorecard span,
+.director-scorecard small,
+.director-signal span,
+.director-signal small {
+  color: var(--muted);
+}
+
+.director-scorecard strong {
+  color: var(--blue);
+  font-size: 34px;
+}
+
+.director-signals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.director-signal {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-left: 6px solid var(--green);
+}
+
+.director-signal strong {
+  font-size: 28px;
+}
+
+.director-signal.amber {
+  border-left-color: var(--amber);
+}
+
+.director-signal.red {
+  border-left-color: var(--red);
+}
+
+.director-brief {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.director-brief-item {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.director-pill.green {
+  color: #176a46;
+  background: #e4f5ec;
+}
+
+.director-pill.amber {
+  color: #86580f;
+  background: #fff1d8;
+}
+
+.director-pill.red {
+  color: #9a312f;
+  background: #fde9e6;
 }
 
 .queue-card,
@@ -768,6 +867,24 @@ textarea {
   color: var(--muted);
 }
 
+body[data-access="director"] #portal,
+body[data-access="director"] #fleet,
+body[data-access="director"] #stock,
+body[data-access="director"] #tasks,
+body[data-access="director"] #todo,
+body[data-access="director"] .command-grid > .panel:has(#nationalTasks),
+body[data-access="director"] .command-grid > .panel:has(.integration-grid) {
+  display: none;
+}
+
+body[data-access="director"] .rail-nav a[href="#portal"],
+body[data-access="director"] .rail-nav a[href="#fleet"],
+body[data-access="director"] .rail-nav a[href="#stock"],
+body[data-access="director"] .rail-nav a[href="#tasks"],
+body[data-access="director"] .rail-nav a[href="#todo"] {
+  opacity: 0.48;
+}
+
 @media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -779,7 +896,7 @@ textarea {
   }
 
   .rail-nav {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
   .status-strip,
@@ -821,6 +938,9 @@ textarea {
 
   .compliance-layout,
   .compliance-card,
+  .director-layout,
+  .director-signals,
+  .director-brief,
   .stock-layout,
   .stock-form {
     grid-template-columns: 1fr;
