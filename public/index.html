@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=4">
+    <link rel="stylesheet" href="./styles.css?v=5">
   </head>
   <body>
     <div class="app-shell">
@@ -22,6 +22,7 @@
           <a href="#portal">Portal</a>
           <a href="#fleet">Fleetio</a>
           <a href="#compliance">Compliance</a>
+          <a href="#stock">Stock Orders</a>
           <a href="#tasks">Tasks</a>
           <a href="#todo">To do</a>
         </nav>
@@ -152,6 +153,73 @@
             </div>
           </section>
 
+          <section class="panel wide-panel" id="stock">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Stock control</span>
+                <h2>Regional stock orders</h2>
+              </div>
+              <span class="pill" id="stockSummary">No stock requests</span>
+            </div>
+            <div class="stock-layout">
+              <form class="stock-form" id="stockOrderForm">
+                <label>
+                  <span>Region</span>
+                  <select id="stockRegion" required>
+                    <option value="Brisbane">Brisbane</option>
+                    <option value="Sydney">Sydney</option>
+                    <option value="Melbourne">Melbourne</option>
+                    <option value="Adelaide">Adelaide</option>
+                    <option value="Perth">Perth</option>
+                    <option value="Canberra">Canberra</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Site / area</span>
+                  <input id="stockSite" type="text" placeholder="Depot, wash bay, client site" required>
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select id="stockCategory" required>
+                    <option value="Chemicals">Chemicals</option>
+                    <option value="PPE">PPE</option>
+                    <option value="Equipment">Equipment</option>
+                    <option value="Parts">Parts</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Item</span>
+                  <input id="stockItem" type="text" placeholder="What is needed" required>
+                </label>
+                <label>
+                  <span>Quantity</span>
+                  <input id="stockQuantity" type="number" min="1" step="1" value="1" required>
+                </label>
+                <label>
+                  <span>Urgency</span>
+                  <select id="stockUrgency" required>
+                    <option value="Normal">Normal</option>
+                    <option value="Soon">Soon</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </label>
+                <label class="stock-notes">
+                  <span>Notes</span>
+                  <textarea id="stockNotes" rows="3" placeholder="Supplier, reason, delivery detail"></textarea>
+                </label>
+                <button type="submit">Send to national</button>
+              </form>
+              <div class="stock-queue-wrap">
+                <div class="stock-queue-head">
+                  <span class="eyebrow">Craig / Simon queue</span>
+                  <button class="text-button" id="clearCompletedStock" type="button">Clear ordered</button>
+                </div>
+                <div class="stock-list" id="stockList"></div>
+              </div>
+            </div>
+          </section>
+
           <section class="panel" id="tasks">
             <div class="panel-head">
               <div>
@@ -198,12 +266,13 @@
               <div><span>Fleetio assets</span><strong>API planned</strong></div>
               <div><span>GPS tracking</span><strong>Fleet feed planned</strong></div>
               <div><span>Woolworths washes</span><strong>Live data planned</strong></div>
+              <div><span>Stock orders</span><strong>Webhook planned</strong></div>
             </div>
           </section>
         </section>
       </main>
     </div>
 
-    <script src="./script.js?v=4"></script>
+    <script src="./script.js?v=5"></script>
   </body>
 </html>

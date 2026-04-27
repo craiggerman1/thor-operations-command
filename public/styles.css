@@ -35,7 +35,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -275,13 +276,20 @@ h2 {
 }
 
 select,
-input {
+input,
+textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
   color: var(--ink);
   min-height: 42px;
   padding: 0 12px;
+}
+
+textarea {
+  min-height: 86px;
+  padding: 10px 12px;
+  resize: vertical;
 }
 
 .topbar select {
@@ -294,7 +302,9 @@ input {
 .text-button,
 .todo-form button,
 .task-card button,
-.queue-card button {
+.queue-card button,
+.stock-form button,
+.stock-card button {
   border: 0;
   border-radius: 8px;
   cursor: pointer;
@@ -311,7 +321,9 @@ input {
 .text-button,
 .todo-form button,
 .task-card button,
-.queue-card button {
+.queue-card button,
+.stock-form button,
+.stock-card button {
   min-height: 36px;
   padding: 0 12px;
   background: var(--ink);
@@ -438,6 +450,7 @@ input {
 .task-card,
 .compliance-card,
 .compliance-stat,
+.stock-card,
 .brief-item,
 .todo-item,
 .wash-row,
@@ -453,6 +466,7 @@ input {
 .task-card,
 .compliance-card,
 .compliance-stat,
+.stock-card,
 .brief-item,
 .todo-item,
 .wash-row,
@@ -472,6 +486,7 @@ input {
 .queue-card strong,
 .task-card strong,
 .compliance-card strong,
+.stock-card strong,
 .wash-row strong,
 .integration-grid strong {
   display: block;
@@ -509,6 +524,7 @@ input {
 .queue-list,
 .asset-list,
 .compliance-list,
+.stock-list,
 .task-stack,
 .todo-list {
   display: grid;
@@ -521,6 +537,7 @@ input {
 .task-card,
 .compliance-card,
 .compliance-stat,
+.stock-card,
 .todo-item {
   padding: 12px;
 }
@@ -636,6 +653,62 @@ input {
   gap: 12px;
 }
 
+.stock-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.1fr);
+  gap: 14px;
+}
+
+.stock-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stock-form label {
+  display: grid;
+  gap: 5px;
+}
+
+.stock-form label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.stock-form .stock-notes,
+.stock-form button {
+  grid-column: 1 / -1;
+}
+
+.stock-queue-wrap,
+.stock-list {
+  display: grid;
+  gap: 10px;
+}
+
+.stock-queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stock-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.stock-detail {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .todo-form {
   margin-bottom: 12px;
 }
@@ -683,6 +756,7 @@ input {
 .queue-card small,
 .task-card small,
 .compliance-card small,
+.stock-card small,
 .brief-item small {
   color: var(--muted);
 }
@@ -698,7 +772,7 @@ input {
   }
 
   .rail-nav {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 
   .status-strip,
@@ -739,7 +813,9 @@ input {
   }
 
   .compliance-layout,
-  .compliance-card {
+  .compliance-card,
+  .stock-layout,
+  .stock-form {
     grid-template-columns: 1fr;
   }
 
@@ -750,6 +826,10 @@ input {
 
   .wash-row {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .stock-detail {
+    grid-template-columns: 1fr;
   }
 
   .wash-row.header {

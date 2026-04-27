@@ -83,6 +83,12 @@ const complianceItems = [
   { region: "Canberra", type: "Training", title: "EWAF and Lite LOTO refresh", status: "Current", owner: "CBR manager", due: "15 May", severity: "green" }
 ];
 
+const starterStockOrders = [
+  { id: "stock-1", region: "Brisbane", site: "Primary Connect Larapinta", category: "Chemicals", item: "Heavy duty wash chemical", quantity: 4, urgency: "Soon", notes: "Keep buffer for Woolworths night shift.", status: "Open", created: "Today" },
+  { id: "stock-2", region: "Sydney", site: "Minchinbury", category: "PPE", item: "Gloves and safety glasses", quantity: 12, urgency: "Normal", notes: "Top up site cabinet.", status: "Open", created: "Today" },
+  { id: "stock-3", region: "Adelaide", site: "Gepps Cross", category: "Equipment", item: "Spray lance trigger", quantity: 2, urgency: "Urgent", notes: "Backup unit needed before Friday PM.", status: "Open", created: "Today" }
+];
+
 let localTasks = [
   { id: "l1", region: "Brisbane", title: "Correct Fleetio wash type mismatch", owner: "Regional manager", priority: "High", done: false },
   { id: "l2", region: "Sydney", title: "Confirm night crew site sign-out discipline", owner: "Sydney manager", priority: "High", done: false },
@@ -104,6 +110,17 @@ const washTable = document.querySelector("#washTable");
 const complianceSummary = document.querySelector("#complianceSummary");
 const complianceMetrics = document.querySelector("#complianceMetrics");
 const complianceList = document.querySelector("#complianceList");
+const stockSummary = document.querySelector("#stockSummary");
+const stockOrderForm = document.querySelector("#stockOrderForm");
+const stockRegion = document.querySelector("#stockRegion");
+const stockSite = document.querySelector("#stockSite");
+const stockCategory = document.querySelector("#stockCategory");
+const stockItem = document.querySelector("#stockItem");
+const stockQuantity = document.querySelector("#stockQuantity");
+const stockUrgency = document.querySelector("#stockUrgency");
+const stockNotes = document.querySelector("#stockNotes");
+const stockList = document.querySelector("#stockList");
+const clearCompletedStock = document.querySelector("#clearCompletedStock");
 const opsMap = document.querySelector("#opsMap");
 const briefStack = document.querySelector("#briefStack");
 const localTasksNode = document.querySelector("#localTasks");
@@ -291,6 +308,67 @@ function renderCompliance() {
   `).join("");
 }
 
+function getStockOrders() {
+  const saved = localStorage.getItem("toc.stockOrders");
+  if (saved) {
+    return JSON.parse(saved);
+  }
+  setStockOrders(starterStockOrders);
+  return starterStockOrders;
+}
+
+function setStockOrders(orders) {
+  localStorage.setItem("toc.stockOrders", JSON.stringify(orders));
+}
+
+function urgencyClass(urgency) {
+  if (urgency === "Urgent") return "red";
+  if (urgency === "Soon") return "amber";
+  return "green";
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderStockOrders() {
+  if (selectedRegion() !== "national") {
+    stockRegion.value = selectedRegion();
+  }
+
+  const orders = getStockOrders();
+  const visibleOrders = orders.filter((order) => order.status !== "Ordered" && isVisible(order));
+  const nationalOpen = orders.filter((order) => order.status !== "Ordered").length;
+  const urgentCount = visibleOrders.filter((order) => order.urgency === "Urgent").length;
+
+  stockSummary.textContent = `${visibleOrders.length} shown - ${nationalOpen} national open`;
+  stockList.innerHTML = visibleOrders.length
+    ? visibleOrders.map((order) => `
+      <article class="stock-card">
+        <div>
+          <strong>${escapeHtml(order.item)}</strong>
+          <small>${escapeHtml(order.region)} - ${escapeHtml(order.site)} - ${escapeHtml(order.created)}</small>
+        </div>
+        <div class="stock-detail">
+          <span>${escapeHtml(order.category)}</span>
+          <span>Qty ${escapeHtml(order.quantity)}</span>
+          <span>${escapeHtml(order.notes || "No notes")}</span>
+        </div>
+        <div class="meta-row">
+          <span class="tag ${urgencyClass(order.urgency)}">${escapeHtml(order.urgency)}</span>
+          <span class="tag blue">${escapeHtml(order.status)}</span>
+        </div>
+        <button type="button" data-stock-ordered="${escapeHtml(order.id)}">Mark ordered</button>
+      </article>
+    `).join("")
+    : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No stock orders in this view.</strong><small>${urgentCount} urgent items.</small></div></div>`;
+}
+
 function renderTasks() {
   localTasksNode.innerHTML = renderTaskCards(localTasks.filter((task) => !task.done && isVisible(task)));
   nationalTasksNode.innerHTML = renderTaskCards(nationalTasks.filter((task) => !task.done));
@@ -341,6 +419,7 @@ function renderAll() {
   renderAssets();
   renderWashes();
   renderCompliance();
+  renderStockOrders();
   renderTasks();
   renderTodos();
 }
@@ -392,6 +471,44 @@ todoList.addEventListener("click", (event) => {
   }
 
   renderTodos();
+});
+
+stockOrderForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const orders = getStockOrders();
+  orders.unshift({
+    id: crypto.randomUUID(),
+    region: stockRegion.value,
+    site: stockSite.value.trim(),
+    category: stockCategory.value,
+    item: stockItem.value.trim(),
+    quantity: Number(stockQuantity.value),
+    urgency: stockUrgency.value,
+    notes: stockNotes.value.trim(),
+    status: "Open",
+    created: new Date().toLocaleDateString("en-AU", { day: "numeric", month: "short" })
+  });
+  setStockOrders(orders);
+  stockOrderForm.reset();
+  stockQuantity.value = 1;
+  if (selectedRegion() !== "national") {
+    stockRegion.value = selectedRegion();
+  }
+  renderStockOrders();
+});
+
+stockList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-stock-ordered]");
+  if (!button) return;
+  const id = button.dataset.stockOrdered;
+  const orders = getStockOrders().map((order) => order.id === id ? { ...order, status: "Ordered" } : order);
+  setStockOrders(orders);
+  renderStockOrders();
+});
+
+clearCompletedStock.addEventListener("click", () => {
+  setStockOrders(getStockOrders().filter((order) => order.status !== "Ordered"));
+  renderStockOrders();
 });
 
 regionFilter.addEventListener("change", renderAll);
