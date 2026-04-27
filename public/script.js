@@ -46,6 +46,14 @@ const regions = [
     wash: 58,
     risks: 2,
     note: "Low activity day. Keep GPS and Fleetio checks current."
+  },
+  {
+    name: "Workshop",
+    readiness: 82,
+    portal: 3,
+    wash: 68,
+    risks: 2,
+    note: "Jason has service jobs moving. Watch parts, defects, and return-to-service timing."
   }
 ];
 
@@ -54,7 +62,8 @@ let approvals = [
   { id: 1015, region: "Sydney", site: "Woolworths Minchinbury", count: 26, age: "3h 45m", risk: "Photo missing", done: false },
   { id: 1016, region: "Melbourne", site: "Woolworths Melbourne DC", count: 31, age: "1h 35m", risk: "Ready", done: false },
   { id: 1017, region: "Adelaide", site: "Primary Connect Adelaide", count: 14, age: "4h 05m", risk: "Wash type query", done: false },
-  { id: 1018, region: "Brisbane", site: "StarTrack Brisbane", count: 19, age: "55m", risk: "Ready", done: false }
+  { id: 1018, region: "Brisbane", site: "StarTrack Brisbane", count: 19, age: "55m", risk: "Ready", done: false },
+  { id: 1019, region: "Workshop", site: "Workshop service bay", count: 6, age: "1h 20m", risk: "Parts check", done: false }
 ];
 
 const assets = [
@@ -63,7 +72,9 @@ const assets = [
   { name: "Wash Plant MEL-02", region: "Melbourne", state: "Online", gps: "Truganina", service: "22 days", status: "green" },
   { name: "Mobile Wash ADL-01", region: "Adelaide", state: "Attention", gps: "Gepps Cross", service: "2 days", status: "red" },
   { name: "Mobile Wash PER-03", region: "Perth", state: "Online", gps: "Kewdale", service: "13 days", status: "green" },
-  { name: "Mobile Wash CBR-01", region: "Canberra", state: "Standby", gps: "Hume", service: "9 days", status: "amber" }
+  { name: "Mobile Wash CBR-01", region: "Canberra", state: "Standby", gps: "Hume", service: "9 days", status: "amber" },
+  { name: "Workshop Service Bay", region: "Workshop", state: "Online", gps: "Workshop", service: "Current", status: "green" },
+  { name: "Workshop Parts Ute", region: "Workshop", state: "Attention", gps: "Workshop", service: "3 days", status: "amber" }
 ];
 
 const washes = [
@@ -71,7 +82,8 @@ const washes = [
   { site: "Woolworths Minchinbury", region: "Sydney", target: 82, actual: 76, internal: 16, exceptions: 4 },
   { site: "Woolworths Melbourne DC", region: "Melbourne", target: 84, actual: 79, internal: 19, exceptions: 1 },
   { site: "Primary Connect Adelaide", region: "Adelaide", target: 70, actual: 62, internal: 8, exceptions: 3 },
-  { site: "Primary Connect Perth", region: "Perth", target: 78, actual: 71, internal: 13, exceptions: 2 }
+  { site: "Primary Connect Perth", region: "Perth", target: 78, actual: 71, internal: 13, exceptions: 2 },
+  { site: "Workshop service jobs", region: "Workshop", target: 18, actual: 15, internal: 7, exceptions: 2 }
 ];
 
 const complianceItems = [
@@ -80,20 +92,23 @@ const complianceItems = [
   { region: "Melbourne", type: "Document", title: "SDS and chemical register review", status: "Current", owner: "MEL manager", due: "18 May", severity: "green" },
   { region: "Adelaide", type: "Equipment", title: "First aid kit audit", status: "Overdue", owner: "ADL manager", due: "Yesterday", severity: "red" },
   { region: "Perth", type: "Site pack", title: "Woolworths compliance pack evidence", status: "Due soon", owner: "PER manager", due: "2 May", severity: "amber" },
-  { region: "Canberra", type: "Training", title: "EWAF and Lite LOTO refresh", status: "Current", owner: "CBR manager", due: "15 May", severity: "green" }
+  { region: "Canberra", type: "Training", title: "EWAF and Lite LOTO refresh", status: "Current", owner: "CBR manager", due: "15 May", severity: "green" },
+  { region: "Workshop", type: "Safety", title: "Workshop isolation and defect-tag process", status: "Due soon", owner: "Jason", due: "3 May", severity: "amber" }
 ];
 
 const starterStockOrders = [
   { id: "stock-1", region: "Brisbane", site: "Primary Connect Larapinta", category: "Chemicals", item: "Heavy duty wash chemical", quantity: 4, urgency: "Soon", notes: "Keep buffer for Woolworths night shift.", status: "Open", created: "Today" },
   { id: "stock-2", region: "Sydney", site: "Minchinbury", category: "PPE", item: "Gloves and safety glasses", quantity: 12, urgency: "Normal", notes: "Top up site cabinet.", status: "Open", created: "Today" },
-  { id: "stock-3", region: "Adelaide", site: "Gepps Cross", category: "Equipment", item: "Spray lance trigger", quantity: 2, urgency: "Urgent", notes: "Backup unit needed before Friday PM.", status: "Open", created: "Today" }
+  { id: "stock-3", region: "Adelaide", site: "Gepps Cross", category: "Equipment", item: "Spray lance trigger", quantity: 2, urgency: "Urgent", notes: "Backup unit needed before Friday PM.", status: "Open", created: "Today" },
+  { id: "stock-4", region: "Workshop", site: "Workshop", category: "Parts", item: "Pressure hose fittings", quantity: 10, urgency: "Soon", notes: "Jason request for common repairs shelf.", status: "Open", created: "Today" }
 ];
 
 let localTasks = [
   { id: "l1", region: "Brisbane", title: "Correct Fleetio wash type mismatch", owner: "Regional manager", priority: "High", done: false },
   { id: "l2", region: "Sydney", title: "Confirm night crew site sign-out discipline", owner: "Sydney manager", priority: "High", done: false },
   { id: "l3", region: "Adelaide", title: "Fill Friday PM roster gap", owner: "Adelaide manager", priority: "Medium", done: false },
-  { id: "l4", region: "Perth", title: "Confirm chemical stock and backup lance", owner: "Perth manager", priority: "Medium", done: false }
+  { id: "l4", region: "Perth", title: "Confirm chemical stock and backup lance", owner: "Perth manager", priority: "Medium", done: false },
+  { id: "l5", region: "Workshop", title: "Confirm parts shelf minimum stock levels", owner: "Jason", priority: "Medium", done: false }
 ];
 
 let nationalTasks = [
@@ -602,6 +617,9 @@ accessLevel.addEventListener("change", () => {
   if (selectedAccess() === "director") {
     regionFilter.value = "national";
     window.location.hash = "director";
+  } else if (selectedAccess() === "workshop") {
+    regionFilter.value = "Workshop";
+    window.location.hash = "overview";
   }
   renderAll();
 });
