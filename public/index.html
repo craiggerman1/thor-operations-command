@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thor Operations Command</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="side-rail" aria-label="Thor Operations navigation">
+        <div class="brand-lockup">
+          <div class="brand-mark">TOC</div>
+          <div>
+            <strong>Thor Operations Command</strong>
+            <span>National operations</span>
+          </div>
+        </div>
+
+        <nav class="rail-nav" aria-label="Primary">
+          <a href="#overview" class="active">Overview</a>
+          <a href="#portal">Portal</a>
+          <a href="#fleet">Fleetio</a>
+          <a href="#tasks">Tasks</a>
+          <a href="#todo">To do</a>
+        </nav>
+
+        <div class="rail-card">
+          <span class="label">Live sync</span>
+          <strong id="syncState">Mock feed active</strong>
+          <small>Ready for Portal and Fleetio API wiring</small>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Command surface</span>
+            <h1>Thor Operations Command</h1>
+          </div>
+
+          <div class="topbar-actions">
+            <label class="select-wrap">
+              <span>Region</span>
+              <select id="regionFilter">
+                <option value="national">National</option>
+                <option value="Brisbane">Brisbane</option>
+                <option value="Sydney">Sydney</option>
+                <option value="Melbourne">Melbourne</option>
+                <option value="Adelaide">Adelaide</option>
+                <option value="Perth">Perth</option>
+                <option value="Canberra">Canberra</option>
+              </select>
+            </label>
+            <button class="icon-button" id="refreshButton" type="button" aria-label="Refresh command data" title="Refresh command data">R</button>
+          </div>
+        </header>
+
+        <section class="status-strip" id="overview" aria-label="Operational status">
+          <article class="metric-card signal-green">
+            <span>Operating week</span>
+            <strong id="abcdWeek">Calculating</strong>
+            <small id="weekRange">Thursday to Wednesday</small>
+          </article>
+          <article class="metric-card signal-amber">
+            <span>Portal approvals</span>
+            <strong id="approvalCount">0</strong>
+            <small>Waiting on manager action</small>
+          </article>
+          <article class="metric-card signal-blue">
+            <span>Assets online</span>
+            <strong id="assetCount">0</strong>
+            <small>Fleetio and GPS ready</small>
+          </article>
+          <article class="metric-card signal-red">
+            <span>Risk flags</span>
+            <strong id="riskCount">0</strong>
+            <small>Compliance, staffing, data</small>
+          </article>
+        </section>
+
+        <section class="command-grid">
+          <section class="panel wide-panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">National situation</span>
+                <h2>Live operating map</h2>
+              </div>
+              <span class="pill" id="lastUpdated">Updated now</span>
+            </div>
+            <div class="ops-map" id="opsMap" aria-label="State operating status"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Today</span>
+                <h2>Command brief</h2>
+              </div>
+            </div>
+            <div class="brief-stack" id="briefStack"></div>
+          </section>
+
+          <section class="panel" id="portal">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Thor Portal</span>
+                <h2>Approval queue</h2>
+              </div>
+              <button class="text-button" id="clearApproved" type="button">Clear done</button>
+            </div>
+            <div class="queue-list" id="approvalQueue"></div>
+          </section>
+
+          <section class="panel" id="fleet">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Fleetio</span>
+                <h2>Field assets</h2>
+              </div>
+            </div>
+            <div class="asset-list" id="assetList"></div>
+          </section>
+
+          <section class="panel wide-panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Woolworths live wash data</span>
+                <h2>Site performance</h2>
+              </div>
+              <span class="pill">Fleetio feed target</span>
+            </div>
+            <div class="wash-table" id="washTable"></div>
+          </section>
+
+          <section class="panel" id="tasks">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Local manager</span>
+                <h2>Action tiles</h2>
+              </div>
+            </div>
+            <div class="task-stack" id="localTasks"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">National ops</span>
+                <h2>Admin directives</h2>
+              </div>
+            </div>
+            <div class="task-stack" id="nationalTasks"></div>
+          </section>
+
+          <section class="panel" id="todo">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Manager memory</span>
+                <h2>To do list</h2>
+              </div>
+            </div>
+            <form class="todo-form" id="todoForm">
+              <input id="todoInput" type="text" placeholder="Add a task as it comes in" autocomplete="off">
+              <button type="submit">Add</button>
+            </form>
+            <div class="todo-list" id="todoList"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Integration layer</span>
+                <h2>Feed readiness</h2>
+              </div>
+            </div>
+            <div class="integration-grid">
+              <div><span>Thor Portal</span><strong>Webhook/API planned</strong></div>
+              <div><span>Fleetio assets</span><strong>API planned</strong></div>
+              <div><span>GPS tracking</span><strong>Fleet feed planned</strong></div>
+              <div><span>Woolworths washes</span><strong>Live data planned</strong></div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
