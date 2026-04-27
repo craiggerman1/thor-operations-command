@@ -1,20 +1,21 @@
 :root {
-  --ink: #18202a;
-  --muted: #637081;
-  --line: #d8e0e8;
-  --bg: #eef2f5;
+  --ink: #111820;
+  --muted: #657384;
+  --line: #d3dbe4;
+  --bg: #e7edf2;
   --panel: #fbfcfd;
-  --nav: #111923;
-  --nav-soft: #223144;
-  --command: #0d1823;
-  --command-line: #263b51;
+  --nav: #0a3152;
+  --nav-soft: #123f63;
+  --command: #060709;
+  --command-line: #1f6282;
   --green: #1f8f5f;
   --amber: #c98716;
   --red: #bf3e39;
-  --blue: #2467a6;
-  --teal: #247f88;
+  --blue: #0a3152;
+  --teal: #25a1bd;
+  --steel: #a8a9ad;
   --violet: #6959a8;
-  --shadow: 0 18px 45px rgba(30, 42, 55, 0.12);
+  --shadow: 0 18px 45px rgba(6, 7, 9, 0.12);
 }
 
 * {
@@ -26,8 +27,8 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    linear-gradient(rgba(24, 32, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(24, 32, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(10, 49, 82, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 49, 82, 0.04) 1px, transparent 1px),
     var(--bg);
   background-size: 34px 34px;
   font-family: Arial, Helvetica, sans-serif;
@@ -53,7 +54,8 @@ textarea {
   padding: 24px 18px;
   color: #eef5fb;
   background:
-    linear-gradient(180deg, rgba(36, 103, 166, 0.16), transparent 260px),
+    linear-gradient(180deg, rgba(37, 161, 189, 0.18), transparent 260px),
+    linear-gradient(140deg, rgba(6, 7, 9, 0.22), transparent 55%),
     var(--nav);
   display: flex;
   flex-direction: column;
@@ -62,23 +64,18 @@ textarea {
 
 .brand-lockup {
   display: grid;
-  grid-template-columns: 58px 1fr;
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   align-items: center;
 }
 
-.brand-mark {
-  width: 58px;
-  height: 58px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #4f6074;
+.brand-logo {
+  width: 100%;
+  max-width: 225px;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  background: #e9f4f0;
-  color: #101923;
-  box-shadow: 0 0 22px rgba(31, 143, 95, 0.18);
-  font-weight: 800;
-  letter-spacing: 0;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
 }
 
 .brand-lockup strong,
@@ -110,6 +107,7 @@ textarea {
 .rail-nav a.active,
 .rail-nav a:hover {
   background: var(--nav-soft);
+  box-shadow: inset 3px 0 0 var(--teal);
 }
 
 .rail-card {
@@ -118,8 +116,8 @@ textarea {
   border-radius: 8px;
   padding: 16px;
   background:
-    linear-gradient(135deg, rgba(36, 103, 166, 0.16), rgba(31, 143, 95, 0.08)),
-    #182536;
+    linear-gradient(135deg, rgba(37, 161, 189, 0.18), rgba(255, 255, 255, 0.05)),
+    #06243d;
 }
 
 .label,
@@ -134,6 +132,9 @@ textarea {
 
 .workspace {
   padding: 26px;
+  background:
+    linear-gradient(180deg, rgba(10, 49, 82, 0.08), transparent 420px),
+    transparent;
 }
 
 .topbar {
@@ -142,14 +143,18 @@ textarea {
   justify-content: space-between;
   gap: 18px;
   margin-bottom: 20px;
-  border: 1px solid var(--command-line);
+  min-height: 184px;
+  border: 1px solid rgba(37, 161, 189, 0.35);
   border-radius: 8px;
-  padding: 18px;
+  padding: 22px;
   color: #eef5fb;
   background:
-    linear-gradient(90deg, rgba(31, 143, 95, 0.18), transparent 42%),
-    linear-gradient(135deg, #0d1823, #172638);
-  box-shadow: 0 18px 48px rgba(13, 24, 35, 0.18);
+    linear-gradient(90deg, rgba(6, 7, 9, 0.9), rgba(6, 7, 9, 0.7) 44%, rgba(10, 49, 82, 0.52)),
+    url("./assets/thor-background.jpg");
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 22px 54px rgba(6, 7, 9, 0.22);
+  overflow: hidden;
 }
 
 h1,
@@ -159,7 +164,9 @@ p {
 }
 
 h1 {
-  font-size: clamp(28px, 3vw, 42px);
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 0.98;
+  text-transform: uppercase;
 }
 
 h2 {
@@ -167,7 +174,7 @@ h2 {
 }
 
 .title-block .eyebrow {
-  color: #9fb1c3;
+  color: #c4d1db;
 }
 
 .title-line {
@@ -182,10 +189,10 @@ h2 {
   flex: 0 0 auto;
   width: 24px;
   height: 24px;
-  border: 3px solid rgba(179, 255, 218, 0.85);
+  border: 3px solid rgba(222, 249, 255, 0.9);
   border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 28px rgba(31, 143, 95, 0.95);
+  background: var(--teal);
+  box-shadow: 0 0 28px rgba(37, 161, 189, 0.95);
   animation: livePulse 3.2s ease-in-out infinite;
 }
 
@@ -193,7 +200,7 @@ h2 {
   content: "";
   position: absolute;
   inset: -9px;
-  border: 1px solid rgba(179, 255, 218, 0.45);
+  border: 1px solid rgba(222, 249, 255, 0.5);
   border-radius: 50%;
   animation: beaconRing 3.2s ease-in-out infinite;
 }
@@ -202,12 +209,12 @@ h2 {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
-  border: 1px solid rgba(179, 255, 218, 0.65);
+  border: 1px solid rgba(222, 249, 255, 0.75);
   border-radius: 999px;
   padding: 0 12px;
-  color: #b3ffda;
-  background: rgba(31, 143, 95, 0.16);
-  box-shadow: 0 0 18px rgba(31, 143, 95, 0.18);
+  color: #def9ff;
+  background: rgba(37, 161, 189, 0.2);
+  box-shadow: 0 0 18px rgba(37, 161, 189, 0.2);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0;
@@ -294,7 +301,7 @@ textarea {
 
 .topbar select {
   border-color: #38536d;
-  background: #101d2a;
+  background: rgba(6, 7, 9, 0.72);
   color: #eef5fb;
 }
 
@@ -314,8 +321,8 @@ textarea {
 .icon-button {
   width: 42px;
   height: 42px;
-  background: #e9f4f0;
-  color: #101923;
+  background: #ffffff;
+  color: #0a3152;
 }
 
 .text-button,
@@ -350,7 +357,7 @@ textarea {
 }
 
 .panel {
-  border-top: 3px solid #2f475f;
+  border-top: 3px solid var(--blue);
 }
 
 .metric-card {
@@ -359,7 +366,7 @@ textarea {
   padding: 18px;
   overflow: hidden;
   background:
-    linear-gradient(180deg, #ffffff, #f7fafc);
+    linear-gradient(180deg, #ffffff, #f6f9fb);
 }
 
 .metric-card::before {
@@ -379,7 +386,7 @@ textarea {
 }
 
 .signal-blue::before {
-  background: var(--blue);
+  background: var(--teal);
 }
 
 .signal-red::before {
@@ -428,8 +435,8 @@ textarea {
   min-height: 28px;
   border-radius: 999px;
   padding: 0 10px;
-  color: #2e4257;
-  background: #e6edf3;
+  color: #0a3152;
+  background: #e6f3f7;
   font-size: 12px;
   font-weight: 700;
 }
@@ -615,8 +622,8 @@ textarea {
 
 .wash-row.header {
   background:
-    linear-gradient(90deg, rgba(31, 143, 95, 0.18), transparent),
-    #18202a;
+    linear-gradient(90deg, rgba(37, 161, 189, 0.22), transparent),
+    #0a3152;
   color: #fff;
   font-weight: 700;
 }
