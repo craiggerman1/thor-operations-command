@@ -74,6 +74,15 @@ const washes = [
   { site: "Primary Connect Perth", region: "Perth", target: 78, actual: 71, internal: 13, exceptions: 2 }
 ];
 
+const complianceItems = [
+  { region: "Brisbane", type: "Induction", title: "Primary Connect site inductions", status: "Due soon", owner: "BNE manager", due: "30 Apr", severity: "amber" },
+  { region: "Sydney", type: "Safety", title: "3-point contact refresher", status: "Action required", owner: "SYD manager", due: "Today", severity: "red" },
+  { region: "Melbourne", type: "Document", title: "SDS and chemical register review", status: "Current", owner: "MEL manager", due: "18 May", severity: "green" },
+  { region: "Adelaide", type: "Equipment", title: "First aid kit audit", status: "Overdue", owner: "ADL manager", due: "Yesterday", severity: "red" },
+  { region: "Perth", type: "Site pack", title: "Woolworths compliance pack evidence", status: "Due soon", owner: "PER manager", due: "2 May", severity: "amber" },
+  { region: "Canberra", type: "Training", title: "EWAF and Lite LOTO refresh", status: "Current", owner: "CBR manager", due: "15 May", severity: "green" }
+];
+
 let localTasks = [
   { id: "l1", region: "Brisbane", title: "Correct Fleetio wash type mismatch", owner: "Regional manager", priority: "High", done: false },
   { id: "l2", region: "Sydney", title: "Confirm night crew site sign-out discipline", owner: "Sydney manager", priority: "High", done: false },
@@ -92,6 +101,9 @@ const refreshButton = document.querySelector("#refreshButton");
 const approvalQueue = document.querySelector("#approvalQueue");
 const assetList = document.querySelector("#assetList");
 const washTable = document.querySelector("#washTable");
+const complianceSummary = document.querySelector("#complianceSummary");
+const complianceMetrics = document.querySelector("#complianceMetrics");
+const complianceList = document.querySelector("#complianceList");
 const opsMap = document.querySelector("#opsMap");
 const briefStack = document.querySelector("#briefStack");
 const localTasksNode = document.querySelector("#localTasks");
@@ -239,6 +251,46 @@ function renderWashes() {
   `;
 }
 
+function renderCompliance() {
+  const items = complianceItems.filter(isVisible);
+  const current = items.filter((item) => item.severity === "green").length;
+  const dueSoon = items.filter((item) => item.severity === "amber").length;
+  const urgent = items.filter((item) => item.severity === "red").length;
+  const score = items.length ? Math.round((current / items.length) * 100) : 100;
+
+  complianceSummary.textContent = `${urgent} urgent - ${dueSoon} due soon`;
+  complianceMetrics.innerHTML = `
+    <article class="compliance-stat">
+      <span>Readiness</span>
+      <strong>${score}%</strong>
+      <small>Current compliance items</small>
+    </article>
+    <article class="compliance-stat">
+      <span>Urgent</span>
+      <strong>${urgent}</strong>
+      <small>Needs manager action</small>
+    </article>
+    <article class="compliance-stat">
+      <span>Due soon</span>
+      <strong>${dueSoon}</strong>
+      <small>Keep ahead this week</small>
+    </article>
+  `;
+
+  complianceList.innerHTML = items.map((item) => `
+    <article class="compliance-card">
+      <div>
+        <strong>${item.title}</strong>
+        <small>${item.region} - ${item.owner} - due ${item.due}</small>
+      </div>
+      <div class="meta-row">
+        <span class="tag blue">${item.type}</span>
+        <span class="tag ${item.severity}">${item.status}</span>
+      </div>
+    </article>
+  `).join("");
+}
+
 function renderTasks() {
   localTasksNode.innerHTML = renderTaskCards(localTasks.filter((task) => !task.done && isVisible(task)));
   nationalTasksNode.innerHTML = renderTaskCards(nationalTasks.filter((task) => !task.done));
@@ -288,6 +340,7 @@ function renderAll() {
   renderApprovals();
   renderAssets();
   renderWashes();
+  renderCompliance();
   renderTasks();
   renderTodos();
 }

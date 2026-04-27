@@ -307,6 +307,8 @@ input {
 .queue-card,
 .asset-card,
 .task-card,
+.compliance-card,
+.compliance-stat,
 .brief-item,
 .todo-item,
 .wash-row,
@@ -327,6 +329,7 @@ input {
 .asset-card strong,
 .queue-card strong,
 .task-card strong,
+.compliance-card strong,
 .wash-row strong,
 .integration-grid strong {
   display: block;
@@ -363,6 +366,7 @@ input {
 .brief-stack,
 .queue-list,
 .asset-list,
+.compliance-list,
 .task-stack,
 .todo-list {
   display: grid;
@@ -373,6 +377,8 @@ input {
 .queue-card,
 .asset-card,
 .task-card,
+.compliance-card,
+.compliance-stat,
 .todo-item {
   padding: 12px;
 }
@@ -454,6 +460,38 @@ input {
   font-weight: 700;
 }
 
+.compliance-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.7fr) minmax(0, 1.3fr);
+  gap: 14px;
+}
+
+.compliance-metrics {
+  display: grid;
+  gap: 10px;
+}
+
+.compliance-stat {
+  display: grid;
+  gap: 4px;
+}
+
+.compliance-stat span,
+.compliance-stat small {
+  color: var(--muted);
+}
+
+.compliance-stat strong {
+  font-size: 28px;
+}
+
+.compliance-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 .todo-form {
   margin-bottom: 12px;
 }
@@ -500,6 +538,7 @@ input {
 .asset-card small,
 .queue-card small,
 .task-card small,
+.compliance-card small,
 .brief-item small {
   color: var(--muted);
 }
@@ -515,7 +554,7 @@ input {
   }
 
   .rail-nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .status-strip,
@@ -549,6 +588,16 @@ input {
 
   .wide-panel {
     grid-column: span 1;
+  }
+
+  .compliance-layout,
+  .compliance-card {
+    grid-template-columns: 1fr;
+  }
+
+  .compliance-card {
+    align-items: stretch;
+    display: grid;
   }
 
   .wash-row {
