@@ -218,6 +218,8 @@ const chatMessages = document.querySelector("#chatMessages");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const navLinks = document.querySelectorAll(".rail-nav a");
+const pageSections = document.querySelectorAll(".page-section");
+const pageTitle = document.querySelector("#pageTitle");
 const sessionChip = document.querySelector("#sessionChip strong");
 const loginScreen = document.querySelector("#loginScreen");
 const loginForm = document.querySelector("#loginForm");
@@ -232,6 +234,57 @@ const adminUserEmail = document.querySelector("#adminUserEmail");
 const adminUserRole = document.querySelector("#adminUserRole");
 const adminUserList = document.querySelector("#adminUserList");
 const resetAdminUsers = document.querySelector("#resetAdminUsers");
+
+const pageCopy = {
+  overview: {
+    title: "Overview",
+    detail: "National operating position and current command brief."
+  },
+  actions: {
+    title: "Action Centre",
+    detail: "Items that need action, review, ownership, or clearing."
+  },
+  operations: {
+    title: "Operations",
+    detail: "Wash output, asset position, feed readiness, and operational health."
+  },
+  director: {
+    title: "Director",
+    detail: "High-level owner view of business health, efficiency, compliance, and productivity."
+  },
+  admin: {
+    title: "Admin",
+    detail: "User access, role permissions, region visibility, and admin setup controls."
+  },
+  portal: {
+    title: "Portal",
+    detail: "Jobsheets and Thor Portal approval items needing manager review."
+  },
+  fleet: {
+    title: "Fleetio",
+    detail: "Wash plants, vehicles, GPS status, and assets needing awareness."
+  },
+  compliance: {
+    title: "Compliance",
+    detail: "Inductions, safety items, site readiness, and compliance actions."
+  },
+  stock: {
+    title: "Stock Orders",
+    detail: "Regional stock requests and the national ordering queue."
+  },
+  chat: {
+    title: "Chat",
+    detail: "Internal manager and national operations communication channels."
+  },
+  tasks: {
+    title: "Tasks",
+    detail: "Local and national action tiles that need ownership."
+  },
+  todo: {
+    title: "To Do",
+    detail: "Personal manager notes and quick tasks captured during the day."
+  }
+};
 
 function selectedRegion() {
   return regionFilter.value;
@@ -315,9 +368,40 @@ function getVisibleChatChannels() {
 
 function updateActiveNav() {
   const currentHash = window.location.hash || "#overview";
+  const currentPage = normalizePage(currentHash.replace("#", "") || "overview");
   navLinks.forEach((link) => {
-    link.classList.toggle("active", link.getAttribute("href") === currentHash);
+    link.classList.toggle("active", link.getAttribute("href") === `#${currentPage}`);
   });
+  updatePageVisibility(currentPage);
+}
+
+function normalizePage(page) {
+  const aliases = {
+    performance: "operations",
+    "national-actions": "tasks",
+    support: "stock"
+  };
+  return aliases[page] || page;
+}
+
+function updatePageVisibility(page) {
+  const requestedPage = normalizePage(page);
+  const visiblePage = pageSections.some((section) => section.dataset.page?.split(" ").includes(requestedPage))
+    ? requestedPage
+    : "overview";
+
+  pageSections.forEach((section) => {
+    const pages = section.dataset.page ? section.dataset.page.split(" ") : [];
+    section.hidden = !pages.includes(visiblePage);
+  });
+
+  navLinks.forEach((link) => {
+    link.classList.toggle("active", link.getAttribute("href") === `#${visiblePage}`);
+  });
+
+  const copy = pageCopy[visiblePage] || pageCopy.overview;
+  pageTitle.querySelector("h2").textContent = copy.title;
+  pageTitle.querySelector("p").textContent = copy.detail;
 }
 
 function calculateThorWeek(date = new Date()) {
