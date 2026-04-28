@@ -1897,9 +1897,10 @@ body[data-access="director"] .rail-nav a[href="#todo"] {
   }
 
   .title-line {
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
   }
 
   .topbar {
@@ -1914,8 +1915,18 @@ body[data-access="director"] .rail-nav a[href="#todo"] {
   }
 
   h1 {
-    font-size: clamp(18px, 6vw, 28px);
-    white-space: nowrap;
+    grid-column: 1 / -1;
+    max-width: 100%;
+    font-size: clamp(25px, 9vw, 38px);
+    line-height: 0.96;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+
+  .live-label {
+    width: fit-content;
+    min-height: 28px;
+    padding: 0 10px;
   }
 
   h2 {
