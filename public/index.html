@@ -4,9 +4,74 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=15">
+    <link rel="stylesheet" href="./styles.css?v=16">
   </head>
   <body>
+    <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
+      <div class="login-brand">
+        <img src="./assets/thor-logo-stacked-sidebar.png" alt="Thor Mobile Truck Wash">
+        <span>Operations Command</span>
+      </div>
+
+      <form class="login-card" id="loginForm">
+        <div>
+          <span class="eyebrow">Secure access prototype</span>
+          <h1>Thor Operations Command</h1>
+          <p>Sign in to open the right command view for your role.</p>
+        </div>
+
+        <label>
+          <span>Email</span>
+          <input id="loginEmail" type="email" placeholder="name@thormobile.com.au" autocomplete="email" required>
+        </label>
+
+        <label>
+          <span>Password</span>
+          <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password" required>
+        </label>
+
+        <div class="login-grid" role="radiogroup" aria-label="Access level">
+          <label class="login-role active">
+            <input type="radio" name="loginAccess" value="manager" checked>
+            <strong>Manager</strong>
+            <small>Regional operations</small>
+          </label>
+          <label class="login-role">
+            <input type="radio" name="loginAccess" value="workshop">
+            <strong>Workshop</strong>
+            <small>Jason / workshop BU</small>
+          </label>
+          <label class="login-role">
+            <input type="radio" name="loginAccess" value="national">
+            <strong>National Ops</strong>
+            <small>Craig / Simon</small>
+          </label>
+          <label class="login-role">
+            <input type="radio" name="loginAccess" value="director">
+            <strong>Director</strong>
+            <small>Anthony overview</small>
+          </label>
+        </div>
+
+        <label>
+          <span>Home region</span>
+          <select id="loginRegion">
+            <option value="national">National</option>
+            <option value="Brisbane">Brisbane</option>
+            <option value="Sydney">Sydney</option>
+            <option value="Melbourne">Melbourne</option>
+            <option value="Adelaide">Adelaide</option>
+            <option value="Perth">Perth</option>
+            <option value="Canberra">Canberra</option>
+            <option value="Workshop">Workshop</option>
+          </select>
+        </label>
+
+        <button type="submit">Enter TOC</button>
+        <small class="login-note">Demo login only. Full database authentication and permissions will be connected later.</small>
+      </form>
+    </section>
+
     <div class="app-shell">
       <aside class="side-rail" aria-label="Thor Operations navigation">
         <div class="brand-lockup">
@@ -73,6 +138,7 @@
               </select>
             </label>
             <button class="icon-button" id="refreshButton" type="button" aria-label="Refresh command data" title="Refresh command data">R</button>
+            <button class="logout-button" id="logoutButton" type="button">Log out</button>
           </div>
         </header>
 
@@ -123,7 +189,7 @@
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Manager scan</span>
-                <h2>Today’s command brief</h2>
+                <h2>Today's command brief</h2>
               </div>
             </div>
             <div class="brief-stack" id="briefStack"></div>
@@ -367,6 +433,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=15"></script>
+    <script src="./script.js?v=16"></script>
   </body>
 </html>

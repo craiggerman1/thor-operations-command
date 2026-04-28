@@ -183,6 +183,14 @@ const chatMessages = document.querySelector("#chatMessages");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const navLinks = document.querySelectorAll(".rail-nav a");
+const loginScreen = document.querySelector("#loginScreen");
+const loginForm = document.querySelector("#loginForm");
+const loginEmail = document.querySelector("#loginEmail");
+const loginPassword = document.querySelector("#loginPassword");
+const loginRegion = document.querySelector("#loginRegion");
+const loginRoles = document.querySelectorAll("[name='loginAccess']");
+const loginRoleCards = document.querySelectorAll(".login-role");
+const logoutButton = document.querySelector("#logoutButton");
 
 function selectedRegion() {
   return regionFilter.value;
@@ -211,6 +219,57 @@ function activeUserName() {
   if (selectedAccess() === "director") return "Anthony";
   if (selectedAccess() === "workshop") return "Jason";
   return selectedRegion() === "national" ? "Regional Manager" : `${selectedRegion()} Manager`;
+}
+
+function selectedLoginAccess() {
+  return document.querySelector("[name='loginAccess']:checked")?.value || "manager";
+}
+
+function updateLoginRoleCards() {
+  const loginAccess = selectedLoginAccess();
+  loginRoleCards.forEach((card) => {
+    const radio = card.querySelector("input");
+    card.classList.toggle("active", radio.value === loginAccess);
+  });
+
+  if (loginAccess === "workshop") {
+    loginRegion.value = "Workshop";
+  } else if (loginAccess === "national" || loginAccess === "director") {
+    loginRegion.value = "national";
+  }
+}
+
+function setSession(session) {
+  localStorage.setItem("toc.session", JSON.stringify(session));
+}
+
+function getSession() {
+  return JSON.parse(localStorage.getItem("toc.session") || "null");
+}
+
+function applySession(session) {
+  accessLevel.value = session.access || "manager";
+  regionFilter.value = session.region || "national";
+  document.body.classList.add("is-authenticated");
+
+  if (session.access === "director") {
+    window.location.hash = "director";
+  } else if (session.access === "workshop") {
+    activeChatChannel = "workshop";
+  }
+}
+
+function initializeSession() {
+  const session = getSession();
+  updateLoginRoleCards();
+
+  if (session) {
+    applySession(session);
+    renderAll();
+    return;
+  }
+
+  document.body.classList.remove("is-authenticated");
 }
 
 function getVisibleChatChannels() {
@@ -829,10 +888,45 @@ accessLevel.addEventListener("change", () => {
   renderAll();
 });
 
+loginRoles.forEach((radio) => {
+  radio.addEventListener("change", updateLoginRoleCards);
+});
+
+loginForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const access = selectedLoginAccess();
+  const region = access === "workshop"
+    ? "Workshop"
+    : access === "national" || access === "director"
+      ? "national"
+      : loginRegion.value;
+
+  const session = {
+    email: loginEmail.value.trim(),
+    access,
+    region,
+    signedInAt: new Date().toISOString()
+  };
+
+  if (!session.email || !loginPassword.value.trim()) return;
+
+  setSession(session);
+  loginPassword.value = "";
+  applySession(session);
+  renderAll();
+});
+
+logoutButton.addEventListener("click", () => {
+  localStorage.removeItem("toc.session");
+  document.body.classList.remove("is-authenticated");
+  window.location.hash = "";
+  loginScreen.scrollIntoView({ block: "start" });
+});
+
 refreshButton.addEventListener("click", () => {
   document.querySelector("#lastUpdated").textContent = `Updated ${new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`;
   document.querySelector("#syncState").textContent = "Demo refreshed";
   renderAll();
 });
 
-renderAll();
+initializeSession();
