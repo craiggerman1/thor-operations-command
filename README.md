@@ -1,6 +1,6 @@
 # Thor Operations Command
 
-Thor Operations Command, or TOC, is a static-first command dashboard scaffold for Thor Mobile Truck Wash operations managers.
+Thor Operations Command, or TOC, is moving from a static prototype into a proper Vercel web app for Thor Mobile Truck Wash operations managers.
 
 It is designed to later connect to:
 
@@ -10,23 +10,42 @@ It is designed to later connect to:
 
 ## Current Build
 
-This first version is a deployable static app using local mock data and browser storage. It includes:
+The repository now contains two layers:
+
+- `src/app` is the new Next.js App Router web app for Vercel.
+- `public` still contains the legacy static prototype and Thor brand assets.
+
+The new Next.js app includes proper route pages for:
 
 - National and regional command overview.
-- Thor ABCD operating week calculation.
+- Action Centre.
+- Operations.
+- Director overview.
+- Admin user-access controls.
 - Portal approval queue.
 - Fleetio asset readiness.
-- Woolworths wash performance by site.
-- Local manager action tiles.
-- National operations action tiles.
-- Manager to-do list with local browser persistence.
-- Integration status panel showing the future API/webhook feed points.
+- Compliance.
+- Stock Orders.
+- Chat.
+- Tasks.
+- To Do.
 
 ## Deployment
 
-The app is Vercel-friendly and uses `public` as the output directory.
+The production direction is Vercel:
 
-No package install is required for this version.
+1. GitHub stores the code.
+2. Vercel imports the repository.
+3. Vercel detects Next.js and builds the `src/app` web app.
+4. Each sidebar item has a real URL such as `/overview`, `/admin`, `/fleet`, and `/stock-orders`.
+
+When local Node/npm tooling is available:
+
+```bash
+npm install
+npm run dev
+npm run build
+```
 
 ## Future API Shape
 
@@ -40,3 +59,5 @@ Recommended live feed endpoints:
 - `GET /api/woolworths/wash-performance?site=all`
 
 Never commit production API keys or Fleetio tokens. Store them in Vercel environment variables once backend endpoints are added.
+
+This public build must not contain real employee emails, private credentials, API keys, or sensitive internal identifiers.
