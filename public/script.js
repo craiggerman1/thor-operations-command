@@ -225,6 +225,9 @@ const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
 const developerSignin = document.querySelector("#developerSignin");
 const logoutButton = document.querySelector("#logoutButton");
+const mobileMenuButton = document.querySelector("#mobileMenuButton");
+const mobileNavClose = document.querySelector("#mobileNavClose");
+const mobileNavBackdrop = document.querySelector("#mobileNavBackdrop");
 const adminSummary = document.querySelector("#adminSummary");
 const adminUserForm = document.querySelector("#adminUserForm");
 const adminUserName = document.querySelector("#adminUserName");
@@ -318,6 +321,16 @@ function updateActiveNav() {
   navLinks.forEach((link) => {
     link.classList.toggle("active", link.getAttribute("href") === currentHash);
   });
+}
+
+function openMobileNav() {
+  document.body.classList.add("nav-open");
+  mobileMenuButton.setAttribute("aria-expanded", "true");
+}
+
+function closeMobileNav() {
+  document.body.classList.remove("nav-open");
+  mobileMenuButton.setAttribute("aria-expanded", "false");
 }
 
 function calculateThorWeek(date = new Date()) {
@@ -971,7 +984,18 @@ navLinks.forEach((link) => {
   link.addEventListener("click", () => {
     navLinks.forEach((item) => item.classList.remove("active"));
     link.classList.add("active");
+    closeMobileNav();
   });
+});
+
+mobileMenuButton.addEventListener("click", openMobileNav);
+mobileNavClose.addEventListener("click", closeMobileNav);
+mobileNavBackdrop.addEventListener("click", closeMobileNav);
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeMobileNav();
+  }
 });
 
 accessLevel.addEventListener("change", () => {
@@ -1059,6 +1083,7 @@ resetAdminUsers.addEventListener("click", () => {
 logoutButton.addEventListener("click", () => {
   localStorage.removeItem("toc.session");
   document.body.classList.remove("is-authenticated");
+  closeMobileNav();
   window.location.hash = "";
   loginScreen.scrollIntoView({ block: "start" });
 });

@@ -1,14 +1,14 @@
 @import url("/styles.css");
 
-body .app-shell {
+body.next-app .app-shell {
   display: grid;
 }
 
-body .region-control {
+body.next-app .region-control {
   display: grid;
 }
 
-body .login-screen {
+body.next-app .login-screen {
   display: grid;
 }
 
@@ -53,4 +53,14 @@ body .login-screen {
   min-height: 42px;
   border-radius: 6px;
   text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  body.next-app .mobile-app-bar {
+    display: grid;
+  }
+
+  body.next-app .mobile-nav-backdrop.active {
+    display: block;
+  }
 }
