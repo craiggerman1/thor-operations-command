@@ -53,7 +53,7 @@ const regions = [
     portal: 3,
     wash: 68,
     risks: 2,
-    note: "Jason has service jobs moving. Watch parts, defects, and return-to-service timing."
+    note: "Workshop jobs are moving. Watch parts, defects, and return-to-service timing."
   }
 ];
 
@@ -93,14 +93,14 @@ const complianceItems = [
   { region: "Adelaide", type: "Equipment", title: "First aid kit audit", status: "Overdue", owner: "ADL manager", due: "Yesterday", severity: "red" },
   { region: "Perth", type: "Site pack", title: "Woolworths compliance pack evidence", status: "Due soon", owner: "PER manager", due: "2 May", severity: "amber" },
   { region: "Canberra", type: "Training", title: "EWAF and Lite LOTO refresh", status: "Current", owner: "CBR manager", due: "15 May", severity: "green" },
-  { region: "Workshop", type: "Safety", title: "Workshop isolation and defect-tag process", status: "Due soon", owner: "Jason", due: "3 May", severity: "amber" }
+  { region: "Workshop", type: "Safety", title: "Workshop isolation and defect-tag process", status: "Due soon", owner: "Workshop lead", due: "3 May", severity: "amber" }
 ];
 
 const starterStockOrders = [
   { id: "stock-1", region: "Brisbane", site: "Primary Connect Larapinta", category: "Chemicals", item: "Heavy duty wash chemical", quantity: 4, urgency: "Soon", notes: "Keep buffer for Woolworths night shift.", status: "Open", created: "Today" },
   { id: "stock-2", region: "Sydney", site: "Minchinbury", category: "PPE", item: "Gloves and safety glasses", quantity: 12, urgency: "Normal", notes: "Top up site cabinet.", status: "Open", created: "Today" },
   { id: "stock-3", region: "Adelaide", site: "Gepps Cross", category: "Equipment", item: "Spray lance trigger", quantity: 2, urgency: "Urgent", notes: "Backup unit needed before Friday PM.", status: "Open", created: "Today" },
-  { id: "stock-4", region: "Workshop", site: "Workshop", category: "Parts", item: "Pressure hose fittings", quantity: 10, urgency: "Soon", notes: "Jason request for common repairs shelf.", status: "Open", created: "Today" }
+  { id: "stock-4", region: "Workshop", site: "Workshop", category: "Parts", item: "Pressure hose fittings", quantity: 10, urgency: "Soon", notes: "Common repairs shelf top-up.", status: "Open", created: "Today" }
 ];
 
 let localTasks = [
@@ -108,11 +108,11 @@ let localTasks = [
   { id: "l2", region: "Sydney", title: "Confirm night crew site sign-out discipline", owner: "Sydney manager", priority: "High", done: false },
   { id: "l3", region: "Adelaide", title: "Fill Friday PM roster gap", owner: "Adelaide manager", priority: "Medium", done: false },
   { id: "l4", region: "Perth", title: "Confirm chemical stock and backup lance", owner: "Perth manager", priority: "Medium", done: false },
-  { id: "l5", region: "Workshop", title: "Confirm parts shelf minimum stock levels", owner: "Jason", priority: "Medium", done: false }
+  { id: "l5", region: "Workshop", title: "Confirm parts shelf minimum stock levels", owner: "Workshop lead", priority: "Medium", done: false }
 ];
 
 let nationalTasks = [
-  { id: "n1", region: "National", title: "Woolworths Fleetio accuracy check", owner: "Craig / Simon", priority: "High", done: false },
+  { id: "n1", region: "National", title: "Woolworths Fleetio accuracy check", owner: "National admin", priority: "High", done: false },
   { id: "n2", region: "National", title: "Review all manager approvals before invoicing", owner: "National ops", priority: "High", done: false },
   { id: "n3", region: "National", title: "Primary Connect compliance pack refresh", owner: "National ops", priority: "Medium", done: false }
 ];
@@ -132,10 +132,10 @@ const chatChannels = [
 ];
 
 const starterChatMessages = [
-  { id: "chat-1", channel: "national", author: "Craig", role: "National Ops", text: "Morning team. Keep Portal approvals tight today and flag anything that will hold invoicing.", time: "08:05" },
-  { id: "chat-2", channel: "national", author: "Simon", role: "National Ops", text: "Please keep Woolworths Fleetio entries clean. Registration, wash type and site all matter.", time: "08:18" },
+  { id: "chat-1", channel: "national", author: "Admin User", role: "National Ops", text: "Morning team. Keep Portal approvals tight today and flag anything that will hold invoicing.", time: "08:05" },
+  { id: "chat-2", channel: "national", author: "National Ops", role: "National Ops", text: "Please keep Woolworths Fleetio entries clean. Registration, wash type and site all matter.", time: "08:18" },
   { id: "chat-3", channel: "managers", author: "Melbourne Manager", role: "Manager", text: "Melbourne wash bay is steady. One asset service item is being watched.", time: "08:34" },
-  { id: "chat-4", channel: "workshop", author: "Jason", role: "Workshop", text: "Workshop parts shelf needs hose fittings and two backup triggers checked.", time: "08:42" },
+  { id: "chat-4", channel: "workshop", author: "Workshop Lead", role: "Workshop", text: "Workshop parts shelf needs hose fittings and two backup triggers checked.", time: "08:42" },
   { id: "chat-5", channel: "compliance", author: "Sydney Manager", role: "Manager", text: "Following up the 3-point contact refresher with night crew before shift start.", time: "09:03" },
   { id: "chat-6", channel: "stock", author: "Adelaide Manager", role: "Manager", text: "Spray lance trigger is urgent for Gepps Cross. Stock order has been raised.", time: "09:16" },
   { id: "chat-7", channel: "brisbane", author: "Brisbane Manager", role: "Manager", text: "Larapinta volume is high but covered. Two job sheets need data correction.", time: "09:20" }
@@ -145,33 +145,33 @@ let activeChatChannel = "national";
 
 const starterAdminUsers = [
   {
-    id: "admin-craig",
-    name: "Craig",
-    email: "craig@thormobile.com.au",
+    id: "admin-primary",
+    name: "Admin User",
+    email: "admin-user",
     role: "Admin",
     regions: ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"],
     permissions: ["Approvals", "Tasks", "Stock", "Compliance", "Chat", "Admin"]
   },
   {
-    id: "admin-simon",
-    name: "Simon",
-    email: "simon@thormobile.com.au",
+    id: "admin-national",
+    name: "National Ops User",
+    email: "national-ops-user",
     role: "National Ops",
     regions: ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"],
     permissions: ["Approvals", "Tasks", "Stock", "Compliance", "Chat"]
   },
   {
-    id: "admin-anthony",
-    name: "Anthony",
-    email: "anthony@thormobile.com.au",
+    id: "admin-director",
+    name: "Director User",
+    email: "director-user",
     role: "Director",
     regions: ["National"],
     permissions: ["Overview", "Director"]
   },
   {
-    id: "admin-jason",
-    name: "Jason",
-    email: "jason@thormobile.com.au",
+    id: "admin-workshop",
+    name: "Workshop User",
+    email: "workshop-user",
     role: "Workshop",
     regions: ["Workshop"],
     permissions: ["Tasks", "Stock", "Compliance", "Chat"]
@@ -257,10 +257,10 @@ function accessLabel() {
 }
 
 function activeUserName() {
-  if (selectedAccess() === "admin") return "Craig";
-  if (selectedAccess() === "national") return "Craig / Simon";
-  if (selectedAccess() === "director") return "Anthony";
-  if (selectedAccess() === "workshop") return "Jason";
+  if (selectedAccess() === "admin") return "Admin User";
+  if (selectedAccess() === "national") return "National Ops";
+  if (selectedAccess() === "director") return "Director User";
+  if (selectedAccess() === "workshop") return "Workshop Lead";
   return selectedRegion() === "national" ? "Regional Manager" : `${selectedRegion()} Manager`;
 }
 
@@ -291,7 +291,7 @@ function initializeSession() {
   const session = getSession();
 
   if (session) {
-    if (session.developer || session.email === "craig@thormobile.com.au") {
+    if (session.developer || session.access === "admin") {
       session.access = "admin";
       session.region = "national";
       setSession(session);
@@ -747,7 +747,7 @@ function renderAdminUsers() {
         <span class="tag green">${escapeHtml(user.regions.join(", "))}</span>
       </div>
       <small>Can use: ${escapeHtml(user.permissions.join(", "))}</small>
-      ${user.id === "admin-craig" ? "" : `<button type="button" data-admin-remove="${escapeHtml(user.id)}">Remove demo user</button>`}
+      ${user.id === "admin-primary" ? "" : `<button type="button" data-admin-remove="${escapeHtml(user.id)}">Remove demo user</button>`}
     </article>
   `).join("");
 }
@@ -991,7 +991,7 @@ loginForm.addEventListener("submit", (event) => {
 
 developerSignin.addEventListener("click", () => {
   const session = {
-    email: "craig@thormobile.com.au",
+    email: "developer-user",
     access: "admin",
     region: "national",
     developer: true,
