@@ -270,7 +270,7 @@ function renderMap() {
   opsMap.innerHTML = regions
     .filter((region) => selectedRegion() === "national" || region.name === selectedRegion())
     .map((region) => `
-      <article class="state-node">
+      <article class="state-node" data-region-card="${region.name}">
         <div>
           <strong>${region.name}</strong>
           <small>${region.note}</small>
@@ -285,6 +285,7 @@ function renderMap() {
           <span class="tag amber">${region.portal} approvals</span>
           <span class="tag red">${region.risks} risks</span>
         </div>
+        <a class="node-action" href="#actions" data-region-link="${region.name}">View action detail</a>
       </article>
     `)
     .join("");
@@ -739,6 +740,16 @@ chatChannelsNode.addEventListener("click", (event) => {
   renderChat();
 });
 
+opsMap.addEventListener("click", (event) => {
+  const regionLink = event.target.closest("[data-region-link]");
+  if (!regionLink) return;
+  const regionName = regionLink.dataset.regionLink;
+  if (regionName && regionFilter.value !== regionName) {
+    regionFilter.value = regionName;
+    renderAll();
+  }
+});
+
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
@@ -820,7 +831,7 @@ accessLevel.addEventListener("change", () => {
 
 refreshButton.addEventListener("click", () => {
   document.querySelector("#lastUpdated").textContent = `Updated ${new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`;
-  document.querySelector("#syncState").textContent = "Feed refreshed";
+  document.querySelector("#syncState").textContent = "Demo refreshed";
   renderAll();
 });
 

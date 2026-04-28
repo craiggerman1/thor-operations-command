@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=12">
+    <link rel="stylesheet" href="./styles.css?v=13">
   </head>
   <body>
     <div class="app-shell">
@@ -32,9 +32,9 @@
         </nav>
 
         <div class="rail-card">
-          <span class="label">Live sync</span>
-          <strong id="syncState">Mock feed active</strong>
-          <small>Ready for Portal and Fleetio API wiring</small>
+          <span class="label">Data feeds</span>
+          <strong id="syncState">Demo data only</strong>
+          <small>Portal and Fleetio feeds are not connected yet</small>
         </div>
       </aside>
 
@@ -43,9 +43,9 @@
           <div class="title-block">
             <span class="eyebrow">Thor Mobile Truck Wash</span>
             <div class="title-line">
-              <span class="live-beacon" aria-label="Live operations feed active"></span>
+              <span class="live-beacon" aria-label="Live data feeds are not connected yet"></span>
               <h1>Thor Operations Command</h1>
-              <span class="live-label">LIVE OPS</span>
+              <span class="live-label">DATA PENDING</span>
             </div>
           </div>
 
@@ -77,26 +77,26 @@
         </header>
 
         <section class="status-strip" id="overview" aria-label="Operational status">
-          <article class="metric-card signal-green">
+          <a class="metric-card signal-green" href="#overview" aria-label="View operating week overview">
             <span>Operating week</span>
             <strong id="abcdWeek">Calculating</strong>
             <small id="weekRange">Thursday to Wednesday</small>
-          </article>
-          <article class="metric-card signal-amber">
+          </a>
+          <a class="metric-card signal-amber" href="#portal" aria-label="View jobsheets needing review">
             <span>Portal approvals</span>
             <strong id="approvalCount">0</strong>
             <small>Waiting on manager action</small>
-          </article>
-          <article class="metric-card signal-blue">
+          </a>
+          <a class="metric-card signal-blue" href="#fleet" aria-label="View Fleetio asset detail">
             <span>Assets online</span>
             <strong id="assetCount">0</strong>
             <small>Fleetio and GPS ready</small>
-          </article>
-          <article class="metric-card signal-red">
+          </a>
+          <a class="metric-card signal-red" href="#compliance" aria-label="View risk and compliance detail">
             <span>Risk flags</span>
             <strong id="riskCount">0</strong>
             <small>Compliance, staffing, data</small>
-          </article>
+          </a>
         </section>
 
         <section class="command-grid">
@@ -212,10 +212,10 @@
           <section class="panel wide-panel" id="performance">
             <div class="panel-head">
               <div>
-                <span class="eyebrow">Woolworths live wash data</span>
+                <span class="eyebrow">Woolworths wash data</span>
                 <h2>Site performance</h2>
               </div>
-              <span class="pill">Fleetio feed target</span>
+              <span class="pill">Fleetio feed planned</span>
             </div>
             <div class="wash-table" id="washTable"></div>
           </section>
@@ -358,7 +358,7 @@
               <div><span>Thor Portal</span><strong>Webhook/API planned</strong></div>
               <div><span>Fleetio assets</span><strong>API planned</strong></div>
               <div><span>GPS tracking</span><strong>Fleet feed planned</strong></div>
-              <div><span>Woolworths washes</span><strong>Live data planned</strong></div>
+              <div><span>Woolworths washes</span><strong>API planned</strong></div>
               <div><span>Stock orders</span><strong>Webhook planned</strong></div>
               <div><span>Manager chat</span><strong>Database planned</strong></div>
             </div>
@@ -367,6 +367,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=12"></script>
+    <script src="./script.js?v=13"></script>
   </body>
 </html>
