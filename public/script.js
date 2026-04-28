@@ -708,7 +708,11 @@ function setChatMessages(messages) {
 
 function getAdminUsers() {
   const saved = localStorage.getItem("toc.adminUsers");
-  if (saved) return JSON.parse(saved);
+  if (saved) {
+    const users = sanitizeAdminUsers(JSON.parse(saved));
+    setAdminUsers(users);
+    return users;
+  }
   setAdminUsers(starterAdminUsers);
   return starterAdminUsers;
 }
@@ -732,6 +736,22 @@ function checkedValues(name) {
   return Array.from(document.querySelectorAll(`[name="${name}"]:checked`)).map((item) => item.value);
 }
 
+function publicUserId(user) {
+  return `TOC-${String(user.id || crypto.randomUUID()).slice(-6).toUpperCase()}`;
+}
+
+function sanitizeAdminUsers(users) {
+  return users.map((user) => {
+    const hadEmailAddress = String(user.email || "").includes("@");
+    const safeEmail = hadEmailAddress ? publicUserId(user) : user.email || publicUserId(user);
+    return {
+      ...user,
+      name: hadEmailAddress ? `${roleLabel(user.role)} User` : user.name || `${roleLabel(user.role)} User`,
+      email: safeEmail
+    };
+  });
+}
+
 function renderAdminUsers() {
   const users = getAdminUsers();
   const adminCount = users.filter((user) => user.role === "Admin" || user.role === "admin").length;
@@ -740,7 +760,7 @@ function renderAdminUsers() {
     <article class="admin-user-card">
       <div>
         <strong>${escapeHtml(user.name)}</strong>
-        <small>${escapeHtml(user.email)}</small>
+        <small>User ID: ${escapeHtml(publicUserId(user))}</small>
       </div>
       <div class="meta-row">
         <span class="tag blue">${escapeHtml(roleLabel(user.role))}</span>
@@ -1013,7 +1033,7 @@ adminUserForm.addEventListener("submit", (event) => {
   users.unshift({
     id: crypto.randomUUID(),
     name: adminUserName.value.trim(),
-    email: adminUserEmail.value.trim(),
+    email: "new-demo-user",
     role: roleLabel(adminUserRole.value),
     regions: adminUserRole.value === "director" ? ["National"] : regions.length ? regions : ["National"],
     permissions,
