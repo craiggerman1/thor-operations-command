@@ -4,6 +4,7 @@
   --line: #d7e0e7;
   --bg: #edf2f5;
   --panel: #ffffff;
+  --panel-glass: rgba(255, 255, 255, 0.86);
   --nav: #0a3152;
   --nav-soft: #123f63;
   --command: #060709;
@@ -15,8 +16,8 @@
   --teal: #25a1bd;
   --steel: #a8a9ad;
   --violet: #6959a8;
-  --shadow: 0 14px 34px rgba(10, 49, 82, 0.10);
-  --tight-shadow: 0 8px 22px rgba(10, 49, 82, 0.08);
+  --shadow: 0 18px 42px rgba(6, 7, 9, 0.12);
+  --tight-shadow: 0 10px 26px rgba(6, 7, 9, 0.10);
 }
 
 * {
@@ -24,15 +25,46 @@
 }
 
 body {
+  position: relative;
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
   background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(237, 242, 245, 0.84) 42%, rgba(214, 226, 234, 0.72)),
     linear-gradient(rgba(10, 49, 82, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(10, 49, 82, 0.03) 1px, transparent 1px),
     var(--bg);
-  background-size: 34px 34px;
+  background-size: auto, 34px 34px, 34px 34px, auto;
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(237, 242, 245, 0.74), rgba(237, 242, 245, 0.36) 46%, rgba(237, 242, 245, 0.88)),
+    url("./assets/thor-background.jpg");
+  background-size: 1180px auto;
+  background-position: right 54% top 120px;
+  background-repeat: no-repeat;
+  opacity: 0.34;
+  filter: saturate(0.95) contrast(1.04);
+}
+
+body::after {
+  inset: auto -10vw -18vh auto;
+  width: 58vw;
+  height: 42vh;
+  background: linear-gradient(125deg, rgba(10, 49, 82, 0.18), rgba(37, 161, 189, 0.12), transparent 64%);
+  transform: skewX(-18deg);
 }
 
 button,
@@ -43,6 +75,8 @@ textarea {
 }
 
 .app-shell {
+  position: relative;
+  z-index: 0;
   display: grid;
   grid-template-columns: 292px minmax(0, 1fr);
   min-height: 100vh;
@@ -55,12 +89,17 @@ textarea {
   padding: 24px 20px;
   color: #eef5fb;
   background:
+    linear-gradient(0deg, rgba(6, 7, 9, 0.64), rgba(6, 7, 9, 0.64)),
+    url("./assets/thor-background.jpg"),
     linear-gradient(180deg, rgba(37, 161, 189, 0.12), transparent 260px),
     linear-gradient(140deg, rgba(6, 7, 9, 0.16), transparent 55%),
     var(--nav);
+  background-size: cover, 740px auto, auto, auto, auto;
+  background-position: center, left -280px bottom 40px, center, center, center;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  box-shadow: 16px 0 44px rgba(6, 7, 9, 0.2);
 }
 
 .brand-lockup {
@@ -75,6 +114,7 @@ textarea {
   max-width: 228px;
   display: block;
   border-radius: 4px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
 }
 
 .brand-lockup strong,
@@ -104,14 +144,18 @@ textarea {
   text-decoration: none;
   padding: 11px 12px;
   border-radius: 6px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.03);
   font-weight: 500;
+  border: 1px solid transparent;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
 
 .rail-nav a.active,
 .rail-nav a:hover {
   background: var(--nav-soft);
+  border-color: rgba(37, 161, 189, 0.28);
   box-shadow: inset 3px 0 0 var(--teal);
+  transform: translateX(2px);
 }
 
 .rail-card {
@@ -137,11 +181,12 @@ textarea {
 .workspace {
   padding: 28px;
   background:
-    linear-gradient(180deg, rgba(10, 49, 82, 0.08), transparent 420px),
+    linear-gradient(180deg, rgba(10, 49, 82, 0.12), transparent 420px),
     transparent;
 }
 
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -159,6 +204,21 @@ textarea {
   background-size: cover;
   box-shadow: 0 22px 54px rgba(6, 7, 9, 0.18);
   overflow: hidden;
+}
+
+.topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 0 48%, rgba(37, 161, 189, 0.18) 48% 50%, transparent 50% 100%),
+    linear-gradient(115deg, transparent 0 61%, rgba(255, 255, 255, 0.12) 61% 62%, transparent 62% 100%);
+  opacity: 0.74;
+}
+
+.topbar > * {
+  position: relative;
+  z-index: 1;
 }
 
 h1,
@@ -232,6 +292,33 @@ h2 {
   animation: labelGlow 3.2s ease-in-out infinite;
 }
 
+@keyframes tileLift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes barSweep {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  28% {
+    opacity: 0.55;
+  }
+
+  100% {
+    transform: translateX(220%);
+    opacity: 0;
+  }
+}
+
 @keyframes livePulse {
   0%,
   100% {
@@ -289,9 +376,9 @@ h2 {
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
-  background: rgba(4, 18, 31, 0.66);
+  background: rgba(4, 18, 31, 0.72);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(10px);
 }
 
 .select-wrap {
@@ -379,14 +466,30 @@ textarea {
 
 .metric-card,
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: var(--panel-glass);
+  border: 1px solid rgba(201, 215, 225, 0.82);
   border-radius: 6px;
   box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
 }
 
 .panel {
+  position: relative;
   border-top: 3px solid var(--blue);
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(37, 161, 189, 0.45), transparent);
+}
+
+.panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .metric-card {
@@ -395,7 +498,8 @@ textarea {
   padding: 18px 18px 16px;
   overflow: hidden;
   background:
-    linear-gradient(180deg, #ffffff, #f6f9fb);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 251, 0.84));
+  transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
 .metric-card::before {
@@ -420,6 +524,25 @@ textarea {
 
 .signal-red::before {
   background: var(--red);
+}
+
+.metric-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  background: linear-gradient(105deg, transparent, rgba(37, 161, 189, 0.12), transparent);
+  animation: barSweep 7s ease-in-out infinite;
+}
+
+.metric-card:hover,
+.state-node:hover,
+.queue-card:hover,
+.asset-card:hover,
+.task-card:hover,
+.stock-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 42px rgba(6, 7, 9, 0.13);
 }
 
 .metric-card span,
@@ -493,9 +616,9 @@ textarea {
 .todo-item,
 .wash-row,
 .integration-grid div {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .state-node,
@@ -513,10 +636,22 @@ textarea {
 }
 
 .state-node {
+  position: relative;
   min-height: 130px;
   padding: 14px;
   display: grid;
   gap: 10px;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  overflow: hidden;
+}
+
+.state-node::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--teal), var(--blue), transparent);
+  opacity: 0.8;
 }
 
 .state-node strong,
@@ -537,6 +672,7 @@ textarea {
 }
 
 .node-bars span {
+  position: relative;
   height: 8px;
   border-radius: 999px;
   background: #d9e2ea;
@@ -549,6 +685,7 @@ textarea {
   height: 100%;
   width: var(--value);
   background: var(--green);
+  animation: tileLift 4.8s ease-in-out infinite;
 }
 
 .node-bars span:nth-child(2)::after {
@@ -596,6 +733,7 @@ textarea {
   margin-top: 4px;
   border-radius: 50%;
   background: var(--blue);
+  box-shadow: 0 0 0 4px rgba(37, 161, 189, 0.12);
 }
 
 .director-panel {
@@ -611,9 +749,9 @@ textarea {
 .director-scorecard,
 .director-signal,
 .director-brief-item {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .director-scorecard {
@@ -624,8 +762,8 @@ textarea {
   padding: 18px;
   border-color: rgba(37, 161, 189, 0.35);
   background:
-    linear-gradient(135deg, rgba(37, 161, 189, 0.12), transparent),
-    #fff;
+    linear-gradient(135deg, rgba(37, 161, 189, 0.16), transparent),
+    rgba(255, 255, 255, 0.94);
 }
 
 .director-scorecard span,
@@ -715,6 +853,7 @@ textarea {
   color: #435367;
   font-size: 12px;
   font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.58);
 }
 
 .tag.red {
@@ -773,6 +912,9 @@ textarea {
 .compliance-stat {
   display: grid;
   gap: 4px;
+  background:
+    linear-gradient(135deg, rgba(10, 49, 82, 0.05), transparent),
+    rgba(255, 255, 255, 0.92);
 }
 
 .compliance-stat span,
@@ -801,6 +943,10 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .stock-form label {
@@ -896,6 +1042,7 @@ textarea {
 .compliance-card small,
 .stock-card small,
 .brief-item small {
+  display: block;
   color: var(--muted);
 }
 
@@ -948,11 +1095,11 @@ textarea {
 }
 
 .chat-room {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
   background:
     linear-gradient(150deg, rgba(10, 49, 82, 0.05), transparent 48%),
-    #ffffff;
+    rgba(255, 255, 255, 0.86);
   min-height: 430px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -985,14 +1132,14 @@ textarea {
 .chat-message {
   max-width: 78%;
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background: #f7fafb;
+  background: rgba(247, 250, 251, 0.96);
 }
 
 .chat-message.own {
   justify-self: end;
-  background: #e6f4f7;
+  background: linear-gradient(135deg, #e6f4f7, #f3fbfd);
   border-color: rgba(37, 161, 189, 0.35);
 }
 
@@ -1035,6 +1182,17 @@ textarea {
 .chat-form input:disabled {
   cursor: not-allowed;
   opacity: 0.56;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body[data-access="director"] #portal,
