@@ -70,6 +70,11 @@ export function TocShell({ children }: { children: ReactNode }) {
               <h1>Thor Operations Command</h1>
               <span className="live-label">DATA PENDING</span>
             </div>
+            <div className="build-notice" aria-label="Beta testing and build version">
+              <strong>Beta testing mode</strong>
+              <span>Not for internal operational use</span>
+              <em>Build 0.027</em>
+            </div>
           </div>
           <div className="topbar-actions">
             <div className="session-chip">

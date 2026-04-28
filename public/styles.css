@@ -555,6 +555,46 @@ h2 {
   animation: labelGlow 3.2s ease-in-out infinite;
 }
 
+.build-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: #d4e1e8;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.build-notice strong,
+.build-notice em {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.build-notice strong {
+  color: #ffe9e6;
+  background: rgba(191, 62, 57, 0.26);
+  border: 1px solid rgba(255, 214, 211, 0.55);
+}
+
+.build-notice span {
+  color: #b9c9d6;
+  font-weight: 700;
+}
+
+.build-notice em {
+  color: #d9f5fb;
+  background: rgba(37, 161, 189, 0.16);
+  border: 1px solid rgba(37, 161, 189, 0.42);
+  font-size: 11px;
+}
+
 @keyframes tileLift {
   0%,
   100% {
@@ -1927,6 +1967,18 @@ body[data-access="director"] .rail-nav a[href="#todo"] {
     width: fit-content;
     min-height: 28px;
     padding: 0 10px;
+  }
+
+  .build-notice {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .build-notice strong,
+  .build-notice em {
+    width: fit-content;
   }
 
   h2 {
