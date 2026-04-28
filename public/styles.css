@@ -50,12 +50,12 @@ body::after {
 body::before {
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(237, 242, 245, 0.82), rgba(237, 242, 245, 0.42) 44%, rgba(237, 242, 245, 0.86)),
+    linear-gradient(90deg, rgba(237, 242, 245, 0.78), rgba(237, 242, 245, 0.30) 44%, rgba(237, 242, 245, 0.76)),
     url("./assets/thor-background.jpg");
-  background-size: min(1280px, 92vw) auto;
-  background-position: right 8vw top 132px;
+  background-size: max(1780px, 122vw) auto;
+  background-position: center top 118px;
   background-repeat: no-repeat;
-  opacity: 0.28;
+  opacity: 0.32;
   filter: saturate(0.95) contrast(1.04);
 }
 
@@ -80,6 +80,7 @@ textarea {
   display: grid;
   grid-template-columns: 292px minmax(0, 1fr);
   min-height: 100vh;
+  min-width: 0;
 }
 
 .side-rail {
@@ -107,7 +108,7 @@ textarea {
 
 .brand-logo {
   width: 100%;
-  max-width: 228px;
+  max-width: 210px;
   display: block;
   border-radius: 4px;
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
@@ -176,6 +177,7 @@ textarea {
 
 .workspace {
   padding: 28px;
+  min-width: 0;
   background:
     linear-gradient(180deg, rgba(10, 49, 82, 0.12), transparent 420px),
     transparent;
@@ -187,6 +189,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+  min-width: 0;
   margin-bottom: 20px;
   min-height: 176px;
   border: 1px solid rgba(37, 161, 189, 0.32);
@@ -198,6 +201,10 @@ textarea {
     linear-gradient(90deg, rgba(37, 161, 189, 0.14), transparent 65%);
   box-shadow: 0 22px 54px rgba(6, 7, 9, 0.18);
   overflow: hidden;
+}
+
+.title-block {
+  min-width: 0;
 }
 
 .topbar::before {
@@ -222,18 +229,21 @@ p {
 }
 
 h1 {
-  max-width: 560px;
-  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
-  font-size: clamp(31px, 3.1vw, 46px);
+  max-width: none;
+  font-family: Impact, Haettenschweiler, "Arial Black", "Segoe UI Black", sans-serif;
+  font-size: clamp(34px, 4.1vw, 58px);
   font-weight: 900;
-  line-height: 0.96;
+  line-height: 0.92;
   text-transform: uppercase;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.32);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
 }
 
 h2 {
   color: #071726;
-  font-size: 18px;
+  font-size: 21px;
+  line-height: 1.08;
   letter-spacing: 0;
 }
 
@@ -246,7 +256,8 @@ h2 {
   display: flex;
   align-items: center;
   gap: 14px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .live-beacon {
@@ -586,7 +597,7 @@ textarea {
 
 .flow-heading h2 {
   color: #ffffff;
-  font-size: 20px;
+  font-size: 23px;
 }
 
 .flow-heading .eyebrow {
@@ -1311,6 +1322,10 @@ body[data-access="director"] .rail-nav a[href="#todo"] {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
+  h1 {
+    font-size: clamp(30px, 6vw, 48px);
+  }
+
   .status-strip,
   .command-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1335,6 +1350,21 @@ body[data-access="director"] .rail-nav a[href="#todo"] {
 
   .title-line {
     align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-size: clamp(18px, 6vw, 28px);
+    white-space: nowrap;
+  }
+
+  h2 {
+    font-size: 19px;
+  }
+
+  .flow-heading h2 {
+    font-size: 20px;
   }
 
   .rail-nav,
