@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=21">
+    <link rel="stylesheet" href="./styles.css?v=20">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
@@ -114,13 +114,7 @@
           </div>
         </header>
 
-        <section class="page-title" id="pageTitle" aria-live="polite">
-          <span class="eyebrow">TOC workspace</span>
-          <h2>Overview</h2>
-          <p>National operating position and current command brief.</p>
-        </section>
-
-        <section class="status-strip page-section" id="overview" data-page="overview" aria-label="Operational status">
+        <section class="status-strip" id="overview" aria-label="Operational status">
           <a class="metric-card signal-green" href="#overview" aria-label="View operating week overview">
             <span>Operating week</span>
             <strong id="abcdWeek">Calculating</strong>
@@ -144,7 +138,7 @@
         </section>
 
         <section class="command-grid">
-          <div class="flow-heading situation-heading page-section" data-page="overview">
+          <div class="flow-heading situation-heading">
             <span class="flow-step">1</span>
             <div>
               <span class="eyebrow">Situation</span>
@@ -152,7 +146,7 @@
             </div>
           </div>
 
-          <section class="panel wide-panel page-section" data-page="overview">
+          <section class="panel wide-panel">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Operating position</span>
@@ -163,7 +157,7 @@
             <div class="ops-map" id="opsMap" aria-label="State operating status"></div>
           </section>
 
-          <section class="panel page-section" data-page="overview">
+          <section class="panel">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Manager scan</span>
@@ -173,7 +167,7 @@
             <div class="brief-stack" id="briefStack"></div>
           </section>
 
-          <section class="panel wide-panel director-panel page-section" id="director" data-page="director">
+          <section class="panel wide-panel director-panel" id="director">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Director access</span>
@@ -192,7 +186,7 @@
             </div>
           </section>
 
-          <div class="flow-heading actions-heading page-section" id="actions" data-page="actions">
+          <div class="flow-heading actions-heading" id="actions">
             <span class="flow-step">2</span>
             <div>
               <span class="eyebrow">Action centre</span>
@@ -200,7 +194,7 @@
             </div>
           </div>
 
-          <section class="panel page-section" id="portal" data-page="actions portal">
+          <section class="panel" id="portal">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Thor Portal</span>
@@ -211,7 +205,7 @@
             <div class="queue-list" id="approvalQueue"></div>
           </section>
 
-          <section class="panel page-section" id="tasks" data-page="actions tasks">
+          <section class="panel" id="tasks">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Local manager</span>
@@ -221,7 +215,7 @@
             <div class="task-stack" id="localTasks"></div>
           </section>
 
-          <section class="panel page-section" id="national-actions" data-page="actions tasks">
+          <section class="panel" id="national-actions">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">National ops</span>
@@ -231,7 +225,7 @@
             <div class="task-stack" id="nationalTasks"></div>
           </section>
 
-          <section class="panel page-section" id="todo" data-page="actions todo">
+          <section class="panel" id="todo">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Manager memory</span>
@@ -245,7 +239,7 @@
             <div class="todo-list" id="todoList"></div>
           </section>
 
-          <div class="flow-heading operations-heading page-section" id="operations" data-page="operations">
+          <div class="flow-heading operations-heading" id="operations">
             <span class="flow-step">3</span>
             <div>
               <span class="eyebrow">Operations health</span>
@@ -253,7 +247,7 @@
             </div>
           </div>
 
-          <section class="panel wide-panel page-section" id="performance" data-page="operations">
+          <section class="panel wide-panel" id="performance">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Woolworths wash data</span>
@@ -264,7 +258,7 @@
             <div class="wash-table" id="washTable"></div>
           </section>
 
-          <section class="panel page-section" id="fleet" data-page="operations fleet">
+          <section class="panel" id="fleet">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Fleetio</span>
@@ -274,7 +268,7 @@
             <div class="asset-list" id="assetList"></div>
           </section>
 
-          <section class="panel wide-panel page-section" id="compliance" data-page="operations compliance">
+          <section class="panel wide-panel" id="compliance">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Compliance command</span>
@@ -288,7 +282,7 @@
             </div>
           </section>
 
-          <div class="flow-heading support-heading page-section" id="support" data-page="stock chat">
+          <div class="flow-heading support-heading" id="support">
             <span class="flow-step">4</span>
             <div>
               <span class="eyebrow">Coordination</span>
@@ -296,7 +290,7 @@
             </div>
           </div>
 
-          <section class="panel wide-panel page-section" id="stock" data-page="stock">
+          <section class="panel wide-panel" id="stock">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Stock control</span>
@@ -364,7 +358,7 @@
             </div>
           </section>
 
-          <section class="panel wide-panel chat-panel page-section" id="chat" data-page="chat">
+          <section class="panel wide-panel chat-panel" id="chat">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Internal comms</span>
@@ -391,7 +385,7 @@
             </div>
           </section>
 
-          <section class="panel page-section" id="integrations" data-page="operations">
+          <section class="panel" id="integrations">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Integration layer</span>
@@ -408,7 +402,7 @@
             </div>
           </section>
 
-          <section class="panel wide-panel admin-panel page-section" id="admin" data-page="admin">
+          <section class="panel wide-panel admin-panel" id="admin">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Admin command</span>
@@ -470,6 +464,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=21"></script>
+    <script src="./script.js?v=20"></script>
   </body>
 </html>
