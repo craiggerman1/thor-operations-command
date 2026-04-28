@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=16">
+    <link rel="stylesheet" href="./styles.css?v=17">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
@@ -17,7 +17,7 @@
         <div>
           <span class="eyebrow">Secure access prototype</span>
           <h1>Thor Operations Command</h1>
-          <p>Sign in to open the right command view for your role.</p>
+          <p>Sign in to open Thor Operations Command.</p>
         </div>
 
         <label>
@@ -30,45 +30,11 @@
           <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password" required>
         </label>
 
-        <div class="login-grid" role="radiogroup" aria-label="Access level">
-          <label class="login-role active">
-            <input type="radio" name="loginAccess" value="manager" checked>
-            <strong>Manager</strong>
-            <small>Regional operations</small>
-          </label>
-          <label class="login-role">
-            <input type="radio" name="loginAccess" value="workshop">
-            <strong>Workshop</strong>
-            <small>Jason / workshop BU</small>
-          </label>
-          <label class="login-role">
-            <input type="radio" name="loginAccess" value="national">
-            <strong>National Ops</strong>
-            <small>Craig / Simon</small>
-          </label>
-          <label class="login-role">
-            <input type="radio" name="loginAccess" value="director">
-            <strong>Director</strong>
-            <small>Anthony overview</small>
-          </label>
+        <div class="login-actions">
+          <button type="submit">Sign in</button>
+          <button class="developer-button" id="developerSignin" type="button">Developer quick sign in</button>
         </div>
-
-        <label>
-          <span>Home region</span>
-          <select id="loginRegion">
-            <option value="national">National</option>
-            <option value="Brisbane">Brisbane</option>
-            <option value="Sydney">Sydney</option>
-            <option value="Melbourne">Melbourne</option>
-            <option value="Adelaide">Adelaide</option>
-            <option value="Perth">Perth</option>
-            <option value="Canberra">Canberra</option>
-            <option value="Workshop">Workshop</option>
-          </select>
-        </label>
-
-        <button type="submit">Enter TOC</button>
-        <small class="login-note">Demo login only. Full database authentication and permissions will be connected later.</small>
+        <small class="login-note">Developer use only while TOC is being built. Full database authentication and permissions will be connected later.</small>
       </form>
     </section>
 
@@ -433,6 +399,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=16"></script>
+    <script src="./script.js?v=17"></script>
   </body>
 </html>

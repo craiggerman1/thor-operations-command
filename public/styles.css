@@ -190,6 +190,11 @@ textarea {
   background: rgba(255, 255, 255, 0.94);
 }
 
+.login-actions {
+  display: grid;
+  gap: 10px;
+}
+
 .login-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -245,6 +250,17 @@ textarea {
   cursor: pointer;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.login-card .developer-button {
+  border: 1px solid rgba(222, 249, 255, 0.24);
+  background: rgba(255, 255, 255, 0.09);
+  color: #d9edf4;
+}
+
+.login-card .developer-button:hover {
+  background: rgba(37, 161, 189, 0.2);
+  box-shadow: inset 4px 0 0 var(--teal);
 }
 
 .login-note {

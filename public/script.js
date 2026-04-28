@@ -187,9 +187,7 @@ const loginScreen = document.querySelector("#loginScreen");
 const loginForm = document.querySelector("#loginForm");
 const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
-const loginRegion = document.querySelector("#loginRegion");
-const loginRoles = document.querySelectorAll("[name='loginAccess']");
-const loginRoleCards = document.querySelectorAll(".login-role");
+const developerSignin = document.querySelector("#developerSignin");
 const logoutButton = document.querySelector("#logoutButton");
 
 function selectedRegion() {
@@ -221,24 +219,6 @@ function activeUserName() {
   return selectedRegion() === "national" ? "Regional Manager" : `${selectedRegion()} Manager`;
 }
 
-function selectedLoginAccess() {
-  return document.querySelector("[name='loginAccess']:checked")?.value || "manager";
-}
-
-function updateLoginRoleCards() {
-  const loginAccess = selectedLoginAccess();
-  loginRoleCards.forEach((card) => {
-    const radio = card.querySelector("input");
-    card.classList.toggle("active", radio.value === loginAccess);
-  });
-
-  if (loginAccess === "workshop") {
-    loginRegion.value = "Workshop";
-  } else if (loginAccess === "national" || loginAccess === "director") {
-    loginRegion.value = "national";
-  }
-}
-
 function setSession(session) {
   localStorage.setItem("toc.session", JSON.stringify(session));
 }
@@ -261,7 +241,6 @@ function applySession(session) {
 
 function initializeSession() {
   const session = getSession();
-  updateLoginRoleCards();
 
   if (session) {
     applySession(session);
@@ -888,29 +867,34 @@ accessLevel.addEventListener("change", () => {
   renderAll();
 });
 
-loginRoles.forEach((radio) => {
-  radio.addEventListener("change", updateLoginRoleCards);
-});
-
 loginForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const access = selectedLoginAccess();
-  const region = access === "workshop"
-    ? "Workshop"
-    : access === "national" || access === "director"
-      ? "national"
-      : loginRegion.value;
-
   const session = {
     email: loginEmail.value.trim(),
-    access,
-    region,
+    access: "national",
+    region: "national",
     signedInAt: new Date().toISOString()
   };
 
   if (!session.email || !loginPassword.value.trim()) return;
 
   setSession(session);
+  loginPassword.value = "";
+  applySession(session);
+  renderAll();
+});
+
+developerSignin.addEventListener("click", () => {
+  const session = {
+    email: "developer@thormobile.com.au",
+    access: "national",
+    region: "national",
+    developer: true,
+    signedInAt: new Date().toISOString()
+  };
+
+  setSession(session);
+  loginEmail.value = "";
   loginPassword.value = "";
   applySession(session);
   renderAll();
