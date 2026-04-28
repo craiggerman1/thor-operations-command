@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=11">
+    <link rel="stylesheet" href="./styles.css?v=12">
   </head>
   <body>
     <div class="app-shell">
@@ -19,6 +19,8 @@
 
         <nav class="rail-nav" aria-label="Primary">
           <a href="#overview" class="active">Overview</a>
+          <a href="#actions">Action Centre</a>
+          <a href="#operations">Operations</a>
           <a href="#director">Director</a>
           <a href="#portal">Portal</a>
           <a href="#fleet">Fleetio</a>
@@ -98,11 +100,19 @@
         </section>
 
         <section class="command-grid">
+          <div class="flow-heading situation-heading">
+            <span class="flow-step">1</span>
+            <div>
+              <span class="eyebrow">Situation</span>
+              <h2>Start here: what is happening and what needs attention</h2>
+            </div>
+          </div>
+
           <section class="panel wide-panel">
             <div class="panel-head">
               <div>
-                <span class="eyebrow">National situation</span>
-                <h2>Live operating map</h2>
+                <span class="eyebrow">Operating position</span>
+                <h2>Region health map</h2>
               </div>
               <span class="pill" id="lastUpdated">Updated now</span>
             </div>
@@ -112,8 +122,8 @@
           <section class="panel">
             <div class="panel-head">
               <div>
-                <span class="eyebrow">Today</span>
-                <h2>Command brief</h2>
+                <span class="eyebrow">Manager scan</span>
+                <h2>Today’s command brief</h2>
               </div>
             </div>
             <div class="brief-stack" id="briefStack"></div>
@@ -123,7 +133,7 @@
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Director access</span>
-                <h2>Owner health summary</h2>
+                <h2>Owner health view</h2>
               </div>
               <span class="pill" id="directorSummary">Reviewing business health</span>
             </div>
@@ -138,28 +148,68 @@
             </div>
           </section>
 
+          <div class="flow-heading actions-heading" id="actions">
+            <span class="flow-step">2</span>
+            <div>
+              <span class="eyebrow">Action centre</span>
+              <h2>Clear the items that can block the day</h2>
+            </div>
+          </div>
+
           <section class="panel" id="portal">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Thor Portal</span>
-                <h2>Approval queue</h2>
+                <h2>Jobsheets needing review</h2>
               </div>
               <button class="text-button" id="clearApproved" type="button">Clear done</button>
             </div>
             <div class="queue-list" id="approvalQueue"></div>
           </section>
 
-          <section class="panel" id="fleet">
+          <section class="panel" id="tasks">
             <div class="panel-head">
               <div>
-                <span class="eyebrow">Fleetio</span>
-                <h2>Field assets</h2>
+                <span class="eyebrow">Local manager</span>
+                <h2>Action tiles</h2>
               </div>
             </div>
-            <div class="asset-list" id="assetList"></div>
+            <div class="task-stack" id="localTasks"></div>
           </section>
 
-          <section class="panel wide-panel">
+          <section class="panel" id="national-actions">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">National ops</span>
+                <h2>Craig / Simon directives</h2>
+              </div>
+            </div>
+            <div class="task-stack" id="nationalTasks"></div>
+          </section>
+
+          <section class="panel" id="todo">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Manager memory</span>
+                <h2>Personal to do list</h2>
+              </div>
+            </div>
+            <form class="todo-form" id="todoForm">
+              <input id="todoInput" type="text" placeholder="Add a task as it comes in" autocomplete="off">
+              <button type="submit">Add</button>
+            </form>
+            <div class="todo-list" id="todoList"></div>
+          </section>
+
+          <div class="flow-heading operations-heading" id="operations">
+            <span class="flow-step">3</span>
+            <div>
+              <span class="eyebrow">Operations health</span>
+              <h2>Check output, assets and compliance before small issues become big ones</h2>
+            </div>
+          </div>
+
+          <section class="panel wide-panel" id="performance">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Woolworths live wash data</span>
@@ -168,6 +218,16 @@
               <span class="pill">Fleetio feed target</span>
             </div>
             <div class="wash-table" id="washTable"></div>
+          </section>
+
+          <section class="panel" id="fleet">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Fleetio</span>
+                <h2>Assets needing awareness</h2>
+              </div>
+            </div>
+            <div class="asset-list" id="assetList"></div>
           </section>
 
           <section class="panel wide-panel" id="compliance">
@@ -184,11 +244,19 @@
             </div>
           </section>
 
+          <div class="flow-heading support-heading" id="support">
+            <span class="flow-step">4</span>
+            <div>
+              <span class="eyebrow">Coordination</span>
+              <h2>Request support, communicate clearly, and keep integrations visible</h2>
+            </div>
+          </div>
+
           <section class="panel wide-panel" id="stock">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Stock control</span>
-                <h2>Regional stock orders</h2>
+                <h2>Request stock from national</h2>
               </div>
               <span class="pill" id="stockSummary">No stock requests</span>
             </div>
@@ -279,41 +347,7 @@
             </div>
           </section>
 
-          <section class="panel" id="tasks">
-            <div class="panel-head">
-              <div>
-                <span class="eyebrow">Local manager</span>
-                <h2>Action tiles</h2>
-              </div>
-            </div>
-            <div class="task-stack" id="localTasks"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <span class="eyebrow">National ops</span>
-                <h2>Admin directives</h2>
-              </div>
-            </div>
-            <div class="task-stack" id="nationalTasks"></div>
-          </section>
-
-          <section class="panel" id="todo">
-            <div class="panel-head">
-              <div>
-                <span class="eyebrow">Manager memory</span>
-                <h2>To do list</h2>
-              </div>
-            </div>
-            <form class="todo-form" id="todoForm">
-              <input id="todoInput" type="text" placeholder="Add a task as it comes in" autocomplete="off">
-              <button type="submit">Add</button>
-            </form>
-            <div class="todo-list" id="todoList"></div>
-          </section>
-
-          <section class="panel">
+          <section class="panel" id="integrations">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Integration layer</span>
@@ -333,6 +367,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=11"></script>
+    <script src="./script.js?v=12"></script>
   </body>
 </html>

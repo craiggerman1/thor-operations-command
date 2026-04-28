@@ -182,6 +182,7 @@ const chatChannelTitle = document.querySelector("#chatChannelTitle");
 const chatMessages = document.querySelector("#chatMessages");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
+const navLinks = document.querySelectorAll(".rail-nav a");
 
 function selectedRegion() {
   return regionFilter.value;
@@ -218,6 +219,13 @@ function getVisibleChatChannels() {
     if (selectedAccess() === "national" || selectedAccess() === "director") return true;
     if (selectedAccess() === "workshop") return !channel.region || channel.region === "Workshop";
     return !channel.region || selectedRegion() === "national" || channel.region === selectedRegion();
+  });
+}
+
+function updateActiveNav() {
+  const currentHash = window.location.hash || "#overview";
+  navLinks.forEach((link) => {
+    link.classList.toggle("active", link.getAttribute("href") === currentHash);
   });
 }
 
@@ -288,17 +296,41 @@ function renderBrief() {
     : regions.filter((region) => region.name === selectedRegion());
 
   const briefItems = [
-    `${visibleRegions.reduce((sum, region) => sum + region.portal, 0)} Portal approval items are open.`,
-    `${assets.filter((asset) => isVisible(asset) && asset.status !== "green").length} Fleetio assets need attention or watching.`,
-    `${washes.filter((wash) => isVisible(wash) && wash.actual < wash.target).length} Woolworths sites are under target today.`,
-    `${localTasks.filter((task) => isVisible(task) && !task.done).length} local manager actions remain open.`
+    {
+      text: `${visibleRegions.reduce((sum, region) => sum + region.portal, 0)} jobsheet approval items are open.`,
+      detail: "Clear Portal work first so admin and invoicing are not held up.",
+      href: "#portal",
+      action: "Open jobsheets"
+    },
+    {
+      text: `${localTasks.filter((task) => isVisible(task) && !task.done).length} manager actions need ownership.`,
+      detail: "These are the practical items that need a person to move them today.",
+      href: "#actions",
+      action: "Review actions"
+    },
+    {
+      text: `${washes.filter((wash) => isVisible(wash) && wash.actual < wash.target).length} sites are under wash target today.`,
+      detail: "Check output before the gap becomes a client or invoicing issue.",
+      href: "#performance",
+      action: "Check output"
+    },
+    {
+      text: `${assets.filter((asset) => isVisible(asset) && asset.status !== "green").length} assets need attention or watching.`,
+      detail: "Fleetio and GPS awareness keeps operations moving.",
+      href: "#fleet",
+      action: "View assets"
+    }
   ];
 
   briefStack.innerHTML = briefItems
     .map((item, index) => `
       <div class="brief-item">
         <span class="brief-dot" style="background: ${["#2467a6", "#c98716", "#1f8f5f", "#bf3e39"][index]}"></span>
-        <div><strong>${item}</strong><small>Live once Portal and Fleetio feeds are connected.</small></div>
+        <div>
+          <strong>${item.text}</strong>
+          <small>${item.detail}</small>
+          <a class="brief-action" href="${item.href}">${item.action}</a>
+        </div>
       </div>
     `)
     .join("");
@@ -636,6 +668,7 @@ function renderChat() {
 
 function renderAll() {
   document.body.dataset.access = selectedAccess();
+  updateActiveNav();
   renderMetrics();
   renderMap();
   renderBrief();
@@ -764,6 +797,14 @@ clearCompletedStock.addEventListener("click", () => {
 });
 
 regionFilter.addEventListener("change", renderAll);
+window.addEventListener("hashchange", updateActiveNav);
+navLinks.forEach((link) => {
+  link.addEventListener("click", () => {
+    navLinks.forEach((item) => item.classList.remove("active"));
+    link.classList.add("active");
+  });
+});
+
 accessLevel.addEventListener("change", () => {
   if (selectedAccess() === "director") {
     regionFilter.value = "national";
