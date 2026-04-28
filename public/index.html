@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=17">
+    <link rel="stylesheet" href="./styles.css?v=18">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
@@ -53,6 +53,7 @@
           <a href="#actions">Action Centre</a>
           <a href="#operations">Operations</a>
           <a href="#director">Director</a>
+          <a href="#admin">Admin</a>
           <a href="#portal">Portal</a>
           <a href="#fleet">Fleetio</a>
           <a href="#compliance">Compliance</a>
@@ -81,17 +82,22 @@
           </div>
 
           <div class="topbar-actions">
-            <label class="select-wrap">
+            <div class="session-chip" id="sessionChip">
+              <span>Signed in</span>
+              <strong>Admin</strong>
+            </div>
+            <label class="select-wrap access-control">
               <span>Access</span>
               <select id="accessLevel">
+                <option value="admin">Admin</option>
                 <option value="manager">Manager</option>
                 <option value="workshop">Workshop</option>
                 <option value="national">National Ops</option>
                 <option value="director">Director</option>
               </select>
             </label>
-            <label class="select-wrap">
-              <span>Region</span>
+            <label class="select-wrap region-control">
+              <span>Scope</span>
               <select id="regionFilter">
                 <option value="national">National</option>
                 <option value="Brisbane">Brisbane</option>
@@ -395,10 +401,69 @@
               <div><span>Manager chat</span><strong>Database planned</strong></div>
             </div>
           </section>
+
+          <section class="panel wide-panel admin-panel" id="admin">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Admin command</span>
+                <h2>User access and permissions</h2>
+              </div>
+              <span class="pill" id="adminSummary">Admin prototype</span>
+            </div>
+            <div class="admin-layout">
+              <form class="admin-user-form" id="adminUserForm">
+                <label>
+                  <span>Name</span>
+                  <input id="adminUserName" type="text" placeholder="User name" required>
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input id="adminUserEmail" type="email" placeholder="name@thormobile.com.au" required>
+                </label>
+                <label>
+                  <span>Access level</span>
+                  <select id="adminUserRole" required>
+                    <option value="manager">Manager</option>
+                    <option value="workshop">Workshop</option>
+                    <option value="national">National Ops</option>
+                    <option value="director">Director</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </label>
+                <fieldset>
+                  <legend>Regions visible</legend>
+                  <label><input type="checkbox" name="adminRegions" value="Brisbane"> Brisbane</label>
+                  <label><input type="checkbox" name="adminRegions" value="Sydney"> Sydney</label>
+                  <label><input type="checkbox" name="adminRegions" value="Melbourne"> Melbourne</label>
+                  <label><input type="checkbox" name="adminRegions" value="Adelaide"> Adelaide</label>
+                  <label><input type="checkbox" name="adminRegions" value="Perth"> Perth</label>
+                  <label><input type="checkbox" name="adminRegions" value="Canberra"> Canberra</label>
+                  <label><input type="checkbox" name="adminRegions" value="Workshop"> Workshop</label>
+                </fieldset>
+                <fieldset>
+                  <legend>Can interact with</legend>
+                  <label><input type="checkbox" name="adminPermissions" value="Approvals" checked> Portal approvals</label>
+                  <label><input type="checkbox" name="adminPermissions" value="Tasks" checked> Action tiles</label>
+                  <label><input type="checkbox" name="adminPermissions" value="Stock" checked> Stock orders</label>
+                  <label><input type="checkbox" name="adminPermissions" value="Compliance" checked> Compliance</label>
+                  <label><input type="checkbox" name="adminPermissions" value="Chat" checked> Manager chat</label>
+                  <label><input type="checkbox" name="adminPermissions" value="Admin"> Admin controls</label>
+                </fieldset>
+                <button type="submit">Create user access</button>
+              </form>
+              <div class="admin-user-wrap">
+                <div class="admin-user-head">
+                  <span class="eyebrow">Current access map</span>
+                  <button class="text-button" id="resetAdminUsers" type="button">Reset demo users</button>
+                </div>
+                <div class="admin-user-list" id="adminUserList"></div>
+              </div>
+            </div>
+          </section>
         </section>
       </main>
     </div>
 
-    <script src="./script.js?v=17"></script>
+    <script src="./script.js?v=18"></script>
   </body>
 </html>

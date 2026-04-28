@@ -118,17 +118,17 @@ let nationalTasks = [
 ];
 
 const chatChannels = [
-  { id: "national", label: "National Ops", scope: "national", access: ["manager", "workshop", "national", "director"] },
-  { id: "managers", label: "Managers", scope: "national", access: ["manager", "workshop", "national"] },
-  { id: "workshop", label: "Workshop", region: "Workshop", access: ["workshop", "national"] },
-  { id: "compliance", label: "Compliance", scope: "national", access: ["manager", "workshop", "national"] },
-  { id: "stock", label: "Stock Orders", scope: "national", access: ["manager", "workshop", "national"] },
-  { id: "brisbane", label: "Brisbane", region: "Brisbane", access: ["manager", "national"] },
-  { id: "sydney", label: "Sydney", region: "Sydney", access: ["manager", "national"] },
-  { id: "melbourne", label: "Melbourne", region: "Melbourne", access: ["manager", "national"] },
-  { id: "adelaide", label: "Adelaide", region: "Adelaide", access: ["manager", "national"] },
-  { id: "perth", label: "Perth", region: "Perth", access: ["manager", "national"] },
-  { id: "canberra", label: "Canberra", region: "Canberra", access: ["manager", "national"] }
+  { id: "national", label: "National Ops", scope: "national", access: ["manager", "workshop", "national", "director", "admin"] },
+  { id: "managers", label: "Managers", scope: "national", access: ["manager", "workshop", "national", "admin"] },
+  { id: "workshop", label: "Workshop", region: "Workshop", access: ["workshop", "national", "admin"] },
+  { id: "compliance", label: "Compliance", scope: "national", access: ["manager", "workshop", "national", "admin"] },
+  { id: "stock", label: "Stock Orders", scope: "national", access: ["manager", "workshop", "national", "admin"] },
+  { id: "brisbane", label: "Brisbane", region: "Brisbane", access: ["manager", "national", "admin"] },
+  { id: "sydney", label: "Sydney", region: "Sydney", access: ["manager", "national", "admin"] },
+  { id: "melbourne", label: "Melbourne", region: "Melbourne", access: ["manager", "national", "admin"] },
+  { id: "adelaide", label: "Adelaide", region: "Adelaide", access: ["manager", "national", "admin"] },
+  { id: "perth", label: "Perth", region: "Perth", access: ["manager", "national", "admin"] },
+  { id: "canberra", label: "Canberra", region: "Canberra", access: ["manager", "national", "admin"] }
 ];
 
 const starterChatMessages = [
@@ -142,6 +142,41 @@ const starterChatMessages = [
 ];
 
 let activeChatChannel = "national";
+
+const starterAdminUsers = [
+  {
+    id: "admin-craig",
+    name: "Craig",
+    email: "craig@thormobile.com.au",
+    role: "Admin",
+    regions: ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"],
+    permissions: ["Approvals", "Tasks", "Stock", "Compliance", "Chat", "Admin"]
+  },
+  {
+    id: "admin-simon",
+    name: "Simon",
+    email: "simon@thormobile.com.au",
+    role: "National Ops",
+    regions: ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"],
+    permissions: ["Approvals", "Tasks", "Stock", "Compliance", "Chat"]
+  },
+  {
+    id: "admin-anthony",
+    name: "Anthony",
+    email: "anthony@thormobile.com.au",
+    role: "Director",
+    regions: ["National"],
+    permissions: ["Overview", "Director"]
+  },
+  {
+    id: "admin-jason",
+    name: "Jason",
+    email: "jason@thormobile.com.au",
+    role: "Workshop",
+    regions: ["Workshop"],
+    permissions: ["Tasks", "Stock", "Compliance", "Chat"]
+  }
+];
 
 const regionFilter = document.querySelector("#regionFilter");
 const accessLevel = document.querySelector("#accessLevel");
@@ -183,12 +218,20 @@ const chatMessages = document.querySelector("#chatMessages");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const navLinks = document.querySelectorAll(".rail-nav a");
+const sessionChip = document.querySelector("#sessionChip strong");
 const loginScreen = document.querySelector("#loginScreen");
 const loginForm = document.querySelector("#loginForm");
 const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
 const developerSignin = document.querySelector("#developerSignin");
 const logoutButton = document.querySelector("#logoutButton");
+const adminSummary = document.querySelector("#adminSummary");
+const adminUserForm = document.querySelector("#adminUserForm");
+const adminUserName = document.querySelector("#adminUserName");
+const adminUserEmail = document.querySelector("#adminUserEmail");
+const adminUserRole = document.querySelector("#adminUserRole");
+const adminUserList = document.querySelector("#adminUserList");
+const resetAdminUsers = document.querySelector("#resetAdminUsers");
 
 function selectedRegion() {
   return regionFilter.value;
@@ -204,6 +247,7 @@ function isVisible(item) {
 
 function accessLabel() {
   const labels = {
+    admin: "Admin",
     manager: "Manager",
     workshop: "Workshop",
     national: "National Ops",
@@ -213,6 +257,7 @@ function accessLabel() {
 }
 
 function activeUserName() {
+  if (selectedAccess() === "admin") return "Craig";
   if (selectedAccess() === "national") return "Craig / Simon";
   if (selectedAccess() === "director") return "Anthony";
   if (selectedAccess() === "workshop") return "Jason";
@@ -230,10 +275,13 @@ function getSession() {
 function applySession(session) {
   accessLevel.value = session.access || "manager";
   regionFilter.value = session.region || "national";
+  sessionChip.textContent = accessLabel();
   document.body.classList.add("is-authenticated");
 
   if (session.access === "director") {
     window.location.hash = "director";
+  } else if (session.access === "admin") {
+    window.location.hash = "overview";
   } else if (session.access === "workshop") {
     activeChatChannel = "workshop";
   }
@@ -243,6 +291,11 @@ function initializeSession() {
   const session = getSession();
 
   if (session) {
+    if (session.developer || session.email === "craig@thormobile.com.au") {
+      session.access = "admin";
+      session.region = "national";
+      setSession(session);
+    }
     applySession(session);
     renderAll();
     return;
@@ -254,7 +307,7 @@ function initializeSession() {
 function getVisibleChatChannels() {
   return chatChannels.filter((channel) => {
     if (!channel.access.includes(selectedAccess())) return false;
-    if (selectedAccess() === "national" || selectedAccess() === "director") return true;
+    if (selectedAccess() === "admin" || selectedAccess() === "national" || selectedAccess() === "director") return true;
     if (selectedAccess() === "workshop") return !channel.region || channel.region === "Workshop";
     return !channel.region || selectedRegion() === "national" || channel.region === selectedRegion();
   });
@@ -653,6 +706,52 @@ function setChatMessages(messages) {
   localStorage.setItem("toc.chatMessages", JSON.stringify(messages));
 }
 
+function getAdminUsers() {
+  const saved = localStorage.getItem("toc.adminUsers");
+  if (saved) return JSON.parse(saved);
+  setAdminUsers(starterAdminUsers);
+  return starterAdminUsers;
+}
+
+function setAdminUsers(users) {
+  localStorage.setItem("toc.adminUsers", JSON.stringify(users));
+}
+
+function roleLabel(role) {
+  const labels = {
+    admin: "Admin",
+    manager: "Manager",
+    workshop: "Workshop",
+    national: "National Ops",
+    director: "Director"
+  };
+  return labels[role] || role;
+}
+
+function checkedValues(name) {
+  return Array.from(document.querySelectorAll(`[name="${name}"]:checked`)).map((item) => item.value);
+}
+
+function renderAdminUsers() {
+  const users = getAdminUsers();
+  const adminCount = users.filter((user) => user.role === "Admin" || user.role === "admin").length;
+  adminSummary.textContent = `${users.length} users - ${adminCount} admin`;
+  adminUserList.innerHTML = users.map((user) => `
+    <article class="admin-user-card">
+      <div>
+        <strong>${escapeHtml(user.name)}</strong>
+        <small>${escapeHtml(user.email)}</small>
+      </div>
+      <div class="meta-row">
+        <span class="tag blue">${escapeHtml(roleLabel(user.role))}</span>
+        <span class="tag green">${escapeHtml(user.regions.join(", "))}</span>
+      </div>
+      <small>Can use: ${escapeHtml(user.permissions.join(", "))}</small>
+      ${user.id === "admin-craig" ? "" : `<button type="button" data-admin-remove="${escapeHtml(user.id)}">Remove demo user</button>`}
+    </article>
+  `).join("");
+}
+
 function getActiveChannel() {
   const visibleChannels = getVisibleChatChannels();
   const visibleIds = visibleChannels.map((channel) => channel.id);
@@ -720,6 +819,7 @@ function renderAll() {
   renderTasks();
   renderTodos();
   renderChat();
+  renderAdminUsers();
 }
 
 approvalQueue.addEventListener("click", (event) => {
@@ -855,7 +955,12 @@ navLinks.forEach((link) => {
 });
 
 accessLevel.addEventListener("change", () => {
-  if (selectedAccess() === "director") {
+  sessionChip.textContent = accessLabel();
+  if (selectedAccess() === "admin") {
+    regionFilter.value = "national";
+    window.location.hash = "overview";
+    activeChatChannel = "national";
+  } else if (selectedAccess() === "director") {
     regionFilter.value = "national";
     window.location.hash = "director";
     activeChatChannel = "national";
@@ -871,7 +976,7 @@ loginForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const session = {
     email: loginEmail.value.trim(),
-    access: "national",
+    access: "admin",
     region: "national",
     signedInAt: new Date().toISOString()
   };
@@ -886,8 +991,8 @@ loginForm.addEventListener("submit", (event) => {
 
 developerSignin.addEventListener("click", () => {
   const session = {
-    email: "developer@thormobile.com.au",
-    access: "national",
+    email: "craig@thormobile.com.au",
+    access: "admin",
     region: "national",
     developer: true,
     signedInAt: new Date().toISOString()
@@ -898,6 +1003,37 @@ developerSignin.addEventListener("click", () => {
   loginPassword.value = "";
   applySession(session);
   renderAll();
+});
+
+adminUserForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const regions = checkedValues("adminRegions");
+  const permissions = checkedValues("adminPermissions");
+  const users = getAdminUsers();
+  users.unshift({
+    id: crypto.randomUUID(),
+    name: adminUserName.value.trim(),
+    email: adminUserEmail.value.trim(),
+    role: roleLabel(adminUserRole.value),
+    regions: adminUserRole.value === "director" ? ["National"] : regions.length ? regions : ["National"],
+    permissions,
+    created: new Date().toISOString()
+  });
+  setAdminUsers(users);
+  adminUserForm.reset();
+  renderAdminUsers();
+});
+
+adminUserList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-remove]");
+  if (!button) return;
+  setAdminUsers(getAdminUsers().filter((user) => user.id !== button.dataset.adminRemove));
+  renderAdminUsers();
+});
+
+resetAdminUsers.addEventListener("click", () => {
+  setAdminUsers(starterAdminUsers);
+  renderAdminUsers();
 });
 
 logoutButton.addEventListener("click", () => {

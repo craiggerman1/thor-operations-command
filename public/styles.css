@@ -569,8 +569,8 @@ h2 {
 }
 
 .topbar-actions {
-  width: min(420px, 100%);
-  max-width: 420px;
+  width: min(520px, 100%);
+  max-width: 520px;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-self: flex-start;
@@ -580,6 +580,40 @@ h2 {
   background: rgba(4, 18, 31, 0.72);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(10px);
+}
+
+.session-chip {
+  min-width: 138px;
+  padding: 8px 12px;
+  border: 1px solid rgba(222, 249, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.session-chip span,
+.session-chip strong {
+  display: block;
+}
+
+.session-chip span {
+  color: #aebdcc;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.session-chip strong {
+  margin-top: 3px;
+  color: #ffffff;
+}
+
+.access-control,
+.region-control {
+  display: none;
+}
+
+body[data-access="admin"] .region-control {
+  display: grid;
 }
 
 .select-wrap {
@@ -994,6 +1028,7 @@ textarea {
 .director-scorecard,
 .director-signal,
 .director-brief-item,
+.admin-user-card,
 .stock-card,
 .todo-item {
   padding: 12px;
@@ -1127,6 +1162,97 @@ textarea {
 .director-pill.red {
   color: #9a312f;
   background: #fde9e6;
+}
+
+.admin-panel {
+  border-top-color: var(--command);
+}
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  gap: 14px;
+}
+
+.admin-user-form {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-user-form label,
+.admin-user-form fieldset {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-user-form label span,
+.admin-user-form legend {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-user-form fieldset {
+  margin: 0;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.admin-user-form fieldset label {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  color: #27384a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-user-form input[type="checkbox"] {
+  width: 16px;
+  min-height: 16px;
+}
+
+.admin-user-form button,
+.admin-user-card button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.admin-user-wrap,
+.admin-user-list,
+.admin-user-card {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-user-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-user-card {
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(37, 161, 189, 0.08), transparent),
+    rgba(255, 255, 255, 0.92);
+}
+
+.admin-user-card small {
+  color: var(--muted);
 }
 
 .queue-card,
@@ -1503,6 +1629,11 @@ body[data-access="director"] #integrations {
   display: none;
 }
 
+body:not([data-access="admin"]) #admin,
+body:not([data-access="admin"]) .rail-nav a[href="#admin"] {
+  display: none;
+}
+
 body[data-access="director"] .rail-nav a[href="#actions"],
 body[data-access="director"] .rail-nav a[href="#portal"],
 body[data-access="director"] .rail-nav a[href="#fleet"],
@@ -1624,6 +1755,7 @@ body[data-access="director"] .rail-nav a[href="#todo"] {
   .director-layout,
   .director-signals,
   .director-brief,
+  .admin-layout,
   .stock-layout,
   .stock-form,
   .chat-layout {
