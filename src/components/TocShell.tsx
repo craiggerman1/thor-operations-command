@@ -68,12 +68,12 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="title-line">
               <span className="live-beacon" aria-label="Live data feeds are not connected yet" />
               <h1>Thor Operations Command</h1>
-              <span className="live-label">DATA PENDING</span>
+              <span className="live-label">OFFLINE - DATA PENDING</span>
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
-              <strong>Beta testing mode</strong>
+              <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.027</em>
+              <em>Build 0.028</em>
             </div>
           </div>
           <div className="topbar-actions">
