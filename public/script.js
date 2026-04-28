@@ -117,6 +117,32 @@ let nationalTasks = [
   { id: "n3", region: "National", title: "Primary Connect compliance pack refresh", owner: "National ops", priority: "Medium", done: false }
 ];
 
+const chatChannels = [
+  { id: "national", label: "National Ops", scope: "national", access: ["manager", "workshop", "national", "director"] },
+  { id: "managers", label: "Managers", scope: "national", access: ["manager", "workshop", "national"] },
+  { id: "workshop", label: "Workshop", region: "Workshop", access: ["workshop", "national"] },
+  { id: "compliance", label: "Compliance", scope: "national", access: ["manager", "workshop", "national"] },
+  { id: "stock", label: "Stock Orders", scope: "national", access: ["manager", "workshop", "national"] },
+  { id: "brisbane", label: "Brisbane", region: "Brisbane", access: ["manager", "national"] },
+  { id: "sydney", label: "Sydney", region: "Sydney", access: ["manager", "national"] },
+  { id: "melbourne", label: "Melbourne", region: "Melbourne", access: ["manager", "national"] },
+  { id: "adelaide", label: "Adelaide", region: "Adelaide", access: ["manager", "national"] },
+  { id: "perth", label: "Perth", region: "Perth", access: ["manager", "national"] },
+  { id: "canberra", label: "Canberra", region: "Canberra", access: ["manager", "national"] }
+];
+
+const starterChatMessages = [
+  { id: "chat-1", channel: "national", author: "Craig", role: "National Ops", text: "Morning team. Keep Portal approvals tight today and flag anything that will hold invoicing.", time: "08:05" },
+  { id: "chat-2", channel: "national", author: "Simon", role: "National Ops", text: "Please keep Woolworths Fleetio entries clean. Registration, wash type and site all matter.", time: "08:18" },
+  { id: "chat-3", channel: "managers", author: "Melbourne Manager", role: "Manager", text: "Melbourne wash bay is steady. One asset service item is being watched.", time: "08:34" },
+  { id: "chat-4", channel: "workshop", author: "Jason", role: "Workshop", text: "Workshop parts shelf needs hose fittings and two backup triggers checked.", time: "08:42" },
+  { id: "chat-5", channel: "compliance", author: "Sydney Manager", role: "Manager", text: "Following up the 3-point contact refresher with night crew before shift start.", time: "09:03" },
+  { id: "chat-6", channel: "stock", author: "Adelaide Manager", role: "Manager", text: "Spray lance trigger is urgent for Gepps Cross. Stock order has been raised.", time: "09:16" },
+  { id: "chat-7", channel: "brisbane", author: "Brisbane Manager", role: "Manager", text: "Larapinta volume is high but covered. Two job sheets need data correction.", time: "09:20" }
+];
+
+let activeChatChannel = "national";
+
 const regionFilter = document.querySelector("#regionFilter");
 const accessLevel = document.querySelector("#accessLevel");
 const refreshButton = document.querySelector("#refreshButton");
@@ -149,6 +175,13 @@ const nationalTasksNode = document.querySelector("#nationalTasks");
 const todoForm = document.querySelector("#todoForm");
 const todoInput = document.querySelector("#todoInput");
 const todoList = document.querySelector("#todoList");
+const chatSummary = document.querySelector("#chatSummary");
+const chatChannelsNode = document.querySelector("#chatChannels");
+const chatAccessLabel = document.querySelector("#chatAccessLabel");
+const chatChannelTitle = document.querySelector("#chatChannelTitle");
+const chatMessages = document.querySelector("#chatMessages");
+const chatForm = document.querySelector("#chatForm");
+const chatInput = document.querySelector("#chatInput");
 
 function selectedRegion() {
   return regionFilter.value;
@@ -160,6 +193,32 @@ function selectedAccess() {
 
 function isVisible(item) {
   return selectedRegion() === "national" || item.region === selectedRegion();
+}
+
+function accessLabel() {
+  const labels = {
+    manager: "Manager",
+    workshop: "Workshop",
+    national: "National Ops",
+    director: "Director"
+  };
+  return labels[selectedAccess()] || "Manager";
+}
+
+function activeUserName() {
+  if (selectedAccess() === "national") return "Craig / Simon";
+  if (selectedAccess() === "director") return "Anthony";
+  if (selectedAccess() === "workshop") return "Jason";
+  return selectedRegion() === "national" ? "Regional Manager" : `${selectedRegion()} Manager`;
+}
+
+function getVisibleChatChannels() {
+  return chatChannels.filter((channel) => {
+    if (!channel.access.includes(selectedAccess())) return false;
+    if (selectedAccess() === "national" || selectedAccess() === "director") return true;
+    if (selectedAccess() === "workshop") return !channel.region || channel.region === "Workshop";
+    return !channel.region || selectedRegion() === "national" || channel.region === selectedRegion();
+  });
 }
 
 function calculateThorWeek(date = new Date()) {
@@ -510,6 +569,71 @@ function renderTodos() {
     : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No manager notes yet.</strong><small>Add tasks as they arrive.</small></div></div>`;
 }
 
+function getChatMessages() {
+  const saved = localStorage.getItem("toc.chatMessages");
+  if (saved) {
+    return JSON.parse(saved);
+  }
+  setChatMessages(starterChatMessages);
+  return starterChatMessages;
+}
+
+function setChatMessages(messages) {
+  localStorage.setItem("toc.chatMessages", JSON.stringify(messages));
+}
+
+function getActiveChannel() {
+  const visibleChannels = getVisibleChatChannels();
+  const visibleIds = visibleChannels.map((channel) => channel.id);
+  if (!visibleIds.includes(activeChatChannel)) {
+    if (selectedAccess() === "workshop" && visibleIds.includes("workshop")) {
+      activeChatChannel = "workshop";
+    } else if (selectedAccess() === "director" && visibleIds.includes("national")) {
+      activeChatChannel = "national";
+    } else {
+      activeChatChannel = visibleIds[0] || "national";
+    }
+  }
+  return visibleChannels.find((channel) => channel.id === activeChatChannel) || visibleChannels[0];
+}
+
+function renderChat() {
+  const visibleChannels = getVisibleChatChannels();
+  const activeChannel = getActiveChannel();
+  const messages = getChatMessages().filter((message) => message.channel === activeChannel.id);
+  const unreadCount = getChatMessages().filter((message) => visibleChannels.some((channel) => channel.id === message.channel)).length;
+
+  chatSummary.textContent = `${visibleChannels.length} channels - ${unreadCount} messages`;
+  chatChannelsNode.innerHTML = visibleChannels.map((channel) => `
+    <button class="${channel.id === activeChannel.id ? "active" : ""}" type="button" data-chat-channel="${channel.id}">
+      <strong>${escapeHtml(channel.label)}</strong>
+      <span>${getChatMessages().filter((message) => message.channel === channel.id).length}</span>
+    </button>
+  `).join("");
+
+  chatAccessLabel.textContent = `${accessLabel()} access`;
+  chatChannelTitle.textContent = activeChannel.label;
+  chatInput.disabled = selectedAccess() === "director";
+  chatForm.querySelector("button").disabled = selectedAccess() === "director";
+  chatInput.placeholder = selectedAccess() === "director"
+    ? "Director view is read-only"
+    : `Message ${activeChannel.label}`;
+
+  chatMessages.innerHTML = messages.length
+    ? messages.map((message) => `
+      <article class="chat-message ${message.author === activeUserName() ? "own" : ""}">
+        <div>
+          <strong>${escapeHtml(message.author)}</strong>
+          <span>${escapeHtml(message.role)} - ${escapeHtml(message.time)}</span>
+        </div>
+        <p>${escapeHtml(message.text)}</p>
+      </article>
+    `).join("")
+    : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No messages in this channel yet.</strong><small>Start the conversation when needed.</small></div></div>`;
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
 function renderAll() {
   document.body.dataset.access = selectedAccess();
   renderMetrics();
@@ -523,6 +647,7 @@ function renderAll() {
   renderStockOrders();
   renderTasks();
   renderTodos();
+  renderChat();
 }
 
 approvalQueue.addEventListener("click", (event) => {
@@ -574,6 +699,32 @@ todoList.addEventListener("click", (event) => {
   renderTodos();
 });
 
+chatChannelsNode.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-chat-channel]");
+  if (!button) return;
+  activeChatChannel = button.dataset.chatChannel;
+  renderChat();
+});
+
+chatForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = chatInput.value.trim();
+  if (!text || selectedAccess() === "director") return;
+  const activeChannel = getActiveChannel();
+  const messages = getChatMessages();
+  messages.push({
+    id: crypto.randomUUID(),
+    channel: activeChannel.id,
+    author: activeUserName(),
+    role: accessLabel(),
+    text,
+    time: new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })
+  });
+  setChatMessages(messages);
+  chatInput.value = "";
+  renderChat();
+});
+
 stockOrderForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const orders = getStockOrders();
@@ -617,9 +768,11 @@ accessLevel.addEventListener("change", () => {
   if (selectedAccess() === "director") {
     regionFilter.value = "national";
     window.location.hash = "director";
+    activeChatChannel = "national";
   } else if (selectedAccess() === "workshop") {
     regionFilter.value = "Workshop";
     window.location.hash = "overview";
+    activeChatChannel = "workshop";
   }
   renderAll();
 });

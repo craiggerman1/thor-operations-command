@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=9">
+    <link rel="stylesheet" href="./styles.css?v=10">
   </head>
   <body>
     <div class="app-shell">
@@ -24,6 +24,7 @@
           <a href="#fleet">Fleetio</a>
           <a href="#compliance">Compliance</a>
           <a href="#stock">Stock Orders</a>
+          <a href="#chat">Chat</a>
           <a href="#tasks">Tasks</a>
           <a href="#todo">To do</a>
         </nav>
@@ -251,6 +252,33 @@
             </div>
           </section>
 
+          <section class="panel wide-panel chat-panel" id="chat">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Internal comms</span>
+                <h2>Manager chat</h2>
+              </div>
+              <span class="pill" id="chatSummary">Channels ready</span>
+            </div>
+            <div class="chat-layout">
+              <aside class="chat-channels" id="chatChannels" aria-label="Chat channels"></aside>
+              <div class="chat-room">
+                <div class="chat-room-head">
+                  <div>
+                    <span class="eyebrow" id="chatAccessLabel">Manager channel</span>
+                    <strong id="chatChannelTitle">National Ops</strong>
+                  </div>
+                  <span class="tag blue" id="chatModeLabel">Local prototype</span>
+                </div>
+                <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+                <form class="chat-form" id="chatForm">
+                  <input id="chatInput" type="text" placeholder="Message managers or national ops" autocomplete="off">
+                  <button type="submit">Send</button>
+                </form>
+              </div>
+            </div>
+          </section>
+
           <section class="panel" id="tasks">
             <div class="panel-head">
               <div>
@@ -298,12 +326,13 @@
               <div><span>GPS tracking</span><strong>Fleet feed planned</strong></div>
               <div><span>Woolworths washes</span><strong>Live data planned</strong></div>
               <div><span>Stock orders</span><strong>Webhook planned</strong></div>
+              <div><span>Manager chat</span><strong>Database planned</strong></div>
             </div>
           </section>
         </section>
       </main>
     </div>
 
-    <script src="./script.js?v=9"></script>
+    <script src="./script.js?v=10"></script>
   </body>
 </html>
