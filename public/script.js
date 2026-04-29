@@ -800,14 +800,22 @@ function renderTodos() {
 function getChatMessages() {
   const saved = localStorage.getItem("toc.chatMessages");
   if (saved) {
-    return JSON.parse(saved);
+    const messages = sanitizeChatMessages(JSON.parse(saved));
+    setChatMessages(messages);
+    return messages;
   }
-  setChatMessages(starterChatMessages);
-  return starterChatMessages;
+  const messages = sanitizeChatMessages(starterChatMessages);
+  setChatMessages(messages);
+  return messages;
 }
 
 function setChatMessages(messages) {
   localStorage.setItem("toc.chatMessages", JSON.stringify(messages));
+}
+
+function sanitizeChatMessages(messages) {
+  const blockedMessages = new Set(["Alice love baby very much :)", "Loves*"]);
+  return messages.filter((message) => !blockedMessages.has(message.text));
 }
 
 function getAdminUsers() {
