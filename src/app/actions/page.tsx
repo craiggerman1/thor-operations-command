@@ -6,9 +6,9 @@ import { approvals, commandSignals, nationalTasks, outlookReminders, rosterWindo
 export default function ActionsPage() {
   return (
     <TocShell>
+      <FlowHeading step="1" eyebrow="Action centre" title="Ensure all items are actioned and then cleared" />
       <PageIntro eyebrow="TOC workspace" title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <section className="command-grid route-grid">
-        <FlowHeading step="1" eyebrow="Action centre" title="Ensure all items are actioned and then cleared" />
         <Panel wide eyebrow="Priority command queue" title="Highest value actions first" pill={`${commandSignals.length} linked signals`}>
           <div className="signal-action-list">
             {commandSignals.map((signal) => (
