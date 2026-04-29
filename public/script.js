@@ -86,6 +86,45 @@ const washes = [
   { site: "Workshop service jobs", region: "Workshop", target: 18, actual: 15, internal: 7, exceptions: 2 }
 ];
 
+const serviceSchedule = [
+  { asset: "Mobile Wash ADL-01", region: "Adelaide", due: "2 days", item: "Pump service and lance inspection", status: "Due soon", severity: "red" },
+  { asset: "Mobile Wash SYD-04", region: "Sydney", due: "6 days", item: "Pressure hose inspection", status: "Watch", severity: "amber" },
+  { asset: "Workshop Parts Ute", region: "Workshop", due: "3 days", item: "Defect check and parts audit", status: "Due soon", severity: "amber" },
+  { asset: "Wash Plant BNE-01", region: "Brisbane", due: "18 days", item: "Preventative service", status: "Scheduled", severity: "green" },
+  { asset: "Wash Plant MEL-02", region: "Melbourne", due: "22 days", item: "Preventative service", status: "Scheduled", severity: "green" }
+];
+
+const outlookReminders = [
+  { region: "National", time: "Today 3:00 pm", title: "Review Portal approvals before admin close", source: "Outlook planned", severity: "amber" },
+  { region: "Brisbane", time: "Tomorrow 7:30 am", title: "Larapinta supervisor check-in", source: "Calendar planned", severity: "green" },
+  { region: "Sydney", time: "Tomorrow 1:00 pm", title: "Night crew induction follow-up", source: "Calendar planned", severity: "red" },
+  { region: "Workshop", time: "Friday 10:00 am", title: "Workshop parts and service review", source: "Calendar planned", severity: "amber" }
+];
+
+const rosterWindows = [
+  { region: "Brisbane", shift: "Tonight", coverage: "Covered", staff: "6/6", gap: "No roster gap", severity: "green" },
+  { region: "Sydney", shift: "Tonight", coverage: "Watch", staff: "5/6", gap: "One backup staff member preferred", severity: "amber" },
+  { region: "Adelaide", shift: "Tomorrow PM", coverage: "Gap", staff: "3/4", gap: "Confirm one wash hand", severity: "red" },
+  { region: "Perth", shift: "Tomorrow AM", coverage: "Covered", staff: "4/4", gap: "Roster ready", severity: "green" },
+  { region: "Workshop", shift: "Tomorrow", coverage: "Watch", staff: "2/3", gap: "Jason to confirm support if defects spike", severity: "amber" }
+];
+
+const staffAvailability = [
+  { region: "Brisbane", window: "6pm-12am", available: 4, unavailable: 1, status: "Healthy", severity: "green" },
+  { region: "Sydney", window: "12am-6am", available: 2, unavailable: 2, status: "Thin", severity: "amber" },
+  { region: "Adelaide", window: "6pm-12am", available: 1, unavailable: 3, status: "Action", severity: "red" },
+  { region: "Perth", window: "6am-12pm", available: 3, unavailable: 1, status: "Healthy", severity: "green" },
+  { region: "Workshop", window: "6am-12pm", available: 2, unavailable: 1, status: "Watch", severity: "amber" }
+];
+
+const washRolloverCounters = [
+  { region: "Brisbane", site: "Primary Connect Larapinta", yesterday: 86, today: 82, rollover: 4, trend: "On track", severity: "green" },
+  { region: "Sydney", site: "Woolworths Minchinbury", yesterday: 79, today: 76, rollover: 6, trend: "Watch", severity: "amber" },
+  { region: "Melbourne", site: "Woolworths Melbourne DC", yesterday: 81, today: 79, rollover: 2, trend: "On track", severity: "green" },
+  { region: "Adelaide", site: "Primary Connect Adelaide", yesterday: 66, today: 62, rollover: 8, trend: "Action", severity: "red" },
+  { region: "Perth", site: "Primary Connect Perth", yesterday: 73, today: 71, rollover: 5, trend: "Watch", severity: "amber" }
+];
+
 const complianceItems = [
   { region: "Brisbane", type: "Induction", title: "Primary Connect site inductions", status: "Due soon", owner: "BNE manager", due: "30 Apr", severity: "amber" },
   { region: "Sydney", type: "Safety", title: "3-point contact refresher", status: "Action required", owner: "SYD manager", due: "Today", severity: "red" },
@@ -184,6 +223,11 @@ const refreshButton = document.querySelector("#refreshButton");
 const approvalQueue = document.querySelector("#approvalQueue");
 const assetList = document.querySelector("#assetList");
 const washTable = document.querySelector("#washTable");
+const serviceScheduleNode = document.querySelector("#serviceSchedule");
+const outlookReminderList = document.querySelector("#outlookReminderList");
+const rosterTracker = document.querySelector("#rosterTracker");
+const availabilityTracker = document.querySelector("#availabilityTracker");
+const washRolloverCounter = document.querySelector("#washRolloverCounter");
 const complianceSummary = document.querySelector("#complianceSummary");
 const complianceMetrics = document.querySelector("#complianceMetrics");
 const complianceList = document.querySelector("#complianceList");
@@ -648,6 +692,90 @@ function renderWashes() {
   `;
 }
 
+function renderServiceSchedule() {
+  const rows = serviceSchedule.filter(isVisible);
+  serviceScheduleNode.innerHTML = rows.length
+    ? rows.map((item) => `
+      <article class="ops-card">
+        <div>
+          <strong>${escapeHtml(item.asset)}</strong>
+          <small>${escapeHtml(item.region)} - ${escapeHtml(item.item)}</small>
+        </div>
+        <div class="meta-row">
+          <span class="tag ${escapeHtml(item.severity)}">${escapeHtml(item.status)}</span>
+          <span class="tag blue">Due ${escapeHtml(item.due)}</span>
+        </div>
+      </article>
+    `).join("")
+    : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No service items in this view.</strong><small>Fleetio service schedule feed planned.</small></div></div>`;
+}
+
+function renderOutlookReminders() {
+  const reminders = outlookReminders.filter((item) => item.region === "National" || isVisible(item));
+  outlookReminderList.innerHTML = reminders.length
+    ? reminders.map((item) => `
+      <article class="ops-card">
+        <div>
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(item.region)} - ${escapeHtml(item.time)}</small>
+        </div>
+        <div class="meta-row">
+          <span class="tag ${escapeHtml(item.severity)}">${escapeHtml(item.source)}</span>
+        </div>
+      </article>
+    `).join("")
+    : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No reminders in this view.</strong><small>Outlook calendar connection planned.</small></div></div>`;
+}
+
+function renderRosterAndAvailability() {
+  const rosterItems = rosterWindows.filter(isVisible);
+  const availabilityItems = staffAvailability.filter(isVisible);
+
+  rosterTracker.innerHTML = rosterItems.length
+    ? rosterItems.map((item) => `
+      <article class="ops-card">
+        <div>
+          <strong>${escapeHtml(item.region)} - ${escapeHtml(item.shift)}</strong>
+          <small>${escapeHtml(item.gap)}</small>
+        </div>
+        <div class="meta-row">
+          <span class="tag ${escapeHtml(item.severity)}">${escapeHtml(item.coverage)}</span>
+          <span class="tag blue">${escapeHtml(item.staff)} staff</span>
+        </div>
+      </article>
+    `).join("")
+    : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No roster items in this view.</strong><small>Roster feed planned.</small></div></div>`;
+
+  availabilityTracker.innerHTML = availabilityItems.length
+    ? availabilityItems.map((item) => `
+      <article class="availability-card ${escapeHtml(item.severity)}">
+        <span>${escapeHtml(item.region)}</span>
+        <strong>${escapeHtml(item.available)} available</strong>
+        <small>${escapeHtml(item.window)} - ${escapeHtml(item.unavailable)} unavailable</small>
+        <em>${escapeHtml(item.status)}</em>
+      </article>
+    `).join("")
+    : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No availability items in this view.</strong><small>Staff availability feed planned.</small></div></div>`;
+}
+
+function renderWashRolloverCounter() {
+  const rows = washRolloverCounters.filter(isVisible);
+  washRolloverCounter.innerHTML = rows.length
+    ? rows.map((item) => `
+      <article class="rollover-card ${escapeHtml(item.severity)}">
+        <div>
+          <strong>${escapeHtml(item.site)}</strong>
+          <small>${escapeHtml(item.region)} - yesterday ${escapeHtml(item.yesterday)}, today ${escapeHtml(item.today)}</small>
+        </div>
+        <div>
+          <span>${escapeHtml(item.rollover)}</span>
+          <em>${escapeHtml(item.trend)}</em>
+        </div>
+      </article>
+    `).join("")
+    : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No wash rollover items in this view.</strong><small>Live wash data feed planned.</small></div></div>`;
+}
+
 function renderCompliance() {
   const items = complianceItems.filter(isVisible);
   const current = items.filter((item) => item.severity === "green").length;
@@ -946,6 +1074,10 @@ function renderAll() {
   renderApprovals();
   renderAssets();
   renderWashes();
+  renderServiceSchedule();
+  renderOutlookReminders();
+  renderRosterAndAvailability();
+  renderWashRolloverCounter();
   renderCompliance();
   renderStockOrders();
   renderTasks();

@@ -1,6 +1,6 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { approvals, nationalTasks, tasks } from "@/lib/toc-data";
+import { approvals, nationalTasks, outlookReminders, rosterWindows, staffAvailability, tasks } from "@/lib/toc-data";
 
 export default function ActionsPage() {
   return (
@@ -24,6 +24,40 @@ export default function ActionsPage() {
         </Panel>
         <Panel eyebrow="National ops" title="National admin directives">
           <TaskList tasks={nationalTasks.map((task) => ({ ...task, region: "National" }))} />
+        </Panel>
+        <Panel wide eyebrow="Live roster tracking" title="Next shifts and coverage" pill="Roster feed planned">
+          <div className="ops-list">
+            {rosterWindows.map((item) => (
+              <article className="ops-card" key={`${item.region}-${item.shift}`}>
+                <strong>{item.region} - {item.shift}</strong>
+                <small>{item.gap}</small>
+                <div className="meta-row"><Tag tone={item.severity}>{item.coverage}</Tag><Tag>{item.staff} staff</Tag></div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+        <Panel eyebrow="Staff availability" title="Available staff by window">
+          <div className="availability-grid">
+            {staffAvailability.map((item) => (
+              <article className={`availability-card ${item.severity}`} key={`${item.region}-${item.window}`}>
+                <span>{item.region}</span>
+                <strong>{item.available} available</strong>
+                <small>{item.window} - {item.unavailable} unavailable</small>
+                <em>{item.status}</em>
+              </article>
+            ))}
+          </div>
+        </Panel>
+        <Panel eyebrow="Outlook calendar" title="Reminders and follow-ups" pill="Calendar planned">
+          <div className="ops-list">
+            {outlookReminders.map((item) => (
+              <article className="ops-card" key={`${item.region}-${item.time}`}>
+                <strong>{item.title}</strong>
+                <small>{item.region} - {item.time}</small>
+                <div className="meta-row"><Tag tone={item.severity}>{item.source}</Tag></div>
+              </article>
+            ))}
+          </div>
         </Panel>
       </section>
     </TocShell>

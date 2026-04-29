@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=37">
+    <link rel="stylesheet" href="./styles.css?v=38">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
@@ -94,7 +94,7 @@
             <div class="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.037</em>
+              <em>Build 0.038</em>
             </div>
           </div>
 
@@ -283,6 +283,17 @@
             <div class="wash-table" id="washTable"></div>
           </section>
 
+          <section class="panel wide-panel page-section" id="wash-rollover" data-page="operations">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Washed unit tracking</span>
+                <h2>Rollover counter</h2>
+              </div>
+              <span class="pill">Live counter planned</span>
+            </div>
+            <div class="rollover-grid" id="washRolloverCounter"></div>
+          </section>
+
           <section class="panel page-section" id="fleet" data-page="operations fleet">
             <div class="panel-head">
               <div>
@@ -291,6 +302,49 @@
               </div>
             </div>
             <div class="asset-list" id="assetList"></div>
+          </section>
+
+          <section class="panel page-section" id="service-schedule" data-page="operations fleet">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Fleetio service schedule</span>
+                <h2>Service items</h2>
+              </div>
+              <span class="pill">API planned</span>
+            </div>
+            <div class="ops-list" id="serviceSchedule"></div>
+          </section>
+
+          <section class="panel wide-panel page-section" id="roster" data-page="actions">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Live roster tracking</span>
+                <h2>Next shifts and coverage</h2>
+              </div>
+              <span class="pill">Roster feed planned</span>
+            </div>
+            <div class="ops-list" id="rosterTracker"></div>
+          </section>
+
+          <section class="panel page-section" id="availability" data-page="actions">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Staff availability</span>
+                <h2>Available staff by window</h2>
+              </div>
+            </div>
+            <div class="availability-grid" id="availabilityTracker"></div>
+          </section>
+
+          <section class="panel page-section" id="calendar-reminders" data-page="actions">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Outlook calendar</span>
+                <h2>Reminders and follow-ups</h2>
+              </div>
+              <span class="pill">Calendar planned</span>
+            </div>
+            <div class="ops-list" id="outlookReminderList"></div>
           </section>
 
           <section class="panel wide-panel page-section" id="compliance" data-page="operations compliance">
@@ -420,8 +474,12 @@
             <div class="integration-grid">
               <div><span>Thor Portal</span><strong>Webhook/API planned</strong></div>
               <div><span>Fleetio assets</span><strong>API planned</strong></div>
+              <div><span>Service schedule</span><strong>Fleetio API planned</strong></div>
               <div><span>GPS tracking</span><strong>Fleet feed planned</strong></div>
               <div><span>Woolworths washes</span><strong>API planned</strong></div>
+              <div><span>Wash rollover counter</span><strong>Live wash feed planned</strong></div>
+              <div><span>Outlook reminders</span><strong>Calendar API planned</strong></div>
+              <div><span>Roster and availability</span><strong>Roster feed planned</strong></div>
               <div><span>Stock orders</span><strong>Webhook planned</strong></div>
               <div><span>Manager chat</span><strong>Database planned</strong></div>
             </div>
@@ -503,6 +561,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=37"></script>
+    <script src="./script.js?v=38"></script>
   </body>
 </html>

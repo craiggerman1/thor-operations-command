@@ -45,6 +45,39 @@ export const washes = [
   { site: "Primary Connect Perth", region: "Perth", target: 78, actual: 71, internal: 13, exceptions: 2 }
 ];
 
+export const serviceSchedule = [
+  { asset: "Mobile Wash ADL-01", region: "Adelaide", due: "2 days", item: "Pump service and lance inspection", status: "Due soon", severity: "red" as Status },
+  { asset: "Mobile Wash SYD-04", region: "Sydney", due: "6 days", item: "Pressure hose inspection", status: "Watch", severity: "amber" as Status },
+  { asset: "Workshop Parts Ute", region: "Workshop", due: "3 days", item: "Defect check and parts audit", status: "Due soon", severity: "amber" as Status },
+  { asset: "Wash Plant BNE-01", region: "Brisbane", due: "18 days", item: "Preventative service", status: "Scheduled", severity: "green" as Status }
+];
+
+export const washRolloverCounters = [
+  { region: "Brisbane", site: "Primary Connect Larapinta", yesterday: 86, today: 82, rollover: 4, trend: "On track", severity: "green" as Status },
+  { region: "Sydney", site: "Woolworths Minchinbury", yesterday: 79, today: 76, rollover: 6, trend: "Watch", severity: "amber" as Status },
+  { region: "Adelaide", site: "Primary Connect Adelaide", yesterday: 66, today: 62, rollover: 8, trend: "Action", severity: "red" as Status }
+];
+
+export const outlookReminders = [
+  { region: "National", time: "Today 3:00 pm", title: "Review Portal approvals before admin close", source: "Outlook planned", severity: "amber" as Status },
+  { region: "Sydney", time: "Tomorrow 1:00 pm", title: "Night crew induction follow-up", source: "Calendar planned", severity: "red" as Status },
+  { region: "Workshop", time: "Friday 10:00 am", title: "Workshop parts and service review", source: "Calendar planned", severity: "amber" as Status }
+];
+
+export const rosterWindows = [
+  { region: "Brisbane", shift: "Tonight", coverage: "Covered", staff: "6/6", gap: "No roster gap", severity: "green" as Status },
+  { region: "Sydney", shift: "Tonight", coverage: "Watch", staff: "5/6", gap: "One backup staff member preferred", severity: "amber" as Status },
+  { region: "Adelaide", shift: "Tomorrow PM", coverage: "Gap", staff: "3/4", gap: "Confirm one wash hand", severity: "red" as Status },
+  { region: "Workshop", shift: "Tomorrow", coverage: "Watch", staff: "2/3", gap: "Jason to confirm support if defects spike", severity: "amber" as Status }
+];
+
+export const staffAvailability = [
+  { region: "Brisbane", window: "6pm-12am", available: 4, unavailable: 1, status: "Healthy", severity: "green" as Status },
+  { region: "Sydney", window: "12am-6am", available: 2, unavailable: 2, status: "Thin", severity: "amber" as Status },
+  { region: "Adelaide", window: "6pm-12am", available: 1, unavailable: 3, status: "Action", severity: "red" as Status },
+  { region: "Workshop", window: "6am-12pm", available: 2, unavailable: 1, status: "Watch", severity: "amber" as Status }
+];
+
 export const assets = [
   { name: "Wash Plant BNE-01", region: "Brisbane", state: "Online", gps: "Larapinta", service: "18 days", status: "green" as Status },
   { name: "Mobile Wash SYD-04", region: "Sydney", state: "Online", gps: "Minchinbury", service: "6 days", status: "amber" as Status },

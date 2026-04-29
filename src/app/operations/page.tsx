@@ -1,6 +1,6 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { assets, washes } from "@/lib/toc-data";
+import { assets, serviceSchedule, washes, washRolloverCounters } from "@/lib/toc-data";
 
 export default function OperationsPage() {
   return (
@@ -18,6 +18,19 @@ export default function OperationsPage() {
             ))}
           </div>
         </Panel>
+        <Panel wide eyebrow="Washed unit tracking" title="Rollover counter" pill="Live counter planned">
+          <div className="rollover-grid">
+            {washRolloverCounters.map((item) => (
+              <article className={`rollover-card ${item.severity}`} key={item.site}>
+                <div>
+                  <strong>{item.site}</strong>
+                  <small>{item.region} - yesterday {item.yesterday}, today {item.today}</small>
+                </div>
+                <div><span>{item.rollover}</span><em>{item.trend}</em></div>
+              </article>
+            ))}
+          </div>
+        </Panel>
         <Panel eyebrow="Fleetio" title="Assets needing awareness">
           <div className="asset-list">
             {assets.map((asset) => (
@@ -25,6 +38,17 @@ export default function OperationsPage() {
                 <strong>{asset.name}</strong>
                 <small>{asset.region} - GPS: {asset.gps} - service due in {asset.service}</small>
                 <div className="meta-row"><Tag tone={asset.status}>{asset.state}</Tag><Tag>Fleetio</Tag></div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+        <Panel eyebrow="Fleetio service schedule" title="Service items" pill="API planned">
+          <div className="ops-list">
+            {serviceSchedule.map((item) => (
+              <article className="ops-card" key={item.asset}>
+                <strong>{item.asset}</strong>
+                <small>{item.region} - {item.item}</small>
+                <div className="meta-row"><Tag tone={item.severity}>{item.status}</Tag><Tag>Due {item.due}</Tag></div>
               </article>
             ))}
           </div>
