@@ -36,12 +36,12 @@ export const commandSignals = [
   },
   {
     title: "Asset service watch",
-    source: "Fleetio",
+    source: "Equipment Servicing",
     severity: "blue" as Status,
     owner: "Workshop",
-    action: "Open Fleetio",
-    href: "/fleet",
-    detail: "Plant, vehicle and workshop readiness should be visible before breakdowns affect output."
+    action: "Open servicing",
+    href: "/equipment-servicing",
+    detail: "Vehicles, wash plants, generators and Pony machines need odometer/hour visibility before servicing becomes reactive."
   }
 ];
 
@@ -55,7 +55,7 @@ export const commandPathways = [
 ];
 
 export const integrationReadiness = [
-  { system: "Thor Portal", purpose: "Jobsheets, approvals, admin flow and invoicing readiness", status: "Webhook pending", severity: "amber" as Status },
+  { system: "Thor Portal", purpose: "Jobsheets, approvals, odometer readings, hour readings, admin flow and invoicing readiness", status: "Webhook pending", severity: "amber" as Status },
   { system: "Fleetio", purpose: "Assets, GPS, service schedule, wash records and Woolworths wash data", status: "API pending", severity: "amber" as Status },
   { system: "Unity", purpose: "Operational data feed to be defined and mapped", status: "Mapping pending", severity: "blue" as Status },
   { system: "Outlook", purpose: "Calendar reminders, manager follow-ups and escalation dates", status: "Connection pending", severity: "blue" as Status }
@@ -104,6 +104,83 @@ export const serviceSchedule = [
   { asset: "Mobile Wash SYD-04", region: "Sydney", due: "6 days", item: "Pressure hose inspection", status: "Watch", severity: "amber" as Status },
   { asset: "Workshop Parts Ute", region: "Workshop", due: "3 days", item: "Defect check and parts audit", status: "Due soon", severity: "amber" as Status },
   { asset: "Wash Plant BNE-01", region: "Brisbane", due: "18 days", item: "Preventative service", status: "Scheduled", severity: "green" as Status }
+];
+
+export const equipmentServiceSummary = [
+  { label: "Wash vehicles", value: "2", detail: "Need odometer review", severity: "amber" as Status },
+  { label: "Wash plants", value: "1", detail: "Hour reading due", severity: "red" as Status },
+  { label: "Pony machines", value: "3", detail: "Mechanical service watch", severity: "blue" as Status },
+  { label: "Portal readings", value: "Pending", detail: "Thor Portal feed planned", severity: "amber" as Status }
+];
+
+export const equipmentAssets = [
+  {
+    asset: "Mobile Wash ADL-01",
+    category: "Wash vehicle",
+    region: "Adelaide",
+    readingType: "Odometer",
+    currentReading: "184,220 km",
+    nextService: "186,000 km",
+    remaining: "1,780 km",
+    lastSubmitted: "Portal feed pending",
+    status: "Watch",
+    severity: "amber" as Status
+  },
+  {
+    asset: "Mobile Wash SYD-04",
+    category: "Wash ute",
+    region: "Sydney",
+    readingType: "Odometer",
+    currentReading: "91,840 km",
+    nextService: "95,000 km",
+    remaining: "3,160 km",
+    lastSubmitted: "Portal feed pending",
+    status: "On track",
+    severity: "green" as Status
+  },
+  {
+    asset: "Wash Plant BNE-01 Honda",
+    category: "Wash plant",
+    region: "Brisbane",
+    readingType: "Hours",
+    currentReading: "1,246 h",
+    nextService: "1,250 h",
+    remaining: "4 h",
+    lastSubmitted: "Portal feed pending",
+    status: "Action",
+    severity: "red" as Status
+  },
+  {
+    asset: "Generator MEL-02",
+    category: "Generator",
+    region: "Melbourne",
+    readingType: "Hours",
+    currentReading: "812 h",
+    nextService: "850 h",
+    remaining: "38 h",
+    lastSubmitted: "Portal feed pending",
+    status: "On track",
+    severity: "green" as Status
+  },
+  {
+    asset: "Pony Machine WKS-03",
+    category: "Pony",
+    region: "Workshop",
+    readingType: "Hours",
+    currentReading: "436 h",
+    nextService: "450 h",
+    remaining: "14 h",
+    lastSubmitted: "Portal feed pending",
+    status: "Watch",
+    severity: "blue" as Status
+  }
+];
+
+export const servicingDataFlow = [
+  { step: "1", title: "Reading captured", detail: "Manager or team leader records odometer or hour reading in Thor Portal." },
+  { step: "2", title: "Portal sends feed", detail: "Thor Portal sends the latest reading to TOC through API or webhook." },
+  { step: "3", title: "TOC calculates status", detail: "TOC compares the reading against service intervals and flags green, watch or action." },
+  { step: "4", title: "Workshop acts", detail: "Jason and workshop users track what needs booking, parts or return-to-service follow-up." }
 ];
 
 export const washRolloverCounters = [

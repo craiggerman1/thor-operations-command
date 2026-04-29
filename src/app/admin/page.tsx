@@ -28,7 +28,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.043">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.044">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);
