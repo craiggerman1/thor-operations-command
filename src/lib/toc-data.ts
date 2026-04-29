@@ -1,10 +1,65 @@
 export type Status = "green" | "amber" | "red" | "blue";
 
 export const metrics = [
-  { label: "Operating week", value: "C Week", detail: "Thursday to Wednesday", status: "green" as Status },
-  { label: "Portal approvals", value: "25", detail: "Waiting on manager action", status: "amber" as Status },
-  { label: "Assets online", value: "5/8", detail: "Fleetio and GPS ready", status: "blue" as Status },
-  { label: "Risk flags", value: "13", detail: "Compliance, staffing, data", status: "red" as Status }
+  { label: "Operating week", value: "C Week", detail: "Thursday to Wednesday", status: "green" as Status, href: "/overview" },
+  { label: "Portal approvals", value: "25", detail: "Waiting on manager action", status: "amber" as Status, href: "/portal" },
+  { label: "Assets online", value: "5/8", detail: "Fleetio and GPS ready", status: "blue" as Status, href: "/fleet" },
+  { label: "Risk flags", value: "13", detail: "Compliance, staffing, data", status: "red" as Status, href: "/actions" }
+];
+
+export const commandSignals = [
+  {
+    title: "Approvals are holding admin flow",
+    source: "Thor Portal",
+    severity: "amber" as Status,
+    owner: "Regional managers",
+    action: "Review jobsheets",
+    href: "/portal",
+    detail: "Manager-approved jobsheets are the gate before invoicing can move cleanly."
+  },
+  {
+    title: "Compliance exceptions need ownership",
+    source: "Compliance",
+    severity: "red" as Status,
+    owner: "Managers",
+    action: "Open compliance",
+    href: "/compliance",
+    detail: "Inductions, safety checks and site-readiness items must be current before operational risk builds."
+  },
+  {
+    title: "Roster and availability pressure",
+    source: "Roster",
+    severity: "amber" as Status,
+    owner: "Operations",
+    action: "Check coverage",
+    href: "/actions",
+    detail: "Next-shift gaps should be resolved before they become missed washes or client pressure."
+  },
+  {
+    title: "Asset service watch",
+    source: "Fleetio",
+    severity: "blue" as Status,
+    owner: "Workshop",
+    action: "Open Fleetio",
+    href: "/fleet",
+    detail: "Plant, vehicle and workshop readiness should be visible before breakdowns affect output."
+  }
+];
+
+export const commandPathways = [
+  { step: "1", label: "Action Centre", href: "/actions", detail: "Start here when something needs action, ownership, escalation or clearing." },
+  { step: "2", label: "Region Health", href: "/overview", detail: "Check whether each state is healthy enough to run the day without surprises." },
+  { step: "3", label: "Compliance", href: "/compliance", detail: "Confirm induction, safety and site-readiness issues are complete and green." },
+  { step: "4", label: "Stock Orders", href: "/stock-orders", detail: "Raise supply needs early before chemicals, PPE or parts block the work." },
+  { step: "5", label: "Operations", href: "/operations", detail: "Review wash output, rollover counts, assets, roster pressure and site activity." },
+  { step: "6", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
+];
+
+export const integrationReadiness = [
+  { system: "Thor Portal", purpose: "Jobsheets, approvals, admin flow and invoicing readiness", status: "Webhook pending", severity: "amber" as Status },
+  { system: "Fleetio", purpose: "Assets, GPS, service schedule, wash records and Woolworths wash data", status: "API pending", severity: "amber" as Status },
+  { system: "Unity", purpose: "Operational data feed to be defined and mapped", status: "Mapping pending", severity: "blue" as Status },
+  { system: "Outlook", purpose: "Calendar reminders, manager follow-ups and escalation dates", status: "Connection pending", severity: "blue" as Status }
 ];
 
 export const regions = [

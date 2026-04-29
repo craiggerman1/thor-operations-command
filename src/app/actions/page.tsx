@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { approvals, nationalTasks, outlookReminders, rosterWindows, staffAvailability, tasks } from "@/lib/toc-data";
+import { approvals, commandSignals, nationalTasks, outlookReminders, rosterWindows, staffAvailability, tasks } from "@/lib/toc-data";
 
 export default function ActionsPage() {
   return (
@@ -8,6 +9,23 @@ export default function ActionsPage() {
       <PageIntro eyebrow="TOC workspace" title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <section className="command-grid route-grid">
         <FlowHeading step="1" eyebrow="Action centre" title="Ensure all items are actioned and then cleared" />
+        <Panel wide eyebrow="Priority command queue" title="Highest value actions first" pill={`${commandSignals.length} linked signals`}>
+          <div className="signal-action-list">
+            {commandSignals.map((signal) => (
+              <article className={`signal-action-card ${signal.severity}`} key={signal.title}>
+                <div>
+                  <span className="eyebrow">{signal.source}</span>
+                  <strong>{signal.title}</strong>
+                  <small>{signal.detail}</small>
+                </div>
+                <div className="signal-action-controls">
+                  <Tag tone={signal.severity}>{signal.owner}</Tag>
+                  <Link className="node-action" href={signal.href}>{signal.action}</Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
         <Panel eyebrow="Thor Portal" title="Jobsheets needing review">
           <div className="queue-list">
             {approvals.map((item) => (
@@ -15,6 +33,7 @@ export default function ActionsPage() {
                 <strong>{item.id} {item.site}</strong>
                 <small>{item.region} - {item.count} vehicles - waiting {item.age}</small>
                 <div className="meta-row"><Tag tone={item.risk === "Ready" ? "green" : "amber"}>{item.risk}</Tag><Tag>Portal</Tag></div>
+                <Link className="node-action" href="/portal">Open detail</Link>
               </article>
             ))}
           </div>
@@ -72,6 +91,7 @@ function TaskList({ tasks }: { tasks: Array<{ title: string; owner: string; regi
           <strong>{task.title}</strong>
           <small>{task.owner} - {task.region}</small>
           <div className="meta-row"><Tag tone={task.priority === "High" ? "red" : "amber"}>{task.priority}</Tag><Tag>Action</Tag></div>
+          <Link className="node-action" href="/actions">Track action</Link>
         </article>
       ))}
     </div>

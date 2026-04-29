@@ -971,6 +971,9 @@ textarea {
 .metric-card:hover,
 .state-node:hover,
 .queue-card:hover,
+.signal-command-card:hover,
+.signal-action-card:hover,
+.pathway-item:hover,
 .asset-card:hover,
 .task-card:hover,
 .stock-card:hover {
@@ -1143,6 +1146,144 @@ textarea {
 .node-action:hover {
   background: var(--blue);
   color: #ffffff;
+}
+
+.signal-command-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.signal-command-card,
+.signal-action-card,
+.pathway-item,
+.integration-item {
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.signal-command-card {
+  position: relative;
+  display: grid;
+  min-height: 178px;
+  gap: 16px;
+  padding: 16px;
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.signal-command-card::before,
+.signal-action-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--blue);
+}
+
+.signal-command-card.red::before,
+.signal-action-card.red::before {
+  background: var(--red);
+}
+
+.signal-command-card.amber::before,
+.signal-action-card.amber::before {
+  background: var(--amber);
+}
+
+.signal-command-card.green::before,
+.signal-action-card.green::before {
+  background: var(--green);
+}
+
+.signal-command-card.blue::before,
+.signal-action-card.blue::before {
+  background: var(--teal);
+}
+
+.signal-command-card h3 {
+  margin: 5px 0 8px;
+  color: var(--blue);
+  font-size: 21px;
+}
+
+.signal-command-card p,
+.integration-item small,
+.pathway-item small,
+.signal-action-card small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.signal-command-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  align-self: end;
+}
+
+.pathway-list,
+.integration-list,
+.signal-action-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pathway-item {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 10px;
+  min-height: 78px;
+  padding: 12px;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.pathway-item > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.pathway-item strong,
+.integration-item strong,
+.signal-action-card strong {
+  display: block;
+  color: #071726;
+}
+
+.integration-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 82px;
+  padding: 12px;
+}
+
+.signal-action-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  min-height: 96px;
+  padding: 14px 14px 14px 18px;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.signal-action-controls {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
 }
 
 .state-node::before {
@@ -2014,6 +2155,7 @@ textarea {
 
   .status-strip,
   .role-blueprint-grid,
+  .signal-command-grid,
   .command-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2216,9 +2358,21 @@ textarea {
   .rail-nav,
   .status-strip,
   .role-blueprint-grid,
+  .signal-command-grid,
   .command-grid,
   .ops-map {
     grid-template-columns: 1fr;
+  }
+
+  .signal-action-card,
+  .integration-item {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-action-controls,
+  .signal-command-footer {
+    align-items: start;
+    justify-items: start;
   }
 
   .flow-heading {
