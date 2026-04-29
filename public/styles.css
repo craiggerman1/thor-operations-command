@@ -1244,7 +1244,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .go-live-item {
   position: relative;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(180px, 1fr) max-content;
   align-items: center;
   gap: 10px;
   min-height: 62px;
@@ -1252,7 +1252,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.92);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .go-live-item::before {
@@ -1287,7 +1287,15 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .go-live-item strong {
+  min-width: 0;
   color: #071726;
+}
+
+.go-live-item .tag {
+  justify-self: end;
+  min-width: 96px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .pathway-item {
@@ -2471,6 +2479,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   .go-live-item,
   .integration-item {
     grid-template-columns: 1fr;
+  }
+
+  .go-live-item .tag {
+    justify-self: start;
   }
 
   .signal-action-controls,
