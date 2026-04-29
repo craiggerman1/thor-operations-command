@@ -54,6 +54,19 @@ export const commandPathways = [
   { step: "6", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
 ];
 
+export const goLivePathway = [
+  { step: "01", title: "Determine page order and flow", status: "In progress", severity: "amber" as Status },
+  { step: "02", title: "Add required features to pages", status: "In progress", severity: "amber" as Status },
+  { step: "03", title: "Determine user access levels", status: "In progress", severity: "amber" as Status },
+  { step: "04", title: "Create database", status: "Pending", severity: "blue" as Status },
+  { step: "05", title: "Link database", status: "Pending", severity: "blue" as Status },
+  { step: "06", title: "Connect API and Webhook feeds", status: "Pending", severity: "blue" as Status },
+  { step: "07", title: "Add remaining feature requests", status: "Pending", severity: "blue" as Status },
+  { step: "08", title: "Test connections", status: "Pending", severity: "blue" as Status },
+  { step: "09", title: "Beta test TOC", status: "Pending", severity: "blue" as Status },
+  { step: "10", title: "Deploy live", status: "Pending", severity: "blue" as Status }
+];
+
 export const integrationReadiness = [
   { system: "Thor Portal", purpose: "Jobsheets, approvals, odometer readings, hour readings, admin flow and invoicing readiness", status: "Webhook pending", severity: "amber" as Status },
   { system: "Fleetio", purpose: "Assets, GPS, service schedule, wash records and Woolworths wash data", status: "API pending", severity: "amber" as Status },

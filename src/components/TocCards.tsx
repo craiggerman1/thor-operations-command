@@ -1,9 +1,9 @@
 import type { Status } from "@/lib/toc-data";
 import type { ReactNode } from "react";
 
-export function Panel({ children, wide = false, title, eyebrow, pill }: { children: ReactNode; wide?: boolean; title: string; eyebrow: string; pill?: string }) {
+export function Panel({ children, wide = false, title, eyebrow, pill, className = "" }: { children: ReactNode; wide?: boolean; title: string; eyebrow: string; pill?: string; className?: string }) {
   return (
-    <section className={`panel ${wide ? "wide-panel" : ""}`}>
+    <section className={`panel ${wide ? "wide-panel" : ""} ${className}`}>
       <div className="panel-head">
         <div>
           <span className="eyebrow">{eyebrow}</span>

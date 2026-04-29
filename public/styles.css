@@ -910,6 +910,10 @@ textarea {
   overflow: hidden;
 }
 
+body:not([data-access="admin"]) .admin-only-panel {
+  display: none;
+}
+
 .panel::before {
   content: "";
   position: absolute;
@@ -1227,9 +1231,63 @@ textarea {
 
 .pathway-list,
 .integration-list,
-.signal-action-list {
+.signal-action-list,
+.go-live-pathway {
   display: grid;
   gap: 10px;
+}
+
+.go-live-pathway {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.go-live-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+}
+
+.go-live-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--blue);
+}
+
+.go-live-item.amber::before {
+  background: var(--amber);
+}
+
+.go-live-item.green::before {
+  background: var(--green);
+}
+
+.go-live-item.red::before {
+  background: var(--red);
+}
+
+.go-live-item > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: #0a3152;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.go-live-item strong {
+  color: #071726;
 }
 
 .pathway-item {
@@ -2199,6 +2257,7 @@ textarea {
   .status-strip,
   .role-blueprint-grid,
   .signal-command-grid,
+  .go-live-pathway,
   .command-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2402,12 +2461,14 @@ textarea {
   .status-strip,
   .role-blueprint-grid,
   .signal-command-grid,
+  .go-live-pathway,
   .command-grid,
   .ops-map {
     grid-template-columns: 1fr;
   }
 
   .signal-action-card,
+  .go-live-item,
   .integration-item {
     grid-template-columns: 1fr;
   }

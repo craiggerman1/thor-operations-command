@@ -2,7 +2,7 @@ import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { Panel, Tag } from "@/components/TocCards";
 import { getThorOperatingWeek } from "@/lib/operating-week";
-import { commandPathways, commandSignals, integrationReadiness } from "@/lib/toc-data";
+import { commandPathways, commandSignals, goLivePathway, integrationReadiness } from "@/lib/toc-data";
 import { metrics } from "@/lib/toc-data";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +71,17 @@ export default function HomePage() {
                   <strong>{item.system}</strong>
                   <small>{item.purpose}</small>
                 </div>
+                <Tag tone={item.severity}>{item.status}</Tag>
+              </article>
+            ))}
+          </div>
+        </Panel>
+        <Panel wide className="admin-only-panel" eyebrow="Admin roadmap" title="Go Live Pathway" pill="Field-use readiness">
+          <div className="go-live-pathway">
+            {goLivePathway.map((item) => (
+              <article className={`go-live-item ${item.severity}`} key={item.step}>
+                <span>{item.step}</span>
+                <strong>{item.title}</strong>
                 <Tag tone={item.severity}>{item.status}</Tag>
               </article>
             ))}
