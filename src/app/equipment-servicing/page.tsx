@@ -9,7 +9,7 @@ export default function EquipmentServicingPage() {
       <PageIntro
         eyebrow="TOC workspace"
         title="Equipment Servicing"
-        detail="Central servicing hub for asset servicing and repairs across wash vehicles, utes, wash plants, Hondas, generators and Pony fleet wash machines."
+        detail="Central servicing hub for asset servicing and repairs."
       />
       <section className="status-strip equipment-summary" aria-label="Equipment servicing overview">
         {equipmentServiceSummary.map((item) => (
