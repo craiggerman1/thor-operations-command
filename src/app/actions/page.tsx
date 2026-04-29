@@ -7,7 +7,7 @@ export default function ActionsPage() {
     <TocShell>
       <PageIntro eyebrow="TOC workspace" title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <section className="command-grid route-grid">
-        <FlowHeading step="2" eyebrow="Action centre" title="Jobsheets, manager actions and national directives" />
+        <FlowHeading step="1" eyebrow="Action centre" title="Ensure all items are actioned and then cleared" />
         <Panel eyebrow="Thor Portal" title="Jobsheets needing review">
           <div className="queue-list">
             {approvals.map((item) => (

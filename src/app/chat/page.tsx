@@ -1,11 +1,12 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 
 export default function ChatPage() {
   return (
     <TocShell>
       <PageIntro eyebrow="TOC workspace" title="Chat" detail="Ensure healthy communication between management." />
       <section className="command-grid route-grid">
+        <FlowHeading step="6" eyebrow="Chat" title="Ensure healthy communication between management" />
         <Panel wide eyebrow="Internal comms" title="Manager chat" pill="Database planned">
           <div className="chat-layout">
             <aside className="chat-channels"><button className="active">National Ops <span>2</span></button><button>Managers <span>1</span></button><button>Workshop <span>1</span></button></aside>

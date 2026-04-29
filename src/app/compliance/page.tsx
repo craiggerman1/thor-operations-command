@@ -1,5 +1,5 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { compliance } from "@/lib/toc-data";
 
 export default function CompliancePage() {
@@ -7,6 +7,7 @@ export default function CompliancePage() {
     <TocShell>
       <PageIntro eyebrow="TOC workspace" title="Compliance" detail="Ensure compliance items are completed and green." />
       <section className="command-grid route-grid">
+        <FlowHeading step="3" eyebrow="Compliance" title="Ensure compliance items are completed and green" />
         <Panel wide eyebrow="Compliance command" title="Inductions, safety and site readiness" pill="2 urgent">
           <div className="compliance-layout">
             <div className="compliance-metrics">

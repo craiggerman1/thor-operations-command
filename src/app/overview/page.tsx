@@ -17,7 +17,7 @@ export default function OverviewPage() {
         ))}
       </section>
       <section className="command-grid route-grid">
-        <FlowHeading step="1" eyebrow="Situation" title="Start here: what is happening and what needs attention" />
+        <FlowHeading step="2" eyebrow="Region health" title="Ensure your region health is at 100%" />
         <Panel wide eyebrow="Operating position" title="Region health map" pill="Updated now">
           <div className="ops-map">
             {regions.map((region) => (
