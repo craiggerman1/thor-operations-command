@@ -6,7 +6,7 @@ import type { CSSProperties } from "react";
 export default function OverviewPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Overview" detail="National operating position and current command brief." />
+      <PageIntro eyebrow="TOC workspace" title="Region Health" detail="National operating position, region readiness and current command brief." />
       <section className="status-strip" aria-label="Operational status">
         {metrics.map((metric) => (
           <div className={`metric-card signal-${metric.status}`} key={metric.label}>

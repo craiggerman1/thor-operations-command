@@ -150,7 +150,7 @@ const starterAdminUsers = [
     email: "admin-user",
     role: "Admin",
     regions: ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"],
-    permissions: ["Approvals", "Tasks", "Stock", "Compliance", "Chat", "Admin"]
+    permissions: ["Approvals", "Action Centre", "Stock", "Compliance", "Chat", "Admin"]
   },
   {
     id: "admin-national",
@@ -158,7 +158,7 @@ const starterAdminUsers = [
     email: "national-ops-user",
     role: "National Ops",
     regions: ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"],
-    permissions: ["Approvals", "Tasks", "Stock", "Compliance", "Chat"]
+    permissions: ["Approvals", "Action Centre", "Stock", "Compliance", "Chat"]
   },
   {
     id: "admin-director",
@@ -166,7 +166,7 @@ const starterAdminUsers = [
     email: "director-user",
     role: "Director",
     regions: ["National"],
-    permissions: ["Overview", "Director"]
+    permissions: ["Region Health", "Director"]
   },
   {
     id: "admin-workshop",
@@ -174,7 +174,7 @@ const starterAdminUsers = [
     email: "workshop-user",
     role: "Workshop",
     regions: ["Workshop"],
-    permissions: ["Tasks", "Stock", "Compliance", "Chat"]
+    permissions: ["Action Centre", "Stock", "Compliance", "Chat"]
   }
 ];
 
@@ -244,12 +244,12 @@ const pageCopy = {
     detail: ""
   },
   overview: {
-    title: "Overview",
-    detail: "National operating position and current command brief."
+    title: "Region Health",
+    detail: "National operating position, region readiness and current command brief."
   },
   actions: {
     title: "Action Centre",
-    detail: "Jobsheets, manager actions and national directives."
+    detail: "Required actions requested by Admin and National Ops for the relevant managers."
   },
   operations: {
     title: "Operations",
@@ -282,10 +282,6 @@ const pageCopy = {
   chat: {
     title: "Chat",
     detail: "Internal manager and national operations communication channels."
-  },
-  tasks: {
-    title: "Tasks",
-    detail: "Local and national action tiles that need ownership."
   },
   todo: {
     title: "To Do",
@@ -384,7 +380,8 @@ function updateActiveNav() {
 function normalizePage(page) {
   const aliases = {
     performance: "operations",
-    "national-actions": "tasks",
+    tasks: "actions",
+    "national-actions": "actions",
     support: "stock"
   };
   return aliases[page] || page || "home";

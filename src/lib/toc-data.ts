@@ -69,7 +69,7 @@ export const stockOrders = [
 
 export const adminUsers = [
   { name: "Admin User", id: "TOC-ADMIN", role: "Admin", regions: "National", permissions: "All controls" },
-  { name: "National Ops User", id: "TOC-NATOPS", role: "National Ops", regions: "National", permissions: "Approvals, tasks, stock, compliance, chat" },
-  { name: "Director User", id: "TOC-DIRECTOR", role: "Director", regions: "National", permissions: "Owner overview only" },
-  { name: "Workshop User", id: "TOC-WORKSHOP", role: "Workshop", regions: "Workshop", permissions: "Workshop tasks, stock, compliance, chat" }
+  { name: "National Ops User", id: "TOC-NATOPS", role: "National Ops", regions: "National", permissions: "Approvals, action centre, stock, compliance, chat" },
+  { name: "Director User", id: "TOC-DIRECTOR", role: "Director", regions: "National", permissions: "Owner region health only" },
+  { name: "Workshop User", id: "TOC-WORKSHOP", role: "Workshop", regions: "Workshop", permissions: "Workshop action centre, stock, compliance, chat" }
 ];

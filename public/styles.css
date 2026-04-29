@@ -1854,7 +1854,6 @@ textarea {
 body[data-access="director"] #portal,
 body[data-access="director"] #fleet,
 body[data-access="director"] #stock,
-body[data-access="director"] #tasks,
 body[data-access="director"] #national-actions,
 body[data-access="director"] #actions,
 body[data-access="director"] #integrations {
@@ -1869,8 +1868,7 @@ body:not([data-access="admin"]) .rail-nav a[href="#admin"] {
 body[data-access="director"] .rail-nav a[href="#actions"],
 body[data-access="director"] .rail-nav a[href="#portal"],
 body[data-access="director"] .rail-nav a[href="#fleet"],
-body[data-access="director"] .rail-nav a[href="#stock"],
-body[data-access="director"] .rail-nav a[href="#tasks"] {
+body[data-access="director"] .rail-nav a[href="#stock"] {
   opacity: 0.48;
 }
 

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=31">
+    <link rel="stylesheet" href="./styles.css?v=32">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
@@ -62,17 +62,16 @@
 
         <nav class="rail-nav" aria-label="Primary">
           <a href="#home" class="active">Home</a>
-          <a href="#overview">Overview</a>
           <a href="#actions">Action Centre</a>
+          <a href="#overview">Region Health</a>
+          <a href="#compliance">Compliance</a>
+          <a href="#stock">Stock Orders</a>
+          <a href="#chat">Chat</a>
           <a href="#operations">Operations</a>
           <a href="#director">Director</a>
           <a href="#admin">Admin</a>
           <a href="#portal">Portal</a>
           <a href="#fleet">Fleetio</a>
-          <a href="#compliance">Compliance</a>
-          <a href="#stock">Stock Orders</a>
-          <a href="#chat">Chat</a>
-          <a href="#tasks">Tasks</a>
           <a href="#todo">To do</a>
         </nav>
 
@@ -95,7 +94,7 @@
             <div class="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.031</em>
+              <em>Build 0.032</em>
             </div>
           </div>
 
@@ -453,7 +452,7 @@
                 <fieldset>
                   <legend>Can interact with</legend>
                   <label><input type="checkbox" name="adminPermissions" value="Approvals" checked> Portal approvals</label>
-                  <label><input type="checkbox" name="adminPermissions" value="Tasks" checked> Action tiles</label>
+                  <label><input type="checkbox" name="adminPermissions" value="Action Centre" checked> Action Centre</label>
                   <label><input type="checkbox" name="adminPermissions" value="Stock" checked> Stock orders</label>
                   <label><input type="checkbox" name="adminPermissions" value="Compliance" checked> Compliance</label>
                   <label><input type="checkbox" name="adminPermissions" value="Chat" checked> Manager chat</label>
@@ -488,6 +487,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=31"></script>
+    <script src="./script.js?v=32"></script>
   </body>
 </html>

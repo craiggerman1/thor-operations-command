@@ -7,17 +7,16 @@ import type { FormEvent, ReactNode } from "react";
 
 const nav = [
   ["Home", "/home"],
-  ["Overview", "/overview"],
   ["Action Centre", "/actions"],
+  ["Region Health", "/overview"],
+  ["Compliance", "/compliance"],
+  ["Stock Orders", "/stock-orders"],
+  ["Chat", "/chat"],
   ["Operations", "/operations"],
   ["Director", "/director"],
   ["Admin", "/admin"],
   ["Portal", "/portal"],
   ["Fleetio", "/fleet"],
-  ["Compliance", "/compliance"],
-  ["Stock Orders", "/stock-orders"],
-  ["Chat", "/chat"],
-  ["Tasks", "/tasks"],
   ["To Do", "/todo"]
 ];
 
@@ -97,7 +96,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.031</em>
+              <em>Build 0.032</em>
             </div>
           </div>
           <div className="topbar-actions">
