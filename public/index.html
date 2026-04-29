@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=29">
+    <link rel="stylesheet" href="./styles.css?v=30">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
@@ -61,7 +61,8 @@
         </div>
 
         <nav class="rail-nav" aria-label="Primary">
-          <a href="#overview" class="active">Overview</a>
+          <a href="#home" class="active">Home</a>
+          <a href="#overview">Overview</a>
           <a href="#actions">Action Centre</a>
           <a href="#operations">Operations</a>
           <a href="#director">Director</a>
@@ -94,7 +95,7 @@
             <div class="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.029</em>
+              <em>Build 0.030</em>
             </div>
           </div>
 
@@ -131,7 +132,13 @@
           </div>
         </header>
 
-        <section class="status-strip" id="overview" aria-label="Operational status">
+        <section class="page-heading" id="pageHeading" aria-live="polite">
+          <span class="eyebrow">TOC workspace</span>
+          <h2>Home</h2>
+          <p hidden></p>
+        </section>
+
+        <section class="status-strip page-section" id="overview" data-page="overview" aria-label="Operational status">
           <a class="metric-card signal-green" href="#overview" aria-label="View operating week overview">
             <span>Operating week</span>
             <strong id="abcdWeek">Calculating</strong>
@@ -155,7 +162,7 @@
         </section>
 
         <section class="command-grid">
-          <div class="flow-heading situation-heading">
+          <div class="flow-heading situation-heading page-section" data-page="overview">
             <span class="flow-step">1</span>
             <div>
               <span class="eyebrow">Situation</span>
@@ -163,7 +170,7 @@
             </div>
           </div>
 
-          <section class="panel wide-panel">
+          <section class="panel wide-panel page-section" data-page="overview">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Operating position</span>
@@ -174,7 +181,7 @@
             <div class="ops-map" id="opsMap" aria-label="State operating status"></div>
           </section>
 
-          <section class="panel">
+          <section class="panel page-section" data-page="overview">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Manager scan</span>
@@ -184,7 +191,7 @@
             <div class="brief-stack" id="briefStack"></div>
           </section>
 
-          <section class="panel wide-panel director-panel" id="director">
+          <section class="panel wide-panel director-panel page-section" id="director" data-page="director">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Director access</span>
@@ -203,7 +210,7 @@
             </div>
           </section>
 
-          <div class="flow-heading actions-heading" id="actions">
+          <div class="flow-heading actions-heading page-section" id="actions" data-page="actions">
             <span class="flow-step">2</span>
             <div>
               <span class="eyebrow">Action centre</span>
@@ -211,7 +218,7 @@
             </div>
           </div>
 
-          <section class="panel" id="portal">
+          <section class="panel page-section" id="portal" data-page="actions portal">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Thor Portal</span>
@@ -222,7 +229,7 @@
             <div class="queue-list" id="approvalQueue"></div>
           </section>
 
-          <section class="panel" id="tasks">
+          <section class="panel page-section" id="tasks" data-page="actions tasks">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Local manager</span>
@@ -232,7 +239,7 @@
             <div class="task-stack" id="localTasks"></div>
           </section>
 
-          <section class="panel" id="national-actions">
+          <section class="panel page-section" id="national-actions" data-page="actions tasks">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">National ops</span>
@@ -242,7 +249,7 @@
             <div class="task-stack" id="nationalTasks"></div>
           </section>
 
-          <section class="panel" id="todo">
+          <section class="panel page-section" id="todo" data-page="actions todo">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Manager memory</span>
@@ -256,7 +263,7 @@
             <div class="todo-list" id="todoList"></div>
           </section>
 
-          <div class="flow-heading operations-heading" id="operations">
+          <div class="flow-heading operations-heading page-section" id="operations" data-page="operations">
             <span class="flow-step">3</span>
             <div>
               <span class="eyebrow">Operations health</span>
@@ -264,7 +271,7 @@
             </div>
           </div>
 
-          <section class="panel wide-panel" id="performance">
+          <section class="panel wide-panel page-section" id="performance" data-page="operations">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Woolworths wash data</span>
@@ -275,7 +282,7 @@
             <div class="wash-table" id="washTable"></div>
           </section>
 
-          <section class="panel" id="fleet">
+          <section class="panel page-section" id="fleet" data-page="operations fleet">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Fleetio</span>
@@ -285,7 +292,7 @@
             <div class="asset-list" id="assetList"></div>
           </section>
 
-          <section class="panel wide-panel" id="compliance">
+          <section class="panel wide-panel page-section" id="compliance" data-page="operations compliance">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Compliance command</span>
@@ -299,7 +306,7 @@
             </div>
           </section>
 
-          <div class="flow-heading support-heading" id="support">
+          <div class="flow-heading support-heading page-section" id="support" data-page="stock chat">
             <span class="flow-step">4</span>
             <div>
               <span class="eyebrow">Coordination</span>
@@ -307,7 +314,7 @@
             </div>
           </div>
 
-          <section class="panel wide-panel" id="stock">
+          <section class="panel wide-panel page-section" id="stock" data-page="stock">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Stock control</span>
@@ -375,7 +382,7 @@
             </div>
           </section>
 
-          <section class="panel wide-panel chat-panel" id="chat">
+          <section class="panel wide-panel chat-panel page-section" id="chat" data-page="chat">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Internal comms</span>
@@ -402,7 +409,7 @@
             </div>
           </section>
 
-          <section class="panel" id="integrations">
+          <section class="panel page-section" id="integrations" data-page="operations">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Integration layer</span>
@@ -419,7 +426,7 @@
             </div>
           </section>
 
-          <section class="panel wide-panel admin-panel" id="admin">
+          <section class="panel wide-panel admin-panel page-section" id="admin" data-page="admin">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Admin command</span>
@@ -481,6 +488,6 @@
       </main>
     </div>
 
-    <script src="./script.js?v=29"></script>
+    <script src="./script.js?v=30"></script>
   </body>
 </html>

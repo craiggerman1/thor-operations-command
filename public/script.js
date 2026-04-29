@@ -218,6 +218,8 @@ const chatMessages = document.querySelector("#chatMessages");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const navLinks = document.querySelectorAll(".rail-nav a");
+const pageSections = document.querySelectorAll(".page-section");
+const pageHeading = document.querySelector("#pageHeading");
 const sessionChip = document.querySelector("#sessionChip strong");
 const loginScreen = document.querySelector("#loginScreen");
 const loginForm = document.querySelector("#loginForm");
@@ -235,6 +237,61 @@ const adminUserEmail = document.querySelector("#adminUserEmail");
 const adminUserRole = document.querySelector("#adminUserRole");
 const adminUserList = document.querySelector("#adminUserList");
 const resetAdminUsers = document.querySelector("#resetAdminUsers");
+
+const pageCopy = {
+  home: {
+    title: "Home",
+    detail: ""
+  },
+  overview: {
+    title: "Overview",
+    detail: "National operating position and current command brief."
+  },
+  actions: {
+    title: "Action Centre",
+    detail: "Jobsheets, manager actions and national directives."
+  },
+  operations: {
+    title: "Operations",
+    detail: "Wash output, assets, feed readiness and operational health."
+  },
+  director: {
+    title: "Director",
+    detail: "High-level owner view of business health, efficiency, compliance and productivity."
+  },
+  admin: {
+    title: "Admin",
+    detail: "User access, role permissions, region visibility and admin setup controls."
+  },
+  portal: {
+    title: "Portal",
+    detail: "Thor Portal approval items needing manager review."
+  },
+  fleet: {
+    title: "Fleetio",
+    detail: "Wash plants, vehicles, GPS status and assets needing awareness."
+  },
+  compliance: {
+    title: "Compliance",
+    detail: "Inductions, safety items, site readiness and compliance actions."
+  },
+  stock: {
+    title: "Stock Orders",
+    detail: "Regional stock requests and the national ordering queue."
+  },
+  chat: {
+    title: "Chat",
+    detail: "Internal manager and national operations communication channels."
+  },
+  tasks: {
+    title: "Tasks",
+    detail: "Local and national action tiles that need ownership."
+  },
+  todo: {
+    title: "To Do",
+    detail: "Personal manager notes and quick tasks captured during the day."
+  }
+};
 
 function selectedRegion() {
   return regionFilter.value;
@@ -281,11 +338,11 @@ function applySession(session) {
   sessionChip.textContent = accessLabel();
   document.body.classList.add("is-authenticated");
 
-  if (session.access === "director") {
-    window.location.hash = "director";
-  } else if (session.access === "admin") {
-    window.location.hash = "overview";
-  } else if (session.access === "workshop") {
+  if (!window.location.hash) {
+    window.location.hash = "home";
+  }
+
+  if (session.access === "workshop") {
     activeChatChannel = "workshop";
   }
 }
@@ -317,9 +374,40 @@ function getVisibleChatChannels() {
 }
 
 function updateActiveNav() {
-  const currentHash = window.location.hash || "#overview";
+  const currentPage = normalizePage((window.location.hash || "#home").replace("#", ""));
   navLinks.forEach((link) => {
-    link.classList.toggle("active", link.getAttribute("href") === currentHash);
+    link.classList.toggle("active", link.getAttribute("href") === `#${currentPage}`);
+  });
+  updatePage(currentPage);
+}
+
+function normalizePage(page) {
+  const aliases = {
+    performance: "operations",
+    "national-actions": "tasks",
+    support: "stock"
+  };
+  return aliases[page] || page || "home";
+}
+
+function updatePage(page) {
+  const requestedPage = normalizePage(page);
+  const hasPage = requestedPage === "home" || Array.from(pageSections).some((section) => section.dataset.page?.split(" ").includes(requestedPage));
+  const activePage = hasPage ? requestedPage : "home";
+
+  pageSections.forEach((section) => {
+    const pages = section.dataset.page ? section.dataset.page.split(" ") : [];
+    section.hidden = activePage === "home" || !pages.includes(activePage);
+  });
+
+  const copy = pageCopy[activePage] || pageCopy.home;
+  pageHeading.querySelector("h2").textContent = copy.title;
+  const pageDetail = pageHeading.querySelector("p");
+  pageDetail.textContent = copy.detail;
+  pageDetail.hidden = !copy.detail;
+
+  navLinks.forEach((link) => {
+    link.classList.toggle("active", link.getAttribute("href") === `#${activePage}`);
   });
 }
 
@@ -1002,7 +1090,7 @@ accessLevel.addEventListener("change", () => {
   sessionChip.textContent = accessLabel();
   if (selectedAccess() === "admin") {
     regionFilter.value = "national";
-    window.location.hash = "overview";
+    window.location.hash = "home";
     activeChatChannel = "national";
   } else if (selectedAccess() === "director") {
     regionFilter.value = "national";
@@ -1010,7 +1098,7 @@ accessLevel.addEventListener("change", () => {
     activeChatChannel = "national";
   } else if (selectedAccess() === "workshop") {
     regionFilter.value = "Workshop";
-    window.location.hash = "overview";
+    window.location.hash = "home";
     activeChatChannel = "workshop";
   }
   renderAll();

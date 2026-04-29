@@ -23,7 +23,7 @@ export default function LoginPage() {
           <input type="password" placeholder="Enter password" autoComplete="current-password" />
         </label>
         <div className="login-actions">
-          <Link href="/overview">Developer quick sign in</Link>
+          <Link href="/home">Developer quick sign in</Link>
         </div>
         <small className="login-note">Developer use only while TOC is being built. Full authentication and permissions will be connected later.</small>
       </form>

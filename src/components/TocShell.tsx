@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { metrics } from "@/lib/toc-data";
 
 const nav = [
+  ["Home", "/home"],
   ["Overview", "/overview"],
   ["Action Centre", "/actions"],
   ["Operations", "/operations"],
@@ -73,7 +73,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.029</em>
+              <em>Build 0.030</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -98,16 +98,6 @@ export function TocShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <section className="status-strip" aria-label="Operational status">
-          {metrics.map((metric) => (
-            <div className={`metric-card signal-${metric.status}`} key={metric.label}>
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
-              <small>{metric.detail}</small>
-            </div>
-          ))}
-        </section>
-
         {children}
       </main>
     </div>
@@ -115,12 +105,12 @@ export function TocShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageIntro({ eyebrow, title, detail }: { eyebrow: string; title: string; detail: string }) {
+export function PageIntro({ eyebrow, title, detail }: { eyebrow: string; title: string; detail?: string }) {
   return (
     <section className="page-title">
       <span className="eyebrow">{eyebrow}</span>
       <h2>{title}</h2>
-      <p>{detail}</p>
+      {detail ? <p>{detail}</p> : null}
     </section>
   );
 }
