@@ -54,10 +54,10 @@ export function TocShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="rail-card">
+        <div className="rail-card offline-feed-card">
           <span className="label">Data feeds</span>
           <strong>Demo data only</strong>
-          <small>Portal, Fleetio, GPS and database feeds are planned</small>
+          <small>Portal, Unity and Fleetio feeds are not connected yet. API and webhook integrations offline.</small>
         </div>
       </aside>
 
@@ -73,7 +73,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.028</em>
+              <em>Build 0.029</em>
             </div>
           </div>
           <div className="topbar-actions">

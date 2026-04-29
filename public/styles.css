@@ -415,6 +415,24 @@ textarea {
     #06243d;
 }
 
+.offline-feed-card {
+  border-color: rgba(255, 214, 211, 0.42);
+  background:
+    linear-gradient(135deg, rgba(191, 62, 57, 0.3), rgba(255, 255, 255, 0.04)),
+    #2d1114;
+  box-shadow: 0 0 0 rgba(191, 62, 57, 0);
+  animation: offlineFeedPulse 4.6s ease-in-out infinite;
+}
+
+.offline-feed-card .label,
+.offline-feed-card strong {
+  color: #ffe9e6;
+}
+
+.offline-feed-card small {
+  color: #f3c1bd;
+}
+
 .label,
 .eyebrow {
   display: block;
@@ -658,6 +676,19 @@ h2 {
   100% {
     opacity: 0;
     transform: scale(1.55);
+  }
+}
+
+@keyframes offlineFeedPulse {
+  0%,
+  100% {
+    border-color: rgba(255, 214, 211, 0.28);
+    box-shadow: 0 0 0 rgba(191, 62, 57, 0);
+  }
+
+  50% {
+    border-color: rgba(255, 214, 211, 0.72);
+    box-shadow: 0 0 24px rgba(191, 62, 57, 0.34);
   }
 }
 
