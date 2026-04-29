@@ -1,13 +1,37 @@
+import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { Panel, Tag } from "@/components/TocCards";
-import { CommandMetricStrip } from "@/components/CommandMetricStrip";
+import { getThorOperatingWeek } from "@/lib/operating-week";
 import { commandPathways, commandSignals, integrationReadiness } from "@/lib/toc-data";
+import { metrics } from "@/lib/toc-data";
+
+export const dynamic = "force-dynamic";
 
 export default function HomePage() {
+  const operatingWeek = getThorOperatingWeek();
+  const commandMetrics = [
+    {
+      label: "Operating week",
+      value: operatingWeek.name,
+      detail: operatingWeek.detail,
+      status: "green",
+      href: "/overview"
+    },
+    ...metrics
+  ];
+
   return (
     <TocShell>
       <PageIntro eyebrow="TOC workspace" title="Home" detail="National command entry point. Start with the business signal, then move to the page that owns the action." />
-      <CommandMetricStrip />
+      <section className="status-strip" aria-label="Business overview">
+        {commandMetrics.map((metric) => (
+          <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+            <small>{metric.detail}</small>
+          </Link>
+        ))}
+      </section>
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Command signal" title="What needs attention first" pill="Action-linked">
           <div className="signal-command-grid">
