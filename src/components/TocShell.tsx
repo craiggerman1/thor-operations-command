@@ -4,36 +4,43 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
+import type { AccessRole } from "@/lib/access";
 
-const nav = [
-  ["Home", "/home"],
-  ["Action Centre", "/actions"],
-  ["Region Health", "/overview"],
-  ["Compliance", "/compliance"],
-  ["Stock Orders", "/stock-orders"],
-  ["Operations", "/operations"],
-  ["Chat", "/chat"],
-  ["Director", "/director"],
-  ["Admin", "/admin"],
-  ["Portal", "/portal"],
-  ["Fleetio", "/fleet"],
-  ["To Do", "/todo"]
-];
+type StoredSession = {
+  role?: AccessRole;
+  label?: string;
+  scope?: string;
+};
 
 export function TocShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
   const [todoText, setTodoText] = useState("");
   const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>([]);
+  const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
+  const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role));
 
   function todoStorageKey() {
-    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
-    return `toc.todos.${session?.email || "next-admin"}`;
+    const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return `toc.todos.${storedSession?.role || activeProfile.role}.${storedSession?.scope || session.scope || "National"}`;
   }
 
   useEffect(() => {
-    setTodos(JSON.parse(localStorage.getItem(todoStorageKey()) || "[]"));
+    const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
+    if (storedSession?.role && storedSession.role in sessionProfiles) {
+      setSession(storedSession);
+      document.body.dataset.access = storedSession.role;
+    } else {
+      document.body.dataset.access = defaultSession.role;
+    }
+    document.body.classList.add("is-authenticated");
   }, []);
+
+  useEffect(() => {
+    setTodos(JSON.parse(localStorage.getItem(todoStorageKey()) || "[]"));
+  }, [session.role, session.scope]);
 
   function saveTodos(nextTodos: { id: string; text: string; done: boolean }[]) {
     setTodos(nextTodos);
@@ -46,6 +53,16 @@ export function TocShell({ children }: { children: ReactNode }) {
     if (!text) return;
     saveTodos([{ id: crypto.randomUUID(), text, done: false }, ...todos]);
     setTodoText("");
+  }
+
+  function updateScope(scope: string) {
+    const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope };
+    setSession(nextSession);
+    localStorage.setItem("toc.session", JSON.stringify(nextSession));
+  }
+
+  function signOut() {
+    localStorage.removeItem("toc.session");
   }
 
   return (
@@ -71,7 +88,7 @@ export function TocShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="rail-nav" aria-label="Primary">
-          {nav.map(([label, href]) => (
+          {visibleNav.map(({ label, href }) => (
             <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)}>
               {label}
             </Link>
@@ -96,29 +113,26 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.038</em>
+              <em>Build 0.039</em>
             </div>
           </div>
           <div className="topbar-actions">
             <div className="session-chip">
               <span>Signed in</span>
-              <strong>Admin</strong>
+              <strong>{activeProfile.label}</strong>
             </div>
-            <label className="select-wrap region-control">
+            <div className="session-chip scope-chip">
               <span>Scope</span>
-              <select defaultValue="national">
-                <option value="national">National</option>
-                <option value="Brisbane">Brisbane</option>
-                <option value="Sydney">Sydney</option>
-                <option value="Melbourne">Melbourne</option>
-                <option value="Adelaide">Adelaide</option>
-                <option value="Perth">Perth</option>
-                <option value="Canberra">Canberra</option>
-                <option value="Workshop">Workshop</option>
+              <strong>{session.scope || activeProfile.regions[0]}</strong>
+            </div>
+            {activeProfile.regions.length > 1 ? <label className="select-wrap region-control">
+              <span>Scope</span>
+              <select value={session.scope || activeProfile.regions[0]} onChange={(event) => updateScope(event.target.value)}>
+                {activeProfile.regions.map((region) => <option key={region} value={region}>{region}</option>)}
               </select>
-            </label>
+            </label> : null}
             <button className="manual-refresh-button" type="button">Manual Refresh</button>
-            <Link className="logout-button" href="/">Log out</Link>
+            <Link className="logout-button" href="/" onClick={signOut}>Log out</Link>
           </div>
         </header>
 

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LoginPanel } from "@/components/LoginPanel";
 
 export default function LoginPage() {
   return (
@@ -8,25 +8,7 @@ export default function LoginPage() {
         <span>Operations Command</span>
       </div>
 
-      <form className="login-card">
-        <div>
-          <span className="eyebrow">Secure access prototype</span>
-          <h1>Thor Operations Command</h1>
-          <p>Sign in to open Thor Operations Command.</p>
-        </div>
-        <label>
-          <span>Email</span>
-          <input type="email" placeholder="user@example.com" autoComplete="email" />
-        </label>
-        <label>
-          <span>Password</span>
-          <input type="password" placeholder="Enter password" autoComplete="current-password" />
-        </label>
-        <div className="login-actions">
-          <Link href="/home">Developer quick sign in</Link>
-        </div>
-        <small className="login-note">Developer use only while TOC is being built. Full authentication and permissions will be connected later.</small>
-      </form>
+      <LoginPanel />
     </section>
   );
 }

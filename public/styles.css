@@ -703,8 +703,8 @@ h2 {
 }
 
 .topbar-actions {
-  width: min(620px, 100%);
-  max-width: 620px;
+  width: min(720px, 100%);
+  max-width: 720px;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-self: flex-start;
@@ -748,6 +748,10 @@ h2 {
 
 body[data-access="admin"] .region-control {
   display: grid;
+}
+
+body[data-access="admin"] .scope-chip {
+  display: none;
 }
 
 .select-wrap {
@@ -1916,6 +1920,38 @@ textarea {
   line-height: 1.45;
 }
 
+.role-blueprint-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.role-blueprint-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(9, 60, 93, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.role-blueprint-card h3 {
+  margin: 4px 0 8px;
+  color: var(--blue);
+  font-size: 20px;
+}
+
+.role-blueprint-card p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.role-page-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .chat-form {
   display: flex;
   gap: 10px;
@@ -1943,27 +1979,6 @@ textarea {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-body[data-access="director"] #portal,
-body[data-access="director"] #fleet,
-body[data-access="director"] #stock,
-body[data-access="director"] #national-actions,
-body[data-access="director"] #actions,
-body[data-access="director"] #integrations {
-  display: none;
-}
-
-body:not([data-access="admin"]) #admin,
-body:not([data-access="admin"]) .rail-nav a[href="#admin"] {
-  display: none;
-}
-
-body[data-access="director"] .rail-nav a[href="#actions"],
-body[data-access="director"] .rail-nav a[href="#portal"],
-body[data-access="director"] .rail-nav a[href="#fleet"],
-body[data-access="director"] .rail-nav a[href="#stock"] {
-  opacity: 0.48;
 }
 
 @media (max-width: 1120px) {
@@ -1998,6 +2013,7 @@ body[data-access="director"] .rail-nav a[href="#stock"] {
   }
 
   .status-strip,
+  .role-blueprint-grid,
   .command-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2199,6 +2215,7 @@ body[data-access="director"] .rail-nav a[href="#stock"] {
 
   .rail-nav,
   .status-strip,
+  .role-blueprint-grid,
   .command-grid,
   .ops-map {
     grid-template-columns: 1fr;

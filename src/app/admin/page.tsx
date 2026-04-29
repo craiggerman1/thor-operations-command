@@ -1,6 +1,7 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { Panel, Tag } from "@/components/TocCards";
 import { adminUsers } from "@/lib/toc-data";
+import { navigationItems, sessionProfiles } from "@/lib/access";
 
 export default function AdminPage() {
   return (
@@ -25,6 +26,25 @@ export default function AdminPage() {
                 </article>
               ))}
             </div>
+          </div>
+        </Panel>
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.039">
+          <div className="role-blueprint-grid">
+            {Object.values(sessionProfiles).map((profile) => {
+              const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);
+              return (
+                <article className="role-blueprint-card" key={profile.role}>
+                  <div>
+                    <span className="eyebrow">{profile.scopeLabel}</span>
+                    <h3>{profile.label}</h3>
+                    <p>{profile.summary}</p>
+                  </div>
+                  <div className="role-page-list">
+                    {pages.map((page) => <Tag key={page}>{page}</Tag>)}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </Panel>
       </section>
