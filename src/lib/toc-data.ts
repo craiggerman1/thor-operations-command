@@ -1,7 +1,6 @@
 export type Status = "green" | "amber" | "red" | "blue";
 
 export const metrics = [
-  { label: "Operating week", value: "C Week", detail: "Thursday to Wednesday", status: "green" as Status, href: "/overview" },
   { label: "Portal approvals", value: "25", detail: "Waiting on manager action", status: "amber" as Status, href: "/portal" },
   { label: "Assets online", value: "5/8", detail: "Fleetio and GPS ready", status: "blue" as Status, href: "/fleet" },
   { label: "Risk flags", value: "13", detail: "Compliance, staffing, data", status: "red" as Status, href: "/actions" }

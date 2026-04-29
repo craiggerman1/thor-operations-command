@@ -1,21 +1,13 @@
-import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { Panel, Tag } from "@/components/TocCards";
-import { commandPathways, commandSignals, integrationReadiness, metrics } from "@/lib/toc-data";
+import { CommandMetricStrip } from "@/components/CommandMetricStrip";
+import { commandPathways, commandSignals, integrationReadiness } from "@/lib/toc-data";
 
 export default function HomePage() {
   return (
     <TocShell>
       <PageIntro eyebrow="TOC workspace" title="Home" detail="National command entry point. Start with the business signal, then move to the page that owns the action." />
-      <section className="status-strip" aria-label="Business overview">
-        {metrics.map((metric) => (
-          <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.detail}</small>
-          </Link>
-        ))}
-      </section>
+      <CommandMetricStrip />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Command signal" title="What needs attention first" pill="Action-linked">
           <div className="signal-command-grid">
