@@ -1,14 +1,15 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { equipmentAssets, equipmentServiceSummary, servicingDataFlow } from "@/lib/toc-data";
 
 export default function EquipmentServicingPage() {
   return (
     <TocShell>
+      <FlowHeading step="6" eyebrow="Equipment servicing" title="Central servicing hub for asset servicing and repairs" />
       <PageIntro
         eyebrow="TOC workspace"
         title="Equipment Servicing"
-        detail="Central servicing hub for wash vehicles, utes, wash plants, Hondas, generators and Pony fleet wash machines."
+        detail="Central servicing hub for asset servicing and repairs across wash vehicles, utes, wash plants, Hondas, generators and Pony fleet wash machines."
       />
       <section className="status-strip equipment-summary" aria-label="Equipment servicing overview">
         {equipmentServiceSummary.map((item) => (

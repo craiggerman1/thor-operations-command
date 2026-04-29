@@ -51,7 +51,8 @@ export const commandPathways = [
   { step: "3", label: "Compliance", href: "/compliance", detail: "Confirm induction, safety and site-readiness issues are complete and green." },
   { step: "4", label: "Stock Orders", href: "/stock-orders", detail: "Raise supply needs early before chemicals, PPE or parts block the work." },
   { step: "5", label: "Operations", href: "/operations", detail: "Review wash output, rollover counts, assets, roster pressure and site activity." },
-  { step: "6", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
+  { step: "6", label: "Equipment Servicing", href: "/equipment-servicing", detail: "Track odometer and hour readings so servicing and repairs are visible before assets fail." },
+  { step: "7", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
 ];
 
 export const goLivePathway = [
