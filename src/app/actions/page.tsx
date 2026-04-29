@@ -5,7 +5,7 @@ import { approvals, nationalTasks, tasks } from "@/lib/toc-data";
 export default function ActionsPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Action Centre" detail="Required actions requested by Admin and National Ops for the relevant managers." />
+      <PageIntro eyebrow="TOC workspace" title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <section className="command-grid route-grid">
         <FlowHeading step="2" eyebrow="Action centre" title="Jobsheets, manager actions and national directives" />
         <Panel eyebrow="Thor Portal" title="Jobsheets needing review">

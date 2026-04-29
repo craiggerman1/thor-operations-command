@@ -245,15 +245,15 @@ const pageCopy = {
   },
   overview: {
     title: "Region Health",
-    detail: "National operating position, region readiness and current command brief."
+    detail: "Ensure your region health is at 100%."
   },
   actions: {
     title: "Action Centre",
-    detail: "Required actions requested by Admin and National Ops for the relevant managers."
+    detail: "Ensure all items are actioned and then cleared."
   },
   operations: {
     title: "Operations",
-    detail: "Wash output, assets, feed readiness and operational health."
+    detail: "Check operations and take action."
   },
   director: {
     title: "Director",
@@ -273,15 +273,15 @@ const pageCopy = {
   },
   compliance: {
     title: "Compliance",
-    detail: "Inductions, safety items, site readiness and compliance actions."
+    detail: "Ensure compliance items are completed and green."
   },
   stock: {
     title: "Stock Orders",
-    detail: "Regional stock requests and the national ordering queue."
+    detail: "Order stock early and ensure up to date."
   },
   chat: {
     title: "Chat",
-    detail: "Internal manager and national operations communication channels."
+    detail: "Ensure healthy communication between management."
   },
   todo: {
     title: "To Do",

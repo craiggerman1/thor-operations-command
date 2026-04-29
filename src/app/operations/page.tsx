@@ -5,7 +5,7 @@ import { assets, washes } from "@/lib/toc-data";
 export default function OperationsPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Operations" detail="Wash output, assets, feed readiness and operational health." />
+      <PageIntro eyebrow="TOC workspace" title="Operations" detail="Check operations and take action." />
       <section className="command-grid route-grid">
         <FlowHeading step="3" eyebrow="Operations health" title="Check output and assets before small issues become big ones" />
         <Panel wide eyebrow="Woolworths wash data" title="Site performance" pill="Fleetio feed planned">

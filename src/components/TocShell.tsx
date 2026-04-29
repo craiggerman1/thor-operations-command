@@ -11,8 +11,8 @@ const nav = [
   ["Region Health", "/overview"],
   ["Compliance", "/compliance"],
   ["Stock Orders", "/stock-orders"],
-  ["Chat", "/chat"],
   ["Operations", "/operations"],
+  ["Chat", "/chat"],
   ["Director", "/director"],
   ["Admin", "/admin"],
   ["Portal", "/portal"],
@@ -96,7 +96,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.032</em>
+              <em>Build 0.033</em>
             </div>
           </div>
           <div className="topbar-actions">

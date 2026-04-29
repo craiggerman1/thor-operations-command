@@ -4,7 +4,7 @@ import { Panel, Tag } from "@/components/TocCards";
 export default function ChatPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Chat" detail="Internal manager and national operations communication channels." />
+      <PageIntro eyebrow="TOC workspace" title="Chat" detail="Ensure healthy communication between management." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Internal comms" title="Manager chat" pill="Database planned">
           <div className="chat-layout">

@@ -5,7 +5,7 @@ import { stockOrders } from "@/lib/toc-data";
 export default function StockOrdersPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Stock Orders" detail="Regional stock requests and the national ordering queue." />
+      <PageIntro eyebrow="TOC workspace" title="Stock Orders" detail="Order stock early and ensure up to date." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Stock control" title="Request stock from national" pill={`${stockOrders.length} open`}>
           <div className="stock-layout">
