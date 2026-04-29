@@ -394,7 +394,7 @@ function updatePage(page) {
 
   pageSections.forEach((section) => {
     const pages = section.dataset.page ? section.dataset.page.split(" ") : [];
-    section.hidden = activePage === "home" || !pages.includes(activePage);
+    section.hidden = !pages.includes(activePage);
   });
 
   const copy = pageCopy[activePage] || pageCopy.home;

@@ -1,21 +1,12 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { metrics, regions } from "@/lib/toc-data";
+import { regions } from "@/lib/toc-data";
 import type { CSSProperties } from "react";
 
 export default function OverviewPage() {
   return (
     <TocShell>
       <PageIntro eyebrow="TOC workspace" title="Region Health" detail="Ensure your region health is at 100%." />
-      <section className="status-strip" aria-label="Operational status">
-        {metrics.map((metric) => (
-          <div className={`metric-card signal-${metric.status}`} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.detail}</small>
-          </div>
-        ))}
-      </section>
       <section className="command-grid route-grid">
         <FlowHeading step="2" eyebrow="Region health" title="Ensure your region health is at 100%" />
         <Panel wide eyebrow="Operating position" title="Region health map" pill="Updated now">
