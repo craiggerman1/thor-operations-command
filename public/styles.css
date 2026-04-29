@@ -444,7 +444,9 @@ textarea {
 }
 
 .workspace {
+  position: relative;
   padding: 28px;
+  padding-right: 360px;
   min-width: 0;
   background:
     linear-gradient(180deg, rgba(10, 49, 82, 0.12), transparent 420px),
@@ -701,8 +703,8 @@ h2 {
 }
 
 .topbar-actions {
-  width: min(520px, 100%);
-  max-width: 520px;
+  width: min(620px, 100%);
+  max-width: 620px;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-self: flex-start;
@@ -784,7 +786,7 @@ textarea {
   color: #eef5fb;
 }
 
-.icon-button,
+.manual-refresh-button,
 .text-button,
 .logout-button,
 .mobile-menu-button,
@@ -802,12 +804,13 @@ textarea {
   font-weight: 700;
 }
 
-.icon-button {
-  width: 42px;
-  height: 42px;
+.manual-refresh-button {
+  min-height: 42px;
+  padding: 0 13px;
   background: #ffffff;
   color: #0a3152;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .mobile-menu-button {
@@ -1198,6 +1201,55 @@ textarea {
 .todo-list {
   display: grid;
   gap: 10px;
+}
+
+.todo-panel {
+  position: fixed;
+  top: 220px;
+  right: 28px;
+  z-index: 25;
+  width: 304px;
+  min-height: auto;
+  max-height: calc(100dvh - 248px);
+  overflow: auto;
+  border-color: rgba(37, 161, 189, 0.28);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 24px 58px rgba(6, 7, 9, 0.16);
+}
+
+.todo-panel .panel-head {
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.todo-panel h2 {
+  font-size: 19px;
+}
+
+.todo-panel .todo-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.todo-panel .todo-form input {
+  min-height: 38px;
+}
+
+.todo-panel .todo-form button {
+  min-height: 38px;
+}
+
+.todo-panel .todo-item {
+  padding: 10px;
+  gap: 8px;
+}
+
+.todo-panel .todo-item button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .brief-item,
@@ -1803,7 +1855,6 @@ body[data-access="director"] #portal,
 body[data-access="director"] #fleet,
 body[data-access="director"] #stock,
 body[data-access="director"] #tasks,
-body[data-access="director"] #todo,
 body[data-access="director"] #national-actions,
 body[data-access="director"] #actions,
 body[data-access="director"] #integrations {
@@ -1819,8 +1870,7 @@ body[data-access="director"] .rail-nav a[href="#actions"],
 body[data-access="director"] .rail-nav a[href="#portal"],
 body[data-access="director"] .rail-nav a[href="#fleet"],
 body[data-access="director"] .rail-nav a[href="#stock"],
-body[data-access="director"] .rail-nav a[href="#tasks"],
-body[data-access="director"] .rail-nav a[href="#todo"] {
+body[data-access="director"] .rail-nav a[href="#tasks"] {
   opacity: 0.48;
 }
 
@@ -1958,6 +2008,13 @@ body[data-access="director"] .rail-nav a[href="#todo"] {
 
   .workspace {
     padding: 14px;
+  }
+
+  .todo-panel {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin-top: 18px;
   }
 
   .side-rail {

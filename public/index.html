@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Thor Operations Command</title>
-    <link rel="stylesheet" href="./styles.css?v=30">
+    <link rel="stylesheet" href="./styles.css?v=31">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" aria-label="Thor Operations Command login">
@@ -95,7 +95,7 @@
             <div class="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.030</em>
+              <em>Build 0.031</em>
             </div>
           </div>
 
@@ -127,7 +127,7 @@
                 <option value="Workshop">Workshop</option>
               </select>
             </label>
-            <button class="icon-button" id="refreshButton" type="button" aria-label="Refresh command data" title="Refresh command data">R</button>
+            <button class="manual-refresh-button" id="refreshButton" type="button" aria-label="Manual refresh command data" title="Manual refresh command data">Manual Refresh</button>
             <button class="logout-button" id="logoutButton" type="button">Log out</button>
           </div>
         </header>
@@ -247,20 +247,6 @@
               </div>
             </div>
             <div class="task-stack" id="nationalTasks"></div>
-          </section>
-
-          <section class="panel page-section" id="todo" data-page="actions todo">
-            <div class="panel-head">
-              <div>
-                <span class="eyebrow">Manager memory</span>
-                <h2>Personal to do list</h2>
-              </div>
-            </div>
-            <form class="todo-form" id="todoForm">
-              <input id="todoInput" type="text" placeholder="Add a task as it comes in" autocomplete="off">
-              <button type="submit">Add</button>
-            </form>
-            <div class="todo-list" id="todoList"></div>
           </section>
 
           <div class="flow-heading operations-heading page-section" id="operations" data-page="operations">
@@ -485,9 +471,23 @@
             </div>
           </section>
         </section>
+
+        <aside class="panel todo-panel" id="todo" aria-label="Personal to do list">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Manager memory</span>
+              <h2>Personal to do list</h2>
+            </div>
+          </div>
+          <form class="todo-form" id="todoForm">
+            <input id="todoInput" type="text" placeholder="Add a task as it comes in" autocomplete="off">
+            <button type="submit">Add</button>
+          </form>
+          <div class="todo-list" id="todoList"></div>
+        </aside>
       </main>
     </div>
 
-    <script src="./script.js?v=30"></script>
+    <script src="./script.js?v=31"></script>
   </body>
 </html>

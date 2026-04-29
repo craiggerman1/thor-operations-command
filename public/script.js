@@ -392,7 +392,7 @@ function normalizePage(page) {
 
 function updatePage(page) {
   const requestedPage = normalizePage(page);
-  const hasPage = requestedPage === "home" || Array.from(pageSections).some((section) => section.dataset.page?.split(" ").includes(requestedPage));
+  const hasPage = Boolean(pageCopy[requestedPage]) || Array.from(pageSections).some((section) => section.dataset.page?.split(" ").includes(requestedPage));
   const activePage = hasPage ? requestedPage : "home";
 
   pageSections.forEach((section) => {
@@ -773,12 +773,18 @@ function renderTaskCards(tasks) {
     : `<div class="brief-item"><span class="brief-dot"></span><div><strong>No open actions.</strong><small>This lane is clear.</small></div></div>`;
 }
 
+function todoStorageKey() {
+  const session = getSession();
+  const userKey = session?.email || `${selectedAccess()}-${selectedRegion()}`;
+  return `toc.todos.${userKey}`;
+}
+
 function getTodos() {
-  return JSON.parse(localStorage.getItem("toc.todos") || "[]");
+  return JSON.parse(localStorage.getItem(todoStorageKey()) || "[]");
 }
 
 function setTodos(todos) {
-  localStorage.setItem("toc.todos", JSON.stringify(todos));
+  localStorage.setItem(todoStorageKey(), JSON.stringify(todos));
 }
 
 function renderTodos() {
