@@ -15,6 +15,8 @@ The repository now contains two layers:
 - `src/app` is the new Next.js App Router web app for Vercel.
 - `public` still contains the legacy static prototype and Thor brand assets.
 
+Current production home: Vercel, protected by the TOC private access gate.
+
 The new Next.js app includes proper route pages for:
 
 - National and regional command overview.
