@@ -1460,10 +1460,42 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 8px;
 }
 
-.todo-panel .todo-item button {
+.todo-panel .todo-item button,
+.todo-panel .todo-item select {
   min-height: 30px;
   padding: 0 9px;
   font-size: 12px;
+}
+
+.todo-page-panel {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: auto;
+  max-height: none;
+  grid-column: 1 / -1;
+}
+
+.todo-page-panel .todo-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.todo-page-panel .todo-form {
+  grid-template-columns: minmax(0, 1fr) 120px;
+}
+
+.todo-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.todo-toggle input {
+  width: 18px;
+  min-height: 18px;
 }
 
 .brief-item,
@@ -1920,7 +1952,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .todo-item {
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
 }
 
@@ -1929,18 +1961,62 @@ body:not([data-access="admin"]) .admin-only-panel {
   min-height: 18px;
 }
 
-.todo-item.done span {
+.todo-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.todo-copy strong {
+  color: #071726;
+  line-height: 1.35;
+}
+
+.todo-copy small {
+  color: var(--muted);
+}
+
+.todo-item.done .todo-copy strong {
   color: var(--muted);
   text-decoration: line-through;
 }
 
-.todo-item button {
+.todo-item.important {
+  border-color: rgba(191, 62, 57, 0.66);
+  background:
+    linear-gradient(135deg, rgba(191, 62, 57, 0.18), rgba(255, 255, 255, 0.94)),
+    #fff;
+  box-shadow: 0 0 0 1px rgba(191, 62, 57, 0.16), 0 14px 32px rgba(191, 62, 57, 0.16);
+}
+
+.todo-item.important .todo-copy strong {
+  color: #8f201e;
+}
+
+.todo-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-item button,
+.todo-item select {
   border: 0;
   background: #eef3f6;
   color: var(--ink);
   border-radius: 6px;
   min-height: 32px;
   cursor: pointer;
+}
+
+.todo-item select {
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  min-width: 150px;
+}
+
+.todo-item button.important-active {
+  background: var(--red);
+  color: #ffffff;
 }
 
 .integration-grid {
@@ -2375,6 +2451,10 @@ body:not([data-access="admin"]) .admin-only-panel {
     width: auto;
     max-height: none;
     margin-top: 18px;
+  }
+
+  .todo-page-panel .todo-list {
+    grid-template-columns: 1fr;
   }
 
   .side-rail {

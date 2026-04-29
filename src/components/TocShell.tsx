@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
+import { TodoManager } from "@/components/TodoManager";
 
 type StoredSession = {
   role?: AccessRole;
@@ -17,15 +18,8 @@ export function TocShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
-  const [todoText, setTodoText] = useState("");
-  const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>([]);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role));
-
-  function todoStorageKey() {
-    const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
-    return `toc.todos.${storedSession?.role || activeProfile.role}.${storedSession?.scope || session.scope || "National"}`;
-  }
 
   useEffect(() => {
     const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
@@ -37,23 +31,6 @@ export function TocShell({ children }: { children: ReactNode }) {
     }
     document.body.classList.add("is-authenticated");
   }, []);
-
-  useEffect(() => {
-    setTodos(JSON.parse(localStorage.getItem(todoStorageKey()) || "[]"));
-  }, [session.role, session.scope]);
-
-  function saveTodos(nextTodos: { id: string; text: string; done: boolean }[]) {
-    setTodos(nextTodos);
-    localStorage.setItem(todoStorageKey(), JSON.stringify(nextTodos));
-  }
-
-  function addTodo(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const text = todoText.trim();
-    if (!text) return;
-    saveTodos([{ id: crypto.randomUUID(), text, done: false }, ...todos]);
-    setTodoText("");
-  }
 
   function updateScope(scope: string) {
     const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope };
@@ -113,7 +90,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.047</em>
+              <em>Build 0.048</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -138,40 +115,7 @@ export function TocShell({ children }: { children: ReactNode }) {
 
         {children}
 
-        <aside className="panel todo-panel" id="todo" aria-label="Personal to do list">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Manager memory</span>
-              <h2>Personal to do list</h2>
-            </div>
-          </div>
-          <form className="todo-form" onSubmit={addTodo}>
-            <input value={todoText} onChange={(event) => setTodoText(event.target.value)} placeholder="Add a task as it comes in" autoComplete="off" />
-            <button type="submit">Add</button>
-          </form>
-          <div className="todo-list">
-            {todos.length ? todos.map((todo) => (
-              <div className={`todo-item ${todo.done ? "done" : ""}`} key={todo.id}>
-                <input
-                  type="checkbox"
-                  checked={todo.done}
-                  aria-label="Mark task complete"
-                  onChange={(event) => saveTodos(todos.map((item) => item.id === todo.id ? { ...item, done: event.target.checked } : item))}
-                />
-                <span>{todo.text}</span>
-                <button type="button" onClick={() => saveTodos(todos.filter((item) => item.id !== todo.id))}>Remove</button>
-              </div>
-            )) : (
-              <div className="brief-item">
-                <span className="brief-dot" />
-                <div>
-                  <strong>No manager notes yet.</strong>
-                  <small>Add tasks as they arrive.</small>
-                </div>
-              </div>
-            )}
-          </div>
-        </aside>
+        <TodoManager />
       </main>
     </div>
     </>
