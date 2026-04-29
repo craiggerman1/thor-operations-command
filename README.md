@@ -10,10 +10,10 @@ It is designed to later connect to:
 
 ## Current Build
 
-The repository now contains two layers:
+The repository now contains the Vercel app and its public brand assets:
 
 - `src/app` is the new Next.js App Router web app for Vercel.
-- `public` still contains the legacy static prototype and Thor brand assets.
+- `public` contains shared Thor brand assets, fonts, and styling used by the Vercel app.
 
 Current production home: Vercel, protected by the TOC private access gate.
 
@@ -29,7 +29,6 @@ The new Next.js app includes proper route pages for:
 - Compliance.
 - Stock Orders.
 - Chat.
-- Tasks.
 - To Do.
 
 ## Deployment
