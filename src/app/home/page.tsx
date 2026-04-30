@@ -23,6 +23,7 @@ export default function HomePage() {
   const [scope, setScope] = useState("National");
   const operatingWeek = getThorOperatingWeek();
   const visibleActionItems = actionItems.filter((item) => scope === "National" || item.region === scope || item.region === "National");
+  const riskMetric = metrics.find((metric) => metric.label === "Risk flags");
   const commandMetrics = [
     {
       label: "Operating week",
@@ -31,7 +32,8 @@ export default function HomePage() {
       status: "green",
       href: "/overview"
     },
-    ...metrics
+    ...(riskMetric ? [riskMetric] : []),
+    ...metrics.filter((metric) => metric.label !== "Risk flags")
   ];
 
   useEffect(() => {
