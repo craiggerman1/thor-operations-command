@@ -25,11 +25,27 @@ function getStoredScope() {
   return session?.scope || "National";
 }
 
+function cleanEditableJob(job: CalendarJob & { originalIndex?: number }): CalendarJob {
+  return {
+    time: job.time,
+    location: job.location,
+    site: job.site,
+    crew: job.crew,
+    job: job.job,
+    status: job.status,
+    notes: job.notes,
+    severity: job.severity,
+    recurrence: job.recurrence,
+    recurrenceDetail: job.recurrenceDetail
+  };
+}
+
 export default function CalendarPage() {
   const [scope, setScope] = useState("National");
   const [viewMode, setViewMode] = useState<CalendarViewMode>("calendar");
   const [calendarData, setCalendarData] = useState(getStoredCalendarWeeks);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [saveMessage, setSaveMessage] = useState("");
   const calendarDays = useMemo(() => calendarData.flatMap((week) => week), [calendarData]);
   const totalVisibleJobs = calendarDays.reduce((total, day) => total + getVisibleJobs(day.jobs).length, 0);
 
@@ -57,6 +73,7 @@ export default function CalendarPage() {
 
   function openEditor(daySlug: string, dayLabel: string, jobIndex: number, job: CalendarJob) {
     setEditTarget({ daySlug, dayLabel, jobIndex, job: { ...job, recurrence: job.recurrence || "None" } });
+    setSaveMessage("");
   }
 
   function updateDraft(field: keyof CalendarJob, value: string) {
@@ -69,17 +86,19 @@ export default function CalendarPage() {
     event.preventDefault();
     if (!editTarget) return;
 
-    const nextData = updateCalendarJob(calendarData, editTarget.daySlug, editTarget.jobIndex, editTarget.job);
+    const jobToSave = cleanEditableJob(editTarget.job as CalendarJob & { originalIndex?: number });
+    const nextData = updateCalendarJob(calendarData, editTarget.daySlug, editTarget.jobIndex, jobToSave);
     setCalendarData(nextData);
     saveStoredCalendarWeeks(nextData);
     setEditTarget(null);
+    setSaveMessage("Calendar job updated for this browser.");
   }
 
   return (
     <TocShell>
-      <PageIntro title="Calendar" detail="Scheduled jobs by Thor operating week, starting Thursday and ending Wednesday." />
+      <PageIntro title="Scheduled jobs by Thor operating week" />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Schedule view" title={`${scope} job calendar`} pill={`${totalVisibleJobs} visible jobs`}>
+        <Panel wide className="calendar-panel" eyebrow="Schedule view" title={`${scope} job calendar`} pill={`${totalVisibleJobs} visible jobs`}>
           <div className="calendar-toolbar" aria-label="Calendar view settings">
             <div>
               <span className="eyebrow">View setting</span>
@@ -90,6 +109,40 @@ export default function CalendarPage() {
               <button className={viewMode === "list" ? "active" : ""} type="button" onClick={() => setViewMode("list")}>List</button>
             </div>
           </div>
+
+          {saveMessage ? <div className="calendar-save-message">{saveMessage}</div> : null}
+
+          {editTarget ? (
+            <form className="calendar-edit-form calendar-edit-form-inline" onSubmit={saveDraft}>
+              <div className="calendar-edit-heading">
+                <div>
+                  <span className="eyebrow">Editing job</span>
+                  <strong>{editTarget.dayLabel}</strong>
+                </div>
+                <span className="calendar-week-label">{editTarget.job.recurrence || "None"}</span>
+              </div>
+              <label><span>Time</span><input value={editTarget.job.time} onChange={(event) => updateDraft("time", event.target.value)} /></label>
+              <label><span>Location</span><input value={editTarget.job.location} onChange={(event) => updateDraft("location", event.target.value)} /></label>
+              <label><span>Site</span><input value={editTarget.job.site} onChange={(event) => updateDraft("site", event.target.value)} /></label>
+              <label><span>Crew</span><input value={editTarget.job.crew} onChange={(event) => updateDraft("crew", event.target.value)} /></label>
+              <label><span>Job</span><input value={editTarget.job.job} onChange={(event) => updateDraft("job", event.target.value)} /></label>
+              <label><span>Status</span><input value={editTarget.job.status} onChange={(event) => updateDraft("status", event.target.value)} /></label>
+              <label><span>Risk colour</span><select value={editTarget.job.severity} onChange={(event) => updateDraft("severity", event.target.value)}>
+                <option value="green">Green</option>
+                <option value="amber">Amber</option>
+                <option value="red">Red</option>
+              </select></label>
+              <label><span>Recurring</span><select value={editTarget.job.recurrence || "None"} onChange={(event) => updateDraft("recurrence", event.target.value)}>
+                {recurrenceOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select></label>
+              {editTarget.job.recurrence === "Custom" ? <label className="calendar-edit-wide"><span>Custom recurrence</span><input value={editTarget.job.recurrenceDetail || ""} placeholder="Example: every 3 weeks on Saturday night" onChange={(event) => updateDraft("recurrenceDetail", event.target.value)} /></label> : null}
+              <label className="calendar-edit-wide"><span>Notes</span><textarea value={editTarget.job.notes} onChange={(event) => updateDraft("notes", event.target.value)} /></label>
+              <div className="calendar-edit-actions">
+                <button type="submit">Save job</button>
+                <button type="button" onClick={() => setEditTarget(null)}>Cancel</button>
+              </div>
+            </form>
+          ) : null}
 
           {viewMode === "calendar" ? (
             <div className="wall-calendar" aria-label="Scheduled jobs calendar">
@@ -104,10 +157,9 @@ export default function CalendarPage() {
                   return (
                     <article className={`calendar-date ${day.today ? "today" : ""}`} key={daySlug}>
                       <div className="calendar-date-head">
-                        <span><strong>{day.date}</strong><em>{day.month}</em></span>
+                        <span><strong>{day.date}</strong><em>{day.month}</em><i className="calendar-week-label">{day.week}</i></span>
                         <small>{visibleJobs.length ? `${visibleJobs.length} jobs` : "No jobs"}</small>
                       </div>
-                      <span className="calendar-week-label">{day.week}</span>
                       <div className="calendar-date-jobs">
                         {visibleJobs.slice(0, 6).map((job) => (
                           <button className={`calendar-job-pill ${job.severity}`} key={`${day.date}-${job.time}-${job.site}`} type="button" onClick={() => openEditor(daySlug, dayLabel, job.originalIndex, job)}>
@@ -133,8 +185,7 @@ export default function CalendarPage() {
                 return (
                   <article className="calendar-list-day" key={daySlug}>
                     <div>
-                      <span className="calendar-week-label">{day.week}</span>
-                      <strong>{dayLabel}</strong>
+                      <strong>{dayLabel} <span className="calendar-week-label">{day.week}</span></strong>
                       <small>{visibleJobs.length ? `${visibleJobs.length} visible jobs for ${scope}` : `No visible jobs for ${scope}`}</small>
                     </div>
                     <div className="calendar-list-jobs">
@@ -153,32 +204,6 @@ export default function CalendarPage() {
           )}
         </Panel>
 
-        {editTarget ? (
-          <Panel wide eyebrow="Edit schedule" title={`Edit job - ${editTarget.dayLabel}`} pill={editTarget.job.recurrence || "None"}>
-            <form className="calendar-edit-form" onSubmit={saveDraft}>
-              <label><span>Time</span><input value={editTarget.job.time} onChange={(event) => updateDraft("time", event.target.value)} /></label>
-              <label><span>Location</span><input value={editTarget.job.location} onChange={(event) => updateDraft("location", event.target.value)} /></label>
-              <label><span>Site</span><input value={editTarget.job.site} onChange={(event) => updateDraft("site", event.target.value)} /></label>
-              <label><span>Crew</span><input value={editTarget.job.crew} onChange={(event) => updateDraft("crew", event.target.value)} /></label>
-              <label><span>Job</span><input value={editTarget.job.job} onChange={(event) => updateDraft("job", event.target.value)} /></label>
-              <label><span>Status</span><input value={editTarget.job.status} onChange={(event) => updateDraft("status", event.target.value)} /></label>
-              <label><span>Risk colour</span><select value={editTarget.job.severity} onChange={(event) => updateDraft("severity", event.target.value)}>
-                <option value="green">Green</option>
-                <option value="amber">Amber</option>
-                <option value="red">Red</option>
-              </select></label>
-              <label><span>Recurring</span><select value={editTarget.job.recurrence || "None"} onChange={(event) => updateDraft("recurrence", event.target.value)}>
-                {recurrenceOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select></label>
-              {editTarget.job.recurrence === "Custom" ? <label className="calendar-edit-wide"><span>Custom recurrence</span><input value={editTarget.job.recurrenceDetail || ""} placeholder="Example: every 3 weeks on Saturday night" onChange={(event) => updateDraft("recurrenceDetail", event.target.value)} /></label> : null}
-              <label className="calendar-edit-wide"><span>Notes</span><textarea value={editTarget.job.notes} onChange={(event) => updateDraft("notes", event.target.value)} /></label>
-              <div className="calendar-edit-actions">
-                <button type="submit">Save job</button>
-                <button type="button" onClick={() => setEditTarget(null)}>Cancel</button>
-              </div>
-            </form>
-          </Panel>
-        ) : null}
       </section>
     </TocShell>
   );
