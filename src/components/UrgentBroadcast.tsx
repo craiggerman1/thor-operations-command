@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { allRegions } from "@/lib/access";
 
 type UrgentBroadcastMessage = {
+  id: string;
   message: string;
   version: string;
   active: boolean;
@@ -13,19 +14,56 @@ type UrgentBroadcastMessage = {
 const broadcastKey = "toc.urgentBroadcast";
 const acknowledgedKey = "toc.urgentBroadcastAcknowledged";
 
-function readBroadcast() {
-  if (typeof window === "undefined") return null as UrgentBroadcastMessage | null;
+function createId() {
+  return `urgent-${Date.now()}-${Math.round(Math.random() * 100000)}`;
+}
+
+function normaliseBroadcast(raw: unknown) {
+  if (Array.isArray(raw)) {
+    return raw.map((item) => ({
+      id: item.id || createId(),
+      message: item.message || "",
+      version: item.version || Date.now().toString(),
+      active: Boolean(item.active),
+      targetScope: item.targetScope || "All users"
+    })) as UrgentBroadcastMessage[];
+  }
+
+  if (raw && typeof raw === "object") {
+    const item = raw as Partial<UrgentBroadcastMessage>;
+    return [{
+      id: item.id || "legacy-urgent-broadcast",
+      message: item.message || "",
+      version: item.version || Date.now().toString(),
+      active: Boolean(item.active),
+      targetScope: item.targetScope || "All users"
+    }];
+  }
+
+  return [] as UrgentBroadcastMessage[];
+}
+
+function readBroadcasts() {
+  if (typeof window === "undefined") return [] as UrgentBroadcastMessage[];
 
   try {
-    return JSON.parse(localStorage.getItem(broadcastKey) || "null") as UrgentBroadcastMessage | null;
+    return normaliseBroadcast(JSON.parse(localStorage.getItem(broadcastKey) || "[]"));
   } catch {
-    return null;
+    return [];
   }
 }
 
 function readAcknowledged() {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem(acknowledgedKey) || "";
+  if (typeof window === "undefined") return {} as Record<string, boolean>;
+
+  try {
+    const raw = JSON.parse(localStorage.getItem(acknowledgedKey) || "{}");
+    if (typeof raw === "string") return { [raw]: true };
+    return raw || {};
+  } catch {
+    const legacyVersion = localStorage.getItem(acknowledgedKey) || "";
+    return legacyVersion ? { [legacyVersion]: true } : {};
+  }
 }
 
 function readSessionScope() {
@@ -39,20 +77,20 @@ function readSessionScope() {
   }
 }
 
-function writeBroadcast(nextBroadcast: UrgentBroadcastMessage) {
-  localStorage.setItem(broadcastKey, JSON.stringify(nextBroadcast));
+function writeBroadcasts(nextBroadcasts: UrgentBroadcastMessage[]) {
+  localStorage.setItem(broadcastKey, JSON.stringify(nextBroadcasts));
   window.dispatchEvent(new Event("toc.urgentBroadcast.updated"));
 }
 
 export function UrgentBroadcastBanner() {
-  const [broadcast, setBroadcast] = useState<UrgentBroadcastMessage | null>(null);
-  const [acknowledgedVersion, setAcknowledgedVersion] = useState("");
+  const [broadcasts, setBroadcasts] = useState<UrgentBroadcastMessage[]>([]);
+  const [acknowledgedVersions, setAcknowledgedVersions] = useState<Record<string, boolean>>({});
   const [sessionScope, setSessionScope] = useState("National");
 
   useEffect(() => {
     function syncBroadcast() {
-      setBroadcast(readBroadcast());
-      setAcknowledgedVersion(readAcknowledged());
+      setBroadcasts(readBroadcasts());
+      setAcknowledgedVersions(readAcknowledged());
       setSessionScope(readSessionScope());
     }
 
@@ -67,37 +105,56 @@ export function UrgentBroadcastBanner() {
     };
   }, []);
 
-  const activeTargetScope = broadcast?.targetScope || "All users";
-  const isTargetedToUser = activeTargetScope === "All users" || activeTargetScope === sessionScope;
+  const visibleBroadcasts = broadcasts.filter((broadcast) => {
+    const targetScope = broadcast.targetScope || "All users";
+    const isTargetedToUser = targetScope === "All users" || targetScope === sessionScope;
+    return broadcast.active && broadcast.message.trim() && isTargetedToUser && !acknowledgedVersions[broadcast.version];
+  });
 
-  if (!broadcast?.active || !broadcast.message.trim() || !isTargetedToUser || acknowledgedVersion === broadcast.version) return null;
+  if (!visibleBroadcasts.length) return null;
 
-  function acknowledge() {
-    if (!broadcast) return;
-    localStorage.setItem(acknowledgedKey, broadcast.version);
-    setAcknowledgedVersion(broadcast.version);
+  function acknowledge(version: string) {
+    const nextAcknowledged = { ...acknowledgedVersions, [version]: true };
+    localStorage.setItem(acknowledgedKey, JSON.stringify(nextAcknowledged));
+    setAcknowledgedVersions(nextAcknowledged);
   }
 
   return (
-    <section className="urgent-broadcast-banner" role="alert">
-      <div>
-        <span>{activeTargetScope === "All users" ? "Urgent site-wide notice" : `Urgent ${activeTargetScope} notice`}</span>
-        <strong>{broadcast.message}</strong>
-      </div>
-      <button type="button" onClick={acknowledge}>Acknowledge</button>
-    </section>
+    <div className="urgent-broadcast-stack" role="region" aria-label="Urgent notices">
+      {visibleBroadcasts.map((broadcast) => {
+        const targetScope = broadcast.targetScope || "All users";
+        return (
+          <section className="urgent-broadcast-banner" role="alert" key={broadcast.version}>
+            <div>
+              <span>{targetScope === "All users" ? "Urgent site-wide notice" : `Urgent ${targetScope} notice`}</span>
+              <strong>{broadcast.message}</strong>
+            </div>
+            <button type="button" onClick={() => acknowledge(broadcast.version)}>Acknowledge</button>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
 export function UrgentBroadcastControls() {
   const [message, setMessage] = useState("");
   const [targetScope, setTargetScope] = useState("All users");
+  const [broadcasts, setBroadcasts] = useState<UrgentBroadcastMessage[]>([]);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    const broadcast = readBroadcast();
-    if (broadcast?.message) setMessage(broadcast.message);
-    if (broadcast?.targetScope) setTargetScope(broadcast.targetScope);
+    function syncBroadcasts() {
+      setBroadcasts(readBroadcasts());
+    }
+
+    syncBroadcasts();
+    window.addEventListener("storage", syncBroadcasts);
+    window.addEventListener("toc.urgentBroadcast.updated", syncBroadcasts);
+    return () => {
+      window.removeEventListener("storage", syncBroadcasts);
+      window.removeEventListener("toc.urgentBroadcast.updated", syncBroadcasts);
+    };
   }, []);
 
   function deployBroadcast(event: FormEvent<HTMLFormElement>) {
@@ -105,60 +162,68 @@ export function UrgentBroadcastControls() {
     const cleanMessage = message.trim();
     if (!cleanMessage) return;
 
-    writeBroadcast({
+    const nextBroadcasts = [{
+      id: createId(),
       message: cleanMessage,
       version: Date.now().toString(),
       active: true,
       targetScope
-    });
-    setStatus(`Urgent banner deployed to ${targetScope}. Users must acknowledge it before it clears.`);
+    }, ...broadcasts];
+    writeBroadcasts(nextBroadcasts);
+    setBroadcasts(nextBroadcasts);
+    setMessage("");
+    setStatus(`Urgent banner deployed to ${targetScope}.`);
   }
 
-  function redeployBroadcast() {
-    const current = readBroadcast();
-    const cleanMessage = (message || current?.message || "").trim();
-    if (!cleanMessage) return;
-
-    writeBroadcast({
-      message: cleanMessage,
-      version: Date.now().toString(),
-      active: true,
-      targetScope
-    });
-    localStorage.removeItem(acknowledgedKey);
-    setStatus(`Urgent banner redeployed to ${targetScope}.`);
+  function redeployBroadcast(id: string) {
+    const nextBroadcasts = broadcasts.map((broadcast) => broadcast.id === id
+      ? { ...broadcast, version: Date.now().toString(), active: true }
+      : broadcast);
+    writeBroadcasts(nextBroadcasts);
+    setBroadcasts(nextBroadcasts);
+    setStatus("Urgent banner redeployed.");
   }
 
-  function disableBroadcast() {
-    const current = readBroadcast();
-    writeBroadcast({
-      message: current?.message || message,
-      version: Date.now().toString(),
-      active: false,
-      targetScope: current?.targetScope || targetScope
-    });
+  function disableBroadcast(id: string) {
+    const nextBroadcasts = broadcasts.map((broadcast) => broadcast.id === id ? { ...broadcast, active: false } : broadcast);
+    writeBroadcasts(nextBroadcasts);
+    setBroadcasts(nextBroadcasts);
     setStatus("Urgent banner disabled.");
   }
 
   return (
-    <form className="urgent-broadcast-controls" onSubmit={deployBroadcast}>
-      <label>
-        <span>Urgent banner message</span>
-        <textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Enter urgent message for all TOC users" />
-      </label>
-      <label>
-        <span>Alert target</span>
-        <select value={targetScope} onChange={(event) => setTargetScope(event.target.value)}>
-          <option value="All users">All users - site wide</option>
-          {allRegions.map((region) => <option value={region} key={region}>{region}</option>)}
-        </select>
-      </label>
-      <div className="urgent-broadcast-actions">
-        <button type="submit">Deploy urgent banner</button>
-        <button type="button" onClick={redeployBroadcast}>Redeploy banner</button>
-        <button type="button" className="danger-button" onClick={disableBroadcast}>Disable banner</button>
+    <div className="urgent-broadcast-controls">
+      <form className="urgent-broadcast-form" onSubmit={deployBroadcast}>
+        <label>
+          <span>Urgent banner message</span>
+          <textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Enter urgent message for TOC users" />
+        </label>
+        <label>
+          <span>Alert target</span>
+          <select value={targetScope} onChange={(event) => setTargetScope(event.target.value)}>
+            <option value="All users">All users - site wide</option>
+            {allRegions.map((region) => <option value={region} key={region}>{region}</option>)}
+          </select>
+        </label>
+        <div className="urgent-broadcast-actions">
+          <button type="submit">Deploy urgent banner</button>
+        </div>
+      </form>
+      <div className="urgent-broadcast-list">
+        {broadcasts.map((broadcast) => (
+          <article className={`urgent-broadcast-admin-card ${broadcast.active ? "active" : ""}`} key={broadcast.id}>
+            <div>
+              <strong>{broadcast.message}</strong>
+              <small>{broadcast.targetScope || "All users"} - {broadcast.active ? "Active" : "Disabled"}</small>
+            </div>
+            <div className="urgent-broadcast-actions">
+              <button type="button" onClick={() => redeployBroadcast(broadcast.id)}>Redeploy</button>
+              <button type="button" className="danger-button" onClick={() => disableBroadcast(broadcast.id)}>Disable</button>
+            </div>
+          </article>
+        ))}
       </div>
       {status ? <small>{status}</small> : null}
-    </form>
+    </div>
   );
 }

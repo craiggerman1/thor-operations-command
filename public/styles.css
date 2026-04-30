@@ -469,19 +469,24 @@ textarea {
     transparent;
 }
 
+.urgent-broadcast-stack {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
 .urgent-broadcast-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
   padding: 13px 16px;
-  border: 1px solid rgba(255, 214, 211, 0.7);
-  border-left: 8px solid #ffd6d3;
+  border: 2px solid rgba(255, 214, 211, 0.86);
+  border-left: 10px solid #ffd6d3;
   border-radius: 6px;
   background: linear-gradient(135deg, #bf3e39, #8f201e);
   color: #ffffff;
-  animation: urgentBroadcastPulse 1.1s ease-in-out infinite;
+  animation: urgentBroadcastPulse 0.78s ease-in-out infinite;
 }
 
 .urgent-broadcast-banner span,
@@ -910,11 +915,13 @@ h2 {
 @keyframes urgentBroadcastPulse {
   0%,
   100% {
-    box-shadow: 0 0 0 1px rgba(191, 62, 57, 0.28), 0 12px 28px rgba(191, 62, 57, 0.22);
+    transform: translateY(0);
+    box-shadow: 0 0 0 2px rgba(255, 214, 211, 0.38), 0 14px 34px rgba(191, 62, 57, 0.34);
   }
 
   50% {
-    box-shadow: 0 0 0 3px rgba(255, 214, 211, 0.35), 0 18px 38px rgba(191, 62, 57, 0.42);
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 6px rgba(255, 214, 211, 0.45), 0 22px 48px rgba(191, 62, 57, 0.62);
   }
 }
 
@@ -1334,6 +1341,12 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
+.urgent-broadcast-form,
+.urgent-broadcast-list {
+  display: grid;
+  gap: 10px;
+}
+
 .urgent-broadcast-controls label {
   display: grid;
   gap: 6px;
@@ -1371,6 +1384,37 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(191, 62, 57, 0.3);
   background: rgba(191, 62, 57, 0.12);
   color: var(--red);
+}
+
+.urgent-broadcast-admin-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.urgent-broadcast-admin-card.active {
+  border-left-color: var(--red);
+}
+
+.urgent-broadcast-admin-card strong,
+.urgent-broadcast-admin-card small {
+  display: block;
+}
+
+.urgent-broadcast-admin-card strong {
+  color: #071726;
+}
+
+.urgent-broadcast-admin-card small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .urgent-broadcast-controls small {
