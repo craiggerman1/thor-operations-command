@@ -1294,13 +1294,20 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .admin-hint-controls {
-  display: grid;
-  gap: 10px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .admin-hint-panel {
   align-self: start;
+  min-height: auto;
+  padding: 12px 14px;
+}
+
+.admin-hint-panel .panel-head {
+  margin-bottom: 8px;
 }
 
 .admin-hint-controls strong,
@@ -1309,7 +1316,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .admin-hint-controls small {
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--muted);
   font-weight: 800;
 }
@@ -3995,7 +4002,8 @@ body:not([data-access="admin"]) .admin-only-panel {
   }
 
   .admin-hint-controls {
-    grid-template-columns: 1fr;
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .wide-panel {

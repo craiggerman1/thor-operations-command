@@ -11,7 +11,7 @@ export default function AdminPage() {
       <PageIntro title="Admin" detail="User access, role permissions, region visibility and admin setup controls." />
       <FlowHeading eyebrow="Admin" title="Use admin controls to manage access, permissions and reusable guidance for managers." />
       <section className="command-grid route-grid">
-        <Panel eyebrow="Guidance controls" title="Page hints" pill="Admin only" className="admin-hint-panel">
+        <Panel wide eyebrow="Guidance controls" title="Page hints" pill="Admin only" className="admin-hint-panel">
           <AdminHintControls />
         </Panel>
         <Panel wide eyebrow="Urgent broadcast" title="All-user alert banner" pill="Admin only">
@@ -55,7 +55,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.075">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.076">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);
