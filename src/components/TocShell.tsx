@@ -110,15 +110,6 @@ export function TocShell({ children }: { children: ReactNode }) {
     }, 1450);
   }
 
-  function goBack() {
-    if (window.history.length > 1) {
-      router.back();
-      return;
-    }
-
-    router.push("/home");
-  }
-
   return (
     <>
     <div className="mobile-app-bar" aria-label="Mobile command navigation">
@@ -168,7 +159,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.099</em>
+              <em>Build 0.100</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -187,7 +178,6 @@ export function TocShell({ children }: { children: ReactNode }) {
                 {activeProfile.regions.map((region) => <option key={region} value={region}>{region}</option>)}
               </select>
             </label> : null}
-            <button className="back-button" type="button" onClick={goBack}>Back</button>
             <button className="manual-refresh-button" type="button">Manual Refresh</button>
             <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
           </div>
