@@ -2892,15 +2892,15 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .stock-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.1fr);
-  gap: 14px;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+  gap: 12px;
 }
 
 .stock-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 14px;
+  gap: 9px;
+  padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.72);
@@ -2908,7 +2908,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .stock-form label {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .stock-form label span {
@@ -2923,34 +2923,37 @@ body:not([data-access="admin"]) .admin-only-panel {
   grid-column: 1 / -1;
 }
 
-.stock-queue-wrap,
+.stock-queue-wrap {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
 .stock-list {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
 }
 
 .stock-queue-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid rgba(37, 161, 189, 0.22);
-  border-left: 5px solid var(--teal);
-  border-radius: 6px;
-  background: rgba(236, 247, 250, 0.88);
+  gap: 8px;
+  padding: 0 2px 4px;
+  border-bottom: 1px solid rgba(201, 215, 225, 0.72);
 }
 
 .stock-queue-head strong {
   display: block;
   color: var(--blue);
+  font-size: 15px;
 }
 
 .stock-card {
   display: grid;
-  gap: 7px;
-  padding: 10px;
+  gap: 8px;
+  padding: 10px 11px;
 }
 
 .stock-card p {
@@ -2961,10 +2964,38 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .stock-detail {
   display: grid;
-  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
-  gap: 7px;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.stock-detail span:first-child {
+  color: var(--blue);
+  font-weight: 900;
+}
+
+.stock-review-controls,
+.admin-stock-review {
+  display: grid;
+  gap: 8px;
+}
+
+.stock-review-controls {
+  padding-top: 8px;
+  border-top: 1px solid rgba(201, 215, 225, 0.72);
+}
+
+.stock-review-controls label {
+  display: grid;
+  gap: 4px;
+}
+
+.stock-review-controls label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .stock-actions {
@@ -3001,6 +3032,23 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.stock-update-alert {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(218, 158, 32, 0.14);
+  color: #8f5c10;
+  font-weight: 900;
+}
+
+.admin-config-card.needs-update {
+  border-color: rgba(218, 158, 32, 0.5);
+  box-shadow: inset 4px 0 0 var(--amber);
 }
 
 .admin-config-grid {

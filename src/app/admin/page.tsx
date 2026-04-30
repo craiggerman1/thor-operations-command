@@ -1,6 +1,7 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { adminUsers, approvedStockItems, compliance, stockOrders } from "@/lib/toc-data";
+import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
+import { adminUsers, approvedStockItems, compliance } from "@/lib/toc-data";
 import { navigationItems, sessionProfiles } from "@/lib/access";
 
 export default function AdminPage() {
@@ -27,15 +28,7 @@ export default function AdminPage() {
             <div className="admin-config-list">
               {approvedStockItems.map((item) => <article className="admin-config-card" key={item}><strong>{item}</strong><small>Available in manager stock order dropdown</small></article>)}
             </div>
-            <div className="admin-config-list">
-              {stockOrders.map((order) => (
-                <article className="admin-config-card" key={`${order.region}-${order.item}`}>
-                  <div><strong>{order.region}: {order.item}</strong><small>{order.status}</small></div>
-                  <small>Admin update visible to manager: {order.update}</small>
-                  <label className="admin-tracking-field"><span>Tracking number</span><input defaultValue={order.trackingNumber} placeholder="Add tracking number" /></label>
-                </article>
-              ))}
-            </div>
+            <StockOrderAdminReview />
           </div>
         </Panel>
         <Panel wide eyebrow="Admin command" title="User access and permissions" pill={`${adminUsers.length} demo users`}>
@@ -58,7 +51,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.068">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.069">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);

@@ -21,47 +21,69 @@ type StockOrderRequest = {
 
 const stockOrderStorageKey = "toc.stockOrders";
 
-function getStoredScope() {
-  if (typeof window === "undefined") return "National";
+function getStoredSession() {
+  if (typeof window === "undefined") return { role: "manager", scope: "National" };
 
   try {
     const session = JSON.parse(localStorage.getItem("toc.session") || "null");
-    return session?.scope || "National";
+    return {
+      role: session?.role || "manager",
+      scope: session?.scope || "National"
+    };
   } catch {
-    return "National";
+    return { role: "manager", scope: "National" };
   }
+}
+
+function getOrderId(order: StockOrderRequest) {
+  return order.id || `${order.region}-${order.item}`;
 }
 
 export default function StockOrdersPage() {
   const [scope, setScope] = useState("National");
+  const [role, setRole] = useState("manager");
   const [orders, setOrders] = useState<StockOrderRequest[]>(stockOrders);
   const [selectedItem, setSelectedItem] = useState(approvedStockItems[0]);
   const [quantity, setQuantity] = useState(1);
   const [urgency, setUrgency] = useState("Normal");
   const [note, setNote] = useState("");
   const visibleOrders = useMemo(() => orders.filter((order) => scope === "National" || order.region === scope), [orders, scope]);
+  const canReviewOrders = role === "admin" || scope === "National";
 
   useEffect(() => {
-    function syncScope(event?: Event) {
-      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
+    function loadOrders() {
+      try {
+        const storedOrders = localStorage.getItem(stockOrderStorageKey);
+        setOrders(storedOrders ? JSON.parse(storedOrders) : stockOrders);
+      } catch {
+        setOrders(stockOrders);
+      }
+    }
+
+    function syncStockState(event?: Event) {
+      const session = getStoredSession();
+      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : session.scope;
       setScope(nextScope);
+      setRole(session.role);
+      loadOrders();
     }
 
-    try {
-      const storedOrders = localStorage.getItem(stockOrderStorageKey);
-      if (storedOrders) setOrders(JSON.parse(storedOrders));
-    } catch {
-      setOrders(stockOrders);
-    }
-
-    syncScope();
-    window.addEventListener("storage", syncScope);
-    window.addEventListener("toc.scopechange", syncScope);
+    syncStockState();
+    window.addEventListener("storage", syncStockState);
+    window.addEventListener("toc.scopechange", syncStockState);
+    window.addEventListener("toc.stockOrders.updated", syncStockState);
     return () => {
-      window.removeEventListener("storage", syncScope);
-      window.removeEventListener("toc.scopechange", syncScope);
+      window.removeEventListener("storage", syncStockState);
+      window.removeEventListener("toc.scopechange", syncStockState);
+      window.removeEventListener("toc.stockOrders.updated", syncStockState);
     };
   }, []);
+
+  function saveOrders(nextOrders: StockOrderRequest[]) {
+    setOrders(nextOrders);
+    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+    window.dispatchEvent(new Event("toc.stockOrders.updated"));
+  }
 
   function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,28 +98,29 @@ export default function StockOrdersPage() {
       update: "Awaiting national admin review.",
       trackingNumber: "Pending"
     };
-    const nextOrders = [nextOrder, ...orders];
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+    saveOrders([nextOrder, ...orders]);
     setQuantity(1);
     setUrgency("Normal");
     setNote("");
   }
 
   function cancelOrder(orderId: string) {
-    const nextOrders = orders.map((order) => (order.id || `${order.region}-${order.item}`) === orderId
+    const nextOrders = orders.map((order) => getOrderId(order) === orderId
       ? { ...order, status: "Cancellation requested", update: "Cancellation sent to national admin for review." }
       : order);
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+    saveOrders(nextOrders);
   }
 
   function requestUpdate(orderId: string) {
-    const nextOrders = orders.map((order) => (order.id || `${order.region}-${order.item}`) === orderId
+    const nextOrders = orders.map((order) => getOrderId(order) === orderId
       ? { ...order, updateRequested: true, update: "Manager requested an update. National admin to respond." }
       : order);
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+    saveOrders(nextOrders);
+  }
+
+  function updateOrder(orderId: string, updates: Partial<StockOrderRequest>) {
+    const nextOrders = orders.map((order) => getOrderId(order) === orderId ? { ...order, ...updates, updateRequested: updates.update ? false : order.updateRequested } : order);
+    saveOrders(nextOrders);
   }
 
   return (
@@ -105,7 +128,7 @@ export default function StockOrdersPage() {
       <PageIntro title="Stock Orders" detail="Order stock early and ensure up to date." />
       <FlowHeading eyebrow="Stock Orders" title="Raise stock needs early so chemicals, PPE, parts and equipment do not block the work." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Stock control" title="Request stock and consumable orders" pill={`${visibleOrders.length} pending`}>
+        <Panel wide eyebrow="Stock control" title="Request stock and consumable orders" pill={`${visibleOrders.length} open`}>
           <div className="stock-layout">
             <form className="stock-form" onSubmit={submitOrder}>
               <label><span>Signed-in region</span><input value={scope} readOnly /></label>
@@ -117,23 +140,30 @@ export default function StockOrdersPage() {
             </form>
             <div className="stock-queue-wrap">
               <div className="stock-queue-head">
-                <div><span className="eyebrow">Order queue</span><strong>Pending stock order requests</strong></div>
-                <Tag>{visibleOrders.length} pending</Tag>
+                <div><span className="eyebrow">Order queue</span><strong>Open stock order requests</strong></div>
               </div>
               <div className="stock-list">
                 {visibleOrders.map((order) => {
-                  const orderId = order.id || `${order.region}-${order.item}`;
+                  const orderId = getOrderId(order);
                   return (
                   <article className="stock-card" key={orderId}>
                     <div><strong>{order.item}</strong><small>{order.region} - Qty {order.quantity}</small></div>
                     <p>{order.note}</p>
                     <div className="stock-detail"><span>{order.status}</span><span>{order.update}</span></div>
                     <div className="stock-detail"><span>Tracking</span><span>{order.trackingNumber || "Pending"}</span></div>
-                    <div className="meta-row"><Tag tone={order.urgency === "Urgent" ? "red" : "green"}>{order.urgency}</Tag><Tag tone="amber">{order.updateRequested ? "Update requested" : "Pending"}</Tag><Tag>National update visible</Tag></div>
-                    <div className="stock-actions">
-                      <button type="button" onClick={() => requestUpdate(orderId)}>Request Update</button>
-                      <button type="button" className="danger-button" onClick={() => cancelOrder(orderId)}>Cancel Order</button>
-                    </div>
+                    <div className="meta-row"><Tag tone={order.urgency === "Urgent" ? "red" : "green"}>{order.urgency}</Tag>{order.updateRequested ? <Tag tone="amber">Update requested</Tag> : null}</div>
+                    {canReviewOrders ? (
+                      <div className="stock-review-controls">
+                        <label><span>Admin / national update</span><input value={order.update} onChange={(event) => updateOrder(orderId, { update: event.target.value, status: "Updated by national" })} /></label>
+                        <label><span>Tracking number</span><input value={order.trackingNumber || ""} onChange={(event) => updateOrder(orderId, { trackingNumber: event.target.value || "Pending" })} placeholder="Enter tracking number" /></label>
+                      </div>
+                    ) : null}
+                    {!canReviewOrders ? (
+                      <div className="stock-actions">
+                        <button type="button" onClick={() => requestUpdate(orderId)}>Request Update</button>
+                        <button type="button" className="danger-button" onClick={() => cancelOrder(orderId)}>Cancel Order</button>
+                      </div>
+                    ) : null}
                   </article>
                   );
                 })}

@@ -44,7 +44,7 @@ export function LoginPanel() {
       </div>
       <div className="login-build-card">
         <span>Current build</span>
-        <strong>Build 0.068</strong>
+        <strong>Build 0.069</strong>
       </div>
       <label>
         <span>Email</span>
