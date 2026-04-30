@@ -25,7 +25,7 @@ export function Tag({ children, tone = "blue" }: { children: ReactNode; tone?: S
 
 const hintDismissedKey = "toc.dismissedPageHints";
 const hintVersionKey = "toc.pageHintVersion";
-const defaultHintVersion = "0.059";
+const defaultHintVersion = "0.062";
 
 function getHintVersion() {
   if (typeof window === "undefined") return defaultHintVersion;
@@ -75,7 +75,7 @@ export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: st
   return (
     <div className="flow-heading page-hint" role="note">
       <div>
-        <h2>{title}</h2>
+        <h2>Hint: {title}</h2>
       </div>
       <button type="button" aria-label={`Dismiss ${eyebrow} hint`} onClick={dismissHint}>Clear hint</button>
     </div>

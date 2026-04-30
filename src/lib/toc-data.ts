@@ -68,6 +68,93 @@ export const commandSignals = [
   }
 ];
 
+export const actionItems = [
+  {
+    id: "ACT-001",
+    title: "National Woolworths Fleetio accuracy check",
+    source: "National ops",
+    directive: "National ops directive",
+    region: "National",
+    severity: "red" as Status,
+    href: "/actions#ACT-001",
+    detail: "Confirm Fleetio wash records are clean before invoicing and client reporting move forward.",
+    status: "Open",
+    closeFlow: "Manager close-out requires national approval before final closure."
+  },
+  {
+    id: "ACT-002",
+    title: "Primary Connect induction exceptions",
+    source: "Compliance",
+    directive: "National ops directive",
+    region: "Brisbane",
+    severity: "red" as Status,
+    href: "/compliance",
+    detail: "Induction and site-readiness exceptions need manager ownership before site risk builds.",
+    status: "Overdue",
+    closeFlow: "Close-out routes to national manager approval."
+  },
+  {
+    id: "ACT-003",
+    title: "Friday PM roster coverage gap",
+    source: "Roster",
+    directive: "Scheduled directive",
+    region: "Adelaide",
+    severity: "amber" as Status,
+    href: "/staff-availability",
+    detail: "Coverage gap may affect scheduled wash delivery if not confirmed before shift start.",
+    status: "Due today",
+    closeFlow: "Manager close-out routes to national review."
+  },
+  {
+    id: "ACT-004",
+    title: "Portal approvals holding admin flow",
+    source: "Thor Portal",
+    directive: "Action required",
+    region: "Sydney",
+    severity: "amber" as Status,
+    href: "/portal",
+    detail: "Approval delays can block invoicing, client reporting and admin close.",
+    status: "Open",
+    closeFlow: "Manager resolution is sent to national approval."
+  },
+  {
+    id: "ACT-005",
+    title: "Wash plant hour reading due",
+    source: "Equipment Servicing",
+    directive: "Scheduled directive",
+    region: "Brisbane",
+    severity: "amber" as Status,
+    href: "/equipment-servicing",
+    detail: "Hour readings are required so servicing can be planned before plant failure.",
+    status: "Due soon",
+    closeFlow: "Workshop or manager close-out routes to national review."
+  },
+  {
+    id: "ACT-006",
+    title: "Chemical stock request overdue",
+    source: "Stock Orders",
+    directive: "Action required",
+    region: "Perth",
+    severity: "amber" as Status,
+    href: "/stock-orders",
+    detail: "Stock needs should be raised early so supply does not block scheduled wash work.",
+    status: "Open",
+    closeFlow: "Close-out requires national stock approval."
+  },
+  {
+    id: "ACT-007",
+    title: "Workshop parts shelf minimum check",
+    source: "Workshop",
+    directive: "Scheduled directive",
+    region: "Workshop",
+    severity: "blue" as Status,
+    href: "/stock-orders",
+    detail: "Parts shelf minimums need confirmation so service work is not delayed.",
+    status: "Scheduled",
+    closeFlow: "Workshop close-out routes to national approval."
+  }
+];
+
 export const commandPathways = [
   { step: "1", label: "Action Centre", href: "/actions", detail: "Start here when something needs action, ownership, escalation or clearing." },
   { step: "2", label: "Region Health", href: "/overview", detail: "Check whether each state is healthy enough to run the day without surprises." },
@@ -102,13 +189,13 @@ export const integrationReadiness = [
 ];
 
 export const regions = [
-  { name: "Brisbane", readiness: 91, portal: 7, wash: 82, risks: 2, note: "High Woolworths volume. Two job sheets need correction before invoicing." },
-  { name: "Sydney", readiness: 84, portal: 4, wash: 76, risks: 3, note: "Induction follow-up due for Primary Connect night crew." },
-  { name: "Melbourne", readiness: 88, portal: 5, wash: 79, risks: 1, note: "Wash bay output steady. One Fleetio asset service due this week." },
-  { name: "Adelaide", readiness: 78, portal: 2, wash: 62, risks: 2, note: "Roster coverage tight for Friday PM shift." },
-  { name: "Perth", readiness: 86, portal: 3, wash: 71, risks: 1, note: "Mobile unit online. Confirm chemical stock by Wednesday." },
-  { name: "Canberra", readiness: 73, portal: 1, wash: 58, risks: 2, note: "Low activity day. Keep GPS and Fleetio checks current." },
-  { name: "Workshop", readiness: 82, portal: 3, wash: 68, risks: 2, note: "Workshop jobs are moving. Watch parts, defects, and return-to-service timing." }
+  { name: "Brisbane", readiness: 62, portal: 7, wash: 82, risks: 2, note: "Action pressure from compliance exceptions and plant readings." },
+  { name: "Sydney", readiness: 78, portal: 4, wash: 76, risks: 3, note: "Portal approvals are holding admin flow." },
+  { name: "Melbourne", readiness: 96, portal: 5, wash: 79, risks: 1, note: "Healthy. Maintain approval discipline and wash output." },
+  { name: "Adelaide", readiness: 44, portal: 2, wash: 62, risks: 2, note: "Roster coverage gap is pulling health down." },
+  { name: "Perth", readiness: 82, portal: 3, wash: 71, risks: 1, note: "Stock request requires manager follow-up." },
+  { name: "Canberra", readiness: 97, portal: 1, wash: 58, risks: 2, note: "Healthy. Keep GPS and Fleetio checks current." },
+  { name: "Workshop", readiness: 88, portal: 3, wash: 68, risks: 2, note: "Scheduled workshop directive remains open." }
 ];
 
 export const approvals = [

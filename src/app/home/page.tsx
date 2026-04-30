@@ -1,14 +1,28 @@
+"use client";
+
 import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { getThorOperatingWeek } from "@/lib/operating-week";
-import { commandPathways, commandSignals, goLivePathway, integrationReadiness } from "@/lib/toc-data";
+import { actionItems, goLivePathway } from "@/lib/toc-data";
 import { metrics } from "@/lib/toc-data";
+import { useEffect, useState } from "react";
 
-export const dynamic = "force-dynamic";
+function getStoredScope() {
+  if (typeof window === "undefined") return "National";
+
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return session?.scope || "National";
+  } catch {
+    return "National";
+  }
+}
 
 export default function HomePage() {
+  const [scope, setScope] = useState("National");
   const operatingWeek = getThorOperatingWeek();
+  const visibleActionItems = actionItems.filter((item) => scope === "National" || item.region === scope || item.region === "National");
   const commandMetrics = [
     {
       label: "Operating week",
@@ -20,9 +34,24 @@ export default function HomePage() {
     ...metrics
   ];
 
+  useEffect(() => {
+    function syncScope(event?: Event) {
+      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
+      setScope(nextScope);
+    }
+
+    syncScope();
+    window.addEventListener("storage", syncScope);
+    window.addEventListener("toc.scopechange", syncScope);
+    return () => {
+      window.removeEventListener("storage", syncScope);
+      window.removeEventListener("toc.scopechange", syncScope);
+    };
+  }, []);
+
   return (
     <TocShell>
-      <PageIntro title="Home" detail="National command entry point. Start with the business signal, then move to the page that owns the action." />
+      <PageIntro title="Home" detail="Command entry point." />
       <FlowHeading eyebrow="Home" title="Start with the business signal, then move to the page that owns the action." />
       <section className="status-strip" aria-label="Business overview">
         {commandMetrics.map((metric) => (
@@ -34,46 +63,20 @@ export default function HomePage() {
         ))}
       </section>
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Command signal" title="What needs attention first" pill="Action-linked">
+        <Panel wide eyebrow="Command signal" title="COMMAND SIGNALS" pill={`${visibleActionItems.length} action-linked`}>
           <div className="signal-command-grid">
-            {commandSignals.map((signal) => (
-              <article className={`signal-command-card ${signal.severity}`} key={signal.title}>
+            {visibleActionItems.map((signal) => (
+              <Link className={`signal-command-card ${signal.severity}`} href={signal.href} key={signal.id}>
                 <div>
-                  <span className="eyebrow">{signal.source}</span>
+                  <span className="eyebrow">{signal.source} - {signal.region}</span>
                   <h3>{signal.title}</h3>
                   <p>{signal.detail}</p>
                 </div>
                 <div className="signal-command-footer">
-                  <div className="meta-row"><Tag tone={signal.severity}>{signal.owner}</Tag></div>
-                  <Link className="node-action" href={signal.href}>{signal.action}</Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </Panel>
-        <Panel eyebrow="Operating flow" title="Manager pathway">
-          <div className="pathway-list">
-            {commandPathways.map((item) => (
-              <Link className="pathway-item" href={item.href} key={item.label}>
-                <span>{item.step}</span>
-                <div>
-                  <strong>{item.label}</strong>
-                  <small>{item.detail}</small>
+                  <div className="meta-row"><Tag tone={signal.severity}>{signal.status}</Tag><Tag>{signal.directive}</Tag></div>
+                  <span className="node-action">Open issue</span>
                 </div>
               </Link>
-            ))}
-          </div>
-        </Panel>
-        <Panel eyebrow="System readiness" title="Integration control">
-          <div className="integration-list">
-            {integrationReadiness.map((item) => (
-              <article className="integration-item" key={item.system}>
-                <div>
-                  <strong>{item.system}</strong>
-                  <small>{item.purpose}</small>
-                </div>
-                <Tag tone={item.severity}>{item.status}</Tag>
-              </article>
             ))}
           </div>
         </Panel>
