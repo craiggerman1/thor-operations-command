@@ -222,9 +222,10 @@ textarea {
 }
 
 .login-card-shell.signing-in .login-card {
-  opacity: 0.2;
+  opacity: 0;
+  visibility: hidden;
   transform: scale(0.985);
-  filter: blur(1px);
+  filter: none;
   pointer-events: none;
 }
 
