@@ -1,5 +1,25 @@
 export type Status = "green" | "amber" | "red" | "blue";
 
+export type CalendarJob = {
+  time: string;
+  location: string;
+  site: string;
+  crew: string;
+  job: string;
+  status: string;
+  notes: string;
+  severity: Status;
+};
+
+export type CalendarDay = {
+  day: string;
+  date: string;
+  month: string;
+  week: string;
+  today?: boolean;
+  jobs: CalendarJob[];
+};
+
 export const metrics = [
   { label: "Portal approvals", value: "25", detail: "Waiting on manager action", status: "amber" as Status, href: "/portal" },
   { label: "Assets online", value: "5/8", detail: "Fleetio and GPS ready", status: "blue" as Status, href: "/fleet" },
@@ -233,51 +253,42 @@ export const unityAssets = [
   { asset: "Workshop Ute WKS-01", crew: "Workshop support", region: "Workshop", location: "Workshop", movement: "Available", lastSeen: "4 min ago", status: "green" as Status }
 ];
 
-export const calendarWeeks = [
+export const calendarWeeks: CalendarDay[][] = [
   [
-    { date: "27", muted: true, jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", severity: "green" as Status }] },
-    { date: "28", muted: true, jobs: [{ time: "20:00", location: "Sydney", site: "Minchinbury", severity: "green" as Status }] },
-    { date: "29", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect Larapinta", severity: "green" as Status }, { time: "20:00", location: "Sydney", site: "Woolworths Minchinbury", severity: "amber" as Status }] },
-    { date: "30", today: true, jobs: [{ time: "07:00", location: "Melbourne", site: "Woolworths Melbourne DC", severity: "green" as Status }, { time: "15:00", location: "Adelaide", site: "Primary Connect Adelaide", severity: "red" as Status }] },
-    { date: "1", jobs: [{ time: "10:00", location: "Workshop", site: "Service review", severity: "amber" as Status }, { time: "19:00", location: "Perth", site: "Primary Connect Perth", severity: "green" as Status }] },
-    { date: "2", jobs: [{ time: "08:00", location: "Brisbane", site: "Weekend parked fleet", severity: "green" as Status }, { time: "21:00", location: "Sydney", site: "Weekend bay run", severity: "amber" as Status }] },
-    { date: "3", jobs: [{ time: "07:30", location: "Melbourne", site: "Parked fleet wash", severity: "green" as Status }, { time: "16:00", location: "Adelaide", site: "Recovery washes", severity: "red" as Status }] }
+    { day: "Thu", date: "30", month: "Apr", week: "C Week", today: true, jobs: [{ time: "07:00", location: "Melbourne", site: "Woolworths Melbourne DC", crew: "MEL day crew", job: "Day shift wash bay", status: "Scheduled", notes: "Portal schedule feed placeholder.", severity: "green" as Status }, { time: "15:00", location: "Adelaide", site: "Primary Connect Adelaide", crew: "ADL mobile crew", job: "Rollover recovery washes", status: "Needs staff", notes: "Manager to confirm coverage before shift.", severity: "red" as Status }, { time: "18:00", location: "Brisbane", site: "Primary Connect Larapinta", crew: "BNE night crew", job: "Trailer wash program", status: "Scheduled", notes: "High-volume evening window.", severity: "green" as Status }] },
+    { day: "Fri", date: "1", month: "May", week: "C Week", jobs: [{ time: "10:00", location: "Workshop", site: "Workshop", crew: "Workshop BU", job: "Service review", status: "Watch", notes: "Review vehicles needing return-to-service follow-up.", severity: "amber" as Status }, { time: "19:00", location: "Perth", site: "Primary Connect Perth", crew: "PER mobile crew", job: "Night fleet wash", status: "Scheduled", notes: "Weekend lead-in wash window.", severity: "green" as Status }, { time: "22:00", location: "Sydney", site: "Woolworths Minchinbury", crew: "SYD night crew", job: "Bay coverage", status: "Scheduled", notes: "Prepare for parked weekend fleet.", severity: "green" as Status }] },
+    { day: "Sat", date: "2", month: "May", week: "C Week", jobs: [{ time: "06:30", location: "Brisbane", site: "Weekend parked fleet", crew: "BNE weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Weekend is a core wash period.", severity: "green" as Status }, { time: "08:00", location: "Melbourne", site: "Truganina parked fleet", crew: "MEL weekend crew", job: "Parked trailer wash", status: "Scheduled", notes: "Fleet available while parked.", severity: "green" as Status }, { time: "21:00", location: "Sydney", site: "Weekend bay run", crew: "SYD night crew", job: "Night bay run", status: "Watch", notes: "Check roster coverage before shift.", severity: "amber" as Status }] },
+    { day: "Sun", date: "3", month: "May", week: "C Week", jobs: [{ time: "07:30", location: "Melbourne", site: "Parked fleet wash", crew: "MEL weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Key weekend wash window.", severity: "green" as Status }, { time: "09:00", location: "Brisbane", site: "Larapinta overflow", crew: "BNE weekend crew", job: "Overflow washes", status: "Scheduled", notes: "Clear rollover before Monday movement.", severity: "green" as Status }, { time: "16:00", location: "Adelaide", site: "Recovery washes", crew: "ADL mobile crew", job: "Recovery wash block", status: "Action", notes: "Supervisor confirmation needed.", severity: "red" as Status }] },
+    { day: "Mon", date: "4", month: "May", week: "C Week", jobs: [{ time: "06:00", location: "Canberra", site: "Fleet wash run", crew: "CBR mobile crew", job: "Morning fleet wash", status: "Watch", notes: "Confirm site access before arrival.", severity: "amber" as Status }, { time: "18:00", location: "Brisbane", site: "Primary Connect Larapinta", crew: "BNE night crew", job: "Night wash program", status: "Scheduled", notes: "Normal operating window.", severity: "green" as Status }] },
+    { day: "Tue", date: "5", month: "May", week: "C Week", jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", crew: "BNE night crew", job: "Trailer wash program", status: "Scheduled", notes: "Portal feed placeholder.", severity: "green" as Status }, { time: "20:00", location: "Sydney", site: "Minchinbury", crew: "SYD night crew", job: "Night wash bay", status: "Scheduled", notes: "Watch Fleetio entries after shift.", severity: "green" as Status }] },
+    { day: "Wed", date: "6", month: "May", week: "C Week", jobs: [{ time: "19:00", location: "Sydney", site: "Minchinbury", crew: "SYD night crew", job: "Night wash closeout", status: "Scheduled", notes: "End-of-operating-week closeout.", severity: "green" as Status }, { time: "21:00", location: "National", site: "Operating week close", crew: "National ops", job: "C Week review", status: "Watch", notes: "Check approvals, rollover and exceptions.", severity: "amber" as Status }] }
   ],
   [
-    { date: "4", jobs: [{ time: "06:00", location: "Canberra", site: "Fleet wash run", severity: "amber" as Status }] },
-    { date: "5", jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", severity: "green" as Status }] },
-    { date: "6", jobs: [{ time: "19:00", location: "Sydney", site: "Minchinbury", severity: "green" as Status }] },
-    { date: "7", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }, { time: "14:00", location: "Workshop", site: "Asset repairs", severity: "amber" as Status }] },
-    { date: "8", jobs: [{ time: "15:00", location: "Adelaide", site: "Primary Connect", severity: "amber" as Status }] },
-    { date: "9", jobs: [{ time: "08:00", location: "Perth", site: "Weekend fleet wash", severity: "green" as Status }] },
-    { date: "10", jobs: [{ time: "09:00", location: "National", site: "Weekend coverage", severity: "amber" as Status }] }
+    { day: "Thu", date: "7", month: "May", week: "D Week", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", crew: "MEL day crew", job: "Day wash bay", status: "Scheduled", notes: "D Week opening shift.", severity: "green" as Status }, { time: "14:00", location: "Workshop", site: "Asset repairs", crew: "Workshop BU", job: "Asset repairs", status: "Watch", notes: "Workshop to confirm parts availability.", severity: "amber" as Status }] },
+    { day: "Fri", date: "8", month: "May", week: "D Week", jobs: [{ time: "15:00", location: "Adelaide", site: "Primary Connect", crew: "ADL mobile crew", job: "Afternoon wash run", status: "Watch", notes: "Confirm staff availability.", severity: "amber" as Status }, { time: "19:00", location: "Perth", site: "Primary Connect Perth", crew: "PER mobile crew", job: "Friday night wash", status: "Scheduled", notes: "Prepare weekend volume.", severity: "green" as Status }] },
+    { day: "Sat", date: "9", month: "May", week: "D Week", jobs: [{ time: "08:00", location: "Perth", site: "Weekend fleet wash", crew: "PER weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Weekend core washing.", severity: "green" as Status }, { time: "09:30", location: "Brisbane", site: "Weekend parked fleet", crew: "BNE weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "High availability window.", severity: "green" as Status }] },
+    { day: "Sun", date: "10", month: "May", week: "D Week", jobs: [{ time: "09:00", location: "National", site: "Weekend coverage", crew: "National ops", job: "Coverage check", status: "Watch", notes: "Managers check coverage and exceptions.", severity: "amber" as Status }, { time: "10:00", location: "Sydney", site: "Weekend bay run", crew: "SYD weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Weekend wash window.", severity: "green" as Status }] },
+    { day: "Mon", date: "11", month: "May", week: "D Week", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect", crew: "BNE night crew", job: "Night wash program", status: "Scheduled", notes: "Normal night shift.", severity: "green" as Status }] },
+    { day: "Tue", date: "12", month: "May", week: "D Week", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect", crew: "BNE night crew", job: "Trailer wash program", status: "Scheduled", notes: "Portal feed placeholder.", severity: "green" as Status }, { time: "20:00", location: "Sydney", site: "Night wash", crew: "SYD night crew", job: "Night wash bay", status: "Scheduled", notes: "Fleetio check after shift.", severity: "green" as Status }] },
+    { day: "Wed", date: "13", month: "May", week: "D Week", jobs: [{ time: "20:00", location: "Sydney", site: "Night wash", crew: "SYD night crew", job: "Operating week closeout", status: "Scheduled", notes: "D Week closeout.", severity: "green" as Status }] }
   ],
   [
-    { date: "11", jobs: [] },
-    { date: "12", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect", severity: "green" as Status }] },
-    { date: "13", jobs: [{ time: "20:00", location: "Sydney", site: "Night wash", severity: "green" as Status }] },
-    { date: "14", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }] },
-    { date: "15", jobs: [{ time: "15:00", location: "Adelaide", site: "Mobile run", severity: "amber" as Status }] },
-    { date: "16", jobs: [{ time: "08:00", location: "Brisbane", site: "Parked fleet wash", severity: "green" as Status }, { time: "11:00", location: "Workshop", site: "Machine checks", severity: "amber" as Status }] },
-    { date: "17", jobs: [{ time: "08:30", location: "Sydney", site: "Parked fleet wash", severity: "green" as Status }] }
+    { day: "Thu", date: "14", month: "May", week: "A Week", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", crew: "MEL day crew", job: "A Week opening wash", status: "Scheduled", notes: "Opening shift.", severity: "green" as Status }] },
+    { day: "Fri", date: "15", month: "May", week: "A Week", jobs: [{ time: "15:00", location: "Adelaide", site: "Mobile run", crew: "ADL mobile crew", job: "Mobile wash run", status: "Watch", notes: "Confirm mobile crew availability.", severity: "amber" as Status }] },
+    { day: "Sat", date: "16", month: "May", week: "A Week", jobs: [{ time: "08:00", location: "Brisbane", site: "Parked fleet wash", crew: "BNE weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Weekend core wash.", severity: "green" as Status }, { time: "11:00", location: "Workshop", site: "Machine checks", crew: "Workshop BU", job: "Machine checks", status: "Watch", notes: "Check Ponys and generators.", severity: "amber" as Status }] },
+    { day: "Sun", date: "17", month: "May", week: "A Week", jobs: [{ time: "08:30", location: "Sydney", site: "Parked fleet wash", crew: "SYD weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Weekend washing while fleet is parked.", severity: "green" as Status }] },
+    { day: "Mon", date: "18", month: "May", week: "A Week", jobs: [{ time: "06:00", location: "Canberra", site: "Fleet wash", crew: "CBR mobile crew", job: "Morning fleet wash", status: "Watch", notes: "Confirm site readiness.", severity: "amber" as Status }] },
+    { day: "Tue", date: "19", month: "May", week: "A Week", jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", crew: "BNE night crew", job: "Trailer wash program", status: "Scheduled", notes: "Normal wash window.", severity: "green" as Status }] },
+    { day: "Wed", date: "20", month: "May", week: "A Week", jobs: [{ time: "20:00", location: "Sydney", site: "Minchinbury", crew: "SYD night crew", job: "Operating week closeout", status: "Scheduled", notes: "A Week closeout.", severity: "green" as Status }] }
   ],
   [
-    { date: "18", jobs: [{ time: "06:00", location: "Canberra", site: "Fleet wash", severity: "amber" as Status }] },
-    { date: "19", jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", severity: "green" as Status }] },
-    { date: "20", jobs: [{ time: "20:00", location: "Sydney", site: "Minchinbury", severity: "green" as Status }] },
-    { date: "21", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }] },
-    { date: "22", jobs: [{ time: "15:00", location: "Adelaide", site: "Primary Connect", severity: "amber" as Status }] },
-    { date: "23", jobs: [{ time: "08:00", location: "Perth", site: "Weekend fleet wash", severity: "green" as Status }] },
-    { date: "24", jobs: [{ time: "09:00", location: "National", site: "Weekend parked fleets", severity: "green" as Status }] }
-  ],
-  [
-    { date: "25", jobs: [] },
-    { date: "26", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect", severity: "green" as Status }] },
-    { date: "27", jobs: [{ time: "20:00", location: "Sydney", site: "Night wash", severity: "green" as Status }] },
-    { date: "28", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }] },
-    { date: "29", jobs: [{ time: "15:00", location: "Adelaide", site: "Mobile run", severity: "amber" as Status }] },
-    { date: "30", jobs: [{ time: "08:00", location: "Brisbane", site: "Weekend parked fleet", severity: "green" as Status }] },
-    { date: "31", jobs: [{ time: "08:30", location: "Sydney", site: "Weekend bay run", severity: "green" as Status }] }
+    { day: "Thu", date: "21", month: "May", week: "B Week", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", crew: "MEL day crew", job: "B Week opening wash", status: "Scheduled", notes: "Opening shift.", severity: "green" as Status }] },
+    { day: "Fri", date: "22", month: "May", week: "B Week", jobs: [{ time: "15:00", location: "Adelaide", site: "Primary Connect", crew: "ADL mobile crew", job: "Friday wash run", status: "Watch", notes: "Monitor rollover count.", severity: "amber" as Status }] },
+    { day: "Sat", date: "23", month: "May", week: "B Week", jobs: [{ time: "08:00", location: "Perth", site: "Weekend fleet wash", crew: "PER weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Weekend parked fleet.", severity: "green" as Status }, { time: "08:45", location: "Brisbane", site: "Weekend parked fleet", crew: "BNE weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Core weekend washing.", severity: "green" as Status }] },
+    { day: "Sun", date: "24", month: "May", week: "B Week", jobs: [{ time: "09:00", location: "National", site: "Weekend parked fleets", crew: "National ops", job: "Weekend fleet health", status: "Scheduled", notes: "National manager visibility.", severity: "green" as Status }, { time: "10:30", location: "Sydney", site: "Weekend bay run", crew: "SYD weekend crew", job: "Parked fleet wash", status: "Scheduled", notes: "Weekend core shift.", severity: "green" as Status }] },
+    { day: "Mon", date: "25", month: "May", week: "B Week", jobs: [] },
+    { day: "Tue", date: "26", month: "May", week: "B Week", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect", crew: "BNE night crew", job: "Night wash program", status: "Scheduled", notes: "Normal wash window.", severity: "green" as Status }] },
+    { day: "Wed", date: "27", month: "May", week: "B Week", jobs: [{ time: "20:00", location: "Sydney", site: "Night wash", crew: "SYD night crew", job: "Operating week closeout", status: "Scheduled", notes: "B Week closeout.", severity: "green" as Status }] }
   ]
 ];
 

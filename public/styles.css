@@ -1924,20 +1924,30 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .calendar-date {
+  width: 100%;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 10px;
-  min-height: 174px;
-  padding: 10px;
+  gap: 12px;
+  min-height: 252px;
+  padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
 .calendar-date.today {
   border-color: rgba(37, 161, 189, 0.7);
   box-shadow: 0 0 0 2px rgba(37, 161, 189, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.calendar-date.selected {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(10, 49, 82, 0.16), 0 14px 30px rgba(7, 23, 38, 0.12);
 }
 
 .calendar-date.muted {
@@ -1956,6 +1966,20 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-size: 28px;
 }
 
+.calendar-date-head span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.calendar-date-head em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .calendar-date-head small {
   color: var(--muted);
   font-size: 11px;
@@ -1963,17 +1987,28 @@ body:not([data-access="admin"]) .admin-only-panel {
   text-transform: uppercase;
 }
 
+.calendar-week-label {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(37, 161, 189, 0.1);
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .calendar-date-jobs {
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 7px;
 }
 
 .calendar-job-pill {
   display: grid;
   gap: 2px;
-  min-height: 50px;
-  padding: 7px 8px;
+  min-height: 58px;
+  padding: 8px 9px;
   border-left: 4px solid var(--green);
   border-radius: 5px;
   background: #f4f9f7;
@@ -1998,6 +2033,67 @@ body:not([data-access="admin"]) .admin-only-panel {
 .calendar-job-pill strong {
   color: #071726;
   font-size: 13px;
+}
+
+.calendar-more-count {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.calendar-expanded-view {
+  display: grid;
+  gap: 10px;
+}
+
+.calendar-expanded-job {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(220px, 0.8fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 96px;
+  padding: 14px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid var(--green);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.calendar-expanded-job.amber {
+  border-left-color: var(--amber);
+}
+
+.calendar-expanded-job.red {
+  border-left-color: var(--red);
+}
+
+.calendar-expanded-time {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+}
+
+.calendar-expanded-time strong {
+  color: var(--blue);
+  font-size: 24px;
+}
+
+.calendar-expanded-job h3 {
+  margin: 0 0 4px;
+  color: #071726;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.calendar-expanded-job p {
+  margin: 0;
+}
+
+.calendar-expanded-job small {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .availability-heatmap {
@@ -2846,11 +2942,16 @@ body:not([data-access="admin"]) .admin-only-panel {
 
   .calendar-weekdays,
   .calendar-month-grid {
-    min-width: 920px;
+    min-width: 1240px;
   }
 
   .wall-calendar {
     overflow-x: auto;
+  }
+
+  .calendar-expanded-job {
+    grid-template-columns: 1fr;
+    align-items: start;
   }
 
   .heatmap-row {

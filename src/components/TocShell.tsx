@@ -36,6 +36,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope };
     setSession(nextSession);
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
+    window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope } }));
   }
 
   function signOut() {
@@ -90,7 +91,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.051</em>
+              <em>Build 0.052</em>
             </div>
           </div>
           <div className="topbar-actions">
