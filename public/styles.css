@@ -1173,7 +1173,7 @@ body.todo-floating-disabled .topbar {
 
 .topbar-actions {
   width: auto;
-  max-width: min(680px, 48%);
+  max-width: min(780px, 58%);
   flex-wrap: nowrap;
   justify-content: flex-end;
   align-self: center;
@@ -1210,6 +1210,23 @@ body.todo-floating-disabled .topbar {
   margin-top: 2px;
   color: #ffffff;
   font-size: 13px;
+}
+
+.back-button {
+  min-height: 36px;
+  border: 1px solid rgba(222, 249, 255, 0.22);
+  border-radius: 5px;
+  padding: 0 15px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.back-button:hover {
+  border-color: rgba(37, 161, 189, 0.58);
+  background: rgba(37, 161, 189, 0.18);
 }
 
 .access-control,
