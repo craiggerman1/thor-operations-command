@@ -836,6 +836,26 @@ body.todo-floating-disabled .topbar {
   font-weight: 700;
 }
 
+.units-counter {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  gap: 6px;
+  border: 1px solid rgba(37, 161, 189, 0.44);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #d9edf4;
+  background: rgba(37, 161, 189, 0.14);
+  box-shadow: 0 0 18px rgba(37, 161, 189, 0.16);
+  font-weight: 800;
+}
+
+.units-counter b {
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .page-title {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(220px, 290px);
@@ -1153,12 +1173,13 @@ body.todo-floating-disabled .topbar {
 }
 
 .topbar-actions {
-  width: min(650px, 100%);
-  max-width: 650px;
-  flex-wrap: wrap;
+  width: auto;
+  max-width: min(680px, 48%);
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  align-self: flex-start;
-  padding: 8px;
+  align-self: center;
+  margin-left: auto;
+  padding: 9px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   background: rgba(4, 18, 31, 0.58);
@@ -1167,7 +1188,7 @@ body.todo-floating-disabled .topbar {
 }
 
 .session-chip {
-  min-width: 124px;
+  min-width: 112px;
   padding: 7px 10px;
   border: 1px solid rgba(222, 249, 255, 0.18);
   border-radius: 5px;
@@ -1208,7 +1229,7 @@ body[data-access="admin"] .scope-chip {
 .select-wrap {
   display: grid;
   gap: 3px;
-  min-width: 148px;
+  min-width: 138px;
 }
 
 .select-wrap span {
