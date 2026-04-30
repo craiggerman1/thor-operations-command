@@ -61,7 +61,9 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     if (mode !== "floating") return undefined;
 
     function syncFloatingTop() {
-      const nextTop = Math.max(floatingDockTop, floatingStartTop - window.scrollY);
+      const headerBottom = document.querySelector(".topbar")?.getBoundingClientRect().bottom;
+      const headerStop = typeof headerBottom === "number" ? headerBottom + 16 : floatingStartTop - window.scrollY;
+      const nextTop = Math.max(floatingDockTop, headerStop);
       setFloatingTop(nextTop);
     }
 
