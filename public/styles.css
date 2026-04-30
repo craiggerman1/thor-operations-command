@@ -1902,7 +1902,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .wall-calendar {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .calendar-weekdays,
@@ -1928,7 +1928,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 12px;
-  min-height: 252px;
+  min-height: 282px;
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
@@ -1938,6 +1938,14 @@ body:not([data-access="admin"]) .admin-only-panel {
   cursor: pointer;
   font: inherit;
   text-align: left;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.calendar-date:hover {
+  transform: translateY(-2px);
+  border-color: rgba(10, 49, 82, 0.42);
+  box-shadow: 0 14px 30px rgba(7, 23, 38, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .calendar-date.today {
@@ -1987,13 +1995,58 @@ body:not([data-access="admin"]) .admin-only-panel {
   text-transform: uppercase;
 }
 
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.calendar-toolbar strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--blue);
+}
+
+.segmented-control {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(10, 49, 82, 0.18);
+  border-radius: 6px;
+  background: #eef5fb;
+}
+
+.segmented-control button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--blue);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.segmented-control button.active {
+  background: var(--blue);
+  color: #ffffff;
+}
+
 .calendar-week-label {
   width: fit-content;
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: rgba(37, 161, 189, 0.1);
-  color: var(--blue);
-  font-size: 10px;
+  min-height: 26px;
+  padding: 5px 9px;
+  border: 1px solid rgba(10, 49, 82, 0.18);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ffffff, #edf6f9);
+  color: #0a3152;
+  font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -2094,6 +2147,168 @@ body:not([data-access="admin"]) .admin-only-panel {
 .calendar-expanded-job small {
   color: var(--muted);
   font-weight: 800;
+}
+
+.calendar-list-view,
+.calendar-detail-list {
+  display: grid;
+  gap: 10px;
+}
+
+.calendar-list-day {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  min-height: 94px;
+  padding: 14px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid var(--blue);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.94);
+  color: inherit;
+  text-decoration: none;
+}
+
+.calendar-list-day strong {
+  display: block;
+  margin-top: 7px;
+  color: #071726;
+  font-size: 18px;
+}
+
+.calendar-list-day small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.calendar-list-jobs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.calendar-day-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.calendar-day-actions span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.calendar-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.calendar-detail-job {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 6px solid var(--green);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.calendar-detail-job.amber {
+  border-left-color: var(--amber);
+}
+
+.calendar-detail-job.red {
+  border-left-color: var(--red);
+}
+
+.calendar-detail-index {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.calendar-detail-index span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.calendar-detail-index strong {
+  color: var(--blue);
+  font-size: 28px;
+}
+
+.calendar-detail-main {
+  display: grid;
+  gap: 14px;
+}
+
+.calendar-detail-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.calendar-detail-title h3 {
+  margin: 0 0 4px;
+  color: #071726;
+  font-size: 22px;
+}
+
+.calendar-detail-title p,
+.calendar-detail-notes p {
+  margin: 0;
+}
+
+.calendar-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.calendar-detail-grid div,
+.calendar-detail-notes {
+  padding: 10px;
+  border-radius: 6px;
+  background: #f4f8fb;
+}
+
+.calendar-detail-grid dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.calendar-detail-grid dd {
+  margin: 5px 0 0;
+  color: #071726;
+  font-weight: 800;
+}
+
+.calendar-detail-notes strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--blue);
 }
 
 .availability-heatmap {
@@ -2942,11 +3157,42 @@ body:not([data-access="admin"]) .admin-only-panel {
 
   .calendar-weekdays,
   .calendar-month-grid {
-    min-width: 1240px;
+    min-width: 0;
+    grid-template-columns: 1fr;
   }
 
   .wall-calendar {
-    overflow-x: auto;
+    overflow-x: visible;
+  }
+
+  .calendar-weekdays {
+    display: none;
+  }
+
+  .calendar-date {
+    min-height: auto;
+  }
+
+  .calendar-toolbar,
+  .calendar-list-day,
+  .calendar-day-actions,
+  .calendar-detail-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .segmented-control {
+    width: 100%;
+  }
+
+  .calendar-list-day,
+  .calendar-detail-job,
+  .calendar-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-list-jobs {
+    justify-content: flex-start;
   }
 
   .calendar-expanded-job {

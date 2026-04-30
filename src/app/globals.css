@@ -41,6 +41,11 @@ body.next-app .login-screen {
 
 .command-grid.route-grid {
   margin-top: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+}
+
+.command-grid.route-grid > .wide-panel {
+  grid-column: 1 / -1;
 }
 
 .login-card a,
@@ -60,5 +65,14 @@ body.next-app .login-screen {
 
   body.next-app .mobile-nav-backdrop.active {
     display: block;
+  }
+
+  .command-grid.route-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-grid.route-grid > .panel,
+  .command-grid.route-grid > .wide-panel {
+    grid-column: 1 / -1;
   }
 }
