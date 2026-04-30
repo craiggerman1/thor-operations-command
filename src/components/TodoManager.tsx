@@ -11,6 +11,8 @@ type TodoItem = {
 };
 
 const shareTargets = ["National Ops", "Workshop", "Brisbane Manager", "Sydney Manager", "Director"];
+const floatingStartTop = 186;
+const floatingDockTop = 28;
 
 function getTodoStorageKey() {
   const session = JSON.parse(localStorage.getItem("toc.session") || "null");
@@ -29,6 +31,7 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   const [todoText, setTodoText] = useState("");
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [floatingEnabled, setFloatingEnabled] = useState(true);
+  const [floatingTop, setFloatingTop] = useState(floatingStartTop);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
 
@@ -53,6 +56,23 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (mode !== "floating") return undefined;
+
+    function syncFloatingTop() {
+      const nextTop = Math.max(floatingDockTop, floatingStartTop - window.scrollY);
+      setFloatingTop(nextTop);
+    }
+
+    syncFloatingTop();
+    window.addEventListener("scroll", syncFloatingTop, { passive: true });
+    window.addEventListener("resize", syncFloatingTop);
+    return () => {
+      window.removeEventListener("scroll", syncFloatingTop);
+      window.removeEventListener("resize", syncFloatingTop);
+    };
+  }, [mode]);
 
   function saveTodos(nextTodos: TodoItem[]) {
     setTodos(nextTodos);
@@ -100,8 +120,12 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     return null;
   }
 
+  const floatingStyle = mode === "floating"
+    ? { top: `${floatingTop}px`, maxHeight: `calc(100dvh - ${floatingTop + 28}px)` }
+    : undefined;
+
   return (
-    <section className={`panel todo-panel ${mode === "page" ? "todo-page-panel" : ""}`} id="todo" aria-label="Personal to do list">
+    <section className={`panel todo-panel ${mode === "page" ? "todo-page-panel" : ""}`} id="todo" aria-label="Personal to do list" style={floatingStyle}>
       <div className="panel-head">
         <div>
           {mode === "page" ? <span className="eyebrow">Manager memory</span> : null}
