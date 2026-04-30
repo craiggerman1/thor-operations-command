@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { Panel, Tag } from "@/components/TocCards";
+import { CalendarJobEditor } from "@/components/CalendarJobEditor";
+import type { CalendarEditTarget } from "@/components/CalendarJobEditor";
 import type { CalendarJob } from "@/lib/toc-data";
 import {
   calendarWeekdays,
@@ -14,10 +16,7 @@ import {
 } from "@/lib/calendar-utils";
 
 type CalendarViewMode = "calendar" | "list";
-type EditTarget = { daySlug: string; dayLabel: string; jobIndex: number; job: CalendarJob };
 type VisibleJob = CalendarJob & { originalIndex: number };
-
-const recurrenceOptions = ["None", "Daily", "Weekly", "Fortnightly", "4 weekly", "Custom"];
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -36,7 +35,8 @@ function cleanEditableJob(job: CalendarJob & { originalIndex?: number }): Calend
     notes: job.notes,
     severity: job.severity,
     recurrence: job.recurrence,
-    recurrenceDetail: job.recurrenceDetail
+    recurrenceDetail: job.recurrenceDetail,
+    recurrenceIntervalWeeks: job.recurrenceIntervalWeeks
   };
 }
 
@@ -44,7 +44,7 @@ export default function CalendarPage() {
   const [scope, setScope] = useState("National");
   const [viewMode, setViewMode] = useState<CalendarViewMode>("calendar");
   const [calendarData, setCalendarData] = useState(getStoredCalendarWeeks);
-  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
   const calendarDays = useMemo(() => calendarData.flatMap((week) => week), [calendarData]);
   const totalVisibleJobs = calendarDays.reduce((total, day) => total + getVisibleJobs(day.jobs).length, 0);
@@ -72,13 +72,16 @@ export default function CalendarPage() {
   }, []);
 
   function openEditor(daySlug: string, dayLabel: string, jobIndex: number, job: CalendarJob) {
-    setEditTarget({ daySlug, dayLabel, jobIndex, job: { ...job, recurrence: job.recurrence || "None" } });
+    setEditTarget({ daySlug, dayLabel, jobIndex, job: { ...job, recurrence: job.recurrence || "None", recurrenceIntervalWeeks: job.recurrenceIntervalWeeks || 3 } });
     setSaveMessage("");
   }
 
-  function updateDraft(field: keyof CalendarJob, value: string) {
+  function updateDraft(field: keyof CalendarJob, value: string | number | undefined) {
     if (!editTarget) return;
     const nextJob = { ...editTarget.job, [field]: value } as CalendarJob;
+    if (field === "recurrence" && value !== "Custom") {
+      delete nextJob.recurrenceIntervalWeeks;
+    }
     setEditTarget({ ...editTarget, job: nextJob });
   }
 
@@ -96,7 +99,7 @@ export default function CalendarPage() {
 
   return (
     <TocShell>
-      <PageIntro title="Scheduled jobs by Thor operating week" />
+      <PageIntro title="Calendar" detail="Scheduled jobs by Thor operating week." />
       <section className="command-grid route-grid">
         <Panel wide className="calendar-panel" eyebrow="Schedule view" title={`${scope} job calendar`} pill={`${totalVisibleJobs} visible jobs`}>
           <div className="calendar-toolbar" aria-label="Calendar view settings">
@@ -113,35 +116,7 @@ export default function CalendarPage() {
           {saveMessage ? <div className="calendar-save-message">{saveMessage}</div> : null}
 
           {editTarget ? (
-            <form className="calendar-edit-form calendar-edit-form-inline" onSubmit={saveDraft}>
-              <div className="calendar-edit-heading">
-                <div>
-                  <span className="eyebrow">Editing job</span>
-                  <strong>{editTarget.dayLabel}</strong>
-                </div>
-                <span className="calendar-week-label">{editTarget.job.recurrence || "None"}</span>
-              </div>
-              <label><span>Time</span><input value={editTarget.job.time} onChange={(event) => updateDraft("time", event.target.value)} /></label>
-              <label><span>Location</span><input value={editTarget.job.location} onChange={(event) => updateDraft("location", event.target.value)} /></label>
-              <label><span>Site</span><input value={editTarget.job.site} onChange={(event) => updateDraft("site", event.target.value)} /></label>
-              <label><span>Crew</span><input value={editTarget.job.crew} onChange={(event) => updateDraft("crew", event.target.value)} /></label>
-              <label><span>Job</span><input value={editTarget.job.job} onChange={(event) => updateDraft("job", event.target.value)} /></label>
-              <label><span>Status</span><input value={editTarget.job.status} onChange={(event) => updateDraft("status", event.target.value)} /></label>
-              <label><span>Risk colour</span><select value={editTarget.job.severity} onChange={(event) => updateDraft("severity", event.target.value)}>
-                <option value="green">Green</option>
-                <option value="amber">Amber</option>
-                <option value="red">Red</option>
-              </select></label>
-              <label><span>Recurring</span><select value={editTarget.job.recurrence || "None"} onChange={(event) => updateDraft("recurrence", event.target.value)}>
-                {recurrenceOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select></label>
-              {editTarget.job.recurrence === "Custom" ? <label className="calendar-edit-wide"><span>Custom recurrence</span><input value={editTarget.job.recurrenceDetail || ""} placeholder="Example: every 3 weeks on Saturday night" onChange={(event) => updateDraft("recurrenceDetail", event.target.value)} /></label> : null}
-              <label className="calendar-edit-wide"><span>Notes</span><textarea value={editTarget.job.notes} onChange={(event) => updateDraft("notes", event.target.value)} /></label>
-              <div className="calendar-edit-actions">
-                <button type="submit">Save job</button>
-                <button type="button" onClick={() => setEditTarget(null)}>Cancel</button>
-              </div>
-            </form>
+            <CalendarJobEditor editTarget={editTarget} onCancel={() => setEditTarget(null)} onSave={saveDraft} onUpdate={updateDraft} />
           ) : null}
 
           {viewMode === "calendar" ? (

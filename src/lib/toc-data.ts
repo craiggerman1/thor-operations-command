@@ -11,6 +11,7 @@ export type CalendarJob = {
   severity: Status;
   recurrence?: string;
   recurrenceDetail?: string;
+  recurrenceIntervalWeeks?: number;
 };
 
 export type CalendarDay = {
