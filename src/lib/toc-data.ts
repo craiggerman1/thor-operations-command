@@ -24,7 +24,7 @@ export type CalendarDay = {
 };
 
 export const metrics = [
-  { label: "Portal approvals", value: "25", detail: "Waiting on manager action", status: "amber" as Status, href: "/portal" },
+  { label: "Jobsheets", value: "25", detail: "Waiting on manager action", status: "amber" as Status, href: "/jobsheets" },
   { label: "Assets online", value: "5/8", detail: "Unity and GPS ready", status: "blue" as Status, href: "/asset-tracking" },
   { label: "Risk flags", value: "13", detail: "Compliance, staffing, data", status: "red" as Status, href: "/actions" }
 ];
@@ -36,7 +36,7 @@ export const commandSignals = [
     severity: "amber" as Status,
     owner: "Regional managers",
     action: "Review jobsheets",
-    href: "/portal",
+    href: "/jobsheets",
     detail: "Manager-approved jobsheets are the gate before invoicing can move cleanly."
   },
   {
@@ -112,7 +112,7 @@ export const actionItems = [
     directive: "Action required",
     region: "Sydney",
     severity: "amber" as Status,
-    href: "/portal",
+    href: "/jobsheets",
     detail: "Approval delays can block invoicing, client reporting and admin close.",
     status: "Open",
     closeFlow: "Manager resolution is sent to national approval."
