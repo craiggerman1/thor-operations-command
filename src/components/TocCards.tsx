@@ -75,7 +75,6 @@ export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: st
   return (
     <div className="flow-heading page-hint" role="note">
       <div>
-        <span className="eyebrow">{eyebrow}</span>
         <h2>{title}</h2>
       </div>
       <button type="button" aria-label={`Dismiss ${eyebrow} hint`} onClick={dismissHint}>Clear hint</button>
