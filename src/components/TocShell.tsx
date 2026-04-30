@@ -20,17 +20,18 @@ type WeatherState = {
   temp: string;
   icon: "clear" | "cloud" | "rain" | "storm";
   warning?: string;
+  warningActive?: boolean;
 };
 
 const weatherByScope: Record<string, WeatherState> = {
-  National: { location: "National", summary: "Weather feed staging", temp: "--", icon: "cloud", warning: "BOM warning feed not connected yet" },
-  Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning feed pending" },
-  Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning feed pending" },
-  Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning feed pending" },
-  Adelaide: { location: "Adelaide", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning feed pending" },
-  Perth: { location: "Perth", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning feed pending" },
-  Canberra: { location: "Canberra", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning feed pending" },
-  Workshop: { location: "Workshop", summary: "Workshop weather view", temp: "--", icon: "cloud", warning: "Use assigned workshop location once configured" }
+  National: { location: "National", summary: "Weather feed staging", temp: "--", icon: "cloud", warning: "BOM warning feed not connected yet", warningActive: false },
+  Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning feed pending", warningActive: false },
+  Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning feed pending", warningActive: false },
+  Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning feed pending", warningActive: false },
+  Adelaide: { location: "Adelaide", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning feed pending", warningActive: false },
+  Perth: { location: "Perth", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning feed pending", warningActive: false },
+  Canberra: { location: "Canberra", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning feed pending", warningActive: false },
+  Workshop: { location: "Workshop", summary: "Workshop weather view", temp: "--", icon: "cloud", warning: "Use assigned workshop location once configured", warningActive: false }
 };
 
 function getStoredScope() {
@@ -121,7 +122,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.064</em>
+              <em>Build 0.065</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -179,7 +180,7 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
         <h2>{title}</h2>
         {detail ? <p>{detail}</p> : null}
       </div>
-      <aside className={`page-weather-card ${weather.warning ? "has-warning" : ""}`} aria-label={`${weather.location} weather`}>
+      <aside className={`page-weather-card ${weather.warning ? "has-warning" : ""} ${weather.warningActive ? "active-warning" : ""}`} aria-label={`${weather.location} weather`}>
         <span className={`weather-logo ${weather.icon}`} aria-hidden="true" />
         <div>
           <span className="eyebrow">{weather.location} weather</span>
