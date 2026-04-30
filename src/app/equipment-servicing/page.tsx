@@ -7,7 +7,6 @@ export default function EquipmentServicingPage() {
     <TocShell>
       <FlowHeading step="6" eyebrow="Equipment servicing" title="Central servicing hub for asset servicing and repairs" />
       <PageIntro
-        eyebrow="TOC workspace"
         title="Equipment Servicing"
         detail="Central servicing hub for asset servicing and repairs."
       />

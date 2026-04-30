@@ -4,7 +4,7 @@ import { Panel, Tag } from "@/components/TocCards";
 export default function DirectorPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Director" detail="High-level owner view of business health, efficiency, compliance and productivity." />
+      <PageIntro title="Director" detail="High-level owner view of business health, efficiency, compliance and productivity." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Director access" title="Owner health view" pill="Green 84%">
           <div className="director-layout">

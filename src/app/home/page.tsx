@@ -22,7 +22,7 @@ export default function HomePage() {
 
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Home" detail="National command entry point. Start with the business signal, then move to the page that owns the action." />
+      <PageIntro title="Home" detail="National command entry point. Start with the business signal, then move to the page that owns the action." />
       <section className="status-strip" aria-label="Business overview">
         {commandMetrics.map((metric) => (
           <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>

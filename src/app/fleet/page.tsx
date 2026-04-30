@@ -5,7 +5,7 @@ import { assets, serviceSchedule } from "@/lib/toc-data";
 export default function FleetPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Fleetio" detail="Wash plants, vehicles, GPS status and assets needing awareness." />
+      <PageIntro title="Fleetio" detail="Wash plants, vehicles, GPS status and assets needing awareness." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Fleetio" title="Assets needing awareness" pill="API planned">
           <div className="asset-list">

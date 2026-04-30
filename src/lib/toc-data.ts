@@ -51,8 +51,11 @@ export const commandPathways = [
   { step: "3", label: "Compliance", href: "/compliance", detail: "Confirm induction, safety and site-readiness issues are complete and green." },
   { step: "4", label: "Stock Orders", href: "/stock-orders", detail: "Raise supply needs early before chemicals, PPE or parts block the work." },
   { step: "5", label: "Operations", href: "/operations", detail: "Review wash output, rollover counts, assets, roster pressure and site activity." },
-  { step: "6", label: "Equipment Servicing", href: "/equipment-servicing", detail: "Track odometer and hour readings so servicing and repairs are visible before assets fail." },
-  { step: "7", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
+  { step: "6", label: "Asset Tracking", href: "/asset-tracking", detail: "Track Unity GPS-equipped wash vehicles and mobile crews in the field." },
+  { step: "7", label: "Calendar", href: "/calendar", detail: "Review scheduled jobs by day and location before the work starts." },
+  { step: "8", label: "Staff Availability", href: "/staff-availability", detail: "Use the availability heat map to quickly see who can cover work." },
+  { step: "9", label: "Equipment Servicing", href: "/equipment-servicing", detail: "Track odometer and hour readings so servicing and repairs are visible before assets fail." },
+  { step: "10", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
 ];
 
 export const goLivePathway = [
@@ -71,7 +74,7 @@ export const goLivePathway = [
 export const integrationReadiness = [
   { system: "Thor Portal", purpose: "Jobsheets, approvals, odometer readings, hour readings, admin flow and invoicing readiness", status: "Webhook pending", severity: "amber" as Status },
   { system: "Fleetio", purpose: "Assets, GPS, service schedule, wash records and Woolworths wash data", status: "API pending", severity: "amber" as Status },
-  { system: "Unity", purpose: "Operational data feed to be defined and mapped", status: "Mapping pending", severity: "blue" as Status },
+  { system: "Unity", purpose: "GPS tracking for wash vehicles, mobile crews and field asset position", status: "Mapping pending", severity: "blue" as Status },
   { system: "Outlook", purpose: "Calendar reminders, manager follow-ups and escalation dates", status: "Connection pending", severity: "blue" as Status }
 ];
 
@@ -221,6 +224,39 @@ export const staffAvailability = [
   { region: "Sydney", window: "12am-6am", available: 2, unavailable: 2, status: "Thin", severity: "amber" as Status },
   { region: "Adelaide", window: "6pm-12am", available: 1, unavailable: 3, status: "Action", severity: "red" as Status },
   { region: "Workshop", window: "6am-12pm", available: 2, unavailable: 1, status: "Watch", severity: "amber" as Status }
+];
+
+export const unityAssets = [
+  { asset: "Mobile Wash BNE-02", crew: "Brisbane mobile crew", region: "Brisbane", location: "Larapinta", movement: "On site", lastSeen: "6 min ago", status: "green" as Status },
+  { asset: "Mobile Wash SYD-04", crew: "Sydney night crew", region: "Sydney", location: "Minchinbury", movement: "In transit", lastSeen: "11 min ago", status: "blue" as Status },
+  { asset: "Mobile Wash ADL-01", crew: "Adelaide mobile crew", region: "Adelaide", location: "Gepps Cross", movement: "Stationary", lastSeen: "22 min ago", status: "amber" as Status },
+  { asset: "Workshop Ute WKS-01", crew: "Workshop support", region: "Workshop", location: "Workshop", movement: "Available", lastSeen: "4 min ago", status: "green" as Status }
+];
+
+export const locationJobs = [
+  { date: "Today", location: "Brisbane", site: "Primary Connect Larapinta", time: "18:00", job: "Trailer wash program", crew: "BNE mobile crew", status: "Scheduled", severity: "green" as Status },
+  { date: "Today", location: "Sydney", site: "Woolworths Minchinbury", time: "20:00", job: "Night wash bay coverage", crew: "SYD night crew", status: "Watch", severity: "amber" as Status },
+  { date: "Tomorrow", location: "Melbourne", site: "Woolworths Melbourne DC", time: "07:00", job: "Day shift wash run", crew: "MEL wash crew", status: "Scheduled", severity: "green" as Status },
+  { date: "Tomorrow", location: "Adelaide", site: "Primary Connect Adelaide", time: "15:00", job: "Rollover recovery washes", crew: "ADL mobile crew", status: "Needs staff", severity: "red" as Status },
+  { date: "Friday", location: "Workshop", site: "Workshop", time: "10:00", job: "Service and repair review", crew: "Workshop", status: "Scheduled", severity: "blue" as Status }
+];
+
+export const calendarDays = [
+  { day: "Mon", date: "27", location: "National", count: 8, severity: "green" as Status },
+  { day: "Tue", date: "28", location: "National", count: 11, severity: "green" as Status },
+  { day: "Wed", date: "29", location: "National", count: 14, severity: "amber" as Status },
+  { day: "Thu", date: "30", location: "National", count: 16, severity: "amber" as Status },
+  { day: "Fri", date: "1", location: "National", count: 18, severity: "red" as Status },
+  { day: "Sat", date: "2", location: "National", count: 9, severity: "green" as Status },
+  { day: "Sun", date: "3", location: "National", count: 6, severity: "blue" as Status }
+];
+
+export const staffHeatMap = [
+  { name: "Crew A", region: "Brisbane", availability: ["green", "green", "amber", "green", "red", "green", "blue"] as Status[] },
+  { name: "Crew B", region: "Sydney", availability: ["amber", "green", "green", "amber", "red", "blue", "blue"] as Status[] },
+  { name: "Crew C", region: "Melbourne", availability: ["green", "green", "green", "green", "amber", "blue", "blue"] as Status[] },
+  { name: "Crew D", region: "Adelaide", availability: ["red", "amber", "amber", "red", "green", "blue", "blue"] as Status[] },
+  { name: "Workshop", region: "Workshop", availability: ["green", "green", "green", "amber", "amber", "blue", "blue"] as Status[] }
 ];
 
 export const assets = [

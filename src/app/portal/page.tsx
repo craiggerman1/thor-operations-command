@@ -5,7 +5,7 @@ import { approvals } from "@/lib/toc-data";
 export default function PortalPage() {
   return (
     <TocShell>
-      <PageIntro eyebrow="TOC workspace" title="Portal" detail="Jobsheets and Thor Portal approval items needing manager review." />
+      <PageIntro title="Portal" detail="Jobsheets and Thor Portal approval items needing manager review." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Thor Portal" title="Jobsheets needing review" pill="Webhook planned">
           <div className="queue-list">

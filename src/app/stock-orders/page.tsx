@@ -6,7 +6,7 @@ export default function StockOrdersPage() {
   return (
     <TocShell>
       <FlowHeading step="4" eyebrow="Stock orders" title="Order stock early and ensure up to date" />
-      <PageIntro eyebrow="TOC workspace" title="Stock Orders" detail="Order stock early and ensure up to date." />
+      <PageIntro title="Stock Orders" detail="Order stock early and ensure up to date." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Stock control" title="Request stock from national" pill={`${stockOrders.length} open`}>
           <div className="stock-layout">

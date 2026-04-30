@@ -5,7 +5,7 @@ export default function ChatPage() {
   return (
     <TocShell>
       <FlowHeading step="7" eyebrow="Chat" title="Ensure healthy communication between management" />
-      <PageIntro eyebrow="TOC workspace" title="Chat" detail="Ensure healthy communication between management." />
+      <PageIntro title="Chat" detail="Ensure healthy communication between management." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Internal comms" title="Manager chat" pill="Database planned">
           <div className="chat-layout">

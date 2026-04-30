@@ -6,7 +6,7 @@ export default function OperationsPage() {
   return (
     <TocShell>
       <FlowHeading step="5" eyebrow="Operations" title="Check operations and take action" />
-      <PageIntro eyebrow="TOC workspace" title="Operations" detail="Check operations and take action." />
+      <PageIntro title="Operations" detail="Check operations and take action." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Woolworths wash data" title="Site performance" pill="Fleetio feed planned">
           <div className="wash-table">

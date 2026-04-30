@@ -1830,6 +1830,185 @@ body:not([data-access="admin"]) .admin-only-panel {
   cursor: default;
 }
 
+.tracking-map {
+  position: relative;
+  min-height: 420px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(10, 49, 82, 0.08) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(10, 49, 82, 0.08) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(10, 49, 82, 0.12), rgba(255, 255, 255, 0.9));
+  background-size: 54px 54px, 54px 54px, auto;
+}
+
+.tracking-marker {
+  position: absolute;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  width: min(260px, 42%);
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 32px rgba(6, 7, 9, 0.14);
+}
+
+.tracking-marker > span {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 0 7px rgba(37, 161, 189, 0.16);
+}
+
+.tracking-marker.green > span {
+  background: var(--green);
+}
+
+.tracking-marker.amber > span {
+  background: var(--amber);
+}
+
+.tracking-marker.red > span {
+  background: var(--red);
+}
+
+.tracking-marker strong,
+.calendar-job strong {
+  display: block;
+  color: #071726;
+}
+
+.tracking-marker small,
+.calendar-job small {
+  color: var(--muted);
+}
+
+.marker-1 { left: 8%; top: 18%; }
+.marker-2 { right: 10%; top: 25%; }
+.marker-3 { left: 22%; bottom: 18%; }
+.marker-4 { right: 18%; bottom: 20%; }
+
+.asset-tracking-list,
+.calendar-job-list {
+  display: grid;
+  gap: 10px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calendar-day,
+.calendar-job {
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.calendar-day {
+  display: grid;
+  gap: 9px;
+  min-height: 150px;
+  padding: 12px;
+  border-top: 5px solid var(--blue);
+}
+
+.calendar-day.green {
+  border-top-color: var(--green);
+}
+
+.calendar-day.amber {
+  border-top-color: var(--amber);
+}
+
+.calendar-day.red {
+  border-top-color: var(--red);
+}
+
+.calendar-day > span,
+.calendar-day small {
+  color: var(--muted);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.calendar-day strong {
+  color: var(--blue);
+  font-size: 34px;
+}
+
+.calendar-job {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 76px;
+  padding: 12px;
+}
+
+.availability-heatmap {
+  display: grid;
+  gap: 8px;
+}
+
+.heatmap-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) repeat(7, minmax(44px, 1fr));
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.heatmap-row.header {
+  background: #0a3152;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.heatmap-row span strong,
+.heatmap-row span small {
+  display: block;
+}
+
+.heatmap-row span small {
+  color: var(--muted);
+}
+
+.heatmap-row.header span small {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.heat-cell {
+  display: block;
+  min-height: 34px;
+  border-radius: 6px;
+  background: var(--blue);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.heat-cell.green {
+  background: var(--green);
+}
+
+.heat-cell.amber {
+  background: var(--amber);
+}
+
+.heat-cell.red {
+  background: var(--red);
+}
+
 .wash-row {
   display: grid;
   grid-template-columns: 1.2fr repeat(4, minmax(82px, 1fr));
@@ -2588,6 +2767,8 @@ body:not([data-access="admin"]) .admin-only-panel {
   .director-brief,
   .admin-layout,
   .equipment-row,
+  .calendar-grid,
+  .calendar-job,
   .stock-layout,
   .stock-form,
   .chat-layout,
@@ -2603,6 +2784,25 @@ body:not([data-access="admin"]) .admin-only-panel {
 
   .chat-form {
     flex-direction: column;
+  }
+
+  .tracking-map {
+    min-height: 520px;
+  }
+
+  .tracking-marker {
+    position: relative;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    width: auto;
+    margin: 10px;
+  }
+
+  .heatmap-row {
+    grid-template-columns: minmax(120px, 1fr) repeat(7, 32px);
+    overflow-x: auto;
   }
 
   .compliance-card {

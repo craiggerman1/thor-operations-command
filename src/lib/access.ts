@@ -23,6 +23,9 @@ export const navigationItems: NavItem[] = [
   { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager", "workshop"] },
   { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager", "workshop"] },
   { label: "Operations", href: "/operations", roles: ["admin", "director", "manager", "workshop"] },
+  { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager", "workshop"] },
+  { label: "Calendar", href: "/calendar", roles: ["admin", "director", "manager", "workshop"] },
+  { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager", "workshop"] },
   { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager", "workshop"] },
   { label: "Chat", href: "/chat", roles: ["admin", "manager", "workshop"] },
   { label: "Director", href: "/director", roles: ["admin", "director"] },
@@ -52,14 +55,14 @@ export const sessionProfiles: Record<AccessRole, SessionProfile> = {
     label: "Manager",
     scopeLabel: "Assigned region",
     regions: ["Brisbane"],
-    summary: "Regional action centre, health, compliance, stock, operations, servicing, Portal and Fleetio visibility."
+    summary: "Regional action centre, health, compliance, stock, operations, tracking, calendar, servicing, Portal and Fleetio visibility."
   },
   workshop: {
     role: "workshop",
     label: "Workshop",
     scopeLabel: "Workshop BU",
     regions: ["Workshop"],
-    summary: "Workshop actions, compliance, parts, stock, equipment servicing, asset readiness and team communication."
+    summary: "Workshop actions, compliance, parts, stock, tracking, staff availability, equipment servicing, asset readiness and team communication."
   }
 };
 

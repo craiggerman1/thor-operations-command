@@ -90,7 +90,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.049</em>
+              <em>Build 0.050</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -122,10 +122,10 @@ export function TocShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageIntro({ eyebrow, title, detail }: { eyebrow: string; title: string; detail?: string }) {
+export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title: string; detail?: string }) {
   return (
     <section className="page-title">
-      <span className="eyebrow">{eyebrow}</span>
+      {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
       <h2>{title}</h2>
       {detail ? <p>{detail}</p> : null}
     </section>
