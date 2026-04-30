@@ -141,6 +141,8 @@ export function UrgentBroadcastControls() {
   const [message, setMessage] = useState("");
   const [targetScope, setTargetScope] = useState("All users");
   const [broadcasts, setBroadcasts] = useState<UrgentBroadcastMessage[]>([]);
+  const [editingId, setEditingId] = useState("");
+  const [editingMessage, setEditingMessage] = useState("");
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -184,6 +186,34 @@ export function UrgentBroadcastControls() {
     setStatus("Urgent banner redeployed.");
   }
 
+  function beginEditBroadcast(id: string) {
+    const target = broadcasts.find((broadcast) => broadcast.id === id);
+    if (!target) return;
+
+    setEditingId(id);
+    setEditingMessage(target.message);
+    setStatus("");
+  }
+
+  function cancelEditBroadcast() {
+    setEditingId("");
+    setEditingMessage("");
+  }
+
+  function saveEditBroadcast(id: string) {
+    const cleanMessage = editingMessage.trim();
+    if (!cleanMessage) return;
+
+    const nextBroadcasts = broadcasts.map((broadcast) => broadcast.id === id
+      ? { ...broadcast, message: cleanMessage, version: Date.now().toString(), active: true }
+      : broadcast);
+    writeBroadcasts(nextBroadcasts);
+    setBroadcasts(nextBroadcasts);
+    setEditingId("");
+    setEditingMessage("");
+    setStatus("Urgent banner message updated.");
+  }
+
   function disableBroadcast(id: string) {
     const nextBroadcasts = broadcasts.map((broadcast) => broadcast.id === id ? { ...broadcast, active: false } : broadcast);
     writeBroadcasts(nextBroadcasts);
@@ -225,15 +255,32 @@ export function UrgentBroadcastControls() {
       <div className="urgent-broadcast-list">
         {broadcasts.map((broadcast) => (
           <article className={`urgent-broadcast-admin-card ${broadcast.active ? "active" : ""}`} key={broadcast.id}>
-            <div>
-              <strong>{broadcast.message}</strong>
-              <small>{broadcast.targetScope || "All users"} - {broadcast.active ? "Active" : "Disabled"}</small>
-            </div>
-            <div className="urgent-broadcast-actions">
-              <button type="button" onClick={() => redeployBroadcast(broadcast.id)}>Redeploy</button>
-              <button type="button" className="danger-button" onClick={() => disableBroadcast(broadcast.id)}>Disable</button>
-              <button type="button" className="danger-button" onClick={() => deleteBroadcast(broadcast.id)}>Delete</button>
-            </div>
+            {editingId === broadcast.id ? (
+              <div className="urgent-broadcast-editor">
+                <label>
+                  <span>Edit alert message</span>
+                  <textarea value={editingMessage} onChange={(event) => setEditingMessage(event.target.value)} />
+                </label>
+                <small>{broadcast.targetScope || "All users"} - {broadcast.active ? "Active" : "Disabled"}</small>
+                <div className="urgent-broadcast-actions">
+                  <button type="button" onClick={() => saveEditBroadcast(broadcast.id)}>Save message</button>
+                  <button type="button" className="secondary-button" onClick={cancelEditBroadcast}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <strong>{broadcast.message}</strong>
+                  <small>{broadcast.targetScope || "All users"} - {broadcast.active ? "Active" : "Disabled"}</small>
+                </div>
+                <div className="urgent-broadcast-actions">
+                  <button type="button" onClick={() => beginEditBroadcast(broadcast.id)}>Edit</button>
+                  <button type="button" onClick={() => redeployBroadcast(broadcast.id)}>Redeploy</button>
+                  <button type="button" className="danger-button" onClick={() => disableBroadcast(broadcast.id)}>Disable</button>
+                  <button type="button" className="danger-button" onClick={() => deleteBroadcast(broadcast.id)}>Delete</button>
+                </div>
+              </>
+            )}
           </article>
         ))}
       </div>

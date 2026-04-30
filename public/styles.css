@@ -1386,6 +1386,12 @@ body:not([data-access="admin"]) .admin-only-panel {
   color: var(--red);
 }
 
+.urgent-broadcast-actions .secondary-button {
+  border: 1px solid rgba(13, 58, 87, 0.18);
+  background: rgba(238, 244, 248, 0.95);
+  color: var(--blue);
+}
+
 .urgent-broadcast-admin-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1400,6 +1406,16 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .urgent-broadcast-admin-card.active {
   border-left-color: var(--red);
+}
+
+.urgent-broadcast-editor {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+}
+
+.urgent-broadcast-editor textarea {
+  min-height: 58px;
 }
 
 .urgent-broadcast-admin-card strong,
