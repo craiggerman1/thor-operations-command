@@ -160,7 +160,7 @@ export const commandPathways = [
   { step: "2", label: "Region Health", href: "/overview", detail: "Check whether each state is healthy enough to run the day without surprises." },
   { step: "3", label: "Compliance", href: "/compliance", detail: "Confirm induction, safety and site-readiness issues are complete and green." },
   { step: "4", label: "Stock Orders", href: "/stock-orders", detail: "Raise supply needs early before chemicals, PPE or parts block the work." },
-  { step: "5", label: "Productivity", href: "/operations", detail: "Review wage cost, gross margin, productivity queues, rollover counts and actions." },
+  { step: "5", label: "Productivity", href: "/operations", detail: "Review productivity queues, rollover counts, site actions and manager responses." },
   { step: "6", label: "Asset Tracking", href: "/asset-tracking", detail: "Track Unity GPS-equipped wash vehicles and mobile crews in the field." },
   { step: "7", label: "Calendar", href: "/calendar", detail: "Review scheduled jobs by day and location before the work starts." },
   { step: "8", label: "Staff Availability", href: "/staff-availability", detail: "Use the availability heat map to quickly see who can cover work." },

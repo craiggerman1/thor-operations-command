@@ -42,6 +42,10 @@ export function LoginPanel() {
         <h1>Thor Operations Command</h1>
         <p>Sign in to open Thor Operations Command.</p>
       </div>
+      <div className="login-build-card">
+        <span>Current build</span>
+        <strong>Build 0.068</strong>
+      </div>
       <label>
         <span>Email</span>
         <input type="email" placeholder="user@example.com" autoComplete="email" />
