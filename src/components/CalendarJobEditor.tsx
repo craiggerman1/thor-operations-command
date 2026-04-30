@@ -1,4 +1,6 @@
-import { FormEvent } from "react";
+"use client";
+
+import type { FormEvent } from "react";
 import type { CalendarJob } from "@/lib/toc-data";
 
 export type CalendarEditTarget = {
