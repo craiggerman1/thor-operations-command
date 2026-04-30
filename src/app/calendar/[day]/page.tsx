@@ -80,14 +80,17 @@ export default function CalendarDayPage() {
     );
   }
 
-  const visibleJobs = day.jobs
+  const currentDay = day;
+  const currentDaySlug = getCalendarDaySlug(currentDay);
+  const currentDayLabel = `${currentDay.day} ${currentDay.date} ${currentDay.month}`;
+  const visibleJobs = currentDay.jobs
     .map((job, originalIndex) => ({ ...job, originalIndex }))
     .filter((job) => scope === "National" || job.location === scope || job.location === "National");
 
   function openEditor(jobIndex: number, job: CalendarJob) {
     setEditTarget({
-      daySlug: getCalendarDaySlug(day),
-      dayLabel: `${day.day} ${day.date} ${day.month}`,
+      daySlug: currentDaySlug,
+      dayLabel: currentDayLabel,
       jobIndex,
       job: { ...job, recurrence: job.recurrence || "None", recurrenceIntervalWeeks: job.recurrenceIntervalWeeks || 3 }
     });
@@ -110,19 +113,19 @@ export default function CalendarDayPage() {
     const nextData = updateCalendarJob(calendarData, editTarget.daySlug, editTarget.jobIndex, cleanEditableJob(editTarget.job));
     setCalendarData(nextData);
     saveStoredCalendarWeeks(nextData);
-    setDay(getCalendarDayFromWeeks(nextData, params.day) || day);
+    setDay(getCalendarDayFromWeeks(nextData, params.day) || currentDay);
     setEditTarget(null);
     setSaveMessage("Calendar job updated for this browser.");
   }
 
   return (
     <TocShell>
-      <PageIntro title={`${day.day} ${day.date} ${day.month}`} detail={`${day.week} detailed job schedule for ${scope}.`} />
+      <PageIntro title="Calendar" detail={`${currentDayLabel} job schedule for ${scope}`} />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Day schedule" title={`${scope} jobs`} pill={`${visibleJobs.length} visible jobs`}>
           <div className="calendar-day-actions">
             <Link className="calendar-back-link" href="/calendar">Back to calendar</Link>
-            <span>{day.week} runs Thursday to Wednesday.</span>
+            <span>{currentDay.week} runs Thursday to Wednesday.</span>
           </div>
           {saveMessage ? <div className="calendar-save-message">{saveMessage}</div> : null}
           {editTarget ? <CalendarJobEditor editTarget={editTarget} onCancel={() => setEditTarget(null)} onSave={saveDraft} onUpdate={updateDraft} /> : null}

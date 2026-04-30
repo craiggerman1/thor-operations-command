@@ -100,13 +100,14 @@ export default function CalendarPage() {
 
   return (
     <TocShell>
-      <PageIntro title="Calendar" detail="Scheduled jobs by Thor operating week." />
+      <PageIntro title="Calendar" detail="Scheduled jobs by Thor operating week" />
       <section className="command-grid route-grid">
         <Panel wide className="calendar-panel" eyebrow="Schedule view" title={`${scope} job calendar`} pill={`${totalVisibleJobs} visible jobs`}>
           <div className="calendar-toolbar" aria-label="Calendar view settings">
             <div>
               <span className="eyebrow">View setting</span>
-              <strong>{viewMode === "calendar" ? "Calendar view" : "List view"}</strong>
+              <strong>{viewMode === "calendar" ? "Wall calendar" : "Operational list"}</strong>
+              <small>{scope} schedule, grouped Thursday to Wednesday.</small>
             </div>
             <div className="segmented-control">
               <button className={viewMode === "calendar" ? "active" : ""} type="button" onClick={() => setViewMode("calendar")}>Calendar</button>
@@ -137,14 +138,14 @@ export default function CalendarPage() {
                         <small>{visibleJobs.length ? `${visibleJobs.length} jobs` : "No jobs"}</small>
                       </div>
                       <div className="calendar-date-jobs">
-                        {visibleJobs.slice(0, 6).map((job) => (
+                        {visibleJobs.slice(0, 5).map((job) => (
                           <button className={`calendar-job-pill ${job.severity}`} key={`${day.date}-${job.time}-${job.site}`} type="button" onClick={() => openEditor(daySlug, dayLabel, job.originalIndex, job)}>
                             <span>{job.time}</span>
                             <strong>{job.location}</strong>
                             <small>{job.site}</small>
                           </button>
                         ))}
-                        {visibleJobs.length > 6 ? <small className="calendar-more-count">+{visibleJobs.length - 6} more shifts</small> : null}
+                        {visibleJobs.length > 5 ? <small className="calendar-more-count">+{visibleJobs.length - 5} more shifts</small> : null}
                       </div>
                       <Link className="calendar-day-link" href={`/calendar/${daySlug}`}>Open day</Link>
                     </article>
@@ -165,12 +166,12 @@ export default function CalendarPage() {
                       <small>{visibleJobs.length ? `${visibleJobs.length} visible jobs for ${scope}` : `No visible jobs for ${scope}`}</small>
                     </div>
                     <div className="calendar-list-jobs">
-                      {visibleJobs.slice(0, 4).map((job) => (
+                      {visibleJobs.slice(0, 6).map((job) => (
                         <button className={`calendar-list-edit ${job.severity}`} type="button" key={`${day.date}-${job.time}-${job.site}`} onClick={() => openEditor(daySlug, dayLabel, job.originalIndex, job)}>
                           {job.time} {job.location}
                         </button>
                       ))}
-                      {visibleJobs.length > 4 ? <Tag>+{visibleJobs.length - 4} more</Tag> : null}
+                      {visibleJobs.length > 6 ? <Tag>+{visibleJobs.length - 6} more</Tag> : null}
                       <Link className="calendar-day-link" href={`/calendar/${daySlug}`}>Open day</Link>
                     </div>
                   </article>

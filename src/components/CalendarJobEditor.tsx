@@ -45,8 +45,9 @@ export function CalendarJobEditor({ editTarget, onCancel, onSave, onUpdate }: Ca
       </select></label>
       {editTarget.job.recurrence === "Custom" ? (
         <label className="calendar-edit-wide">
-          <span>Repeat every</span>
+          <span>Custom repeat logic</span>
           <div className="calendar-custom-repeat">
+            <strong>Every</strong>
             <input
               min="1"
               type="number"
@@ -55,6 +56,7 @@ export function CalendarJobEditor({ editTarget, onCancel, onSave, onUpdate }: Ca
             />
             <strong>weeks</strong>
           </div>
+          <small className="calendar-field-help">Example: 3 weekly, 6 weekly or 8 weekly. Future matching dates in this schedule will update from this job.</small>
         </label>
       ) : null}
       <label className="calendar-edit-wide"><span>Notes</span><textarea value={editTarget.job.notes} onChange={(event) => onUpdate("notes", event.target.value)} /></label>

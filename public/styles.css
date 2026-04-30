@@ -1999,7 +1999,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   padding: 10px 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
@@ -2024,6 +2024,13 @@ body:not([data-access="admin"]) .admin-only-panel {
   display: block;
   margin-top: 4px;
   color: var(--blue);
+}
+
+.calendar-toolbar small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .segmented-control {
@@ -2057,13 +2064,13 @@ body:not([data-access="admin"]) .admin-only-panel {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  min-height: 22px;
-  padding: 3px 7px;
+  min-height: 20px;
+  padding: 3px 6px;
   border: 1px solid rgba(10, 49, 82, 0.18);
   border-radius: 4px;
   background: linear-gradient(180deg, #ffffff, #edf6f9);
   color: #0a3152;
-  font-size: 10px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 900;
   line-height: 1;
@@ -2074,14 +2081,14 @@ body:not([data-access="admin"]) .admin-only-panel {
 .calendar-date-jobs {
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 5px;
 }
 
 .calendar-job-pill {
   display: grid;
   gap: 2px;
-  min-height: 52px;
-  padding: 7px 9px;
+  min-height: 48px;
+  padding: 6px 8px;
   border: 0;
   border-left: 4px solid var(--green);
   border-radius: 5px;
@@ -2115,7 +2122,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .calendar-job-pill strong {
   color: #071726;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .calendar-more-count {
@@ -2202,7 +2209,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .calendar-list-day {
   display: grid;
-  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 0.6fr) minmax(0, 1fr);
   gap: 14px;
   align-items: center;
   min-height: 94px;
@@ -2322,13 +2329,19 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .calendar-custom-repeat {
   display: grid;
-  grid-template-columns: minmax(90px, 130px) auto;
+  grid-template-columns: auto minmax(90px, 130px) auto;
   align-items: center;
   gap: 10px;
 }
 
 .calendar-custom-repeat strong {
   color: var(--blue);
+}
+
+.calendar-field-help {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .calendar-edit-actions {
