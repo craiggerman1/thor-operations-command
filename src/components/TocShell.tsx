@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
@@ -47,8 +47,11 @@ function getStoredScope() {
 }
 
 export function TocShell({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role));
@@ -62,6 +65,10 @@ export function TocShell({ children }: { children: ReactNode }) {
       document.body.dataset.access = defaultSession.role;
     }
     document.body.classList.add("is-authenticated");
+
+    return () => {
+      if (signOutTimer.current) window.clearTimeout(signOutTimer.current);
+    };
   }, []);
 
   function updateScope(scope: string) {
@@ -72,7 +79,15 @@ export function TocShell({ children }: { children: ReactNode }) {
   }
 
   function signOut() {
-    localStorage.removeItem("toc.session");
+    if (signingOut) return;
+
+    setSigningOut(true);
+    signOutTimer.current = window.setTimeout(() => {
+      localStorage.removeItem("toc.session");
+      document.body.classList.remove("is-authenticated");
+      delete document.body.dataset.access;
+      router.push("/");
+    }, 1450);
   }
 
   return (
@@ -124,7 +139,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.087</em>
+              <em>Build 0.088</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -143,7 +158,7 @@ export function TocShell({ children }: { children: ReactNode }) {
               </select>
             </label> : null}
             <button className="manual-refresh-button" type="button">Manual Refresh</button>
-            <Link className="logout-button" href="/" onClick={signOut}>Log out</Link>
+            <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
           </div>
         </header>
 
@@ -152,6 +167,20 @@ export function TocShell({ children }: { children: ReactNode }) {
         <TodoManager />
       </main>
     </div>
+    {signingOut ? (
+      <div className="sign-in-sequence sign-out-sequence" role="status" aria-live="polite">
+        <div className="sequence-core">
+          <span className="sequence-ring" />
+          <img src="/assets/thor-logo-stacked-sidebar.png" alt="" />
+        </div>
+        <div className="sequence-copy">
+          <span>Secure sign out</span>
+          <strong>Closing command session</strong>
+          <small>Shutting down data feed connections. Signing out.</small>
+        </div>
+        <div className="sequence-progress"><span /></div>
+      </div>
+    ) : null}
     </>
   );
 }
