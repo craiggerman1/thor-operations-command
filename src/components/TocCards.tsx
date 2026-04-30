@@ -89,7 +89,7 @@ export function AdminHintControls() {
     localStorage.setItem(hintVersionKey, Date.now().toString());
     localStorage.removeItem(hintDismissedKey);
     window.dispatchEvent(new CustomEvent("toc.pageHintsRedeployed"));
-    setMessage("Page hints redeployed for this prototype browser. Database-backed user reset will make this national later.");
+    setMessage("Page hints redeployed for this browser. Database-backed user reset will make this national later.");
   }
 
   return (

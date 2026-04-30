@@ -54,10 +54,10 @@ export function LoginPanel() {
     <div className={`login-card-shell ${signingIn ? "signing-in" : ""}`}>
       <form className="login-card" onSubmit={signIn}>
         <div>
-          <span className="eyebrow">Secure access prototype</span>
+          <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.100</span>
+            <span>Build 0.101</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>

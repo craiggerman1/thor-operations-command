@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Thor Operations Command",
-  description: "Thor Operations Command prototype"
+  description: "Thor Operations Command beta"
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

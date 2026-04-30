@@ -35,7 +35,7 @@ export default function AdminPage() {
             <StockOrderAdminReview />
           </div>
         </Panel>
-        <Panel wide eyebrow="Admin command" title="User access and permissions" pill={`${adminUsers.length} demo users`}>
+        <Panel wide eyebrow="Admin command" title="User access and permissions" pill={`${adminUsers.length} access profiles`}>
           <div className="admin-layout">
             <form className="admin-user-form">
               <label><span>Name</span><input placeholder="User name" /></label>
@@ -55,7 +55,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.100">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.101">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);

@@ -6,35 +6,6 @@ body.next-app .region-control {
   display: grid;
 }
 
-body.next-app .login-screen {
-  display: grid;
-}
-
-.page-title {
-  margin-bottom: 16px;
-  padding: 18px 20px;
-  border: 1px solid rgba(37, 161, 189, 0.24);
-  border-left: 6px solid var(--teal);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: var(--tight-shadow);
-  backdrop-filter: blur(10px);
-}
-
-.page-title h2 {
-  margin-top: 4px;
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 400;
-  text-transform: uppercase;
-}
-
-.page-title p {
-  margin-top: 7px;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
 .metric-card {
   color: inherit;
 }
@@ -48,8 +19,7 @@ body.next-app .login-screen {
   grid-column: 1 / -1;
 }
 
-.login-card a,
-.logout-button {
+.login-card a {
   display: inline-flex;
   align-items: center;
   justify-content: center;

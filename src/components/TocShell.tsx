@@ -159,7 +159,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.100</em>
+              <em>Build 0.101</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -232,7 +232,7 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
         <h2>{title}</h2>
         {detail ? <p>{detail}</p> : null}
       </div>
-      <aside className={`page-weather-card ${weather.warning ? "has-warning" : ""} ${weather.warningActive ? "active-warning" : ""}`} aria-label={`${weather.location} weather`}>
+      <aside className={`page-weather-card ${weather.warningActive ? "has-warning active-warning" : ""}`} aria-label={`${weather.location} weather`}>
         <span className={`weather-logo ${weather.icon}`} aria-hidden="true" />
         <div>
           <span className="eyebrow">{weather.location} weather</span>
