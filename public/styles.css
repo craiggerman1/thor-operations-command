@@ -599,11 +599,15 @@ textarea {
 .workspace {
   position: relative;
   padding: 28px;
-  padding-right: 360px;
+  padding-right: 388px;
   min-width: 0;
   background:
     linear-gradient(180deg, rgba(10, 49, 82, 0.12), transparent 420px),
     transparent;
+}
+
+body.todo-floating-disabled .workspace {
+  padding-right: 28px;
 }
 
 .urgent-broadcast-stack {
@@ -2068,7 +2072,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   top: 28px;
   right: 28px;
   z-index: 25;
-  width: 304px;
+  width: 332px;
   min-height: auto;
   max-height: calc(100dvh - 56px);
   overflow: auto;
@@ -2084,7 +2088,40 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .todo-panel h2 {
-  font-size: 19px;
+  font-size: 22px;
+}
+
+.todo-hide-button {
+  min-height: 28px;
+  border: 1px solid rgba(13, 58, 87, 0.16);
+  border-radius: 999px;
+  padding: 0 10px;
+  background: rgba(238, 244, 248, 0.92);
+  color: var(--blue);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.todo-disabled-notice {
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 24;
+  width: min(310px, calc(100vw - 56px));
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
+  box-shadow: var(--tight-shadow);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.todo-disabled-notice a {
+  color: var(--blue);
+  font-weight: 900;
 }
 
 .todo-panel .todo-form {

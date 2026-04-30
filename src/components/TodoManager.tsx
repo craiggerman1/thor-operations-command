@@ -33,8 +33,12 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   const [editingText, setEditingText] = useState("");
 
   function loadTodos() {
+    const floatingSetting = getFloatingSetting();
     setTodos(JSON.parse(localStorage.getItem(getTodoStorageKey()) || "[]"));
-    setFloatingEnabled(getFloatingSetting());
+    setFloatingEnabled(floatingSetting);
+    if (mode === "floating") {
+      document.body.classList.toggle("todo-floating-disabled", !floatingSetting);
+    }
   }
 
   useEffect(() => {
@@ -44,6 +48,9 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     return () => {
       window.removeEventListener("storage", loadTodos);
       window.removeEventListener("toc.todos.updated", loadTodos);
+      if (mode === "floating") {
+        document.body.classList.remove("todo-floating-disabled");
+      }
     };
   }, []);
 
@@ -85,26 +92,33 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   function setFloating(value: boolean) {
     setFloatingEnabled(value);
     localStorage.setItem("toc.todoFloating", value ? "on" : "off");
+    document.body.classList.toggle("todo-floating-disabled", !value);
     dispatchTodoUpdate();
   }
 
   if (mode === "floating" && !floatingEnabled) {
-    return null;
+    return (
+      <aside className="todo-disabled-notice" aria-label="Floating to do list disabled">
+        Floating To Do hidden. Turn it back on in <a href="/todo">To Do page settings</a>.
+      </aside>
+    );
   }
 
   return (
     <section className={`panel todo-panel ${mode === "page" ? "todo-page-panel" : ""}`} id="todo" aria-label="Personal to do list">
       <div className="panel-head">
         <div>
-          <span className="eyebrow">Manager memory</span>
-          <h2>{mode === "page" ? "Personal to do control" : "Personal to do list"}</h2>
+          {mode === "page" ? <span className="eyebrow">Manager memory</span> : null}
+          <h2>{mode === "page" ? "Personal to do control" : "Manager To Do List"}</h2>
         </div>
         {mode === "page" ? (
           <label className="todo-toggle">
             <input type="checkbox" checked={floatingEnabled} onChange={(event) => setFloating(event.target.checked)} />
             <span>Keep floating panel</span>
           </label>
-        ) : null}
+        ) : (
+          <button className="todo-hide-button" type="button" onClick={() => setFloating(false)}>Hide</button>
+        )}
       </div>
       <form className="todo-form" onSubmit={addTodo}>
         <input value={todoText} onChange={(event) => setTodoText(event.target.value)} placeholder="Add a task as it comes in" autoComplete="off" />
