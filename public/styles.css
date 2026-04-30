@@ -202,6 +202,11 @@ textarea {
   text-transform: uppercase;
 }
 
+.login-card-shell {
+  position: relative;
+  width: 100%;
+}
+
 .login-card {
   display: grid;
   gap: 14px;
@@ -213,6 +218,14 @@ textarea {
   background: rgba(6, 24, 39, 0.82);
   box-shadow: 0 26px 64px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(14px);
+  transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease;
+}
+
+.login-card-shell.signing-in .login-card {
+  opacity: 0.2;
+  transform: scale(0.985);
+  filter: blur(1px);
+  pointer-events: none;
 }
 
 .login-card h1 {
@@ -336,6 +349,126 @@ textarea {
 .login-note {
   color: #b9c9d6;
   line-height: 1.4;
+}
+
+.sign-in-sequence {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  gap: 16px;
+  padding: 28px;
+  border: 1px solid rgba(222, 249, 255, 0.24);
+  border-top: 4px solid var(--teal);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(6, 24, 39, 0.96), rgba(10, 49, 82, 0.94)),
+    radial-gradient(circle at 50% 38%, rgba(37, 161, 189, 0.24), transparent 42%);
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+  animation: sequenceEnter 180ms ease-out both;
+}
+
+.sign-in-sequence::before,
+.sign-in-sequence::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  background:
+    linear-gradient(115deg, transparent 0 46%, rgba(37, 161, 189, 0.22) 47%, transparent 49%),
+    linear-gradient(115deg, transparent 0 58%, rgba(255, 255, 255, 0.15) 59%, transparent 60%);
+  animation: sequenceSweep 1.35s ease-in-out both;
+}
+
+.sign-in-sequence::after {
+  animation-delay: 180ms;
+  opacity: 0.55;
+}
+
+.sequence-core,
+.sequence-copy,
+.sequence-progress {
+  position: relative;
+  z-index: 1;
+}
+
+.sequence-core {
+  width: 138px;
+  height: 138px;
+  display: grid;
+  place-items: center;
+}
+
+.sequence-core img {
+  width: 88px;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.35));
+  animation: sequenceMark 1.2s ease-in-out infinite;
+}
+
+.sequence-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(37, 161, 189, 0.34);
+  border-top-color: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 0 32px rgba(37, 161, 189, 0.3);
+  animation: sequenceSpin 900ms linear infinite;
+}
+
+.sequence-ring::before {
+  content: "";
+  position: absolute;
+  inset: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom-color: rgba(37, 161, 189, 0.74);
+  border-radius: inherit;
+  animation: sequenceSpin 1.45s linear infinite reverse;
+}
+
+.sequence-copy {
+  display: grid;
+  gap: 5px;
+  text-align: center;
+}
+
+.sequence-copy span,
+.sequence-copy small {
+  color: #b9c9d6;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sequence-copy strong {
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 400;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.sequence-copy small {
+  color: #d9edf4;
+  text-transform: none;
+}
+
+.sequence-progress {
+  width: min(320px, 82%);
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.sequence-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--teal), #ffffff);
+  transform-origin: left;
+  animation: sequenceProgress 1.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .app-shell {
@@ -922,6 +1055,55 @@ h2 {
   50% {
     transform: translateY(-1px);
     box-shadow: 0 0 0 6px rgba(255, 214, 211, 0.45), 0 22px 48px rgba(191, 62, 57, 0.62);
+  }
+}
+
+@keyframes sequenceEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sequenceSweep {
+  from {
+    transform: translateX(-22%);
+  }
+
+  to {
+    transform: translateX(18%);
+  }
+}
+
+@keyframes sequenceSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sequenceMark {
+  0%,
+  100% {
+    transform: scale(0.98);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes sequenceProgress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
   }
 }
 
