@@ -2795,6 +2795,8 @@ body:not([data-access="admin"]) .admin-only-panel {
 .compliance-stat {
   display: grid;
   gap: 4px;
+  color: inherit;
+  text-decoration: none;
   background:
     linear-gradient(135deg, rgba(10, 49, 82, 0.05), transparent),
     rgba(255, 255, 255, 0.92);
@@ -2810,10 +2812,23 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .compliance-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.compliance-card > small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.actionable-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(7, 23, 38, 0.12);
 }
 
 .stock-layout {
@@ -2868,12 +2883,47 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 12px;
 }
 
+.stock-card p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .stock-detail {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
   gap: 8px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.admin-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-config-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-config-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.admin-config-card strong {
+  color: #071726;
+}
+
+.admin-config-card small {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .todo-form {
@@ -3193,6 +3243,12 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(9, 60, 93, 0.12);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.stock-form input[readonly] {
+  background: #eef5fb;
+  color: var(--blue);
+  font-weight: 900;
 }
 
 .role-blueprint-card h3 {
@@ -3540,6 +3596,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   .director-signals,
   .director-brief,
   .admin-layout,
+  .admin-config-grid,
   .equipment-row,
   .stock-layout,
   .stock-form,

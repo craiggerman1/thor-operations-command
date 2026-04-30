@@ -399,17 +399,30 @@ export const assets = [
 ];
 
 export const compliance = [
-  { title: "Primary Connect site inductions", region: "Brisbane", owner: "Regional manager", due: "30 Apr", status: "Due soon", type: "Induction", severity: "amber" as Status },
-  { title: "3-point contact refresher", region: "Sydney", owner: "Regional manager", due: "Today", status: "Action required", type: "Safety", severity: "red" as Status },
-  { title: "SDS and chemical register review", region: "Melbourne", owner: "Regional manager", due: "18 May", status: "Current", type: "Document", severity: "green" as Status },
-  { title: "First aid kit audit", region: "Adelaide", owner: "Regional manager", due: "Yesterday", status: "Overdue", type: "Equipment", severity: "red" as Status },
-  { title: "Workshop isolation and defect-tag process", region: "Workshop", owner: "Workshop lead", due: "3 May", status: "Due soon", type: "Safety", severity: "amber" as Status }
+  { title: "Primary Connect site inductions", region: "Brisbane", owner: "Regional manager", due: "30 Apr", status: "Due soon", type: "Induction", severity: "amber" as Status, href: "/actions#ACT-002", adminSet: true },
+  { title: "3-point contact refresher", region: "Sydney", owner: "Regional manager", due: "Today", status: "Action required", type: "Safety", severity: "red" as Status, href: "/actions#ACT-004", adminSet: true },
+  { title: "SDS and chemical register review", region: "Melbourne", owner: "Regional manager", due: "18 May", status: "Current", type: "Document", severity: "green" as Status, href: "/actions", adminSet: true },
+  { title: "First aid kit audit", region: "Adelaide", owner: "Regional manager", due: "Yesterday", status: "Overdue", type: "Equipment", severity: "red" as Status, href: "/actions#ACT-003", adminSet: true },
+  { title: "Workshop isolation and defect-tag process", region: "Workshop", owner: "Workshop lead", due: "3 May", status: "Due soon", type: "Safety", severity: "amber" as Status, href: "/actions#ACT-007", adminSet: true }
+];
+
+export const approvedStockItems = [
+  "Heavy duty wash chemical",
+  "Traffic film remover",
+  "Degreaser",
+  "Gloves",
+  "Safety glasses",
+  "Spray lance trigger",
+  "Pressure hose",
+  "PPE kit",
+  "Generator service consumables"
 ];
 
 export const stockOrders = [
-  { item: "Heavy duty wash chemical", region: "Brisbane", site: "Primary Connect Larapinta", category: "Chemicals", quantity: 4, urgency: "Soon", status: "Open" },
-  { item: "Gloves and safety glasses", region: "Sydney", site: "Minchinbury", category: "PPE", quantity: 12, urgency: "Normal", status: "Open" },
-  { item: "Spray lance trigger", region: "Adelaide", site: "Gepps Cross", category: "Equipment", quantity: 2, urgency: "Urgent", status: "Open" }
+  { item: "Heavy duty wash chemical", region: "Brisbane", quantity: 4, urgency: "Urgent", status: "Awaiting national approval", note: "Needed before weekend Primary Connect volume.", update: "National ops reviewing supplier stock today." },
+  { item: "Gloves", region: "Sydney", quantity: 12, urgency: "Normal", status: "Pending dispatch", note: "Night crew PPE top-up.", update: "Approved. Dispatch ETA to be confirmed." },
+  { item: "Spray lance trigger", region: "Adelaide", quantity: 2, urgency: "Urgent", status: "Parts being sourced", note: "Required for mobile wash unit.", update: "Jason checking workshop parts shelf before ordering." },
+  { item: "Pressure hose", region: "Workshop", quantity: 1, urgency: "Normal", status: "Open", note: "Workshop stock minimum.", update: "Pending admin review." }
 ];
 
 export const adminUsers = [
