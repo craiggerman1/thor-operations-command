@@ -191,6 +191,19 @@ export function UrgentBroadcastControls() {
     setStatus("Urgent banner disabled.");
   }
 
+  function deleteBroadcast(id: string) {
+    const target = broadcasts.find((broadcast) => broadcast.id === id);
+    if (!target) return;
+
+    const confirmed = window.confirm("Are you sure you want to delete this urgent alert?");
+    if (!confirmed) return;
+
+    const nextBroadcasts = broadcasts.filter((broadcast) => broadcast.id !== id);
+    writeBroadcasts(nextBroadcasts);
+    setBroadcasts(nextBroadcasts);
+    setStatus("Urgent banner deleted.");
+  }
+
   return (
     <div className="urgent-broadcast-controls">
       <form className="urgent-broadcast-form" onSubmit={deployBroadcast}>
@@ -219,6 +232,7 @@ export function UrgentBroadcastControls() {
             <div className="urgent-broadcast-actions">
               <button type="button" onClick={() => redeployBroadcast(broadcast.id)}>Redeploy</button>
               <button type="button" className="danger-button" onClick={() => disableBroadcast(broadcast.id)}>Disable</button>
+              <button type="button" className="danger-button" onClick={() => deleteBroadcast(broadcast.id)}>Delete</button>
             </div>
           </article>
         ))}
