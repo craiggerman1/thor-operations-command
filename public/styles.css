@@ -3143,7 +3143,8 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .productivity-response textarea {
-  min-height: 96px;
+  min-height: 38px;
+  resize: vertical;
 }
 
 .productivity-response small {

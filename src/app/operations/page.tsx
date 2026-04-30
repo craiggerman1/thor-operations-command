@@ -150,12 +150,12 @@ export default function OperationsPage() {
                   <div className={`productivity-bar ${tone}`}><span style={{ "--value": `${score}%` } as CSSProperties} /></div>
                   <div className="productivity-site-footer">
                     <div className="meta-row"><Tag tone={getProductivityTagTone(tone)}>{score}% productivity</Tag><Tag>{site.units} units</Tag><Tag>{site.labourHours} labour hrs</Tag></div>
-                    <p>{site.action}</p>
                   </div>
                   {score < 80 ? (
                     <label className="productivity-response">
                       <span>Manager response on actions that will be taken to increase productivity</span>
                       <textarea
+                        rows={1}
                         value={savedResponse?.response || ""}
                         onChange={(event) => updateResponse(site.region, site.site, event.target.value)}
                         placeholder="Enter the action plan for this site"
