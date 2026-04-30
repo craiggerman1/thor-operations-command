@@ -4,8 +4,8 @@ import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 export default function ChatPage() {
   return (
     <TocShell>
-      <FlowHeading step="7" eyebrow="Chat" title="Ensure healthy communication between management" />
       <PageIntro title="Chat" detail="Ensure healthy communication between management." />
+      <FlowHeading eyebrow="Chat" title="Keep manager communication clear, useful and tied to operational decisions." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Internal comms" title="Manager chat" pill="Database planned">
           <div className="chat-layout">

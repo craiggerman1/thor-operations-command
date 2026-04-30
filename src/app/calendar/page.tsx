@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { CalendarJobEditor } from "@/components/CalendarJobEditor";
 import type { CalendarEditTarget } from "@/components/CalendarJobEditor";
 import type { CalendarJob } from "@/lib/toc-data";
@@ -101,6 +101,7 @@ export default function CalendarPage() {
   return (
     <TocShell>
       <PageIntro title="Calendar" detail="Scheduled jobs by Thor operating week" />
+      <FlowHeading eyebrow="Calendar" title="Review the operating week by day, then edit jobs or open the day for more detail." />
       <section className="command-grid route-grid">
         <Panel wide className="calendar-panel" eyebrow="Schedule view" title={`${scope} job calendar`} pill={`${totalVisibleJobs} visible jobs`}>
           <div className="calendar-toolbar" aria-label="Calendar view settings">

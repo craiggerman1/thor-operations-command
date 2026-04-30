@@ -1011,45 +1011,80 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .flow-heading {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 76px;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 70px;
   margin: 0 0 14px;
   padding: 16px 18px;
   border: 1px solid rgba(37, 161, 189, 0.22);
   border-left: 6px solid var(--teal);
   border-radius: 6px;
   background:
-    linear-gradient(110deg, rgba(10, 49, 82, 0.94), rgba(10, 49, 82, 0.82) 58%, rgba(37, 161, 189, 0.28));
-  color: #eef5fb;
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(236, 247, 250, 0.86));
+  color: var(--ink);
   box-shadow: var(--tight-shadow);
   overflow: hidden;
 }
 
 .flow-heading h2 {
-  color: #ffffff;
-  font-size: 23px;
+  max-width: 960px;
+  color: #071726;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  letter-spacing: 0;
+  line-height: 1.35;
 }
 
 .flow-heading .eyebrow {
-  color: #bfe4ed;
+  color: var(--teal-dark);
   margin-bottom: 4px;
 }
 
-.flow-step {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(222, 249, 255, 0.5);
-  border-radius: 50%;
-  background: rgba(37, 161, 189, 0.24);
-  color: #ffffff;
-  font-size: 18px;
+.page-hint button,
+.admin-hint-controls button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(10, 49, 82, 0.16);
+  border-radius: 6px;
+  background: #eef5fb;
+  color: var(--blue);
+  cursor: pointer;
   font-weight: 900;
-  box-shadow: 0 0 24px rgba(37, 161, 189, 0.22);
+  white-space: nowrap;
+}
+
+.page-hint button:hover,
+.admin-hint-controls button:hover {
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.admin-hint-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.admin-hint-controls strong,
+.admin-hint-controls small {
+  display: block;
+}
+
+.admin-hint-controls small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-hint-message {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #eef8f5;
+  color: #125d3d;
 }
 
 .panel {
@@ -3291,9 +3326,18 @@ body:not([data-access="admin"]) .admin-only-panel {
   }
 
   .flow-heading {
-    grid-template-columns: 1fr;
+    align-items: stretch;
+    flex-direction: column;
     min-height: auto;
     padding: 14px;
+  }
+
+  .page-hint button {
+    width: fit-content;
+  }
+
+  .admin-hint-controls {
+    grid-template-columns: 1fr;
   }
 
   .wide-panel {

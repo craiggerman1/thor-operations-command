@@ -5,11 +5,11 @@ import { equipmentAssets, equipmentServiceSummary, servicingDataFlow } from "@/l
 export default function EquipmentServicingPage() {
   return (
     <TocShell>
-      <FlowHeading step="6" eyebrow="Equipment servicing" title="Central servicing hub for asset servicing and repairs" />
       <PageIntro
         title="Equipment Servicing"
         detail="Central servicing hub for asset servicing and repairs."
       />
+      <FlowHeading eyebrow="Equipment Servicing" title="Use odometer and hour readings to keep servicing visible before assets fail in the field." />
       <section className="status-strip equipment-summary" aria-label="Equipment servicing overview">
         {equipmentServiceSummary.map((item) => (
           <article className={`metric-card signal-${item.severity}`} key={item.label}>

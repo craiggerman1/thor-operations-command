@@ -1,11 +1,12 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { unityAssets } from "@/lib/toc-data";
 
 export default function AssetTrackingPage() {
   return (
     <TocShell>
       <PageIntro title="Asset Tracking" detail="Central hub for Unity GPS data across wash vehicles, mobile crews and GPS-equipped field assets." />
+      <FlowHeading eyebrow="Asset Tracking" title="Use this page to confirm where GPS-equipped wash vehicles and mobile crews are situated." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Unity data" title="Live asset position" pill="Unity feed planned">
           <div className="tracking-map">

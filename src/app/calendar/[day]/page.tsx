@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { CalendarJobEditor } from "@/components/CalendarJobEditor";
 import type { CalendarEditTarget } from "@/components/CalendarJobEditor";
 import {
@@ -121,6 +121,7 @@ export default function CalendarDayPage() {
   return (
     <TocShell>
       <PageIntro title="Calendar" detail={`${currentDayLabel} job schedule for ${scope}`} />
+      <FlowHeading eyebrow="Calendar Day" title="Review each job in order, edit the detail if needed, then return to the main calendar view." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Day schedule" title={`${scope} jobs`} pill={`${visibleJobs.length} visible jobs`}>
           <div className="calendar-day-actions">

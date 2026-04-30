@@ -1,11 +1,12 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { assets, serviceSchedule } from "@/lib/toc-data";
 
 export default function FleetPage() {
   return (
     <TocShell>
       <PageIntro title="Fleetio" detail="Wash plants, vehicles, GPS status and assets needing awareness." />
+      <FlowHeading eyebrow="Fleetio" title="Watch asset status and service pressure so Fleetio issues can be acted on before they affect work." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Fleetio" title="Assets needing awareness" pill="API planned">
           <div className="asset-list">

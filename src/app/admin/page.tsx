@@ -1,5 +1,5 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { adminUsers } from "@/lib/toc-data";
 import { navigationItems, sessionProfiles } from "@/lib/access";
 
@@ -7,7 +7,11 @@ export default function AdminPage() {
   return (
     <TocShell>
       <PageIntro title="Admin" detail="User access, role permissions, region visibility and admin setup controls." />
+      <FlowHeading eyebrow="Admin" title="Use admin controls to manage access, permissions and reusable guidance for managers." />
       <section className="command-grid route-grid">
+        <Panel wide eyebrow="Guidance controls" title="Page hints" pill="Admin only">
+          <AdminHintControls />
+        </Panel>
         <Panel wide eyebrow="Admin command" title="User access and permissions" pill={`${adminUsers.length} demo users`}>
           <div className="admin-layout">
             <form className="admin-user-form">
@@ -28,7 +32,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.058">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.059">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);

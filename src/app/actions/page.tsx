@@ -6,8 +6,8 @@ import { approvals, commandSignals, nationalTasks, outlookReminders, rosterWindo
 export default function ActionsPage() {
   return (
     <TocShell>
-      <FlowHeading step="1" eyebrow="Action centre" title="Ensure all items are actioned and then cleared" />
       <PageIntro title="Action Centre" detail="Ensure all items are actioned and then cleared." />
+      <FlowHeading eyebrow="Action Centre" title="Ensure all items are actioned, owned, escalated where needed, and then cleared from the queue." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Priority command queue" title="Highest value actions first" pill={`${commandSignals.length} linked signals`}>
           <div className="signal-action-list">

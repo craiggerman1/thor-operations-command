@@ -1,5 +1,5 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { staffHeatMap } from "@/lib/toc-data";
 
 const heatDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -8,6 +8,7 @@ export default function StaffAvailabilityPage() {
   return (
     <TocShell>
       <PageIntro title="Staff Availability" detail="Heat map showing staff availability by day, designed to update from a staff-accessible Google Sheets file." />
+      <FlowHeading eyebrow="Staff Availability" title="Read green, amber and red quickly so managers can cover gaps before rosters become urgent." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Availability heat map" title="Staff coverage by day" pill="Google Sheets feed planned">
           <div className="availability-heatmap">

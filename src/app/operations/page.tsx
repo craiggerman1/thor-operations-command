@@ -5,8 +5,8 @@ import { assets, serviceSchedule, washes, washRolloverCounters } from "@/lib/toc
 export default function OperationsPage() {
   return (
     <TocShell>
-      <FlowHeading step="5" eyebrow="Operations" title="Check operations and take action" />
       <PageIntro title="Operations" detail="Check operations and take action." />
+      <FlowHeading eyebrow="Operations" title="Check wash output, rollover, asset pressure and service items before they become client issues." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Woolworths wash data" title="Site performance" pill="Fleetio feed planned">
           <div className="wash-table">

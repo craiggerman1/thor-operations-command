@@ -1,10 +1,11 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 
 export default function DirectorPage() {
   return (
     <TocShell>
       <PageIntro title="Director" detail="High-level owner view of business health, efficiency, compliance and productivity." />
+      <FlowHeading eyebrow="Director" title="Use this view for the overall health of the business without operational noise." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Director access" title="Owner health view" pill="Green 84%">
           <div className="director-layout">

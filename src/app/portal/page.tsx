@@ -1,11 +1,12 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { approvals } from "@/lib/toc-data";
 
 export default function PortalPage() {
   return (
     <TocShell>
       <PageIntro title="Portal" detail="Jobsheets and Thor Portal approval items needing manager review." />
+      <FlowHeading eyebrow="Portal" title="Clear jobsheet approval issues early so admin, invoicing and client reporting are not held up." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Thor Portal" title="Jobsheets needing review" pill="Webhook planned">
           <div className="queue-list">

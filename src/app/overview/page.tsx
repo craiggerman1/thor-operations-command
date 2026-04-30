@@ -6,8 +6,8 @@ import type { CSSProperties } from "react";
 export default function OverviewPage() {
   return (
     <TocShell>
-      <FlowHeading step="2" eyebrow="Region health" title="Ensure your region health is at 100%" />
       <PageIntro title="Region Health" detail="Ensure your region health is at 100%." />
+      <FlowHeading eyebrow="Region Health" title="Scan your region first, then open the items pulling readiness below target." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Operating position" title="Region health map" pill="Updated now">
           <div className="ops-map">

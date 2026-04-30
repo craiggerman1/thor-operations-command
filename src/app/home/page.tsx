@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { getThorOperatingWeek } from "@/lib/operating-week";
 import { commandPathways, commandSignals, goLivePathway, integrationReadiness } from "@/lib/toc-data";
 import { metrics } from "@/lib/toc-data";
@@ -23,6 +23,7 @@ export default function HomePage() {
   return (
     <TocShell>
       <PageIntro title="Home" detail="National command entry point. Start with the business signal, then move to the page that owns the action." />
+      <FlowHeading eyebrow="Home" title="Start with the business signal, then move to the page that owns the action." />
       <section className="status-strip" aria-label="Business overview">
         {commandMetrics.map((metric) => (
           <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>
