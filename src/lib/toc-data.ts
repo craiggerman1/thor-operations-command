@@ -25,7 +25,7 @@ export type CalendarDay = {
 
 export const metrics = [
   { label: "Portal approvals", value: "25", detail: "Waiting on manager action", status: "amber" as Status, href: "/portal" },
-  { label: "Assets online", value: "5/8", detail: "Fleetio and GPS ready", status: "blue" as Status, href: "/fleet" },
+  { label: "Assets online", value: "5/8", detail: "Unity and GPS ready", status: "blue" as Status, href: "/asset-tracking" },
   { label: "Risk flags", value: "13", detail: "Compliance, staffing, data", status: "red" as Status, href: "/actions" }
 ];
 
