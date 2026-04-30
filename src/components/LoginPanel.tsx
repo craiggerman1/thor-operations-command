@@ -39,12 +39,11 @@ export function LoginPanel() {
     <form className="login-card" onSubmit={signIn}>
       <div>
         <span className="eyebrow">Secure access prototype</span>
-        <h1>Thor Operations Command</h1>
+        <div className="login-title-row">
+          <h1>Thor Operations Command</h1>
+          <span>Build 0.069</span>
+        </div>
         <p>Sign in to open Thor Operations Command.</p>
-      </div>
-      <div className="login-build-card">
-        <span>Current build</span>
-        <strong>Build 0.069</strong>
       </div>
       <label>
         <span>Email</span>
