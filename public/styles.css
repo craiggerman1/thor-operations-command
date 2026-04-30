@@ -469,6 +469,49 @@ textarea {
     transparent;
 }
 
+.urgent-broadcast-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 13px 16px;
+  border: 1px solid rgba(255, 214, 211, 0.7);
+  border-left: 8px solid #ffd6d3;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #bf3e39, #8f201e);
+  color: #ffffff;
+  animation: urgentBroadcastPulse 1.1s ease-in-out infinite;
+}
+
+.urgent-broadcast-banner span,
+.urgent-broadcast-banner strong {
+  display: block;
+}
+
+.urgent-broadcast-banner span {
+  color: #ffd6d3;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.urgent-broadcast-banner strong {
+  margin-top: 2px;
+  font-size: 17px;
+}
+
+.urgent-broadcast-banner button {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  border-radius: 6px;
+  padding: 0 13px;
+  background: #ffffff;
+  color: #8f201e;
+  cursor: pointer;
+  font-weight: 900;
+}
+
 .topbar {
   position: relative;
   display: flex;
@@ -861,6 +904,17 @@ h2 {
   50% {
     border-color: rgba(218, 158, 32, 0.76);
     box-shadow: 0 0 0 1px rgba(218, 158, 32, 0.16), 0 12px 30px rgba(218, 158, 32, 0.2);
+  }
+}
+
+@keyframes urgentBroadcastPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(191, 62, 57, 0.28), 0 12px 28px rgba(191, 62, 57, 0.22);
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px rgba(255, 214, 211, 0.35), 0 18px 38px rgba(191, 62, 57, 0.42);
   }
 }
 
@@ -1266,6 +1320,55 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-radius: 6px;
   background: #eef8f5;
   color: #125d3d;
+}
+
+.urgent-broadcast-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.urgent-broadcast-controls label {
+  display: grid;
+  gap: 6px;
+}
+
+.urgent-broadcast-controls label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.urgent-broadcast-controls textarea {
+  min-height: 76px;
+}
+
+.urgent-broadcast-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.urgent-broadcast-actions button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 11px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.urgent-broadcast-actions .danger-button {
+  border: 1px solid rgba(191, 62, 57, 0.3);
+  background: rgba(191, 62, 57, 0.12);
+  color: var(--red);
+}
+
+.urgent-broadcast-controls small {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .panel {

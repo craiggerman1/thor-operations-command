@@ -41,7 +41,7 @@ export function LoginPanel() {
         <span className="eyebrow">Secure access prototype</span>
         <div className="login-title-row">
           <h1>Thor Operations Command</h1>
-          <span>Build 0.071</span>
+          <span>Build 0.072</span>
         </div>
         <p>Sign in to open Thor Operations Command.</p>
       </div>

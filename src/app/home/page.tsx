@@ -63,7 +63,7 @@ export default function HomePage() {
         ))}
       </section>
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Command signal" title="COMMAND SIGNALS" pill={`${visibleActionItems.length} action-linked`}>
+        <Panel wide eyebrow="Command signal" title="Take action on command signals" pill={`${visibleActionItems.length} action-linked`}>
           <div className="signal-command-grid">
             {visibleActionItems.map((signal) => (
               <Link className={`signal-command-card ${signal.severity}`} href={signal.href} key={signal.id}>
