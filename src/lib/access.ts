@@ -22,7 +22,7 @@ export const navigationItems: NavItem[] = [
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
   { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager", "workshop"] },
   { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager", "workshop"] },
-  { label: "Operations", href: "/operations", roles: ["admin", "director", "manager", "workshop"] },
+  { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager", "workshop"] },
   { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager", "workshop"] },
   { label: "Calendar", href: "/calendar", roles: ["admin", "director", "manager", "workshop"] },
   { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager", "workshop"] },
@@ -55,7 +55,7 @@ export const sessionProfiles: Record<AccessRole, SessionProfile> = {
     label: "Manager",
     scopeLabel: "Assigned region",
     regions: ["Brisbane"],
-    summary: "Regional action centre, health, compliance, stock, operations, tracking, calendar, servicing, Portal and Fleetio visibility."
+    summary: "Regional action centre, health, compliance, stock, productivity, tracking, calendar, servicing, Portal and Fleetio visibility."
   },
   workshop: {
     role: "workshop",

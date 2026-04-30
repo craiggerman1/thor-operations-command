@@ -11,8 +11,8 @@ export default function DirectorPage() {
           <div className="director-layout">
             <article className="director-scorecard"><span>Overall position</span><strong>Green 84%</strong><small>Business is broadly healthy. Keep watching isolated exceptions.</small></article>
             <div className="director-signals">
-              <Signal label="Operations" value="84%" />
-              <Signal label="Productivity" value="91%" />
+              <Signal label="Productivity" value="84%" />
+              <Signal label="Efficiency" value="91%" />
               <Signal label="Compliance" value="76%" tone="amber" />
               <Signal label="Asset availability" value="83%" />
             </div>

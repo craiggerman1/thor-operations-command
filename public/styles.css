@@ -2875,6 +2875,16 @@ body:not([data-access="admin"]) .admin-only-panel {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(37, 161, 189, 0.22);
+  border-left: 5px solid var(--teal);
+  border-radius: 6px;
+  background: rgba(236, 247, 250, 0.88);
+}
+
+.stock-queue-head strong {
+  display: block;
+  color: var(--blue);
 }
 
 .stock-card {
@@ -2924,6 +2934,109 @@ body:not([data-access="admin"]) .admin-only-panel {
 .admin-config-card small {
   color: var(--muted);
   font-weight: 800;
+}
+
+.productivity-score-card,
+.productivity-site-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 6px solid var(--green);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.productivity-score-card {
+  margin-bottom: 12px;
+}
+
+.productivity-score-card strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--blue);
+  font-size: 34px;
+}
+
+.productivity-score-card small,
+.productivity-site-card small,
+.productivity-site-card p {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.productivity-site-list {
+  display: grid;
+  gap: 10px;
+}
+
+.productivity-site-card strong {
+  display: block;
+  color: #071726;
+  font-size: 20px;
+}
+
+.productivity-site-card p {
+  margin: 0;
+}
+
+.productivity-site-footer {
+  display: grid;
+  gap: 8px;
+}
+
+.productivity-bar {
+  height: 13px;
+  border-radius: 999px;
+  background: #d9e2ea;
+  overflow: hidden;
+}
+
+.productivity-bar span {
+  display: block;
+  width: var(--value);
+  height: 100%;
+  background: var(--green);
+}
+
+.productivity-score-card.red,
+.productivity-site-card.red {
+  border-left-color: var(--red);
+}
+
+.productivity-score-card.amber,
+.productivity-site-card.amber {
+  border-left-color: var(--amber);
+}
+
+.productivity-score-card.yellow,
+.productivity-site-card.yellow {
+  border-left-color: #e1c542;
+}
+
+.productivity-score-card.light-green,
+.productivity-site-card.light-green {
+  border-left-color: #7bbf59;
+}
+
+.productivity-bar.red span {
+  background: var(--red);
+}
+
+.productivity-bar.amber span {
+  background: var(--amber);
+}
+
+.productivity-bar.yellow span {
+  background: #e1c542;
+}
+
+.productivity-bar.light-green span {
+  background: #7bbf59;
+}
+
+.productivity-bar.green span {
+  background: var(--green);
 }
 
 .todo-form {

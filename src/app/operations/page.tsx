@@ -1,56 +1,99 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { assets, serviceSchedule, washes, washRolloverCounters } from "@/lib/toc-data";
+import { productivitySites } from "@/lib/toc-data";
+
+type ProductivityTone = "red" | "amber" | "yellow" | "light-green" | "green";
+
+function getStoredScope() {
+  if (typeof window === "undefined") return "National";
+
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return session?.scope || "National";
+  } catch {
+    return "National";
+  }
+}
+
+function getProductivityTone(score: number): ProductivityTone {
+  if (score < 40) return "red";
+  if (score < 50) return "amber";
+  if (score < 70) return "yellow";
+  if (score < 80) return "light-green";
+  return "green";
+}
+
+function getProductivityText(score: number) {
+  if (score < 40) return "Critical productivity issue";
+  if (score < 50) return "Productivity action required";
+  if (score < 70) return "Efficiency needs refinement";
+  if (score < 80) return "Near healthy productivity";
+  return "Healthy productivity";
+}
+
+function getProductivityTagTone(tone: ProductivityTone) {
+  if (tone === "red") return "red";
+  if (tone === "green") return "green";
+  return "amber";
+}
 
 export default function OperationsPage() {
+  const [scope, setScope] = useState("National");
+  const visibleSites = useMemo(() => productivitySites.filter((site) => scope === "National" || site.region === scope), [scope]);
+  const regionScore = visibleSites.length ? Math.round(visibleSites.reduce((total, site) => total + site.efficiency, 0) / visibleSites.length) : 0;
+  const regionTone = getProductivityTone(regionScore);
+
+  useEffect(() => {
+    function syncScope(event?: Event) {
+      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
+      setScope(nextScope);
+    }
+
+    syncScope();
+    window.addEventListener("storage", syncScope);
+    window.addEventListener("toc.scopechange", syncScope);
+    return () => {
+      window.removeEventListener("storage", syncScope);
+      window.removeEventListener("toc.scopechange", syncScope);
+    };
+  }, []);
+
   return (
     <TocShell>
-      <PageIntro title="Operations" detail="Check operations and take action." />
-      <FlowHeading eyebrow="Operations" title="Check wash output, rollover, asset pressure and service items before they become client issues." />
+      <PageIntro title="Productivity" detail="Productivity tracking and action hub." />
+      <FlowHeading eyebrow="Productivity" title="Take productivity queues, refine the operation, and keep each site moving efficiently." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Woolworths wash data" title="Site performance" pill="Fleetio feed planned">
-          <div className="wash-table">
-            <div className="wash-row header"><span>Site</span><span>Target</span><span>Actual</span><span>Internal</span><span>Exceptions</span></div>
-            {washes.map((wash) => (
-              <div className="wash-row" key={wash.site}>
-                <strong>{wash.site}</strong><span>{wash.target}</span><span>{wash.actual}</span><span>{wash.internal}</span><span className={wash.exceptions > 2 ? "tag red" : "tag green"}>{wash.exceptions}</span>
-              </div>
-            ))}
+        <Panel wide eyebrow="Productivity command" title={`${scope} productivity score`} pill={`${regionScore}% efficiency`}>
+          <div className={`productivity-score-card ${regionTone}`}>
+            <div>
+              <span className="eyebrow">Cumulative site score</span>
+              <strong>{regionScore}%</strong>
+              <small>{getProductivityText(regionScore)}. 80% is treated as perfect productivity for this TOC score.</small>
+            </div>
+            <div className={`productivity-bar ${regionTone}`}><span style={{ "--value": `${regionScore}%` } as CSSProperties} /></div>
           </div>
-        </Panel>
-        <Panel wide eyebrow="Washed unit tracking" title="Rollover counter" pill="Live counter planned">
-          <div className="rollover-grid">
-            {washRolloverCounters.map((item) => (
-              <article className={`rollover-card ${item.severity}`} key={item.site}>
-                <div>
-                  <strong>{item.site}</strong>
-                  <small>{item.region} - yesterday {item.yesterday}, today {item.today}</small>
-                </div>
-                <div><span>{item.rollover}</span><em>{item.trend}</em></div>
-              </article>
-            ))}
-          </div>
-        </Panel>
-        <Panel eyebrow="Fleetio" title="Assets needing awareness">
-          <div className="asset-list">
-            {assets.map((asset) => (
-              <article className="asset-card" key={asset.name}>
-                <strong>{asset.name}</strong>
-                <small>{asset.region} - GPS: {asset.gps} - service due in {asset.service}</small>
-                <div className="meta-row"><Tag tone={asset.status}>{asset.state}</Tag><Tag>Fleetio</Tag></div>
-              </article>
-            ))}
-          </div>
-        </Panel>
-        <Panel eyebrow="Fleetio service schedule" title="Service items" pill="API planned">
-          <div className="ops-list">
-            {serviceSchedule.map((item) => (
-              <article className="ops-card" key={item.asset}>
-                <strong>{item.asset}</strong>
-                <small>{item.region} - {item.item}</small>
-                <div className="meta-row"><Tag tone={item.severity}>{item.status}</Tag><Tag>Due {item.due}</Tag></div>
-              </article>
-            ))}
+          <div className="productivity-site-list">
+            {visibleSites.map((site) => {
+              const tone = getProductivityTone(site.efficiency);
+              return (
+                <article className={`productivity-site-card ${tone}`} key={`${site.region}-${site.site}`}>
+                  <div>
+                    <span className="eyebrow">{site.region}</span>
+                    <strong>{site.site}</strong>
+                    <small>{getProductivityText(site.efficiency)} - {site.queue}</small>
+                  </div>
+                  <div className={`productivity-bar ${tone}`}><span style={{ "--value": `${site.efficiency}%` } as CSSProperties} /></div>
+                  <div className="productivity-site-footer">
+                    <div className="meta-row"><Tag tone={getProductivityTagTone(tone)}>{site.efficiency}% efficiency</Tag><Tag>{site.units} units</Tag><Tag>{site.labourHours} labour hrs</Tag></div>
+                    <p>{site.action}</p>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </Panel>
       </section>

@@ -49,10 +49,10 @@ export const commandSignals = [
     detail: "Inductions, safety checks and site-readiness items must be current before operational risk builds."
   },
   {
-    title: "Roster and availability pressure",
+    title: "Roster and productivity pressure",
     source: "Roster",
     severity: "amber" as Status,
-    owner: "Operations",
+    owner: "Productivity",
     action: "Check coverage",
     href: "/actions",
     detail: "Next-shift gaps should be resolved before they become missed washes or client pressure."
@@ -160,7 +160,7 @@ export const commandPathways = [
   { step: "2", label: "Region Health", href: "/overview", detail: "Check whether each state is healthy enough to run the day without surprises." },
   { step: "3", label: "Compliance", href: "/compliance", detail: "Confirm induction, safety and site-readiness issues are complete and green." },
   { step: "4", label: "Stock Orders", href: "/stock-orders", detail: "Raise supply needs early before chemicals, PPE or parts block the work." },
-  { step: "5", label: "Operations", href: "/operations", detail: "Review wash output, rollover counts, assets, roster pressure and site activity." },
+  { step: "5", label: "Productivity", href: "/operations", detail: "Review site efficiency, productivity queues, rollover counts and actions." },
   { step: "6", label: "Asset Tracking", href: "/asset-tracking", detail: "Track Unity GPS-equipped wash vehicles and mobile crews in the field." },
   { step: "7", label: "Calendar", href: "/calendar", detail: "Review scheduled jobs by day and location before the work starts." },
   { step: "8", label: "Staff Availability", href: "/staff-availability", detail: "Use the availability heat map to quickly see who can cover work." },
@@ -224,6 +224,17 @@ export const washes = [
   { site: "Woolworths Melbourne DC", region: "Melbourne", target: 84, actual: 79, internal: 19, exceptions: 1 },
   { site: "Primary Connect Adelaide", region: "Adelaide", target: 70, actual: 62, internal: 8, exceptions: 3 },
   { site: "Primary Connect Perth", region: "Perth", target: 78, actual: 71, internal: 13, exceptions: 2 }
+];
+
+export const productivitySites = [
+  { site: "Primary Connect Larapinta", region: "Brisbane", efficiency: 84, queue: "Fleetio exception follow-up", action: "Refine data discipline and clear wash type mismatches.", units: 82, labourHours: 18 },
+  { site: "Weekend parked fleet", region: "Brisbane", efficiency: 76, queue: "Weekend output watch", action: "Confirm crew mix before parked fleet volume peaks.", units: 64, labourHours: 16 },
+  { site: "Woolworths Minchinbury", region: "Sydney", efficiency: 68, queue: "Rollover pressure", action: "Review night bay pace and reduce rollover into next shift.", units: 76, labourHours: 20 },
+  { site: "Woolworths Melbourne DC", region: "Melbourne", efficiency: 81, queue: "Healthy", action: "Maintain current output and approve any delayed jobsheets.", units: 79, labourHours: 17 },
+  { site: "Primary Connect Adelaide", region: "Adelaide", efficiency: 46, queue: "Staffing action", action: "Fix crew coverage gap before the next wash window.", units: 62, labourHours: 19 },
+  { site: "Primary Connect Perth", region: "Perth", efficiency: 73, queue: "Stock watch", action: "Confirm chemical stock before weekend operations.", units: 71, labourHours: 18 },
+  { site: "Canberra fleet wash run", region: "Canberra", efficiency: 88, queue: "Healthy", action: "Keep site readiness and GPS checks current.", units: 58, labourHours: 11 },
+  { site: "Workshop productivity", region: "Workshop", efficiency: 64, queue: "Parts queue", action: "Clear parts availability items before service work stacks up.", units: 7, labourHours: 9 }
 ];
 
 export const serviceSchedule = [
