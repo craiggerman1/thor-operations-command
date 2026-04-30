@@ -29,6 +29,8 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   const [todoText, setTodoText] = useState("");
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [floatingEnabled, setFloatingEnabled] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
 
   function loadTodos() {
     setTodos(JSON.parse(localStorage.getItem(getTodoStorageKey()) || "[]"));
@@ -65,6 +67,19 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
 
   function removeTodo(id: string) {
     saveTodos(todos.filter((item) => item.id !== id));
+  }
+
+  function startEditing(todo: TodoItem) {
+    setEditingId(todo.id);
+    setEditingText(todo.text);
+  }
+
+  function saveEdit(id: string) {
+    const text = editingText.trim();
+    if (!text) return;
+    updateTodo(id, { text });
+    setEditingId(null);
+    setEditingText("");
   }
 
   function setFloating(value: boolean) {
@@ -105,13 +120,22 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
               onChange={(event) => updateTodo(todo.id, { done: event.target.checked })}
             />
             <div className="todo-copy">
-              <strong>{todo.text}</strong>
+              {editingId === todo.id ? (
+                <input value={editingText} onChange={(event) => setEditingText(event.target.value)} aria-label="Edit to do item" />
+              ) : (
+                <strong>{todo.text}</strong>
+              )}
               {todo.sharedWith ? <small>Shared with {todo.sharedWith}</small> : <small>Private task</small>}
             </div>
             <div className="todo-actions">
               <button className={todo.important ? "important-active" : ""} type="button" onClick={() => updateTodo(todo.id, { important: !todo.important })}>
                 Important
               </button>
+              {editingId === todo.id ? (
+                <button type="button" onClick={() => saveEdit(todo.id)}>Save</button>
+              ) : (
+                <button type="button" onClick={() => startEditing(todo)}>Edit</button>
+              )}
               {mode === "page" ? (
                 <select value={todo.sharedWith || ""} aria-label="Share to do item" onChange={(event) => updateTodo(todo.id, { sharedWith: event.target.value || undefined })}>
                   <option value="">Share</option>

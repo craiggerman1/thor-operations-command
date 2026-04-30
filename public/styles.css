@@ -352,6 +352,7 @@ textarea {
   grid-template-columns: 1fr;
   gap: 12px;
   align-items: center;
+  text-align: center;
   padding: 2px 0 4px;
 }
 
@@ -359,7 +360,7 @@ textarea {
   width: 100%;
   max-width: 198px;
   display: block;
-  justify-self: start;
+  justify-self: center;
   border-radius: 0;
   box-shadow: none;
 }
@@ -838,13 +839,13 @@ h2 {
 @keyframes hintPulse {
   0%,
   100% {
-    border-color: rgba(37, 161, 189, 0.22);
+    border-color: rgba(218, 158, 32, 0.3);
     box-shadow: var(--tight-shadow);
   }
 
   50% {
-    border-color: rgba(37, 161, 189, 0.58);
-    box-shadow: 0 0 0 1px rgba(37, 161, 189, 0.12), 0 12px 30px rgba(37, 161, 189, 0.2);
+    border-color: rgba(218, 158, 32, 0.76);
+    box-shadow: 0 0 0 1px rgba(218, 158, 32, 0.16), 0 12px 30px rgba(218, 158, 32, 0.2);
   }
 }
 
@@ -1184,6 +1185,9 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .flow-heading.page-hint {
+  justify-content: flex-start;
+  border-color: rgba(218, 158, 32, 0.36);
+  border-left-color: var(--amber);
   animation: hintPulse 5.6s ease-in-out infinite;
 }
 
@@ -1222,9 +1226,12 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .admin-hint-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
+}
+
+.admin-hint-panel {
+  align-self: start;
 }
 
 .admin-hint-controls strong,
@@ -3125,6 +3132,11 @@ body:not([data-access="admin"]) .admin-only-panel {
 .todo-item input {
   width: 18px;
   min-height: 18px;
+}
+
+.todo-copy input {
+  width: 100%;
+  min-height: 34px;
 }
 
 .todo-copy {
