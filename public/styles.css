@@ -3066,6 +3066,24 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-weight: 800;
 }
 
+.stock-order-head {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(201, 215, 225, 0.72);
+}
+
+.stock-order-head strong {
+  color: #071726;
+  font-size: 18px;
+  line-height: 1.12;
+}
+
+.stock-order-head small {
+  color: var(--blue);
+  font-weight: 900;
+}
+
 .stock-detail {
   display: grid;
   grid-template-columns: 74px minmax(0, 1fr);

@@ -56,6 +56,7 @@ export function StockOrderAdminReview() {
   }
 
   function deleteOrder(orderId: string) {
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
     const nextOrders = orders.filter((order) => getOrderId(order) !== orderId);
     setOrders(nextOrders);
     localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
@@ -68,7 +69,7 @@ export function StockOrderAdminReview() {
         const orderId = getOrderId(order);
         return (
           <article className={`admin-config-card ${order.updateRequested ? "needs-update" : ""}`} key={orderId}>
-            <div>
+            <div className="stock-order-head">
               <strong>{order.region}: {order.item}</strong>
               <small>{order.status} - Qty {order.quantity} - {order.urgency}</small>
             </div>

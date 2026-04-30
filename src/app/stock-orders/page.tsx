@@ -126,6 +126,7 @@ export default function StockOrdersPage() {
   }
 
   function deleteOrder(orderId: string) {
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
     saveOrders(orders.filter((order) => getOrderId(order) !== orderId));
   }
 
@@ -158,7 +159,7 @@ export default function StockOrdersPage() {
                   const orderId = getOrderId(order);
                   return (
                   <article className="stock-card" key={orderId}>
-                    <div><strong>{order.item}</strong><small>{order.region} - Qty {order.quantity}</small></div>
+                    <div className="stock-order-head"><strong>{order.item}</strong><small>{order.region} - Qty {order.quantity}</small></div>
                     <p>{order.note}</p>
                     <div className="stock-detail"><span>{order.status}</span><span>{order.update}</span></div>
                     <div className="stock-detail"><span>Tracking</span><span>{order.trackingNumber || "Pending"}</span></div>
