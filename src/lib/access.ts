@@ -29,7 +29,7 @@ export const navigationItems: NavItem[] = [
   { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager", "workshop"] },
   { label: "Chat", href: "/chat", roles: ["admin", "manager", "workshop"] },
   { label: "Director", href: "/director", roles: ["admin", "director"] },
-  { label: "Admin", href: "/admin", roles: ["admin"] },
+  { label: "Admin Settings", href: "/admin", roles: ["admin"] },
   { label: "Portal", href: "/portal", roles: ["admin", "manager"] },
   { label: "Fleetio", href: "/fleet", roles: ["admin", "manager", "workshop"] },
   { label: "To Do", href: "/todo", roles: ["admin", "director", "manager", "workshop"] }

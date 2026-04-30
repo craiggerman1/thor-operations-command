@@ -1427,6 +1427,15 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 18px;
 }
 
+.panel.admin-hint-panel {
+  min-height: 0;
+  padding: 10px 12px;
+}
+
+.panel.admin-hint-panel .panel-head {
+  margin-bottom: 6px;
+}
+
 .wide-panel {
   grid-column: span 2;
 }

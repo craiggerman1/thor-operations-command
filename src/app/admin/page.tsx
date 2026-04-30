@@ -8,8 +8,8 @@ import { navigationItems, sessionProfiles } from "@/lib/access";
 export default function AdminPage() {
   return (
     <TocShell>
-      <PageIntro title="Admin" detail="User access, role permissions, region visibility and admin setup controls." />
-      <FlowHeading eyebrow="Admin" title="Use admin controls to manage access, permissions and reusable guidance for managers." />
+      <PageIntro title="Admin Settings" detail="Site settings, user access, permissions, region visibility and admin setup controls." />
+      <FlowHeading eyebrow="Admin Settings" title="Use admin settings to manage access, permissions and reusable guidance for managers." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Guidance controls" title="Page hints" pill="Admin only" className="admin-hint-panel">
           <AdminHintControls />
@@ -55,7 +55,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.077">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.078">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);
