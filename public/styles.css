@@ -118,6 +118,11 @@ body.is-authenticated .login-screen {
   display: none;
 }
 
+body.is-authenticated .app-shell,
+body.is-authenticated .mobile-app-bar {
+  font-size: 17px;
+}
+
 body:not(.is-authenticated) .mobile-app-bar,
 body:not(.is-authenticated) .mobile-nav-backdrop {
   display: none;
@@ -591,7 +596,7 @@ textarea {
 .eyebrow {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -707,7 +712,7 @@ p {
 h1 {
   max-width: none;
   font-family: var(--font-display);
-  font-size: clamp(30px, 2.9vw, 42px);
+  font-size: clamp(31px, 3vw, 43px);
   font-weight: 400;
   line-height: 0.92;
   text-transform: uppercase;
@@ -719,7 +724,7 @@ h1 {
 h2 {
   font-family: var(--font-sans);
   color: #071726;
-  font-size: 21px;
+  font-size: 22px;
   line-height: 1.08;
   letter-spacing: 0;
   font-weight: 800;
@@ -775,7 +780,7 @@ h2 {
   color: #ffe9e6;
   background: rgba(191, 62, 57, 0.22);
   box-shadow: 0 0 18px rgba(191, 62, 57, 0.18);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
   animation: labelGlow 3.2s ease-in-out infinite;
@@ -788,7 +793,7 @@ h2 {
   gap: 7px;
   margin-top: 10px;
   color: #d4e1e8;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -816,7 +821,7 @@ h2 {
 
 .build-notice em {
   color: #b9c9d6;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -842,7 +847,7 @@ h2 {
 }
 
 .page-title-copy h2 {
-  font-size: 22px;
+  font-size: 23px;
 }
 
 .page-title-copy p {
@@ -2089,7 +2094,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .todo-panel h2 {
-  font-size: 22px;
+  font-size: 23px;
 }
 
 .todo-hide-button {
