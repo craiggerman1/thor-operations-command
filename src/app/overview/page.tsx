@@ -65,7 +65,6 @@ export default function OverviewPage() {
         <Panel wide eyebrow="Operating position" title="Region health map" pill="Updated now">
           <div className="region-health-notice">
             <strong>All region health is visible to all managers.</strong>
-            <small>Every manager can see the national scoreboard, which creates clear ownership and a little healthy pressure to beat the other regions.</small>
           </div>
           <div className="ops-map">
             {regions.map((region) => {

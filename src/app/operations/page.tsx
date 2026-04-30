@@ -35,6 +35,12 @@ function getProductivityText(score: number) {
   return "Healthy productivity";
 }
 
+function getGrossMarginScore(site: { grossMargin?: number; wageCost?: number }) {
+  if (typeof site.grossMargin === "number") return site.grossMargin;
+  if (typeof site.wageCost === "number") return Math.max(0, 100 - site.wageCost);
+  return 0;
+}
+
 function getProductivityTagTone(tone: ProductivityTone) {
   if (tone === "red") return "red";
   if (tone === "green") return "green";
@@ -44,7 +50,8 @@ function getProductivityTagTone(tone: ProductivityTone) {
 export default function OperationsPage() {
   const [scope, setScope] = useState("National");
   const visibleSites = useMemo(() => productivitySites.filter((site) => scope === "National" || site.region === scope), [scope]);
-  const regionScore = visibleSites.length ? Math.round(visibleSites.reduce((total, site) => total + site.efficiency, 0) / visibleSites.length) : 0;
+  const regionScore = visibleSites.length ? Math.round(visibleSites.reduce((total, site) => total + getGrossMarginScore(site), 0) / visibleSites.length) : 0;
+  const regionWageCost = visibleSites.length ? Math.round(visibleSites.reduce((total, site) => total + site.wageCost, 0) / visibleSites.length) : 0;
   const regionTone = getProductivityTone(regionScore);
 
   useEffect(() => {
@@ -67,28 +74,30 @@ export default function OperationsPage() {
       <PageIntro title="Productivity" detail="Productivity tracking and action hub." />
       <FlowHeading eyebrow="Productivity" title="Take productivity queues, refine the operation, and keep each site moving efficiently." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Productivity command" title={`${scope} productivity score`} pill={`${regionScore}% efficiency`}>
+        <Panel wide eyebrow="Productivity command" title={`${scope} productivity score`} pill={`${regionScore}% gross margin`}>
           <div className={`productivity-score-card ${regionTone}`}>
             <div>
-              <span className="eyebrow">Cumulative site score</span>
+              <span className="eyebrow">Cumulative gross margin score</span>
               <strong>{regionScore}%</strong>
-              <small>{getProductivityText(regionScore)}. 80% is treated as perfect productivity for this TOC score.</small>
+              <small>{getProductivityText(regionScore)}. Linked to wage cost and gross margin from the planned data feed.</small>
             </div>
             <div className={`productivity-bar ${regionTone}`}><span style={{ "--value": `${regionScore}%` } as CSSProperties} /></div>
+            <div className="meta-row"><Tag tone={getProductivityTagTone(regionTone)}>{regionWageCost}% wage cost</Tag><Tag>{regionScore}% gross margin</Tag></div>
           </div>
           <div className="productivity-site-list">
             {visibleSites.map((site) => {
-              const tone = getProductivityTone(site.efficiency);
+              const score = getGrossMarginScore(site);
+              const tone = getProductivityTone(score);
               return (
                 <article className={`productivity-site-card ${tone}`} key={`${site.region}-${site.site}`}>
                   <div>
                     <span className="eyebrow">{site.region}</span>
                     <strong>{site.site}</strong>
-                    <small>{getProductivityText(site.efficiency)} - {site.queue}</small>
+                    <small>{getProductivityText(score)} - {site.queue}</small>
                   </div>
-                  <div className={`productivity-bar ${tone}`}><span style={{ "--value": `${site.efficiency}%` } as CSSProperties} /></div>
+                  <div className={`productivity-bar ${tone}`}><span style={{ "--value": `${score}%` } as CSSProperties} /></div>
                   <div className="productivity-site-footer">
-                    <div className="meta-row"><Tag tone={getProductivityTagTone(tone)}>{site.efficiency}% efficiency</Tag><Tag>{site.units} units</Tag><Tag>{site.labourHours} labour hrs</Tag></div>
+                    <div className="meta-row"><Tag tone={getProductivityTagTone(tone)}>{score}% gross margin</Tag><Tag tone={getProductivityTagTone(tone)}>{site.wageCost}% wage cost</Tag><Tag>{site.units} units</Tag><Tag>{site.labourHours} labour hrs</Tag></div>
                     <p>{site.action}</p>
                   </div>
                 </article>

@@ -32,6 +32,7 @@ export default function AdminPage() {
                 <article className="admin-config-card" key={`${order.region}-${order.item}`}>
                   <div><strong>{order.region}: {order.item}</strong><small>{order.status}</small></div>
                   <small>Admin update visible to manager: {order.update}</small>
+                  <label className="admin-tracking-field"><span>Tracking number</span><input defaultValue={order.trackingNumber} placeholder="Add tracking number" /></label>
                 </article>
               ))}
             </div>
@@ -57,7 +58,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.065">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.066">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);

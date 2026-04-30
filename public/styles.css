@@ -2900,6 +2900,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .stock-list {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
 .stock-queue-head {
@@ -2921,8 +2922,8 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .stock-card {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 7px;
+  padding: 10px;
 }
 
 .stock-card p {
@@ -2934,9 +2935,45 @@ body:not([data-access="admin"]) .admin-only-panel {
 .stock-detail {
   display: grid;
   grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
-  gap: 8px;
+  gap: 7px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.stock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stock-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(10, 49, 82, 0.18);
+  border-radius: 6px;
+  background: rgba(10, 49, 82, 0.08);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stock-actions .danger-button {
+  border-color: rgba(191, 62, 57, 0.28);
+  background: rgba(191, 62, 57, 0.1);
+  color: var(--red);
+}
+
+.admin-tracking-field {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.admin-tracking-field span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .admin-config-grid {

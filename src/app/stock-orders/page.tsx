@@ -15,6 +15,8 @@ type StockOrderRequest = {
   status: string;
   note: string;
   update: string;
+  trackingNumber?: string;
+  updateRequested?: boolean;
 };
 
 const stockOrderStorageKey = "toc.stockOrders";
@@ -71,7 +73,8 @@ export default function StockOrdersPage() {
       urgency,
       status: "Request submitted",
       note: note || "No additional note supplied.",
-      update: "Awaiting national admin review."
+      update: "Awaiting national admin review.",
+      trackingNumber: "Pending"
     };
     const nextOrders = [nextOrder, ...orders];
     setOrders(nextOrders);
@@ -79,6 +82,22 @@ export default function StockOrdersPage() {
     setQuantity(1);
     setUrgency("Normal");
     setNote("");
+  }
+
+  function cancelOrder(orderId: string) {
+    const nextOrders = orders.map((order) => (order.id || `${order.region}-${order.item}`) === orderId
+      ? { ...order, status: "Cancellation requested", update: "Cancellation sent to national admin for review." }
+      : order);
+    setOrders(nextOrders);
+    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+  }
+
+  function requestUpdate(orderId: string) {
+    const nextOrders = orders.map((order) => (order.id || `${order.region}-${order.item}`) === orderId
+      ? { ...order, updateRequested: true, update: "Manager requested an update. National admin to respond." }
+      : order);
+    setOrders(nextOrders);
+    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
   }
 
   return (
@@ -102,14 +121,22 @@ export default function StockOrdersPage() {
                 <Tag>{visibleOrders.length} pending</Tag>
               </div>
               <div className="stock-list">
-                {visibleOrders.map((order) => (
-                  <article className="stock-card" key={order.id || `${order.region}-${order.item}`}>
+                {visibleOrders.map((order) => {
+                  const orderId = order.id || `${order.region}-${order.item}`;
+                  return (
+                  <article className="stock-card" key={orderId}>
                     <div><strong>{order.item}</strong><small>{order.region} - Qty {order.quantity}</small></div>
                     <p>{order.note}</p>
                     <div className="stock-detail"><span>{order.status}</span><span>{order.update}</span></div>
-                    <div className="meta-row"><Tag tone={order.urgency === "Urgent" ? "red" : "green"}>{order.urgency}</Tag><Tag tone="amber">Pending</Tag><Tag>National update visible</Tag></div>
+                    <div className="stock-detail"><span>Tracking</span><span>{order.trackingNumber || "Pending"}</span></div>
+                    <div className="meta-row"><Tag tone={order.urgency === "Urgent" ? "red" : "green"}>{order.urgency}</Tag><Tag tone="amber">{order.updateRequested ? "Update requested" : "Pending"}</Tag><Tag>National update visible</Tag></div>
+                    <div className="stock-actions">
+                      <button type="button" onClick={() => requestUpdate(orderId)}>Request Update</button>
+                      <button type="button" className="danger-button" onClick={() => cancelOrder(orderId)}>Cancel Order</button>
+                    </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
