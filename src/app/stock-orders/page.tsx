@@ -118,6 +118,17 @@ export default function StockOrdersPage() {
     saveOrders(nextOrders);
   }
 
+  function markDelivered(orderId: string) {
+    const nextOrders = orders.map((order) => getOrderId(order) === orderId
+      ? { ...order, status: "Delivered", update: "Manager marked this stock order as delivered.", updateRequested: false }
+      : order);
+    saveOrders(nextOrders);
+  }
+
+  function deleteOrder(orderId: string) {
+    saveOrders(orders.filter((order) => getOrderId(order) !== orderId));
+  }
+
   function updateOrder(orderId: string, updates: Partial<StockOrderRequest>) {
     const nextOrders = orders.map((order) => getOrderId(order) === orderId ? { ...order, ...updates, updateRequested: updates.update ? false : order.updateRequested } : order);
     saveOrders(nextOrders);
@@ -161,9 +172,14 @@ export default function StockOrdersPage() {
                     {!canReviewOrders ? (
                       <div className="stock-actions">
                         <button type="button" onClick={() => requestUpdate(orderId)}>Request Update</button>
+                        <button type="button" onClick={() => markDelivered(orderId)}>Mark Delivered</button>
                         <button type="button" className="danger-button" onClick={() => cancelOrder(orderId)}>Cancel Order</button>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="stock-actions">
+                        <button type="button" className="danger-button" onClick={() => deleteOrder(orderId)}>Delete Order</button>
+                      </div>
+                    )}
                   </article>
                   );
                 })}

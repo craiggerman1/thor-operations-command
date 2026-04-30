@@ -55,6 +55,13 @@ export function StockOrderAdminReview() {
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
   }
 
+  function deleteOrder(orderId: string) {
+    const nextOrders = orders.filter((order) => getOrderId(order) !== orderId);
+    setOrders(nextOrders);
+    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+    window.dispatchEvent(new Event("toc.stockOrders.updated"));
+  }
+
   return (
     <div className="admin-stock-review">
       {orders.map((order) => {
@@ -68,6 +75,9 @@ export function StockOrderAdminReview() {
             {order.updateRequested ? <small className="stock-update-alert">Manager requested an update</small> : null}
             <label className="admin-tracking-field"><span>Admin / national update</span><input value={order.update} onChange={(event) => updateOrder(orderId, { update: event.target.value, status: "Updated by national" })} /></label>
             <label className="admin-tracking-field"><span>Tracking number</span><input value={order.trackingNumber || ""} onChange={(event) => updateOrder(orderId, { trackingNumber: event.target.value || "Pending" })} placeholder="Add tracking number" /></label>
+            <div className="stock-actions">
+              <button type="button" className="danger-button" onClick={() => deleteOrder(orderId)}>Delete Order</button>
+            </div>
           </article>
         );
       })}
