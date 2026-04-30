@@ -61,16 +61,23 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     if (mode !== "floating") return undefined;
 
     function syncFloatingTop() {
-      const headerBottom = document.querySelector(".topbar")?.getBoundingClientRect().bottom;
-      const headerStop = typeof headerBottom === "number" ? headerBottom + 16 : floatingStartTop - window.scrollY;
+      const header = document.querySelector<HTMLElement>(".topbar");
+      const headerStop = header
+        ? header.offsetTop + header.offsetHeight - window.scrollY + 16
+        : floatingStartTop - window.scrollY;
       const nextTop = Math.max(floatingDockTop, headerStop);
       setFloatingTop(nextTop);
     }
 
-    syncFloatingTop();
+    const frameId = window.requestAnimationFrame(syncFloatingTop);
+    const header = document.querySelector<HTMLElement>(".topbar");
+    const observer = header ? new ResizeObserver(syncFloatingTop) : null;
+    if (header && observer) observer.observe(header);
     window.addEventListener("scroll", syncFloatingTop, { passive: true });
     window.addEventListener("resize", syncFloatingTop);
     return () => {
+      window.cancelAnimationFrame(frameId);
+      observer?.disconnect();
       window.removeEventListener("scroll", syncFloatingTop);
       window.removeEventListener("resize", syncFloatingTop);
     };

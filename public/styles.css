@@ -2123,6 +2123,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(14px);
   box-shadow: 0 24px 58px rgba(6, 7, 9, 0.16);
+  transition: top 120ms ease;
 }
 
 .todo-panel .panel-head {
