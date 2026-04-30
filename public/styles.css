@@ -2109,27 +2109,6 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-weight: 900;
 }
 
-.todo-disabled-notice {
-  position: fixed;
-  top: 28px;
-  right: 28px;
-  z-index: 24;
-  width: min(310px, calc(100vw - 56px));
-  padding: 10px 12px;
-  border: 1px solid rgba(201, 215, 225, 0.86);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--muted);
-  box-shadow: var(--tight-shadow);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.todo-disabled-notice a {
-  color: var(--blue);
-  font-weight: 900;
-}
-
 .todo-panel .todo-form {
   display: grid;
   grid-template-columns: 1fr auto;

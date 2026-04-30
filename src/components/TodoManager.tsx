@@ -97,11 +97,7 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   }
 
   if (mode === "floating" && !floatingEnabled) {
-    return (
-      <aside className="todo-disabled-notice" aria-label="Floating to do list disabled">
-        Floating To Do hidden. Turn it back on in <a href="/todo">To Do page settings</a>.
-      </aside>
-    );
+    return null;
   }
 
   return (
