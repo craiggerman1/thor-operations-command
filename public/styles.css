@@ -1900,58 +1900,104 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
-.calendar-grid {
+.wall-calendar {
+  display: grid;
+  gap: 8px;
+}
+
+.calendar-weekdays,
+.calendar-month-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
-.calendar-day,
-.calendar-job {
+.calendar-weekdays strong {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #0a3152;
+  color: #ffffff;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.calendar-date {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  min-height: 174px;
+  padding: 10px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
-.calendar-day {
-  display: grid;
-  gap: 9px;
-  min-height: 150px;
-  padding: 12px;
-  border-top: 5px solid var(--blue);
+.calendar-date.today {
+  border-color: rgba(37, 161, 189, 0.7);
+  box-shadow: 0 0 0 2px rgba(37, 161, 189, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
-.calendar-day.green {
-  border-top-color: var(--green);
+.calendar-date.muted {
+  opacity: 0.62;
 }
 
-.calendar-day.amber {
-  border-top-color: var(--amber);
+.calendar-date-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.calendar-day.red {
-  border-top-color: var(--red);
+.calendar-date-head strong {
+  color: var(--blue);
+  font-size: 28px;
 }
 
-.calendar-day > span,
-.calendar-day small {
+.calendar-date-head small {
   color: var(--muted);
+  font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.calendar-day strong {
-  color: var(--blue);
-  font-size: 34px;
+.calendar-date-jobs {
+  display: grid;
+  align-content: start;
+  gap: 6px;
 }
 
-.calendar-job {
+.calendar-job-pill {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  min-height: 76px;
-  padding: 12px;
+  gap: 2px;
+  min-height: 50px;
+  padding: 7px 8px;
+  border-left: 4px solid var(--green);
+  border-radius: 5px;
+  background: #f4f9f7;
+}
+
+.calendar-job-pill.amber {
+  border-left-color: var(--amber);
+  background: #fff7e9;
+}
+
+.calendar-job-pill.red {
+  border-left-color: var(--red);
+  background: #fff0ee;
+}
+
+.calendar-job-pill span,
+.calendar-job-pill small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.calendar-job-pill strong {
+  color: #071726;
+  font-size: 13px;
 }
 
 .availability-heatmap {
@@ -1993,7 +2039,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   display: block;
   min-height: 34px;
   border-radius: 6px;
-  background: var(--blue);
+  background: var(--red);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
@@ -2767,8 +2813,6 @@ body:not([data-access="admin"]) .admin-only-panel {
   .director-brief,
   .admin-layout,
   .equipment-row,
-  .calendar-grid,
-  .calendar-job,
   .stock-layout,
   .stock-form,
   .chat-layout,
@@ -2798,6 +2842,15 @@ body:not([data-access="admin"]) .admin-only-panel {
     bottom: auto !important;
     width: auto;
     margin: 10px;
+  }
+
+  .calendar-weekdays,
+  .calendar-month-grid {
+    min-width: 920px;
+  }
+
+  .wall-calendar {
+    overflow-x: auto;
   }
 
   .heatmap-row {

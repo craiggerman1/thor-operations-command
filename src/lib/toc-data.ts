@@ -233,30 +233,60 @@ export const unityAssets = [
   { asset: "Workshop Ute WKS-01", crew: "Workshop support", region: "Workshop", location: "Workshop", movement: "Available", lastSeen: "4 min ago", status: "green" as Status }
 ];
 
-export const locationJobs = [
-  { date: "Today", location: "Brisbane", site: "Primary Connect Larapinta", time: "18:00", job: "Trailer wash program", crew: "BNE mobile crew", status: "Scheduled", severity: "green" as Status },
-  { date: "Today", location: "Sydney", site: "Woolworths Minchinbury", time: "20:00", job: "Night wash bay coverage", crew: "SYD night crew", status: "Watch", severity: "amber" as Status },
-  { date: "Tomorrow", location: "Melbourne", site: "Woolworths Melbourne DC", time: "07:00", job: "Day shift wash run", crew: "MEL wash crew", status: "Scheduled", severity: "green" as Status },
-  { date: "Tomorrow", location: "Adelaide", site: "Primary Connect Adelaide", time: "15:00", job: "Rollover recovery washes", crew: "ADL mobile crew", status: "Needs staff", severity: "red" as Status },
-  { date: "Friday", location: "Workshop", site: "Workshop", time: "10:00", job: "Service and repair review", crew: "Workshop", status: "Scheduled", severity: "blue" as Status }
-];
-
-export const calendarDays = [
-  { day: "Mon", date: "27", location: "National", count: 8, severity: "green" as Status },
-  { day: "Tue", date: "28", location: "National", count: 11, severity: "green" as Status },
-  { day: "Wed", date: "29", location: "National", count: 14, severity: "amber" as Status },
-  { day: "Thu", date: "30", location: "National", count: 16, severity: "amber" as Status },
-  { day: "Fri", date: "1", location: "National", count: 18, severity: "red" as Status },
-  { day: "Sat", date: "2", location: "National", count: 9, severity: "green" as Status },
-  { day: "Sun", date: "3", location: "National", count: 6, severity: "blue" as Status }
+export const calendarWeeks = [
+  [
+    { date: "27", muted: true, jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", severity: "green" as Status }] },
+    { date: "28", muted: true, jobs: [{ time: "20:00", location: "Sydney", site: "Minchinbury", severity: "green" as Status }] },
+    { date: "29", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect Larapinta", severity: "green" as Status }, { time: "20:00", location: "Sydney", site: "Woolworths Minchinbury", severity: "amber" as Status }] },
+    { date: "30", today: true, jobs: [{ time: "07:00", location: "Melbourne", site: "Woolworths Melbourne DC", severity: "green" as Status }, { time: "15:00", location: "Adelaide", site: "Primary Connect Adelaide", severity: "red" as Status }] },
+    { date: "1", jobs: [{ time: "10:00", location: "Workshop", site: "Service review", severity: "amber" as Status }, { time: "19:00", location: "Perth", site: "Primary Connect Perth", severity: "green" as Status }] },
+    { date: "2", jobs: [{ time: "08:00", location: "Brisbane", site: "Weekend parked fleet", severity: "green" as Status }, { time: "21:00", location: "Sydney", site: "Weekend bay run", severity: "amber" as Status }] },
+    { date: "3", jobs: [{ time: "07:30", location: "Melbourne", site: "Parked fleet wash", severity: "green" as Status }, { time: "16:00", location: "Adelaide", site: "Recovery washes", severity: "red" as Status }] }
+  ],
+  [
+    { date: "4", jobs: [{ time: "06:00", location: "Canberra", site: "Fleet wash run", severity: "amber" as Status }] },
+    { date: "5", jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", severity: "green" as Status }] },
+    { date: "6", jobs: [{ time: "19:00", location: "Sydney", site: "Minchinbury", severity: "green" as Status }] },
+    { date: "7", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }, { time: "14:00", location: "Workshop", site: "Asset repairs", severity: "amber" as Status }] },
+    { date: "8", jobs: [{ time: "15:00", location: "Adelaide", site: "Primary Connect", severity: "amber" as Status }] },
+    { date: "9", jobs: [{ time: "08:00", location: "Perth", site: "Weekend fleet wash", severity: "green" as Status }] },
+    { date: "10", jobs: [{ time: "09:00", location: "National", site: "Weekend coverage", severity: "amber" as Status }] }
+  ],
+  [
+    { date: "11", jobs: [] },
+    { date: "12", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect", severity: "green" as Status }] },
+    { date: "13", jobs: [{ time: "20:00", location: "Sydney", site: "Night wash", severity: "green" as Status }] },
+    { date: "14", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }] },
+    { date: "15", jobs: [{ time: "15:00", location: "Adelaide", site: "Mobile run", severity: "amber" as Status }] },
+    { date: "16", jobs: [{ time: "08:00", location: "Brisbane", site: "Parked fleet wash", severity: "green" as Status }, { time: "11:00", location: "Workshop", site: "Machine checks", severity: "amber" as Status }] },
+    { date: "17", jobs: [{ time: "08:30", location: "Sydney", site: "Parked fleet wash", severity: "green" as Status }] }
+  ],
+  [
+    { date: "18", jobs: [{ time: "06:00", location: "Canberra", site: "Fleet wash", severity: "amber" as Status }] },
+    { date: "19", jobs: [{ time: "18:00", location: "Brisbane", site: "Larapinta", severity: "green" as Status }] },
+    { date: "20", jobs: [{ time: "20:00", location: "Sydney", site: "Minchinbury", severity: "green" as Status }] },
+    { date: "21", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }] },
+    { date: "22", jobs: [{ time: "15:00", location: "Adelaide", site: "Primary Connect", severity: "amber" as Status }] },
+    { date: "23", jobs: [{ time: "08:00", location: "Perth", site: "Weekend fleet wash", severity: "green" as Status }] },
+    { date: "24", jobs: [{ time: "09:00", location: "National", site: "Weekend parked fleets", severity: "green" as Status }] }
+  ],
+  [
+    { date: "25", jobs: [] },
+    { date: "26", jobs: [{ time: "18:00", location: "Brisbane", site: "Primary Connect", severity: "green" as Status }] },
+    { date: "27", jobs: [{ time: "20:00", location: "Sydney", site: "Night wash", severity: "green" as Status }] },
+    { date: "28", jobs: [{ time: "07:00", location: "Melbourne", site: "DC wash bay", severity: "green" as Status }] },
+    { date: "29", jobs: [{ time: "15:00", location: "Adelaide", site: "Mobile run", severity: "amber" as Status }] },
+    { date: "30", jobs: [{ time: "08:00", location: "Brisbane", site: "Weekend parked fleet", severity: "green" as Status }] },
+    { date: "31", jobs: [{ time: "08:30", location: "Sydney", site: "Weekend bay run", severity: "green" as Status }] }
+  ]
 ];
 
 export const staffHeatMap = [
-  { name: "Crew A", region: "Brisbane", availability: ["green", "green", "amber", "green", "red", "green", "blue"] as Status[] },
-  { name: "Crew B", region: "Sydney", availability: ["amber", "green", "green", "amber", "red", "blue", "blue"] as Status[] },
-  { name: "Crew C", region: "Melbourne", availability: ["green", "green", "green", "green", "amber", "blue", "blue"] as Status[] },
-  { name: "Crew D", region: "Adelaide", availability: ["red", "amber", "amber", "red", "green", "blue", "blue"] as Status[] },
-  { name: "Workshop", region: "Workshop", availability: ["green", "green", "green", "amber", "amber", "blue", "blue"] as Status[] }
+  { name: "Crew A", region: "Brisbane", availability: ["green", "green", "amber", "green", "red", "green", "green"] as Status[] },
+  { name: "Crew B", region: "Sydney", availability: ["amber", "green", "green", "amber", "red", "green", "amber"] as Status[] },
+  { name: "Crew C", region: "Melbourne", availability: ["green", "green", "green", "green", "amber", "green", "green"] as Status[] },
+  { name: "Crew D", region: "Adelaide", availability: ["red", "amber", "amber", "red", "green", "amber", "green"] as Status[] },
+  { name: "Workshop", region: "Workshop", availability: ["green", "green", "green", "amber", "amber", "green", "amber"] as Status[] }
 ];
 
 export const assets = [

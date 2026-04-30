@@ -28,7 +28,6 @@ export default function StaffAvailabilityPage() {
             <div className="brief-item"><span className="brief-dot" /><div><strong><Tag tone="green">Green</Tag> Available.</strong><small>Staff or crew can be considered available for the day.</small></div></div>
             <div className="brief-item"><span className="brief-dot" /><div><strong><Tag tone="amber">Amber</Tag> Limited.</strong><small>May be available but needs confirmation or has conditions.</small></div></div>
             <div className="brief-item"><span className="brief-dot" /><div><strong><Tag tone="red">Red</Tag> Not available.</strong><small>Do not plan coverage without direct manager follow-up.</small></div></div>
-            <div className="brief-item"><span className="brief-dot" /><div><strong><Tag tone="blue">Blue</Tag> Not required / unknown.</strong><small>Useful for weekends, no roster need, or incomplete sheet data.</small></div></div>
           </div>
         </Panel>
         <Panel eyebrow="Data source" title="Google Sheets connection">
