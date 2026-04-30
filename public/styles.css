@@ -3946,6 +3946,58 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-size: 20px;
 }
 
+.chat-target-panel {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(241, 246, 248, 0.72);
+}
+
+.chat-recipient-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 8px;
+}
+
+.chat-recipient-grid button {
+  min-height: 54px;
+  border: 1px solid rgba(201, 215, 225, 0.9);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.chat-recipient-grid button.selected {
+  border-color: rgba(37, 161, 189, 0.72);
+  background: linear-gradient(135deg, rgba(37, 161, 189, 0.14), rgba(255, 255, 255, 0.94));
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.chat-recipient-grid button:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.chat-recipient-grid strong,
+.chat-recipient-grid small {
+  display: block;
+}
+
+.chat-recipient-grid strong {
+  color: var(--blue);
+  font-size: 13px;
+}
+
+.chat-recipient-grid small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .chat-messages {
   display: grid;
   gap: 10px;
