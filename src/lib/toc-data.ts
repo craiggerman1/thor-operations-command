@@ -9,6 +9,8 @@ export type CalendarJob = {
   status: string;
   notes: string;
   severity: Status;
+  recurrence?: string;
+  recurrenceDetail?: string;
 };
 
 export type CalendarDay = {

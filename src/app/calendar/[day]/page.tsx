@@ -5,7 +5,13 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { Panel, Tag } from "@/components/TocCards";
-import { filterCalendarJobs, getCalendarDayBySlug } from "@/lib/calendar-utils";
+import {
+  filterCalendarJobs,
+  getCalendarDayBySlug,
+  getCalendarDayFromWeeks,
+  getStoredCalendarWeeks
+} from "@/lib/calendar-utils";
+import type { CalendarDay } from "@/lib/toc-data";
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -15,7 +21,8 @@ function getStoredScope() {
 
 export default function CalendarDayPage() {
   const params = useParams<{ day: string }>();
-  const day = getCalendarDayBySlug(params.day);
+  const fallbackDay = getCalendarDayBySlug(params.day);
+  const [day, setDay] = useState<CalendarDay | undefined>(fallbackDay);
   const [scope, setScope] = useState("National");
 
   useEffect(() => {
@@ -24,6 +31,7 @@ export default function CalendarDayPage() {
       setScope(nextScope);
     }
 
+    setDay(getCalendarDayFromWeeks(getStoredCalendarWeeks(), params.day) || fallbackDay);
     syncScope();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
@@ -31,7 +39,7 @@ export default function CalendarDayPage() {
       window.removeEventListener("storage", syncScope);
       window.removeEventListener("toc.scopechange", syncScope);
     };
-  }, []);
+  }, [fallbackDay, params.day]);
 
   if (!day) {
     return (
@@ -55,7 +63,7 @@ export default function CalendarDayPage() {
         <Panel wide eyebrow="Day schedule" title={`${scope} jobs`} pill={`${visibleJobs.length} visible jobs`}>
           <div className="calendar-day-actions">
             <Link className="calendar-back-link" href="/calendar">Back to calendar</Link>
-            <span>ABCD {day.week} runs Thursday to Wednesday.</span>
+            <span>{day.week} runs Thursday to Wednesday.</span>
           </div>
           <div className="calendar-detail-list">
             {visibleJobs.length ? visibleJobs.map((job, index) => (
@@ -77,6 +85,7 @@ export default function CalendarDayPage() {
                     <div><dt>Location</dt><dd>{job.location}</dd></div>
                     <div><dt>Site</dt><dd>{job.site}</dd></div>
                     <div><dt>Source</dt><dd>Portal schedule feed planned</dd></div>
+                    <div><dt>Recurring</dt><dd>{job.recurrence && job.recurrence !== "None" ? `${job.recurrence}${job.recurrenceDetail ? ` - ${job.recurrenceDetail}` : ""}` : "None"}</dd></div>
                   </dl>
                   <div className="calendar-detail-notes">
                     <strong>Manager notes</strong>
