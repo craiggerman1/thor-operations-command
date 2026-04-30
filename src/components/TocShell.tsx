@@ -14,6 +14,36 @@ type StoredSession = {
   scope?: string;
 };
 
+type WeatherState = {
+  location: string;
+  summary: string;
+  temp: string;
+  icon: "clear" | "cloud" | "rain" | "storm";
+  warning?: string;
+};
+
+const weatherByScope: Record<string, WeatherState> = {
+  National: { location: "National", summary: "Weather feed staging", temp: "--", icon: "cloud", warning: "BOM warning feed not connected yet" },
+  Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning feed pending" },
+  Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning feed pending" },
+  Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning feed pending" },
+  Adelaide: { location: "Adelaide", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning feed pending" },
+  Perth: { location: "Perth", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning feed pending" },
+  Canberra: { location: "Canberra", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning feed pending" },
+  Workshop: { location: "Workshop", summary: "Workshop weather view", temp: "--", icon: "cloud", warning: "Use assigned workshop location once configured" }
+};
+
+function getStoredScope() {
+  if (typeof window === "undefined") return "National";
+
+  try {
+    const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return storedSession?.scope || "National";
+  } catch {
+    return "National";
+  }
+}
+
 export function TocShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
@@ -91,7 +121,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.059</em>
+              <em>Build 0.060</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -124,11 +154,40 @@ export function TocShell({ children }: { children: ReactNode }) {
 }
 
 export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title: string; detail?: string }) {
+  const [scope, setScope] = useState("National");
+  const weather = weatherByScope[scope] || weatherByScope.National;
+
+  useEffect(() => {
+    function syncScope(event?: Event) {
+      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
+      setScope(nextScope);
+    }
+
+    syncScope();
+    window.addEventListener("storage", syncScope);
+    window.addEventListener("toc.scopechange", syncScope);
+    return () => {
+      window.removeEventListener("storage", syncScope);
+      window.removeEventListener("toc.scopechange", syncScope);
+    };
+  }, []);
+
   return (
     <section className="page-title">
-      {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
-      <h2>{title}</h2>
-      {detail ? <p>{detail}</p> : null}
+      <div className="page-title-copy">
+        {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+        <h2>{title}</h2>
+        {detail ? <p>{detail}</p> : null}
+      </div>
+      <aside className={`page-weather-card ${weather.warning ? "has-warning" : ""}`} aria-label={`${weather.location} weather`}>
+        <span className={`weather-logo ${weather.icon}`} aria-hidden="true" />
+        <div>
+          <span className="eyebrow">{weather.location} weather</span>
+          <strong>{weather.temp}</strong>
+          <small>{weather.summary}</small>
+          <em>{weather.warning || "No active warnings shown"}</em>
+        </div>
+      </aside>
     </section>
   );
 }
