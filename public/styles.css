@@ -619,7 +619,12 @@ body.todo-floating-disabled .workspace {
 .urgent-broadcast-stack {
   display: grid;
   gap: 10px;
+  margin-right: -360px;
   margin-bottom: 14px;
+}
+
+body.todo-floating-disabled .urgent-broadcast-stack {
+  margin-right: 0;
 }
 
 .urgent-broadcast-banner {
@@ -4212,6 +4217,10 @@ body:not([data-access="admin"]) .admin-only-panel {
     min-height: auto;
     margin-right: 0;
     padding: 16px;
+  }
+
+  .urgent-broadcast-stack {
+    margin-right: 0;
   }
 
   .topbar-actions {
