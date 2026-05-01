@@ -3732,8 +3732,8 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .productivity-chart-card {
   display: grid;
-  gap: 14px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .productivity-chart-head {
@@ -3750,60 +3750,55 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .productivity-line-chart {
-  min-height: 238px;
-  padding: 14px 14px 10px;
+  width: min(100%, 740px);
+  min-height: 0;
+  padding: 10px 12px 8px;
   border: 1px solid rgba(201, 215, 225, 0.72);
   border-radius: 6px;
-  background:
-    linear-gradient(rgba(10, 49, 82, 0.055) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(247, 250, 251, 0.92), rgba(238, 245, 248, 0.84));
-  background-size: 100% 25%;
+  background: #ffffff;
 }
 
 .productivity-line-chart svg {
   display: block;
   width: 100%;
-  min-height: 190px;
+  max-height: 300px;
   overflow: visible;
 }
 
 .chart-grid-line {
   fill: none;
-  stroke: rgba(10, 49, 82, 0.11);
+  stroke: rgba(10, 49, 82, 0.15);
   stroke-width: 1;
 }
 
-.productivity-trend-fill {
-  fill: rgba(37, 161, 189, 0.13);
-  stroke: none;
+.chart-axis-label,
+.chart-month-label {
+  fill: #6a7a89;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chart-axis-label {
+  text-anchor: end;
+}
+
+.chart-month-label {
+  text-anchor: middle;
 }
 
 .productivity-trend-line {
   fill: none;
-  stroke: var(--blue);
+  stroke: #4478c8;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 4;
-  filter: drop-shadow(0 8px 10px rgba(10, 49, 82, 0.18));
 }
 
 .productivity-trend-dot {
-  fill: #ffffff;
-  stroke: var(--teal);
-  stroke-width: 3;
-}
-
-.productivity-chart-months {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.productivity-chart-months strong {
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
+  fill: #4478c8;
+  stroke: #4478c8;
+  stroke-width: 2;
 }
 
 .productivity-detail-actions {

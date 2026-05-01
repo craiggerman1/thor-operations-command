@@ -64,11 +64,12 @@ export default function ProductivitySitePage() {
   const tone = getProductivityTone(score);
   const trend = getProductivityTrend(score);
   const chartPoints = trend.map((point, index) => {
-    const x = 24 + index * 50.4;
-    const y = 176 - point.indexScore * 1.45;
+    const x = 62 + index * 100;
+    const y = 220 - point.indexScore * 1.8;
     return { ...point, x, y };
   });
   const linePoints = chartPoints.map((point) => `${point.x},${point.y}`).join(" ");
+  const yAxisTicks = [100, 80, 60, 40, 20, 0];
 
   if (!isVisible) {
     return (
@@ -126,19 +127,24 @@ export default function ProductivitySitePage() {
               <Tag tone={getProductivityTagTone(tone)}>Trend view</Tag>
             </div>
             <div className="productivity-line-chart" aria-label="Six month productivity trend">
-              <svg viewBox="0 0 300 190" role="img" aria-hidden="true">
-                <path className="chart-grid-line" d="M18 35H284" />
-                <path className="chart-grid-line" d="M18 82H284" />
-                <path className="chart-grid-line" d="M18 129H284" />
-                <polyline className="productivity-trend-fill" points={`24,176 ${linePoints} 276,176`} />
+              <svg viewBox="0 0 620 275" role="img" aria-hidden="true">
+                {yAxisTicks.map((tick) => {
+                  const y = 220 - tick * 1.8;
+                  return (
+                    <g key={tick}>
+                      <text className="chart-axis-label" x="30" y={y + 4}>{tick}</text>
+                      <path className="chart-grid-line" d={`M50 ${y}H588`} />
+                    </g>
+                  );
+                })}
                 <polyline className="productivity-trend-line" points={linePoints} />
                 {chartPoints.map((point) => (
                   <circle className="productivity-trend-dot" cx={point.x} cy={point.y} r="4.2" key={point.month} />
                 ))}
+                {chartPoints.map((point) => (
+                  <text className="chart-month-label" x={point.x} y="252" key={`${point.month}-label`}>{point.month}</text>
+                ))}
               </svg>
-              <div className="productivity-chart-months">
-                {trend.map((point) => <strong key={point.month}>{point.month}</strong>)}
-              </div>
             </div>
           </div>
 
