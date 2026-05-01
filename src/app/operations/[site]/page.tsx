@@ -64,8 +64,8 @@ export default function ProductivitySitePage() {
   const tone = getProductivityTone(score);
   const trend = getProductivityTrend(score);
   const chartPoints = trend.map((point, index) => {
-    const x = 62 + index * 100;
-    const y = 220 - point.indexScore * 1.8;
+    const x = 76 + index * 118;
+    const y = 350 - point.indexScore * 3;
     return { ...point, x, y };
   });
   const linePoints = chartPoints.map((point) => `${point.x},${point.y}`).join(" ");
@@ -127,13 +127,13 @@ export default function ProductivitySitePage() {
               <Tag tone={getProductivityTagTone(tone)}>Trend view</Tag>
             </div>
             <div className="productivity-line-chart" aria-label="Six month productivity trend">
-              <svg viewBox="0 0 620 275" role="img" aria-hidden="true">
+              <svg viewBox="0 0 720 430" role="img" aria-hidden="true">
                 {yAxisTicks.map((tick) => {
-                  const y = 220 - tick * 1.8;
+                  const y = 350 - tick * 3;
                   return (
                     <g key={tick}>
-                      <text className="chart-axis-label" x="30" y={y + 4}>{tick}</text>
-                      <path className="chart-grid-line" d={`M50 ${y}H588`} />
+                      <text className="chart-axis-label" x="42" y={y + 4}>{tick}</text>
+                      <path className="chart-grid-line" d={`M60 ${y}H684`} />
                     </g>
                   );
                 })}
@@ -142,7 +142,7 @@ export default function ProductivitySitePage() {
                   <circle className="productivity-trend-dot" cx={point.x} cy={point.y} r="4.2" key={point.month} />
                 ))}
                 {chartPoints.map((point) => (
-                  <text className="chart-month-label" x={point.x} y="252" key={`${point.month}-label`}>{point.month}</text>
+                  <text className="chart-month-label" x={point.x} y="400" key={`${point.month}-label`}>{point.month}</text>
                 ))}
               </svg>
             </div>
