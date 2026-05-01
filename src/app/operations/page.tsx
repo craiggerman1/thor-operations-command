@@ -1,12 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { productivitySites } from "@/lib/toc-data";
+import {
+  getProductivityScore,
+  getProductivitySiteSlug,
+  getProductivityTagTone,
+  getProductivityText,
+  getProductivityTone
+} from "@/lib/productivity-utils";
 
-type ProductivityTone = "red" | "amber" | "yellow" | "light-green" | "green";
 type ProductivityResponse = {
   response: string;
   updatedAt: string;
@@ -46,34 +53,6 @@ function getProductivityResponses() {
   } catch {
     return {};
   }
-}
-
-function getProductivityTone(score: number): ProductivityTone {
-  if (score < 40) return "red";
-  if (score < 50) return "amber";
-  if (score < 70) return "yellow";
-  if (score < 80) return "light-green";
-  return "green";
-}
-
-function getProductivityText(score: number) {
-  if (score < 40) return "Critical productivity issue";
-  if (score < 50) return "Productivity action required";
-  if (score < 70) return "Efficiency needs refinement";
-  if (score < 80) return "Near healthy productivity";
-  return "Healthy productivity";
-}
-
-function getProductivityScore(site: { grossMargin?: number; wageCost?: number }) {
-  if (typeof site.grossMargin === "number") return site.grossMargin;
-  if (typeof site.wageCost === "number") return Math.max(0, 100 - site.wageCost);
-  return 0;
-}
-
-function getProductivityTagTone(tone: ProductivityTone) {
-  if (tone === "red") return "red";
-  if (tone === "green") return "green";
-  return "amber";
 }
 
 export default function OperationsPage() {
@@ -144,12 +123,12 @@ export default function OperationsPage() {
                 <article className={`productivity-site-card ${tone}`} key={`${site.region}-${site.site}`}>
                   <div>
                     <span className="eyebrow">{site.region}</span>
-                    <strong>{site.site}</strong>
+                    <Link className="productivity-site-link" href={`/operations/${getProductivitySiteSlug(site.site)}`}>{site.site}</Link>
                     <small>{getProductivityText(score)} - {site.queue}</small>
                   </div>
                   <div className={`productivity-bar ${tone}`}><span style={{ "--value": `${score}%` } as CSSProperties} /></div>
                   <div className="productivity-site-footer">
-                    <div className="meta-row"><Tag tone={getProductivityTagTone(tone)}>{score}% productivity</Tag><Tag>{site.units} units</Tag><Tag>{site.labourHours} labour hrs</Tag></div>
+                    <div className="meta-row"><Tag tone={getProductivityTagTone(tone)}>{score}% productivity</Tag><Tag>{site.units} units</Tag><Tag>{site.labourHours} labour hrs</Tag><Tag>Open detail</Tag></div>
                   </div>
                   {score < 80 ? (
                     <label className="productivity-response">

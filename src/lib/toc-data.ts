@@ -227,14 +227,14 @@ export const washes = [
 ];
 
 export const productivitySites = [
-  { site: "Primary Connect Larapinta", region: "Brisbane", grossMargin: 84, wageCost: 16, queue: "Fleetio exception follow-up", action: "Refine data discipline and clear wash type mismatches.", units: 82, labourHours: 18 },
-  { site: "Weekend parked fleet", region: "Brisbane", grossMargin: 76, wageCost: 24, queue: "Weekend output watch", action: "Confirm crew mix before parked fleet volume peaks.", units: 64, labourHours: 16 },
-  { site: "Woolworths Minchinbury", region: "Sydney", grossMargin: 68, wageCost: 32, queue: "Rollover pressure", action: "Review night bay pace and reduce rollover into next shift.", units: 76, labourHours: 20 },
-  { site: "Woolworths Melbourne DC", region: "Melbourne", grossMargin: 81, wageCost: 19, queue: "Healthy", action: "Maintain current output and approve any delayed jobsheets.", units: 79, labourHours: 17 },
-  { site: "Primary Connect Adelaide", region: "Adelaide", grossMargin: 46, wageCost: 54, queue: "Staffing action", action: "Fix crew coverage gap before the next wash window.", units: 62, labourHours: 19 },
-  { site: "Primary Connect Perth", region: "Perth", grossMargin: 73, wageCost: 27, queue: "Stock watch", action: "Confirm chemical stock before weekend operations.", units: 71, labourHours: 18 },
-  { site: "Canberra fleet wash run", region: "Canberra", grossMargin: 88, wageCost: 12, queue: "Healthy", action: "Keep site readiness and GPS checks current.", units: 58, labourHours: 11 },
-  { site: "Workshop productivity", region: "Workshop", grossMargin: 64, wageCost: 36, queue: "Parts queue", action: "Clear parts availability items before service work stacks up.", units: 7, labourHours: 9 }
+  { site: "Primary Connect Larapinta", region: "Brisbane", productivityScore: 84, queue: "Fleetio exception follow-up", action: "Refine data discipline and clear wash type mismatches.", units: 82, labourHours: 18 },
+  { site: "Weekend parked fleet", region: "Brisbane", productivityScore: 76, queue: "Weekend output watch", action: "Confirm crew mix before parked fleet volume peaks.", units: 64, labourHours: 16 },
+  { site: "Woolworths Minchinbury", region: "Sydney", productivityScore: 68, queue: "Rollover pressure", action: "Review night bay pace and reduce rollover into next shift.", units: 76, labourHours: 20 },
+  { site: "Woolworths Melbourne DC", region: "Melbourne", productivityScore: 81, queue: "Healthy", action: "Maintain current output and approve any delayed jobsheets.", units: 79, labourHours: 17 },
+  { site: "Primary Connect Adelaide", region: "Adelaide", productivityScore: 46, queue: "Staffing action", action: "Fix crew coverage gap before the next wash window.", units: 62, labourHours: 19 },
+  { site: "Primary Connect Perth", region: "Perth", productivityScore: 73, queue: "Stock watch", action: "Confirm chemical stock before weekend operations.", units: 71, labourHours: 18 },
+  { site: "Canberra fleet wash run", region: "Canberra", productivityScore: 88, queue: "Healthy", action: "Keep site readiness and GPS checks current.", units: 58, labourHours: 11 },
+  { site: "Workshop productivity", region: "Workshop", productivityScore: 64, queue: "Parts queue", action: "Clear parts availability items before service work stacks up.", units: 7, labourHours: 9 }
 ];
 
 export const serviceSchedule = [
