@@ -1,4 +1,4 @@
-export type AccessRole = "admin" | "director" | "manager" | "workshop";
+export type AccessRole = "admin" | "director" | "manager";
 
 export type NavItem = {
   label: string;
@@ -11,27 +11,29 @@ export type SessionProfile = {
   label: string;
   scopeLabel: string;
   regions: string[];
+  responsibilities: string[];
   summary: string;
 };
 
 export const allRegions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
+export const assignableRegions = allRegions.filter((region) => region !== "National");
 
 export const navigationItems: NavItem[] = [
-  { label: "Home", href: "/home", roles: ["admin", "director", "manager", "workshop"] },
-  { label: "Action Centre", href: "/actions", roles: ["admin", "manager", "workshop"] },
+  { label: "Home", href: "/home", roles: ["admin", "director", "manager"] },
+  { label: "Action Centre", href: "/actions", roles: ["admin", "manager"] },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
-  { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager", "workshop"] },
-  { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager", "workshop"] },
-  { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager", "workshop"] },
-  { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager", "workshop"] },
-  { label: "Calendar", href: "/calendar", roles: ["admin", "director", "manager", "workshop"] },
-  { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager", "workshop"] },
-  { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager", "workshop"] },
-  { label: "Chat", href: "/chat", roles: ["admin", "manager", "workshop"] },
+  { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
+  { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager"] },
+  { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },
+  { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager"] },
+  { label: "Calendar", href: "/calendar", roles: ["admin", "director", "manager"] },
+  { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager"] },
+  { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager"] },
+  { label: "Chat", href: "/chat", roles: ["admin", "manager"] },
   { label: "Director", href: "/director", roles: ["admin", "director"] },
   { label: "Admin Settings", href: "/admin", roles: ["admin"] },
   { label: "Jobsheets", href: "/jobsheets", roles: ["admin", "manager"] },
-  { label: "To Do", href: "/todo", roles: ["admin", "director", "manager", "workshop"] }
+  { label: "To Do", href: "/todo", roles: ["admin", "director", "manager"] }
 ];
 
 export const sessionProfiles: Record<AccessRole, SessionProfile> = {
@@ -40,28 +42,24 @@ export const sessionProfiles: Record<AccessRole, SessionProfile> = {
     label: "Admin",
     scopeLabel: "National control",
     regions: allRegions,
-    summary: "Full national overview, user access, permissions, all regions and integration setup."
+    responsibilities: ["National command", "Admin Settings", "User access", "All region visibility", "Optional assigned region management"],
+    summary: "Full national scope, view and control. Admin can manage settings, assign users to one or multiple regions, and also hold normal manager responsibilities."
   },
   director: {
     role: "director",
     label: "Director",
     scopeLabel: "Owner overview",
     regions: ["National"],
-    summary: "High-level business health, efficiency, compliance and productivity without operational noise."
+    responsibilities: ["Owner dashboard", "Business health", "Efficiency", "Compliance", "Productivity", "Director messages"],
+    summary: "Owner view of business health, efficiency, compliance and productivity, with ability to issue A Message From The Director."
   },
   manager: {
     role: "manager",
     label: "Manager",
     scopeLabel: "Assigned region",
-    regions: ["Brisbane"],
-    summary: "Regional action centre, health, compliance, stock, productivity, tracking, calendar, servicing and jobsheet visibility."
-  },
-  workshop: {
-    role: "workshop",
-    label: "Workshop",
-    scopeLabel: "Workshop BU",
-    regions: ["Workshop"],
-    summary: "Workshop actions, compliance, parts, stock, tracking, staff availability, equipment servicing, asset readiness and team communication."
+    regions: ["Brisbane", "Workshop"],
+    responsibilities: ["Assigned region actions", "Compliance", "Stock orders", "Productivity", "Calendar", "Equipment servicing", "Chat"],
+    summary: "Manager view is limited to the region or regions assigned by Admin. Multiple regions can be assigned, including Workshop responsibility."
   }
 };
 

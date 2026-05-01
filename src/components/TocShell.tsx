@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
 import { TodoManager } from "@/components/TodoManager";
-import { UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
+import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
 
 type StoredSession = {
   role?: AccessRole;
@@ -148,6 +148,7 @@ export function TocShell({ children }: { children: ReactNode }) {
 
       <main className="workspace">
         <UrgentBroadcastBanner />
+        <DirectorBroadcastBanner />
         <header className="topbar">
           <div className="title-block">
             <span className="eyebrow">Thor Mobile Truck Wash</span>
@@ -159,7 +160,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.109</em>
+              <em>Build 0.110</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>

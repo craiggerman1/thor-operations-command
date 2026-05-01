@@ -679,6 +679,55 @@ body.todo-floating-disabled .urgent-broadcast-stack {
   font-weight: 900;
 }
 
+.director-broadcast-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-right: -360px;
+  margin-bottom: 14px;
+  padding: 15px 18px;
+  border: 2px solid rgba(255, 194, 96, 0.92);
+  border-left: 12px solid #ffb13b;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f28a16, #b95d08);
+  color: #ffffff;
+  box-shadow: 0 18px 46px rgba(185, 93, 8, 0.28);
+  animation: directorBroadcastPulse 1.05s ease-in-out infinite;
+}
+
+body.todo-floating-disabled .director-broadcast-banner {
+  margin-right: 0;
+}
+
+.director-broadcast-banner span,
+.director-broadcast-banner strong {
+  display: block;
+}
+
+.director-broadcast-banner span {
+  color: #fff2d8;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.director-broadcast-banner strong {
+  margin-top: 3px;
+  font-size: 19px;
+}
+
+.director-broadcast-banner button {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 6px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #9b4e05;
+  cursor: pointer;
+  font-weight: 900;
+}
+
 .topbar {
   position: relative;
   display: flex;
@@ -1109,6 +1158,19 @@ body.todo-floating-disabled .topbar {
   50% {
     transform: translateY(-1px);
     box-shadow: 0 0 0 6px rgba(255, 214, 211, 0.45), 0 22px 48px rgba(191, 62, 57, 0.62);
+  }
+}
+
+@keyframes directorBroadcastPulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 2px rgba(255, 194, 96, 0.35), 0 18px 46px rgba(185, 93, 8, 0.28);
+  }
+
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 7px rgba(255, 194, 96, 0.52), 0 24px 58px rgba(185, 93, 8, 0.58);
   }
 }
 
@@ -1595,19 +1657,22 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
-.urgent-broadcast-controls label {
+.urgent-broadcast-controls label,
+.director-broadcast-controls label {
   display: grid;
   gap: 6px;
 }
 
-.urgent-broadcast-controls label span {
+.urgent-broadcast-controls label span,
+.director-broadcast-controls label span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.urgent-broadcast-controls textarea {
+.urgent-broadcast-controls textarea,
+.director-broadcast-controls textarea {
   min-height: 76px;
 }
 
@@ -2446,6 +2511,77 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .admin-user-card small {
   color: var(--muted);
+}
+
+.access-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.access-rule-card {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid var(--teal);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.access-rule-card strong {
+  color: var(--blue);
+  font-size: 17px;
+}
+
+.access-rule-card small {
+  color: var(--green);
+  font-weight: 900;
+}
+
+.access-rule-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.38;
+}
+
+.permission-matrix {
+  display: grid;
+  gap: 8px;
+}
+
+.permission-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) repeat(3, minmax(150px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+.permission-row > * {
+  min-height: 42px;
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.78);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.permission-row.header > * {
+  background: var(--nav);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.director-broadcast-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.director-message-card.active {
+  border-left-color: var(--amber);
 }
 
 .queue-card,
@@ -4715,6 +4851,12 @@ body:not([data-access="admin"]) .admin-only-panel {
     margin-right: 0;
   }
 
+  .director-broadcast-banner {
+    align-items: stretch;
+    flex-direction: column;
+    margin-right: 0;
+  }
+
   .topbar-actions {
     width: 100%;
     max-width: none;
@@ -4760,6 +4902,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   .page-title,
   .status-strip,
   .role-blueprint-grid,
+  .access-rule-grid,
   .signal-command-grid,
   .go-live-pathway,
   .command-grid,
@@ -4806,6 +4949,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   .admin-hint-controls {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .permission-row {
+    grid-template-columns: 1fr;
   }
 
   .wide-panel {

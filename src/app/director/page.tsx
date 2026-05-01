@@ -1,5 +1,6 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 
 export default function DirectorPage() {
   return (
@@ -21,6 +22,9 @@ export default function DirectorPage() {
               <div className="director-brief-item"><span className="brief-dot" /><strong><Tag tone="amber">Watch</Tag> Compliance needs attention this week.</strong></div>
             </div>
           </div>
+        </Panel>
+        <Panel wide eyebrow="Director message" title="A Message From The Director" pill="All users">
+          <DirectorBroadcastControls />
         </Panel>
       </section>
     </TocShell>

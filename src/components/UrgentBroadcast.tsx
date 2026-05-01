@@ -11,8 +11,16 @@ type UrgentBroadcastMessage = {
   targetScope: string;
 };
 
+type DirectorBroadcastMessage = {
+  message: string;
+  version: string;
+  active: boolean;
+};
+
 const broadcastKey = "toc.urgentBroadcast";
 const acknowledgedKey = "toc.urgentBroadcastAcknowledged";
+const directorBroadcastKey = "toc.directorBroadcast";
+const directorAcknowledgedKey = "toc.directorBroadcastAcknowledged";
 
 function createId() {
   return `urgent-${Date.now()}-${Math.round(Math.random() * 100000)}`;
@@ -80,6 +88,21 @@ function readSessionScope() {
 function writeBroadcasts(nextBroadcasts: UrgentBroadcastMessage[]) {
   localStorage.setItem(broadcastKey, JSON.stringify(nextBroadcasts));
   window.dispatchEvent(new Event("toc.urgentBroadcast.updated"));
+}
+
+function readDirectorBroadcast() {
+  if (typeof window === "undefined") return null as DirectorBroadcastMessage | null;
+
+  try {
+    return JSON.parse(localStorage.getItem(directorBroadcastKey) || "null") as DirectorBroadcastMessage | null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDirectorBroadcast(nextBroadcast: DirectorBroadcastMessage) {
+  localStorage.setItem(directorBroadcastKey, JSON.stringify(nextBroadcast));
+  window.dispatchEvent(new Event("toc.directorBroadcast.updated"));
 }
 
 export function UrgentBroadcastBanner() {
@@ -284,6 +307,122 @@ export function UrgentBroadcastControls() {
           </article>
         ))}
       </div>
+      {status ? <small>{status}</small> : null}
+    </div>
+  );
+}
+
+export function DirectorBroadcastBanner() {
+  const [broadcast, setBroadcast] = useState<DirectorBroadcastMessage | null>(null);
+  const [acknowledgedVersion, setAcknowledgedVersion] = useState("");
+
+  useEffect(() => {
+    function syncBroadcast() {
+      setBroadcast(readDirectorBroadcast());
+      setAcknowledgedVersion(localStorage.getItem(directorAcknowledgedKey) || "");
+    }
+
+    syncBroadcast();
+    window.addEventListener("storage", syncBroadcast);
+    window.addEventListener("toc.directorBroadcast.updated", syncBroadcast);
+    return () => {
+      window.removeEventListener("storage", syncBroadcast);
+      window.removeEventListener("toc.directorBroadcast.updated", syncBroadcast);
+    };
+  }, []);
+
+  if (!broadcast?.active || !broadcast.message.trim() || acknowledgedVersion === broadcast.version) return null;
+
+  function acknowledgeDirectorMessage() {
+    if (!broadcast) return;
+    localStorage.setItem(directorAcknowledgedKey, broadcast.version);
+    setAcknowledgedVersion(broadcast.version);
+  }
+
+  return (
+    <section className="director-broadcast-banner" role="alert">
+      <div>
+        <span>A Message From The Director</span>
+        <strong>{broadcast.message}</strong>
+      </div>
+      <button type="button" onClick={acknowledgeDirectorMessage}>Acknowledge</button>
+    </section>
+  );
+}
+
+export function DirectorBroadcastControls() {
+  const [message, setMessage] = useState("");
+  const [broadcast, setBroadcast] = useState<DirectorBroadcastMessage | null>(null);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    function syncBroadcast() {
+      const current = readDirectorBroadcast();
+      setBroadcast(current);
+      setMessage(current?.message || "");
+    }
+
+    syncBroadcast();
+    window.addEventListener("storage", syncBroadcast);
+    window.addEventListener("toc.directorBroadcast.updated", syncBroadcast);
+    return () => {
+      window.removeEventListener("storage", syncBroadcast);
+      window.removeEventListener("toc.directorBroadcast.updated", syncBroadcast);
+    };
+  }, []);
+
+  function deployDirectorMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const cleanMessage = message.trim();
+    if (!cleanMessage) return;
+
+    const nextBroadcast = {
+      message: cleanMessage,
+      version: Date.now().toString(),
+      active: true
+    };
+    writeDirectorBroadcast(nextBroadcast);
+    setBroadcast(nextBroadcast);
+    setStatus("Director message deployed to all users.");
+  }
+
+  function disableDirectorMessage() {
+    if (!broadcast) return;
+    const nextBroadcast = { ...broadcast, active: false };
+    writeDirectorBroadcast(nextBroadcast);
+    setBroadcast(nextBroadcast);
+    setStatus("Director message disabled.");
+  }
+
+  function redeployDirectorMessage() {
+    if (!broadcast?.message.trim()) return;
+    const nextBroadcast = { ...broadcast, version: Date.now().toString(), active: true };
+    writeDirectorBroadcast(nextBroadcast);
+    setBroadcast(nextBroadcast);
+    setStatus("Director message redeployed to all users.");
+  }
+
+  return (
+    <div className="director-broadcast-controls">
+      <form className="urgent-broadcast-form" onSubmit={deployDirectorMessage}>
+        <label>
+          <span>A Message From The Director</span>
+          <textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Enter Director message for all TOC users" />
+        </label>
+        <div className="urgent-broadcast-actions">
+          <button type="submit">Deploy Director Message</button>
+          <button type="button" className="secondary-button" onClick={redeployDirectorMessage}>Redeploy</button>
+          <button type="button" className="danger-button" onClick={disableDirectorMessage}>Disable</button>
+        </div>
+      </form>
+      {broadcast ? (
+        <article className={`urgent-broadcast-admin-card director-message-card ${broadcast.active ? "active" : ""}`}>
+          <div>
+            <strong>{broadcast.message}</strong>
+            <small>{broadcast.active ? "Active Director message" : "Director message disabled"}</small>
+          </div>
+        </article>
+      ) : null}
       {status ? <small>{status}</small> : null}
     </div>
   );
