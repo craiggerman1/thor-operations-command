@@ -113,6 +113,17 @@ export default function ChatPage() {
     return recipients.map((recipient) => recipient.label).join(", ");
   }, [mode, selectedRecipients]);
 
+  const selectedManagerLabels = useMemo(() => {
+    if (mode === "group") return managerRecipients.map((manager) => manager.label);
+    return managerRecipients.filter((manager) => selectedRecipients.includes(manager.id)).map((manager) => manager.label);
+  }, [mode, selectedRecipients]);
+
+  const modeSummary = mode === "group"
+    ? "Visible management group chat for all configured managers."
+    : mode === "direct"
+      ? "One-to-one manager message thread."
+      : "Target a selected group of managers without sending site-wide.";
+
   function selectMode(nextMode: ChatMode) {
     setMode(nextMode);
     if (nextMode === "group") {
@@ -171,29 +182,41 @@ export default function ChatPage() {
       <PageIntro title="Chat" detail="Ensure healthy communication between management." />
       <FlowHeading eyebrow="Chat" title="Keep manager communication clear, useful and tied to operational decisions." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Internal comms" title="Manager chat" pill="Database planned">
+        <Panel wide eyebrow="Internal comms" title="Manager communications" pill="Database planned">
           <div className="chat-layout">
             <aside className="chat-channels" aria-label="Chat targeting">
+              <div className="chat-sidebar-head">
+                <span className="eyebrow">Conversation type</span>
+                <strong>Route message</strong>
+              </div>
               <button className={mode === "group" ? "active" : ""} type="button" onClick={() => selectMode("group")}>
-                System-wide group <span>All</span>
+                <span><strong>System-wide group</strong><small>All visible managers</small></span><em>All</em>
               </button>
               <button className={mode === "direct" ? "active" : ""} type="button" onClick={() => selectMode("direct")}>
-                Direct message <span>1</span>
+                <span><strong>Direct message</strong><small>Single manager thread</small></span><em>1</em>
               </button>
               <button className={mode === "multi" ? "active" : ""} type="button" onClick={() => selectMode("multi")}>
-                Multi-manager <span>{selectedRecipients.length}</span>
+                <span><strong>Multi-manager</strong><small>Selected managers only</small></span><em>{selectedRecipients.length}</em>
               </button>
+              <div className="chat-channel-note">
+                <strong>Comms staging</strong>
+                <small>Messages save in this browser until database-backed chat is connected.</small>
+              </div>
             </aside>
             <div className="chat-room">
               <div className="chat-room-head">
                 <div>
                   <span className="eyebrow">{mode === "group" ? "Visible group chat" : "Targeted message"}</span>
                   <strong>{audienceLabel}</strong>
+                  <small>{modeSummary}</small>
                 </div>
                 <Tag>{mode === "group" ? "All visible" : "Targeted"}</Tag>
               </div>
               <div className="chat-target-panel">
-                <span className="eyebrow">Recipients</span>
+                <div className="chat-target-head">
+                  <span className="eyebrow">Recipients</span>
+                  <small>{selectedManagerLabels.length} selected</small>
+                </div>
                 <div className="chat-recipient-grid">
                   {managerRecipients.map((manager) => (
                     <button
@@ -212,8 +235,11 @@ export default function ChatPage() {
               <div className="chat-messages">
                 {visibleMessages.map((message) => (
                   <article key={message.id} className={`chat-message ${message.own ? "own" : ""}`}>
-                    <div><strong>{message.author}</strong><span>{message.audience} - {message.time}</span></div>
+                    <span className="chat-avatar" aria-hidden="true">{message.author.slice(0, 1)}</span>
+                    <div className="chat-bubble">
+                      <div><strong>{message.author}</strong><span>{message.audience} - {message.time}</span></div>
                     <p>{message.text}</p>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -222,6 +248,21 @@ export default function ChatPage() {
                 <button type="submit">Send</button>
               </form>
             </div>
+            <aside className="chat-context-panel" aria-label="Conversation context">
+              <div>
+                <span className="eyebrow">Active thread</span>
+                <strong>{audienceLabel}</strong>
+                <small>{modeSummary}</small>
+              </div>
+              <div className="chat-context-list">
+                {selectedManagerLabels.slice(0, 6).map((label) => <span key={label}>{label}</span>)}
+                {selectedManagerLabels.length > 6 ? <span>+{selectedManagerLabels.length - 6} more</span> : null}
+              </div>
+              <div className="chat-context-footer">
+                <strong>Future live state</strong>
+                <small>Database chat will add read receipts, user identity, attachments and searchable history.</small>
+              </div>
+            </aside>
           </div>
         </Panel>
       </section>
