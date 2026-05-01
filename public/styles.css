@@ -4361,6 +4361,141 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-top: 1px solid rgba(201, 215, 225, 0.72);
 }
 
+.manager-meetings {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(10, 49, 82, 0.08), rgba(37, 161, 189, 0.05)),
+    rgba(255, 255, 255, 0.86);
+}
+
+.manager-meetings-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.manager-meetings-head strong,
+.meeting-note-form strong,
+.manager-meeting-card strong {
+  display: block;
+  color: var(--blue);
+}
+
+.manager-meetings-head strong {
+  font-size: 20px;
+}
+
+.manager-meetings-head small,
+.manager-meeting-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.meeting-action-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.meeting-action-strip button {
+  min-height: 68px;
+  padding: 12px;
+  border: 1px solid rgba(10, 49, 82, 0.16);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--blue);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 4px 0 0 var(--teal);
+}
+
+.meeting-action-strip button:hover {
+  border-color: rgba(37, 161, 189, 0.5);
+  background: #f3fbfd;
+}
+
+.meeting-action-strip strong,
+.meeting-action-strip small {
+  display: block;
+}
+
+.meeting-action-strip small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.manager-meeting-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manager-meeting-card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(201, 215, 225, 0.9);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.manager-meeting-card p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.42;
+}
+
+.meeting-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(201, 215, 225, 0.72);
+}
+
+.meeting-card-footer span {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(31, 143, 95, 0.12);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.meeting-card-footer button,
+.meeting-note-form button {
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 12px;
+  background: var(--nav);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.meeting-note-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.36fr) minmax(260px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(201, 215, 225, 0.78);
+}
+
+.meeting-note-form input {
+  width: 100%;
+}
+
 .chat-form button:disabled,
 .chat-form input:disabled {
   cursor: not-allowed;
@@ -4688,10 +4823,19 @@ body:not([data-access="admin"]) .admin-only-panel {
   .stock-layout,
   .stock-form,
   .chat-layout,
+  .meeting-action-strip,
+  .manager-meeting-grid,
+  .meeting-note-form,
   .rollover-grid,
   .availability-grid,
   .rollover-card {
     grid-template-columns: 1fr;
+  }
+
+  .manager-meetings-head,
+  .meeting-card-footer {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .chat-message {

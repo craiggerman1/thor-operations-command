@@ -24,6 +24,16 @@ type ChatMessage = {
   own?: boolean;
 };
 
+type ManagerMeeting = {
+  id: string;
+  title: string;
+  audience: string;
+  time: string;
+  purpose: string;
+  status: "Ready" | "Staged" | "Planned";
+  link: string;
+};
+
 const managerRecipients: ManagerRecipient[] = allRegions
   .filter((region) => region !== "National")
   .map((region) => ({
@@ -63,6 +73,36 @@ const initialMessages: ChatMessage[] = [
   }
 ];
 
+const managerMeetings: ManagerMeeting[] = [
+  {
+    id: "national-ops",
+    title: "National Ops Standup",
+    audience: "All managers",
+    time: "Today 14:30",
+    purpose: "Daily risk, blockers, region health and urgent action review.",
+    status: "Staged",
+    link: "https://teams.microsoft.com/"
+  },
+  {
+    id: "region-escalation",
+    title: "Region Escalation Room",
+    audience: "Selected managers",
+    time: "On demand",
+    purpose: "Open a focused meeting when an action item needs a quick decision.",
+    status: "Ready",
+    link: "https://teams.microsoft.com/"
+  },
+  {
+    id: "weekly-productivity",
+    title: "Productivity Review",
+    audience: "National + region managers",
+    time: "Weekly",
+    purpose: "Review site scores, manager responses and improvement actions.",
+    status: "Planned",
+    link: "https://teams.microsoft.com/"
+  }
+];
+
 function getStoredMessages() {
   if (typeof window === "undefined") return initialMessages;
 
@@ -85,6 +125,7 @@ export default function ChatPage() {
   const [mode, setMode] = useState<ChatMode>("group");
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>(managerRecipients.map((manager) => manager.id));
   const [draft, setDraft] = useState("");
+  const [meetingNote, setMeetingNote] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
 
   useEffect(() => {
@@ -177,6 +218,31 @@ export default function ChatPage() {
     setDraft("");
   }
 
+  function openMeeting(meeting: ManagerMeeting) {
+    window.open(meeting.link, "_blank", "noopener,noreferrer");
+  }
+
+  function addMeetingNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const text = meetingNote.trim();
+    if (!text) return;
+
+    setMessages((current) => [
+      ...current,
+      {
+        id: Date.now(),
+        mode: "group",
+        author: "Admin User",
+        audience: "System-wide group chat",
+        recipients: managerRecipients.map((manager) => manager.id),
+        text: `Meeting note: ${text}`,
+        time: getNowTime(),
+        own: true
+      }
+    ]);
+    setMeetingNote("");
+  }
+
   return (
     <TocShell>
       <PageIntro title="Chat" detail="Ensure healthy communication between management." />
@@ -263,6 +329,58 @@ export default function ChatPage() {
                 <small>Database chat will add read receipts, user identity, attachments and searchable history.</small>
               </div>
             </aside>
+          </div>
+          <div className="manager-meetings">
+            <div className="manager-meetings-head">
+              <div>
+                <span className="eyebrow">Teams meetings</span>
+                <strong>Manager meeting hub</strong>
+                <small>Launch scheduled or on-demand manager meetings from TOC. Microsoft Graph integration is staged for live meeting creation later.</small>
+              </div>
+              <Tag>Teams staging</Tag>
+            </div>
+            <div className="meeting-action-strip">
+              <button type="button" onClick={() => openMeeting(managerMeetings[0])}>
+                <strong>Start National Ops Meeting</strong>
+                <small>All managers</small>
+              </button>
+              <button type="button" onClick={() => selectMode("multi")}>
+                <strong>Select Managers</strong>
+                <small>Prepare targeted meeting</small>
+              </button>
+              <button type="button" onClick={() => selectMode("group")}>
+                <strong>Post Meeting Note</strong>
+                <small>Send note to group chat</small>
+              </button>
+            </div>
+            <div className="manager-meeting-grid">
+              {managerMeetings.map((meeting) => (
+                <article key={meeting.id} className="manager-meeting-card">
+                  <div>
+                    <span className="eyebrow">{meeting.time}</span>
+                    <strong>{meeting.title}</strong>
+                    <small>{meeting.audience}</small>
+                  </div>
+                  <p>{meeting.purpose}</p>
+                  <div className="meeting-card-footer">
+                    <span>{meeting.status}</span>
+                    <button type="button" onClick={() => openMeeting(meeting)}>Open Teams</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <form className="meeting-note-form" onSubmit={addMeetingNote}>
+              <div>
+                <span className="eyebrow">Meeting actions</span>
+                <strong>Capture meeting note or action</strong>
+              </div>
+              <input
+                value={meetingNote}
+                placeholder="Example: Sydney to confirm weekend crew coverage before 3pm"
+                onChange={(event) => setMeetingNote(event.target.value)}
+              />
+              <button type="submit">Post to Chat</button>
+            </form>
           </div>
         </Panel>
       </section>
