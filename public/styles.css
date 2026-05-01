@@ -4178,9 +4178,9 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .chat-recipient-grid button.selected {
-  border-color: rgba(37, 161, 189, 0.72);
-  background: linear-gradient(135deg, rgba(37, 161, 189, 0.14), rgba(255, 255, 255, 0.94));
-  box-shadow: inset 3px 0 0 var(--teal);
+  border-color: rgba(31, 143, 95, 0.82);
+  background: linear-gradient(135deg, rgba(31, 143, 95, 0.2), rgba(246, 255, 250, 0.96));
+  box-shadow: inset 4px 0 0 var(--green), 0 0 0 1px rgba(31, 143, 95, 0.1);
 }
 
 .chat-recipient-grid button:disabled {
