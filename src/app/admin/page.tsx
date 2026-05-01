@@ -1,7 +1,7 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
-import { UrgentBroadcastControls } from "@/components/UrgentBroadcast";
+import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { adminUsers, approvedStockItems, compliance } from "@/lib/toc-data";
 import { assignableRegions, navigationItems, sessionProfiles } from "@/lib/access";
 
@@ -42,6 +42,9 @@ export default function AdminPage() {
         </Panel>
         <Panel wide eyebrow="Urgent broadcast" title="All-user alert banner" pill="Admin only">
           <UrgentBroadcastControls />
+        </Panel>
+        <Panel wide eyebrow="Director broadcast" title="Director message control" pill="Admin can disable">
+          <DirectorBroadcastControls />
         </Panel>
         <Panel wide eyebrow="Compliance setup" title="Admin-set compliance items" pill={`${compliance.length} active`}>
           <div className="admin-config-list">
@@ -94,7 +97,7 @@ export default function AdminPage() {
             </div>
           </div>
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.111">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.112">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);

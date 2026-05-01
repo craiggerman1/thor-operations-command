@@ -25,6 +25,7 @@ export function Tag({ children, tone = "blue" }: { children: ReactNode; tone?: S
 
 const hintDismissedKey = "toc.dismissedPageHints";
 const hintVersionKey = "toc.pageHintVersion";
+const hintEnabledKey = "toc.pageHintsEnabled";
 const defaultHintVersion = "0.062";
 
 function getHintVersion() {
@@ -46,21 +47,30 @@ function getHintKey(id: string) {
   return `${getHintVersion()}:${id}`;
 }
 
+function pageHintsAreEnabled() {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem(hintEnabledKey) !== "false";
+}
+
 export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: string; title: string; id?: string }) {
   const hintId = id || eyebrow.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const [isDismissed, setIsDismissed] = useState(false);
+  const [hintsEnabled, setHintsEnabled] = useState(true);
 
   useEffect(() => {
     function syncHintState() {
+      setHintsEnabled(pageHintsAreEnabled());
       setIsDismissed(Boolean(getDismissedHints()[getHintKey(hintId)]));
     }
 
     syncHintState();
     window.addEventListener("storage", syncHintState);
     window.addEventListener("toc.pageHintsRedeployed", syncHintState);
+    window.addEventListener("toc.pageHintsSettingChanged", syncHintState);
     return () => {
       window.removeEventListener("storage", syncHintState);
       window.removeEventListener("toc.pageHintsRedeployed", syncHintState);
+      window.removeEventListener("toc.pageHintsSettingChanged", syncHintState);
     };
   }, [hintId]);
 
@@ -70,7 +80,7 @@ export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: st
     setIsDismissed(true);
   }
 
-  if (isDismissed) return null;
+  if (!hintsEnabled || isDismissed) return null;
 
   return (
     <div className="flow-heading page-hint" role="note">
@@ -84,20 +94,48 @@ export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: st
 
 export function AdminHintControls() {
   const [message, setMessage] = useState("");
+  const [hintsEnabled, setHintsEnabled] = useState(true);
+
+  useEffect(() => {
+    function syncHintSetting() {
+      setHintsEnabled(pageHintsAreEnabled());
+    }
+
+    syncHintSetting();
+    window.addEventListener("storage", syncHintSetting);
+    window.addEventListener("toc.pageHintsSettingChanged", syncHintSetting);
+    return () => {
+      window.removeEventListener("storage", syncHintSetting);
+      window.removeEventListener("toc.pageHintsSettingChanged", syncHintSetting);
+    };
+  }, []);
 
   function redeployHints() {
+    localStorage.setItem(hintEnabledKey, "true");
     localStorage.setItem(hintVersionKey, Date.now().toString());
     localStorage.removeItem(hintDismissedKey);
     window.dispatchEvent(new CustomEvent("toc.pageHintsRedeployed"));
+    window.dispatchEvent(new CustomEvent("toc.pageHintsSettingChanged"));
+    setHintsEnabled(true);
     setMessage("Page hints redeployed for this browser. Database-backed user reset will make this national later.");
+  }
+
+  function toggleHints(nextEnabled: boolean) {
+    localStorage.setItem(hintEnabledKey, nextEnabled ? "true" : "false");
+    window.dispatchEvent(new CustomEvent("toc.pageHintsSettingChanged"));
+    setHintsEnabled(nextEnabled);
+    setMessage(nextEnabled ? "Page hints turned on." : "Page hints turned off for all users once database-backed settings are connected.");
   }
 
   return (
     <div className="admin-hint-controls">
       <div>
         <strong>Page hint controls</strong>
-        <small>Use this during testing or training to bring cleared guidance banners back.</small>
+        <small>{hintsEnabled ? "Hints are currently on." : "Hints are currently off."} Use this during testing or training to control guidance banners.</small>
       </div>
+      <button type="button" className={hintsEnabled ? "danger-button" : ""} onClick={() => toggleHints(!hintsEnabled)}>
+        {hintsEnabled ? "Turn off all hints" : "Turn on all hints"}
+      </button>
       <button type="button" onClick={redeployHints}>Redeploy page hints</button>
       {message ? <small className="admin-hint-message">{message}</small> : null}
     </div>

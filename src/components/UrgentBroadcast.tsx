@@ -105,6 +105,12 @@ function writeDirectorBroadcast(nextBroadcast: DirectorBroadcastMessage) {
   window.dispatchEvent(new Event("toc.directorBroadcast.updated"));
 }
 
+function deleteDirectorBroadcast() {
+  localStorage.removeItem(directorBroadcastKey);
+  localStorage.removeItem(directorAcknowledgedKey);
+  window.dispatchEvent(new Event("toc.directorBroadcast.updated"));
+}
+
 export function UrgentBroadcastBanner() {
   const [broadcasts, setBroadcasts] = useState<UrgentBroadcastMessage[]>([]);
   const [acknowledgedVersions, setAcknowledgedVersions] = useState<Record<string, boolean>>({});
@@ -394,6 +400,17 @@ export function DirectorBroadcastControls() {
     setStatus("Director message disabled.");
   }
 
+  function removeDirectorMessage() {
+    if (!broadcast) return;
+    const confirmed = window.confirm("Are you sure you want to delete this Director message?");
+    if (!confirmed) return;
+
+    deleteDirectorBroadcast();
+    setBroadcast(null);
+    setMessage("");
+    setStatus("Director message deleted.");
+  }
+
   function redeployDirectorMessage() {
     if (!broadcast?.message.trim()) return;
     const nextBroadcast = { ...broadcast, version: Date.now().toString(), active: true };
@@ -413,6 +430,7 @@ export function DirectorBroadcastControls() {
           <button type="submit">Deploy Director Message</button>
           <button type="button" className="secondary-button" onClick={redeployDirectorMessage}>Redeploy</button>
           <button type="button" className="danger-button" onClick={disableDirectorMessage}>Disable</button>
+          <button type="button" className="danger-button" onClick={removeDirectorMessage}>Delete</button>
         </div>
       </form>
       {broadcast ? (

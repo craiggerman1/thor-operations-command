@@ -1603,9 +1603,15 @@ body:not([data-access="admin"]) .admin-only-panel {
   color: #ffffff;
 }
 
+.admin-hint-controls button.danger-button {
+  border-color: rgba(191, 62, 57, 0.28);
+  background: rgba(191, 62, 57, 0.12);
+  color: var(--red);
+}
+
 .admin-hint-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
 }
