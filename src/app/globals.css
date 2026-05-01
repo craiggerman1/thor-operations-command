@@ -2,6 +2,7 @@ body.next-app .app-shell {
   display: grid;
 }
 
+body.next-app .access-control,
 body.next-app .region-control {
   display: grid;
 }

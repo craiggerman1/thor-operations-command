@@ -916,10 +916,10 @@ body.todo-floating-disabled .topbar {
 
 .page-title {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 290px);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 270px);
+  gap: 10px;
   align-items: stretch;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
 .page-title-copy,
@@ -932,27 +932,28 @@ body.todo-floating-disabled .topbar {
 }
 
 .page-title-copy {
-  padding: 13px 16px;
+  padding: 9px 13px;
 }
 
 .page-title-copy h2 {
-  font-size: 23px;
+  font-size: 21px;
+  line-height: 1.02;
 }
 
 .page-title-copy p {
   max-width: 920px;
-  margin-top: 5px;
+  margin-top: 3px;
   color: var(--muted);
   font-weight: 800;
-  line-height: 1.3;
+  line-height: 1.22;
 }
 
 .page-weather-card {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-left: 4px solid var(--teal);
 }
 
@@ -978,7 +979,7 @@ body.todo-floating-disabled .topbar {
 .page-weather-card strong {
   margin-top: 1px;
   color: var(--blue);
-  font-size: 19px;
+  font-size: 17px;
 }
 
 .page-weather-card small {
@@ -1004,8 +1005,8 @@ body.todo-floating-disabled .topbar {
 .weather-logo {
   position: relative;
   display: block;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #eaf7fb;
   box-shadow: inset 0 0 0 1px rgba(37, 161, 189, 0.22);
@@ -1286,15 +1287,7 @@ body.todo-floating-disabled .topbar {
 
 .access-control,
 .region-control {
-  display: none;
-}
-
-body[data-access="admin"] .region-control {
   display: grid;
-}
-
-body[data-access="admin"] .scope-chip {
-  display: none;
 }
 
 .select-wrap {

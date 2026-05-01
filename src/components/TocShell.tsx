@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
+import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
@@ -46,6 +46,8 @@ function getStoredScope() {
   }
 }
 
+const accessRoleOptions = Object.values(sessionProfiles);
+
 export function TocShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -73,6 +75,14 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const activeRole = activeProfile.role;
+    const currentNavItem = navigationItems.find((item) => item.href === pathname);
+    if (currentNavItem && !currentNavItem.roles.includes(activeRole)) {
+      router.push("/home");
+    }
+  }, [activeProfile.role, pathname, router]);
+
+  useEffect(() => {
     const targetUnits = 184;
     const duration = 1100;
     const startedAt = performance.now();
@@ -96,6 +106,17 @@ export function TocShell({ children }: { children: ReactNode }) {
     setSession(nextSession);
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope } }));
+  }
+
+  function updateRole(role: AccessRole) {
+    const nextProfile = sessionProfiles[role] || defaultSession;
+    const currentScope = session.scope || activeProfile.regions[0] || "National";
+    const nextScope = currentScope || nextProfile.regions[0] || "National";
+    const nextSession = { role: nextProfile.role, label: nextProfile.label, scope: nextScope };
+    setSession(nextSession);
+    document.body.dataset.access = nextProfile.role;
+    localStorage.setItem("toc.session", JSON.stringify(nextSession));
+    window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextScope } }));
   }
 
   function signOut() {
@@ -160,25 +181,27 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.110</em>
+              <em>Build 0.111</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
           <div className="topbar-actions">
             <div className="session-chip">
-              <span>Signed in</span>
+              <span>Development view</span>
               <strong>{activeProfile.label}</strong>
             </div>
-            <div className="session-chip scope-chip">
-              <span>Scope</span>
-              <strong>{session.scope || activeProfile.regions[0]}</strong>
-            </div>
-            {activeProfile.regions.length > 1 ? <label className="select-wrap region-control">
-              <span>Scope</span>
-              <select value={session.scope || activeProfile.regions[0]} onChange={(event) => updateScope(event.target.value)}>
-                {activeProfile.regions.map((region) => <option key={region} value={region}>{region}</option>)}
+            <label className="select-wrap access-control">
+              <span>View as</span>
+              <select value={activeProfile.role} onChange={(event) => updateRole(event.target.value as AccessRole)}>
+                {accessRoleOptions.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
               </select>
-            </label> : null}
+            </label>
+            <label className="select-wrap region-control">
+              <span>Region</span>
+              <select value={session.scope || activeProfile.regions[0]} onChange={(event) => updateScope(event.target.value)}>
+                {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
+              </select>
+            </label>
             <button className="manual-refresh-button" type="button">Manual Refresh</button>
             <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
           </div>
