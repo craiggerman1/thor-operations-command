@@ -12,7 +12,7 @@ import {
   getProductivityTagTone,
   getProductivityText,
   getProductivityTone,
-  getRedactedGrossMarginTrend
+  getProductivityTrend
 } from "@/lib/productivity-utils";
 
 function getStoredScope() {
@@ -62,7 +62,13 @@ export default function ProductivitySitePage() {
   const isVisible = scope === "National" || scope === site.region;
   const score = getProductivityScore(site);
   const tone = getProductivityTone(score);
-  const trend = getRedactedGrossMarginTrend(score);
+  const trend = getProductivityTrend(score);
+  const chartPoints = trend.map((point, index) => {
+    const x = 24 + index * 50.4;
+    const y = 176 - point.indexScore * 1.45;
+    return { ...point, x, y };
+  });
+  const linePoints = chartPoints.map((point) => `${point.x},${point.y}`).join(" ");
 
   if (!isVisible) {
     return (
@@ -81,7 +87,7 @@ export default function ProductivitySitePage() {
   return (
     <TocShell>
       <PageIntro title="Productivity" detail={`${site.site} productivity detail.`} />
-      <FlowHeading eyebrow="Productivity Detail" title="Review the site signal, redacted commercial productivity trend and manager action required." />
+      <FlowHeading eyebrow="Productivity Detail" title="Review the site signal, productivity trend and manager action required." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow={site.region} title={site.site} pill={`${score}% productivity`}>
           <div className={`productivity-score-card ${tone}`}>
@@ -114,20 +120,26 @@ export default function ProductivitySitePage() {
           <div className="productivity-chart-card">
             <div className="productivity-chart-head">
               <div>
-                <span className="eyebrow">Gross margin trend</span>
-                <strong>Last 6 months - redacted</strong>
+                <span className="eyebrow">Productivity trend</span>
+                <strong>Last 6 months</strong>
               </div>
-              <Tag tone={getProductivityTagTone(tone)}>Commercial values hidden</Tag>
+              <Tag tone={getProductivityTagTone(tone)}>Trend view</Tag>
             </div>
-            <div className="productivity-chart" aria-label="Redacted six month gross margin trend">
-              {trend.map((point) => (
-                <div className="productivity-chart-column" key={point.month}>
-                  <span style={{ "--value": `${point.indexScore}%` } as CSSProperties}><i>{point.label}</i></span>
-                  <strong>{point.month}</strong>
-                </div>
-              ))}
+            <div className="productivity-line-chart" aria-label="Six month productivity trend">
+              <svg viewBox="0 0 300 190" role="img" aria-hidden="true">
+                <path className="chart-grid-line" d="M18 35H284" />
+                <path className="chart-grid-line" d="M18 82H284" />
+                <path className="chart-grid-line" d="M18 129H284" />
+                <polyline className="productivity-trend-fill" points={`24,176 ${linePoints} 276,176`} />
+                <polyline className="productivity-trend-line" points={linePoints} />
+                {chartPoints.map((point) => (
+                  <circle className="productivity-trend-dot" cx={point.x} cy={point.y} r="4.2" key={point.month} />
+                ))}
+              </svg>
+              <div className="productivity-chart-months">
+                {trend.map((point) => <strong key={point.month}>{point.month}</strong>)}
+              </div>
             </div>
-            <small className="productivity-redacted-note">Exact gross margin values are intentionally hidden on this management view.</small>
           </div>
 
           <div className="productivity-detail-actions">

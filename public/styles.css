@@ -3724,8 +3724,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   line-height: 1.05;
 }
 
-.productivity-detail-metric small,
-.productivity-redacted-note {
+.productivity-detail-metric small {
   color: var(--muted);
   font-weight: 800;
   line-height: 1.35;
@@ -3750,13 +3749,9 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-size: 19px;
 }
 
-.productivity-chart {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: end;
-  gap: 10px;
-  min-height: 220px;
-  padding: 14px;
+.productivity-line-chart {
+  min-height: 238px;
+  padding: 14px 14px 10px;
   border: 1px solid rgba(201, 215, 225, 0.72);
   border-radius: 6px;
   background:
@@ -3765,40 +3760,47 @@ body:not([data-access="admin"]) .admin-only-panel {
   background-size: 100% 25%;
 }
 
-.productivity-chart-column {
+.productivity-line-chart svg {
+  display: block;
+  width: 100%;
+  min-height: 190px;
+  overflow: visible;
+}
+
+.chart-grid-line {
+  fill: none;
+  stroke: rgba(10, 49, 82, 0.11);
+  stroke-width: 1;
+}
+
+.productivity-trend-fill {
+  fill: rgba(37, 161, 189, 0.13);
+  stroke: none;
+}
+
+.productivity-trend-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+  filter: drop-shadow(0 8px 10px rgba(10, 49, 82, 0.18));
+}
+
+.productivity-trend-dot {
+  fill: #ffffff;
+  stroke: var(--teal);
+  stroke-width: 3;
+}
+
+.productivity-chart-months {
   display: grid;
-  align-items: end;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
-  min-height: 180px;
-}
-
-.productivity-chart-column > span {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 42px;
-  height: var(--value);
-  border: 1px solid rgba(37, 161, 189, 0.26);
-  border-radius: 6px 6px 3px 3px;
-  background:
-    linear-gradient(180deg, rgba(37, 161, 189, 0.72), rgba(10, 49, 82, 0.9)),
-    var(--blue);
-  box-shadow: 0 10px 22px rgba(10, 49, 82, 0.14);
-}
-
-.productivity-chart-column i {
   margin-top: 8px;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 900;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
 }
 
-.productivity-chart-column strong {
+.productivity-chart-months strong {
   color: var(--muted);
   font-size: 12px;
   text-align: center;

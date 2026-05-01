@@ -37,11 +37,10 @@ export function getProductivityTagTone(tone: ProductivityTone) {
   return "amber";
 }
 
-export function getRedactedGrossMarginTrend(score: number) {
+export function getProductivityTrend(score: number) {
   const offsets = [-4, -2, 1, -1, 3, 0];
   return ["Nov", "Dec", "Jan", "Feb", "Mar", "Apr"].map((month, index) => ({
     month,
-    indexScore: Math.max(28, Math.min(96, score + offsets[index])),
-    label: "Redacted"
+    indexScore: Math.max(28, Math.min(96, score + offsets[index]))
   }));
 }
