@@ -1,9 +1,10 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { AdminAccessManager } from "@/components/AdminAccessManager";
 import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
-import { adminUsers, approvedStockItems, compliance } from "@/lib/toc-data";
-import { assignableRegions, navigationItems, sessionProfiles } from "@/lib/access";
+import { approvedStockItems, compliance } from "@/lib/toc-data";
+import { navigationItems, sessionProfiles } from "@/lib/access";
 
 const accessRules = [
   {
@@ -46,6 +47,13 @@ export default function AdminPage() {
         <Panel wide eyebrow="Director broadcast" title="Director message control" pill="Admin can disable">
           <DirectorBroadcastControls />
         </Panel>
+        <Panel wide eyebrow="System tuning" title="TOC configuration switches" pill="Admin only">
+          <div className="admin-settings-grid">
+            <article className="admin-setting-card"><strong>Data feed mode</strong><small>Integration staging</small><span>Portal, Unity and Fleetio API/webhook feeds remain offline until database and API credentials are connected.</span></article>
+            <article className="admin-setting-card"><strong>Build environment</strong><small>Protected Vercel production</small><span>Use the header development switcher to test access levels and region scope while TOC is being built.</span></article>
+            <article className="admin-setting-card"><strong>Audit readiness</strong><small>Database planned</small><span>User, access, alert and setting changes will be logged once database-backed admin settings are connected.</span></article>
+          </div>
+        </Panel>
         <Panel wide eyebrow="Compliance setup" title="Admin-set compliance items" pill={`${compliance.length} active`}>
           <div className="admin-config-list">
             {compliance.map((item) => (
@@ -64,40 +72,19 @@ export default function AdminPage() {
             <StockOrderAdminReview />
           </div>
         </Panel>
-        <Panel wide eyebrow="Access control" title="User access levels and region responsibility" pill={`${adminUsers.length} demo profiles`}>
-          <div className="admin-layout">
-            <form className="admin-user-form">
-              <label><span>Name</span><input placeholder="User name" /></label>
-              <label><span>User reference</span><input placeholder="Demo user reference" /></label>
-              <label><span>Access level</span><select defaultValue="manager"><option>Admin</option><option>Manager</option><option>Director</option></select></label>
-              <fieldset>
-                <legend>Assigned region responsibility</legend>
-                {assignableRegions.map((region) => <label key={region}><input type="checkbox" /> {region}</label>)}
-              </fieldset>
-              <small>Admin keeps national command control even when assigned a normal manager region such as Brisbane. Managers only see the assigned regions selected here.</small>
-              <button type="button">Create user access</button>
-            </form>
-            <div className="admin-user-list">
-              <div className="access-rule-grid">
-                {accessRules.map((rule) => (
-                  <article className="access-rule-card" key={rule.title}>
-                    <strong>{rule.title}</strong>
-                    <small>{rule.scope}</small>
-                    <p>{rule.detail}</p>
-                  </article>
-                ))}
-              </div>
-              {adminUsers.map((user) => (
-                <article className="admin-user-card" key={user.id}>
-                  <div><strong>{user.name}</strong><small>User ID: {user.id}</small></div>
-                  <div className="meta-row"><Tag>{user.role}</Tag><Tag tone="green">{user.regions}</Tag></div>
-                  <small>Can use: {user.permissions}</small>
-                </article>
-              ))}
-            </div>
+        <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility" pill="Admin only">
+          <div className="access-rule-grid">
+            {accessRules.map((rule) => (
+              <article className="access-rule-card" key={rule.title}>
+                <strong>{rule.title}</strong>
+                <small>{rule.scope}</small>
+                <p>{rule.detail}</p>
+              </article>
+            ))}
           </div>
+          <AdminAccessManager />
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.112">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.113">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);

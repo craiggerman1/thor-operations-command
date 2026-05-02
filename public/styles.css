@@ -2475,8 +2475,28 @@ body:not([data-access="admin"]) .admin-only-panel {
   min-height: 16px;
 }
 
+.admin-user-form > div strong,
+.admin-setting-card strong {
+  display: block;
+  color: var(--blue);
+  font-size: 17px;
+}
+
+.admin-user-form > div small,
+.admin-setting-card small,
+.admin-setting-card span {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-user-form fieldset:disabled {
+  opacity: 0.56;
+}
+
 .admin-user-form button,
-.admin-user-card button {
+.admin-user-card button,
+.admin-region-picker button {
   min-height: 36px;
   border: 0;
   border-radius: 6px;
@@ -2503,13 +2523,118 @@ body:not([data-access="admin"]) .admin-only-panel {
 .admin-user-card {
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
+  padding: 12px;
   background:
     linear-gradient(135deg, rgba(37, 161, 189, 0.08), transparent),
     rgba(255, 255, 255, 0.92);
 }
 
+.admin-user-card.disabled {
+  opacity: 0.72;
+  background: rgba(245, 247, 249, 0.88);
+}
+
 .admin-user-card small {
   color: var(--muted);
+}
+
+.admin-access-console {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.admin-access-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-access-summary,
+.admin-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-access-summary article,
+.admin-setting-card {
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.admin-access-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-access-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--blue);
+  font-size: 24px;
+}
+
+.admin-user-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.26fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.admin-user-edit-grid label {
+  display: grid;
+  gap: 5px;
+}
+
+.field-label,
+.admin-user-edit-grid label span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-region-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.admin-region-picker button {
+  min-height: 32px;
+  padding: 0 9px;
+  background: #eef5fb;
+  color: var(--blue);
+}
+
+.admin-region-picker button.selected {
+  background: #e4f5ec;
+  color: #176a46;
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.admin-region-picker button:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.admin-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-user-actions .danger-button {
+  border: 1px solid rgba(191, 62, 57, 0.28);
+  background: rgba(191, 62, 57, 0.12);
+  color: var(--red);
 }
 
 .access-rule-grid {
@@ -4902,6 +5027,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   .status-strip,
   .role-blueprint-grid,
   .access-rule-grid,
+  .admin-access-console,
+  .admin-access-summary,
+  .admin-settings-grid,
+  .admin-user-edit-grid,
   .signal-command-grid,
   .go-live-pathway,
   .command-grid,
