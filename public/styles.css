@@ -4031,6 +4031,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .productivity-site-list {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -5004,7 +5005,8 @@ body:not([data-access="admin"]) .admin-only-panel {
   .role-blueprint-grid,
   .signal-command-grid,
   .go-live-pathway,
-  .command-grid {
+  .command-grid,
+  .productivity-site-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -5653,6 +5655,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   .heatmap-row {
     grid-template-columns: minmax(105px, 1fr) repeat(7, 28px);
     gap: 5px;
+  }
+
+  .productivity-site-list {
+    grid-template-columns: 1fr;
   }
 }
 

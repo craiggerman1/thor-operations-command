@@ -68,8 +68,6 @@ export default function OperationsPage() {
                   <div>
                     <span className="eyebrow">{site.region}</span>
                     <strong>{site.site}</strong>
-                    <small>{getProductivityText(score)}</small>
-                    <p>{site.queue}</p>
                   </div>
                   <div className={`productivity-bar ${tone}`}><span style={{ "--value": `${score}%` } as CSSProperties} /></div>
                   <div className="productivity-site-footer">
