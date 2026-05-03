@@ -60,7 +60,7 @@ export const commandSignals = [
   {
     title: "Asset service watch",
     source: "Equipment Servicing",
-    severity: "blue" as Status,
+    severity: "amber" as Status,
     owner: "Workshop",
     action: "Open servicing",
     href: "/equipment-servicing",
@@ -73,85 +73,99 @@ export const actionItems = [
     id: "ACT-001",
     title: "National Woolworths Fleetio accuracy check",
     source: "National ops",
-    directive: "National ops directive",
+    directive: "National Ops Directive",
     region: "National",
     severity: "red" as Status,
-    href: "/actions#ACT-001",
+    dueDate: "Today 3:00 pm",
+    href: "/actions/ACT-001",
     detail: "Confirm Fleetio wash records are clean before invoicing and client reporting move forward.",
     status: "Open",
-    closeFlow: "Manager close-out requires national approval before final closure."
+    closeFlow: "Manager close-out requires national approval before final closure.",
+    closeActions: ["Review Fleetio wash records for assigned region", "Confirm registration, wash type and site data are accurate", "Submit manager close-out note for national approval"]
   },
   {
     id: "ACT-002",
     title: "Primary Connect induction exceptions",
     source: "Compliance",
-    directive: "National ops directive",
+    directive: "National Ops Directive",
     region: "Brisbane",
     severity: "red" as Status,
-    href: "/compliance",
+    dueDate: "Today 5:00 pm",
+    href: "/actions/ACT-002",
     detail: "Induction and site-readiness exceptions need manager ownership before site risk builds.",
     status: "Overdue",
-    closeFlow: "Close-out routes to national manager approval."
+    closeFlow: "Close-out routes to national manager approval.",
+    closeActions: ["Open compliance exceptions for Brisbane", "Confirm each outstanding induction owner", "Record corrective action and submit evidence note"]
   },
   {
     id: "ACT-003",
     title: "Friday PM roster coverage gap",
     source: "Roster",
-    directive: "Scheduled directive",
+    directive: "Scheduled Directive",
     region: "Adelaide",
     severity: "amber" as Status,
-    href: "/staff-availability",
+    dueDate: "Today 12:00 pm",
+    href: "/actions/ACT-003",
     detail: "Coverage gap may affect scheduled wash delivery if not confirmed before shift start.",
     status: "Due today",
-    closeFlow: "Manager close-out routes to national review."
+    closeFlow: "Manager close-out routes to national review.",
+    closeActions: ["Check staff availability for Friday PM", "Confirm backup coverage", "Submit final roster coverage note"]
   },
   {
     id: "ACT-004",
     title: "Portal approvals holding admin flow",
     source: "Thor Portal",
-    directive: "Action required",
+    directive: "To Do",
     region: "Sydney",
-    severity: "amber" as Status,
-    href: "/jobsheets",
+    severity: "blue" as Status,
+    dueDate: "Today 4:00 pm",
+    href: "/actions/ACT-004",
     detail: "Approval delays can block invoicing, client reporting and admin close.",
     status: "Open",
-    closeFlow: "Manager resolution is sent to national approval."
+    closeFlow: "Manager resolution is sent to national approval.",
+    closeActions: ["Review outstanding jobsheets", "Clear manager approval blockers", "Submit note confirming admin flow is clear"]
   },
   {
     id: "ACT-005",
     title: "Wash plant hour reading due",
     source: "Equipment Servicing",
-    directive: "Scheduled directive",
+    directive: "Scheduled Directive",
     region: "Brisbane",
     severity: "amber" as Status,
-    href: "/equipment-servicing",
+    dueDate: "Tomorrow 9:00 am",
+    href: "/actions/ACT-005",
     detail: "Hour readings are required so servicing can be planned before plant failure.",
     status: "Due soon",
-    closeFlow: "Workshop or manager close-out routes to national review."
+    closeFlow: "Workshop or manager close-out routes to national review.",
+    closeActions: ["Collect current hour reading", "Check service due position", "Submit reading and service note"]
   },
   {
     id: "ACT-006",
     title: "Chemical stock request overdue",
     source: "Stock Orders",
-    directive: "Action required",
+    directive: "To Do",
     region: "Perth",
-    severity: "amber" as Status,
-    href: "/stock-orders",
+    severity: "blue" as Status,
+    dueDate: "Today 2:00 pm",
+    href: "/actions/ACT-006",
     detail: "Stock needs should be raised early so supply does not block scheduled wash work.",
     status: "Open",
-    closeFlow: "Close-out requires national stock approval."
+    closeFlow: "Close-out requires national stock approval.",
+    closeActions: ["Check current chemical stock level", "Submit stock order request if needed", "Record expected run-out risk"]
   },
   {
     id: "ACT-007",
     title: "Workshop parts shelf minimum check",
     source: "Workshop",
-    directive: "Scheduled directive",
+    directive: "Scheduled Directive",
     region: "Workshop",
     severity: "blue" as Status,
-    href: "/stock-orders",
+    dueDate: "Friday 10:00 am",
+    href: "/actions/ACT-007",
     detail: "Parts shelf minimums need confirmation so service work is not delayed.",
     status: "Scheduled",
-    closeFlow: "Workshop close-out routes to national approval."
+    closeFlow: "Workshop close-out routes to national approval.",
+    closeActions: ["Check parts shelf minimums", "List missing critical items", "Submit workshop close-out for national review"]
   }
 ];
 
@@ -410,11 +424,11 @@ export const assets = [
 ];
 
 export const compliance = [
-  { title: "Primary Connect site inductions", region: "Brisbane", owner: "Regional manager", due: "30 Apr", status: "Due soon", type: "Induction", severity: "amber" as Status, href: "/actions#ACT-002", adminSet: true },
-  { title: "3-point contact refresher", region: "Sydney", owner: "Regional manager", due: "Today", status: "Action required", type: "Safety", severity: "red" as Status, href: "/actions#ACT-004", adminSet: true },
+  { title: "Primary Connect site inductions", region: "Brisbane", owner: "Regional manager", due: "30 Apr", status: "Due soon", type: "Induction", severity: "amber" as Status, href: "/actions/ACT-002", adminSet: true },
+  { title: "3-point contact refresher", region: "Sydney", owner: "Regional manager", due: "Today", status: "Action required", type: "Safety", severity: "red" as Status, href: "/actions/ACT-004", adminSet: true },
   { title: "SDS and chemical register review", region: "Melbourne", owner: "Regional manager", due: "18 May", status: "Current", type: "Document", severity: "green" as Status, href: "/actions", adminSet: true },
-  { title: "First aid kit audit", region: "Adelaide", owner: "Regional manager", due: "Yesterday", status: "Overdue", type: "Equipment", severity: "red" as Status, href: "/actions#ACT-003", adminSet: true },
-  { title: "Workshop isolation and defect-tag process", region: "Workshop", owner: "Workshop lead", due: "3 May", status: "Due soon", type: "Safety", severity: "amber" as Status, href: "/actions#ACT-007", adminSet: true }
+  { title: "First aid kit audit", region: "Adelaide", owner: "Regional manager", due: "Yesterday", status: "Overdue", type: "Equipment", severity: "red" as Status, href: "/actions/ACT-003", adminSet: true },
+  { title: "Workshop isolation and defect-tag process", region: "Workshop", owner: "Workshop lead", due: "3 May", status: "Due soon", type: "Safety", severity: "amber" as Status, href: "/actions/ACT-007", adminSet: true }
 ];
 
 export const approvedStockItems = [
