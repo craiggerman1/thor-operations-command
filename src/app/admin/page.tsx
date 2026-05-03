@@ -4,32 +4,24 @@ import { AdminAccessManager } from "@/components/AdminAccessManager";
 import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { approvedStockItems, compliance } from "@/lib/toc-data";
-import { navigationItems, sessionProfiles } from "@/lib/access";
+import { navigationItems } from "@/lib/access";
 
-const accessRules = [
-  {
-    title: "Admin",
-    scope: "National command + optional assigned regions",
-    detail: "Full national view and control, Admin Settings access, user assignment control, and optional manager responsibility for one or more regions."
-  },
-  {
-    title: "Manager",
-    scope: "Assigned region or multiple assigned regions",
-    detail: "Sees and acts on only the regions Admin assigns, including normal region responsibilities such as stock, compliance, productivity and chat."
-  },
-  {
-    title: "Director",
-    scope: "Owner overview",
-    detail: "High-level business health view with Director message broadcast ability. No operational noise unless required."
-  }
-];
-
-const permissionGroups = [
-  { area: "National command", admin: "Full control", manager: "No", director: "Summary only" },
-  { area: "Admin Settings", admin: "Full control", manager: "No", director: "No" },
-  { area: "Assigned region work", admin: "When assigned", manager: "Full within assigned regions", director: "No" },
-  { area: "Director message", admin: "Control via Admin Settings", manager: "Acknowledge only", director: "Create and redeploy" },
-  { area: "Action close-out", admin: "Approve and control", manager: "Submit for national approval", director: "Summary only" }
+const pageSettings = [
+  { page: "Home", owner: "Command signals and go-live pathway", control: "Set which national signals, roadmap items and Director scorecard items appear on Home.", state: "Mapped" },
+  { page: "Action Centre", owner: "Action item workflow", control: "Create directives, assign due dates, set priority type and review manager close-out submissions.", state: "Next" },
+  { page: "Region Health", owner: "Region scoring", control: "Tune region health scoring from open actions, compliance load and productivity score inputs.", state: "Mapped" },
+  { page: "Compliance", owner: "Compliance action setup", control: "Set compliance actions, due dates, target regions and whether items count into Region Health.", state: "Active" },
+  { page: "Inductions", owner: "Induction source and site mapping", control: "Manage read-only sheet source, site-region mapping and induction status display rules.", state: "Mapped" },
+  { page: "Stock Orders", owner: "Stock catalogue and order review", control: "Approve orderable items, review requests, update tracking and manage national responses.", state: "Active" },
+  { page: "Productivity", owner: "Productivity scoring", control: "Configure site score sources, manager response requirements and national review rules.", state: "Mapped" },
+  { page: "Asset Tracking", owner: "Unity GPS integration", control: "Connect GPS asset feeds, map assets to regions and configure status visibility.", state: "Planned" },
+  { page: "Calendar", owner: "Schedule control", control: "Manage calendar source, operating-week display, recurring job rules and regional schedule visibility.", state: "Mapped" },
+  { page: "Staff Availability", owner: "Availability feed", control: "Manage read-only sheet source, availability windows, display status rules and region relevance.", state: "Mapped" },
+  { page: "Equipment Servicing", owner: "Service feed integration", control: "Connect odometer/hour data, map assets to regions and define service alert thresholds.", state: "Planned" },
+  { page: "Chat", owner: "Manager communications", control: "Set manager chat audiences, meeting links and future database-backed communication rules.", state: "Mapped" },
+  { page: "Admin Settings", owner: "TOC control room", control: "Register users, assign access levels, assign regions, tune page settings and manage global notices.", state: "Active" },
+  { page: "Jobsheets", owner: "Thor Portal integration", control: "Connect jobsheet feed, approval queue visibility and manager action routing.", state: "Planned" },
+  { page: "To Do", owner: "Personal and shared tasks", control: "Configure shared task routing, importance handling and future user-specific persistence.", state: "Mapped" }
 ];
 
 export default function AdminPage() {
@@ -73,49 +65,19 @@ export default function AdminPage() {
           </div>
         </Panel>
         <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility" pill="Admin only">
-          <div className="access-rule-grid">
-            {accessRules.map((rule) => (
-              <article className="access-rule-card" key={rule.title}>
-                <strong>{rule.title}</strong>
-                <small>{rule.scope}</small>
-                <p>{rule.detail}</p>
-              </article>
-            ))}
-          </div>
           <AdminAccessManager />
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.133">
-          <div className="role-blueprint-grid">
-            {Object.values(sessionProfiles).map((profile) => {
-              const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);
-              return (
-                <article className="role-blueprint-card" key={profile.role}>
-                  <div>
-                    <span className="eyebrow">{profile.scopeLabel}</span>
-                    <h3>{profile.label}</h3>
-                    <p>{profile.summary}</p>
-                  </div>
-                  <div className="role-page-list">
-                    {profile.responsibilities.map((responsibility) => <Tag tone="green" key={responsibility}>{responsibility}</Tag>)}
-                  </div>
-                  <div className="role-page-list">
-                    {pages.map((page) => <Tag key={page}>{page}</Tag>)}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </Panel>
-        <Panel wide eyebrow="Permission map" title="Access level behaviour" pill="Database-ready">
-          <div className="permission-matrix">
-            <div className="permission-row header"><span>Area</span><span>Admin</span><span>Manager</span><span>Director</span></div>
-            {permissionGroups.map((group) => (
-              <div className="permission-row" key={group.area}>
-                <strong>{group.area}</strong>
-                <span>{group.admin}</span>
-                <span>{group.manager}</span>
-                <span>{group.director}</span>
-              </div>
+        <Panel wide eyebrow="Page settings" title="TOC page control sections" pill={`${navigationItems.length} pages`}>
+          <div className="admin-page-settings-grid">
+            {pageSettings.map((setting) => (
+              <article className="admin-page-setting-card" key={setting.page}>
+                <div>
+                  <strong>{setting.page}</strong>
+                  <small>{setting.owner}</small>
+                </div>
+                <p>{setting.control}</p>
+                <div className="meta-row"><Tag tone={setting.state === "Active" ? "green" : setting.state === "Planned" ? "amber" : "blue"}>{setting.state}</Tag></div>
+              </article>
             ))}
           </div>
         </Panel>

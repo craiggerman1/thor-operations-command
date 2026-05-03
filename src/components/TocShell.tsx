@@ -61,18 +61,25 @@ export function TocShell({ children }: { children: ReactNode }) {
   const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role));
 
   useEffect(() => {
-    const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
-    if (storedSession?.role && storedSession.role in sessionProfiles) {
-      setSession(storedSession);
-      document.body.dataset.access = storedSession.role;
-    } else {
-      document.body.dataset.access = defaultSession.role;
+    function syncSession(event?: Event) {
+      const eventSession = event instanceof CustomEvent ? event.detail : null;
+      const storedSession = eventSession || JSON.parse(localStorage.getItem("toc.session") || "null");
+      if (storedSession?.role && storedSession.role in sessionProfiles) {
+        setSession(storedSession);
+        document.body.dataset.access = storedSession.role;
+      } else {
+        document.body.dataset.access = defaultSession.role;
+      }
     }
+
+    syncSession();
     document.body.classList.add("is-authenticated");
     setSessionReady(true);
+    window.addEventListener("toc.sessionchange", syncSession);
 
     return () => {
       if (signOutTimer.current) window.clearTimeout(signOutTimer.current);
+      window.removeEventListener("toc.sessionchange", syncSession);
     };
   }, []);
 
@@ -185,7 +192,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.133</em>
+              <em>Build 0.134</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>

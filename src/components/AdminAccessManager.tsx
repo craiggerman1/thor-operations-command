@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { assignableRegions, type AccessRole } from "@/lib/access";
+import { assignableRegions, sessionProfiles, type AccessRole } from "@/lib/access";
 import { Tag } from "@/components/TocCards";
 
 type AdminAccessUser = {
@@ -128,12 +128,24 @@ export function AdminAccessManager() {
     updateUser(user.id, { status: user.status === "Active" ? "Disabled" : "Active" });
   }
 
+  function previewUser(user: AdminAccessUser) {
+    const profile = sessionProfiles[user.role];
+    const scope = user.regions[0] || profile.regions[0] || "National";
+    const nextSession = { role: profile.role, label: profile.label, scope };
+
+    localStorage.setItem("toc.session", JSON.stringify(nextSession));
+    document.body.dataset.access = profile.role;
+    window.dispatchEvent(new CustomEvent("toc.sessionchange", { detail: nextSession }));
+    window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope } }));
+    setStatus(`Previewing ${user.name} as ${roleLabel(user.role)} - ${scope}.`);
+  }
+
   return (
     <div className="admin-access-console">
       <form className="admin-user-form" onSubmit={registerUser}>
         <div>
           <strong>Register user</strong>
-          <small>Create a staged TOC user profile. Database-backed authentication will connect this later.</small>
+          <small>Create a staged TOC user profile, assign access level, assign region responsibility and preview the exact view.</small>
         </div>
         <label><span>Name</span><input value={name} placeholder="User name" onChange={(event) => setName(event.target.value)} /></label>
         <label><span>User reference</span><input value={reference} placeholder="Employee ID or internal reference" onChange={(event) => setReference(event.target.value)} /></label>
@@ -192,6 +204,7 @@ export function AdminAccessManager() {
               </div>
             </div>
             <div className="admin-user-actions">
+              <button type="button" onClick={() => previewUser(user)}>Preview User View</button>
               <button type="button" onClick={() => toggleStatus(user)}>{user.status === "Active" ? "Disable User" : "Reactivate User"}</button>
               <button className="danger-button" type="button" onClick={() => deregisterUser(user.id)}>Deregister User</button>
             </div>

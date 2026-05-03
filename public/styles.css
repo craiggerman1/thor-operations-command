@@ -2755,12 +2755,48 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
+.admin-page-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .admin-access-summary article,
-.admin-setting-card {
+.admin-setting-card,
+.admin-page-setting-card {
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.86);
+}
+
+.admin-page-setting-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  border-left: 5px solid rgba(37, 161, 189, 0.72);
+}
+
+.admin-page-setting-card strong,
+.admin-page-setting-card small {
+  display: block;
+}
+
+.admin-page-setting-card strong {
+  color: var(--blue);
+  font-size: 16px;
+}
+
+.admin-page-setting-card small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.admin-page-setting-card p {
+  margin: 0;
+  color: #27384a;
+  line-height: 1.36;
 }
 
 .admin-access-summary span {
@@ -5637,6 +5673,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   .admin-access-console,
   .admin-access-summary,
   .admin-settings-grid,
+  .admin-page-settings-grid,
   .admin-user-edit-grid,
   .action-detail-shell,
   .signal-command-grid,
