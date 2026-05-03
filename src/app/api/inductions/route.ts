@@ -61,9 +61,12 @@ export async function GET() {
     const sites = siteRow
       .slice(1)
       .filter((_, index) => index % 2 === 0)
-      .map((name) => ({ name: name.trim(), region: "Brisbane" }))
+      .map((name) => ({ name: name.trim().replace(/\s+Status$/i, ""), region: "Brisbane" }))
       .filter((site) => site.name);
-    const staffRows = rows.slice(2).filter((row) => row[0]?.trim());
+    const staffRows = rows.slice(1).filter((row) => {
+      const staffName = row[0]?.trim() || "";
+      return staffName && !/^staff\b/i.test(staffName);
+    });
     const staff = staffRows.map((row) => ({
       name: row[0].trim(),
       inductions: sites.map((site, index) => {
