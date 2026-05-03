@@ -108,20 +108,6 @@ export default function StaffAvailabilityPage() {
             ))}
           </div>
         </Panel>
-        <Panel eyebrow="Visual key" title="Quick read">
-          <div className="brief-stack">
-            <div className="brief-item"><span className="brief-dot" /><div><strong>Green means available.</strong><small>The person has marked that time window as available.</small></div></div>
-            <div className="brief-item"><span className="brief-dot amber-dot" /><div><strong>Amber means limited or not supplied.</strong><small>Use this when the sheet has no clear availability value.</small></div></div>
-            <div className="brief-item"><span className="brief-dot red-dot" /><div><strong>Red means not available.</strong><small>Do not use that person for that window unless directly confirmed.</small></div></div>
-          </div>
-        </Panel>
-        <Panel eyebrow="Data source" title="Google Sheets connection">
-          <div className="brief-stack">
-            <div className="brief-item"><span className="brief-dot" /><div><strong>Google Sheet remains the source.</strong><small>Staff update the shared sheet. TOC presents it as a manager-friendly coverage view.</small></div></div>
-            <div className="brief-item"><span className="brief-dot" /><div><strong>Read-only display.</strong><small>This page is designed to consume the Google Sheet without editing the sheet data.</small></div></div>
-            <div className="brief-item"><span className="brief-dot" /><div><strong>Live API connection next.</strong><small>The current build uses the sheet read captured for TOC. Database-backed live refresh can be connected in the next data stage.</small></div></div>
-          </div>
-        </Panel>
       </section>
     </TocShell>
   );

@@ -126,19 +126,6 @@ export default function InductionsPage() {
             <div className="empty-state">No induction sheet sites are mapped to {scope} yet.</div>
           )}
         </Panel>
-        <Panel eyebrow="Visual key" title="Quick read">
-          <div className="brief-stack">
-            <div className="brief-item"><span className="brief-dot" /><div><strong>Green means inducted.</strong><small>The staff member is currently inducted for that site.</small></div></div>
-            <div className="brief-item"><span className="brief-dot amber-dot" /><div><strong>Amber needs attention.</strong><small>The induction is expiring soon or this month.</small></div></div>
-            <div className="brief-item"><span className="brief-dot red-dot" /><div><strong>Red needs action.</strong><small>The induction is expired and should be resolved before site work.</small></div></div>
-          </div>
-        </Panel>
-        <Panel eyebrow="Scope" title="Region-specific induction control">
-          <div className="brief-stack">
-            <div className="brief-item"><span className="brief-dot" /><div><strong>Region filtering is active.</strong><small>National can see all mapped sites. Regional managers see the sites mapped to their region.</small></div></div>
-            <div className="brief-item"><span className="brief-dot" /><div><strong>Read-only display.</strong><small>TOC consumes the sheet only and does not edit the Google Sheet.</small></div></div>
-          </div>
-        </Panel>
       </section>
     </TocShell>
   );

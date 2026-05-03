@@ -3821,6 +3821,9 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .staff-name strong {
+  display: flex;
+  align-items: center;
+  min-height: 100%;
   color: #071726;
   font-size: 15px;
   letter-spacing: 0.01em;
