@@ -3070,7 +3070,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .calendar-date {
   width: 100%;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   gap: 12px;
   min-height: 282px;
   padding: 12px;
@@ -3082,12 +3082,19 @@ body:not([data-access="admin"]) .admin-only-panel {
   font: inherit;
   text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition: box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .calendar-date:hover {
   border-color: rgba(10, 49, 82, 0.42);
   box-shadow: 0 14px 30px rgba(7, 23, 38, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.calendar-date:focus-visible,
+.calendar-list-day:focus-visible {
+  outline: 3px solid rgba(37, 161, 189, 0.34);
+  outline-offset: 3px;
 }
 
 .calendar-date.today {
@@ -3363,6 +3370,14 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.94);
   color: inherit;
+  cursor: pointer;
+  transition: box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.calendar-list-day:hover {
+  transform: translateY(-1px);
+  border-color: rgba(10, 49, 82, 0.42);
+  box-shadow: 0 12px 26px rgba(7, 23, 38, 0.1);
 }
 
 .calendar-list-day strong {
