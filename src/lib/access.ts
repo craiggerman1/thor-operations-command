@@ -21,6 +21,7 @@ export const assignableRegions = allRegions.filter((region) => region !== "Natio
 export const navigationItems: NavItem[] = [
   { label: "Home", href: "/home", roles: ["admin", "director", "manager"] },
   { label: "Admin Settings", href: "/admin", roles: ["admin"] },
+  { label: "National Requests", href: "/national-requests", roles: ["admin"] },
   { label: "Action Centre", href: "/actions", roles: ["admin", "director", "manager"] },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },

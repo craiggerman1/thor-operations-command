@@ -1,13 +1,13 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminAccessManager } from "@/components/AdminAccessManager";
-import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { approvedStockItems, compliance } from "@/lib/toc-data";
 import { navigationItems } from "@/lib/access";
 
 const pageSettings = [
   { page: "Home", owner: "Command signals and go-live pathway", control: "Set which national signals, roadmap items and Director scorecard items appear on Home.", state: "Mapped" },
+  { page: "National Requests", owner: "National action queue", control: "Review stock order requests, manager-submitted close-outs and requests that need national follow-up.", state: "Active" },
   { page: "Action Centre", owner: "Action item workflow", control: "Create directives, assign due dates, set priority type and review manager close-out submissions.", state: "Next" },
   { page: "Region Health", owner: "Region scoring", control: "Tune region health scoring from open actions, compliance load and productivity score inputs.", state: "Mapped" },
   { page: "Compliance", owner: "Compliance action setup", control: "Set compliance actions, due dates, target regions and whether items count into Region Health.", state: "Active" },
@@ -57,11 +57,8 @@ export default function AdminPage() {
           </div>
         </Panel>
         <Panel wide eyebrow="Stock setup" title="Approved stock order items" pill={`${approvedStockItems.length} approved`}>
-          <div className="admin-config-grid">
-            <div className="admin-config-list">
-              {approvedStockItems.map((item) => <article className="admin-config-card" key={item}><strong>{item}</strong><small>Available in manager stock order dropdown</small></article>)}
-            </div>
-            <StockOrderAdminReview />
+          <div className="admin-config-list">
+            {approvedStockItems.map((item) => <article className="admin-config-card" key={item}><strong>{item}</strong><small>Available in manager stock order dropdown</small></article>)}
           </div>
         </Panel>
         <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility" pill="Admin only">

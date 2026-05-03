@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { approvedStockItems, stockOrders } from "@/lib/toc-data";
@@ -48,7 +49,6 @@ export default function StockOrdersPage() {
   const [urgency, setUrgency] = useState("Normal");
   const [note, setNote] = useState("");
   const visibleOrders = useMemo(() => orders.filter((order) => scope === "National" || order.region === scope), [orders, scope]);
-  const canReviewOrders = role === "admin";
 
   useEffect(() => {
     function loadOrders() {
@@ -125,16 +125,6 @@ export default function StockOrdersPage() {
     saveOrders(nextOrders);
   }
 
-  function deleteOrder(orderId: string) {
-    if (!window.confirm("Are you sure you want to delete this order?")) return;
-    saveOrders(orders.filter((order) => getOrderId(order) !== orderId));
-  }
-
-  function updateOrder(orderId: string, updates: Partial<StockOrderRequest>) {
-    const nextOrders = orders.map((order) => getOrderId(order) === orderId ? { ...order, ...updates, updateRequested: updates.update ? false : order.updateRequested } : order);
-    saveOrders(nextOrders);
-  }
-
   return (
     <TocShell>
       <PageIntro title="Stock Orders" detail="Order stock early and ensure up to date." />
@@ -164,21 +154,15 @@ export default function StockOrdersPage() {
                     <div className="stock-detail"><span>{order.status}</span><span>{order.update}</span></div>
                     <div className="stock-detail"><span>Tracking</span><span>{order.trackingNumber || "Pending"}</span></div>
                     <div className="meta-row"><Tag tone={order.urgency === "Urgent" ? "red" : "green"}>{order.urgency}</Tag>{order.updateRequested ? <Tag tone="amber">Update requested</Tag> : null}</div>
-                    {canReviewOrders ? (
-                      <div className="stock-review-controls">
-                        <label><span>Admin / national update</span><input value={order.update} onChange={(event) => updateOrder(orderId, { update: event.target.value, status: "Updated by national" })} /></label>
-                        <label><span>Tracking number</span><input value={order.trackingNumber || ""} onChange={(event) => updateOrder(orderId, { trackingNumber: event.target.value || "Pending" })} placeholder="Enter tracking number" /></label>
+                    {role === "admin" ? (
+                      <div className="stock-actions">
+                        <Link className="node-action" href="/national-requests">Review In National Requests</Link>
                       </div>
-                    ) : null}
-                    {!canReviewOrders ? (
+                    ) : (
                       <div className="stock-actions">
                         <button type="button" onClick={() => requestUpdate(orderId)}>Request Update</button>
                         <button type="button" onClick={() => markDelivered(orderId)}>Mark Delivered</button>
                         <button type="button" className="danger-button" onClick={() => cancelOrder(orderId)}>Request to Cancel</button>
-                      </div>
-                    ) : (
-                      <div className="stock-actions">
-                        <button type="button" className="danger-button" onClick={() => deleteOrder(orderId)}>Delete Order</button>
                       </div>
                     )}
                   </article>

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { FormEvent, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { actionItems } from "@/lib/toc-data";
+import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
 
 const sourceLinks: Record<string, string> = {
   Compliance: "/compliance",
@@ -19,6 +21,9 @@ const sourceLinks: Record<string, string> = {
 export default function ActionDetailPage() {
   const params = useParams<{ id: string }>();
   const action = actionItems.find((item) => item.id === params.id);
+  const [managerResponse, setManagerResponse] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const [message, setMessage] = useState("");
 
   if (!action) {
     return (
@@ -34,6 +39,39 @@ export default function ActionDetailPage() {
   }
 
   const sourceHref = sourceLinks[action.source] || "/actions";
+
+  function readNationalRequests() {
+    try {
+      return JSON.parse(localStorage.getItem(nationalActionRequestsKey) || "[]") as NationalActionRequest[];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveDraft() {
+    localStorage.setItem(`toc.actionDraft.${action.id}`, JSON.stringify({ managerResponse, evidence, updatedAt: new Date().toISOString() }));
+    setMessage("Draft saved on this device.");
+  }
+
+  function submitForNationalApproval(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextRequest: NationalActionRequest = {
+      id: `NAR-${Date.now()}`,
+      actionId: action.id,
+      title: action.title,
+      region: action.region,
+      source: action.source,
+      directive: action.directive,
+      submittedAt: new Date().toISOString(),
+      managerResponse: managerResponse.trim() || "Manager submitted close-out with no additional response.",
+      evidence: evidence.trim() || "No evidence or reference supplied.",
+      status: "Awaiting national review"
+    };
+
+    localStorage.setItem(nationalActionRequestsKey, JSON.stringify([nextRequest, ...readNationalRequests()]));
+    window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
+    setMessage("Submitted to National Requests for approval.");
+  }
 
   return (
     <TocShell>
@@ -66,19 +104,20 @@ export default function ActionDetailPage() {
               <ol className="action-closeout-steps">
                 {action.closeActions.map((step) => <li key={step}>{step}</li>)}
               </ol>
-              <form className="action-closeout-form">
+              <form className="action-closeout-form" onSubmit={submitForNationalApproval}>
                 <label>
                   <span>Manager response</span>
-                  <textarea placeholder="Record what was checked, what was fixed, and any remaining risk." />
+                  <textarea value={managerResponse} placeholder="Record what was checked, what was fixed, and any remaining risk." onChange={(event) => setManagerResponse(event.target.value)} />
                 </label>
                 <label>
                   <span>Evidence / reference</span>
-                  <input placeholder="Example: Fleetio checked, jobsheets approved, stock order raised, photo/evidence uploaded later" />
+                  <input value={evidence} placeholder="Example: Fleetio checked, jobsheets approved, stock order raised, photo/evidence uploaded later" onChange={(event) => setEvidence(event.target.value)} />
                 </label>
                 <div className="action-closeout-buttons">
-                  <button type="button">Save Draft</button>
-                  <button type="button">Submit For National Approval</button>
+                  <button type="button" onClick={saveDraft}>Save Draft</button>
+                  <button type="submit">Submit For National Approval</button>
                 </div>
+                {message ? <small className="admin-hint-message">{message}</small> : null}
               </form>
             </div>
           </div>
