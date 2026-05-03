@@ -20,20 +20,20 @@ export const assignableRegions = allRegions.filter((region) => region !== "Natio
 
 export const navigationItems: NavItem[] = [
   { label: "Home", href: "/home", roles: ["admin", "director", "manager"] },
+  { label: "Admin Settings", href: "/admin", roles: ["admin"] },
   { label: "Action Centre", href: "/actions", roles: ["admin", "director", "manager"] },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
-  { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
-  { label: "Inductions", href: "/inductions", roles: ["admin", "director", "manager"] },
-  { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager"] },
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },
-  { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager"] },
-  { label: "Calendar", href: "/calendar", roles: ["admin", "director", "manager"] },
-  { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager"] },
   { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager"] },
-  { label: "Chat", href: "/chat", roles: ["admin", "manager"] },
-  { label: "Admin Settings", href: "/admin", roles: ["admin"] },
+  { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
+  { label: "Calendar", href: "/calendar", roles: ["admin", "director", "manager"] },
+  { label: "Inductions", href: "/inductions", roles: ["admin", "director", "manager"] },
+  { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager"] },
+  { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager"] },
+  { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager"] },
   { label: "Jobsheets", href: "/jobsheets", roles: ["admin", "manager"] },
-  { label: "To Do", href: "/todo", roles: ["admin", "director", "manager"] }
+  { label: "To Do", href: "/todo", roles: ["admin", "director", "manager"] },
+  { label: "Chat", href: "/chat", roles: ["admin", "manager"] }
 ];
 
 export const sessionProfiles: Record<AccessRole, SessionProfile> = {
