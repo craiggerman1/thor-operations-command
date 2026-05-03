@@ -28,14 +28,14 @@ export const navigationItems: NavItem[] = [
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },
   { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager"] },
   { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
-  { label: "Calendar", href: "/calendar", roles: ["admin", "director", "manager"] },
-  { label: "Inductions", href: "/inductions", roles: ["admin", "director", "manager"] },
+  { label: "Calendar", href: "/calendar", roles: ["admin", "manager"] },
+  { label: "Inductions", href: "/inductions", roles: ["admin", "manager"] },
   { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager"] },
-  { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager"] },
+  { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "director", "manager"] },
   { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager"] },
-  { label: "Jobsheets", href: "/jobsheets", roles: ["admin", "manager"] },
+  { label: "Jobsheets", href: "/jobsheets", roles: ["admin", "director", "manager"] },
   { label: "To Do", href: "/todo", roles: ["admin", "director", "manager"] },
-  { label: "Chat", href: "/chat", roles: ["admin", "manager"] }
+  { label: "Chat", href: "/chat", roles: ["admin", "director", "manager"] }
 ];
 
 export const sessionProfiles: Record<AccessRole, SessionProfile> = {
