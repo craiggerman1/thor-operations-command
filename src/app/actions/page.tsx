@@ -18,10 +18,6 @@ export default function ActionsPage() {
       <FlowHeading eyebrow="Action Centre" title="Ensure all items are actioned, owned, escalated where needed, and then cleared from the queue." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} open actions`}>
-          <div className="action-centre-brief">
-            <strong>All actionable items land here.</strong>
-            <small>Admin and national users issue actions to managers. Region Health, Compliance, Productivity, Equipment Servicing and To Do feed their actionable items into this queue for close-out.</small>
-          </div>
           <div className="signal-action-list">
             {sortedActions.map((signal) => (
               <Link id={signal.id} className={`signal-action-card ${signal.severity}`} href={signal.href} key={signal.id}>
