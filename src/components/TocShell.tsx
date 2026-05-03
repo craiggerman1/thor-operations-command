@@ -35,14 +35,14 @@ type StockOrderStorageRequest = {
 };
 
 const weatherByScope: Record<string, WeatherState> = {
-  National: { location: "National", summary: "Weather feed offline", temp: "--", icon: "cloud", warning: "BOM warning feed offline", warningActive: false },
+  National: { location: "Gold Coast, Australia", summary: "Head office weather feed", temp: "--", icon: "cloud", warning: "BOM warning feed pending", warningActive: false },
   Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning feed pending", warningActive: false },
   Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning feed pending", warningActive: false },
   Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning feed pending", warningActive: false },
   Adelaide: { location: "Adelaide", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning feed pending", warningActive: false },
   Perth: { location: "Perth", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning feed pending", warningActive: false },
   Canberra: { location: "Canberra", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning feed pending", warningActive: false },
-  Workshop: { location: "Workshop", summary: "Workshop weather view", temp: "--", icon: "cloud", warning: "Use assigned workshop location once configured", warningActive: false }
+  Workshop: { location: "Gold Coast, Australia", summary: "Head office workshop weather feed", temp: "--", icon: "cloud", warning: "BOM warning feed pending", warningActive: false }
 };
 
 function getStoredScope() {
@@ -230,7 +230,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.147</em>
+              <em>Build 0.148</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
