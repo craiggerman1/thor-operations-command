@@ -48,7 +48,7 @@ export default function StockOrdersPage() {
   const [urgency, setUrgency] = useState("Normal");
   const [note, setNote] = useState("");
   const visibleOrders = useMemo(() => orders.filter((order) => scope === "National" || order.region === scope), [orders, scope]);
-  const canReviewOrders = role === "admin" || scope === "National";
+  const canReviewOrders = role === "admin";
 
   useEffect(() => {
     function loadOrders() {
@@ -106,7 +106,7 @@ export default function StockOrdersPage() {
 
   function cancelOrder(orderId: string) {
     const nextOrders = orders.map((order) => getOrderId(order) === orderId
-      ? { ...order, status: "Cancellation requested", update: "Cancellation sent to national admin for review." }
+      ? { ...order, status: "Cancellation requested", update: "Cancellation request sent to national/admin as an action item for review." }
       : order);
     saveOrders(nextOrders);
   }
@@ -174,7 +174,7 @@ export default function StockOrdersPage() {
                       <div className="stock-actions">
                         <button type="button" onClick={() => requestUpdate(orderId)}>Request Update</button>
                         <button type="button" onClick={() => markDelivered(orderId)}>Mark Delivered</button>
-                        <button type="button" className="danger-button" onClick={() => cancelOrder(orderId)}>Cancel Order</button>
+                        <button type="button" className="danger-button" onClick={() => cancelOrder(orderId)}>Request to Cancel</button>
                       </div>
                     ) : (
                       <div className="stock-actions">

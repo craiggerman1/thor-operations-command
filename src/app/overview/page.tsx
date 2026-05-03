@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { actionItems, regions } from "@/lib/toc-data";
+import { actionItems, productivitySites, regions } from "@/lib/toc-data";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 
@@ -34,9 +34,20 @@ function getHealthText(readiness: number) {
   return "Healthy and competitive";
 }
 
-function getHealthScore(openActionCount: number) {
+function getActionHealthScore(openActionCount: number) {
   if (openActionCount <= 0) return 100;
-  return Math.max(10, 100 - openActionCount * 19);
+  return Math.max(10, 100 - openActionCount * 16);
+}
+
+function getProductivityScore(regionName: string) {
+  const sites = productivitySites.filter((site) => site.region === regionName);
+  if (!sites.length) return 100;
+  return Math.round(sites.reduce((total, site) => total + site.productivityScore, 0) / sites.length);
+}
+
+function getRegionHealthScore(openActionCount: number, productivityScore: number) {
+  const actionHealthScore = getActionHealthScore(openActionCount);
+  return Math.round(actionHealthScore * 0.58 + productivityScore * 0.42);
 }
 
 export default function OverviewPage() {
@@ -65,11 +76,13 @@ export default function OverviewPage() {
         <Panel wide eyebrow="Operating position" title="Region health map" pill="Updated now">
           <div className="region-health-notice">
             <strong>All region health is visible to all managers.</strong>
+            <small>Health is calculated from open Action Centre items and the region productivity score.</small>
           </div>
           <div className="ops-map">
             {regions.map((region) => {
               const openActions = actionItems.filter((item) => item.region === region.name || item.region === "National");
-              const healthScore = getHealthScore(openActions.length);
+              const productivityScore = getProductivityScore(region.name);
+              const healthScore = getRegionHealthScore(openActions.length, productivityScore);
               const tone = getHealthTone(healthScore);
               const healthText = getHealthText(healthScore);
               const canOpen = scope === region.name;
@@ -85,6 +98,7 @@ export default function OverviewPage() {
                 <div className="meta-row">
                   <Tag tone={tone === "yellow" ? "amber" : tone}>{healthScore}% health</Tag>
                   <Tag tone={openActions.length ? "red" : "green"}>{openActions.length} open actions</Tag>
+                  <Tag tone={productivityScore >= 80 ? "green" : productivityScore >= 70 ? "amber" : "red"}>{productivityScore}% productivity</Tag>
                   <Tag>{canOpen ? "Open your action centre" : "Visible only"}</Tag>
                 </div>
                 </>

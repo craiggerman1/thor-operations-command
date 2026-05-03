@@ -166,6 +166,48 @@ export const actionItems = [
     status: "Scheduled",
     closeFlow: "Workshop close-out routes to national approval.",
     closeActions: ["Check parts shelf minimums", "List missing critical items", "Submit workshop close-out for national review"]
+  },
+  {
+    id: "ACT-008",
+    title: "SDS and chemical register review",
+    source: "Compliance",
+    directive: "Scheduled Directive",
+    region: "Melbourne",
+    severity: "amber" as Status,
+    dueDate: "18 May 10:00 am",
+    href: "/actions/ACT-008",
+    detail: "Chemical register and SDS records need confirmation so site compliance remains current.",
+    status: "Scheduled",
+    closeFlow: "Manager close-out routes to national compliance review.",
+    closeActions: ["Review current SDS register", "Confirm chemical list matches current stock", "Submit confirmation note for national review"]
+  },
+  {
+    id: "ACT-009",
+    title: "First aid kit audit",
+    source: "Compliance",
+    directive: "To Do",
+    region: "Adelaide",
+    severity: "blue" as Status,
+    dueDate: "Today 1:00 pm",
+    href: "/actions/ACT-009",
+    detail: "First aid kit audit is overdue and needs manager confirmation before site readiness can be marked healthy.",
+    status: "Overdue",
+    closeFlow: "Close-out requires national compliance approval.",
+    closeActions: ["Check first aid kit stock", "Record missing items or confirm complete", "Submit audit note for national approval"]
+  },
+  {
+    id: "ACT-010",
+    title: "Workshop isolation and defect-tag process",
+    source: "Compliance",
+    directive: "Scheduled Directive",
+    region: "Workshop",
+    severity: "amber" as Status,
+    dueDate: "3 May 10:00 am",
+    href: "/actions/ACT-010",
+    detail: "Workshop isolation and defect-tag process must be confirmed for safe repair and return-to-service control.",
+    status: "Due soon",
+    closeFlow: "Workshop close-out routes to national compliance approval.",
+    closeActions: ["Review isolation and defect-tag setup", "Confirm staff understand tag process", "Submit workshop compliance note"]
   }
 ];
 
@@ -426,9 +468,9 @@ export const assets = [
 export const compliance = [
   { title: "Primary Connect site inductions", region: "Brisbane", owner: "Regional manager", due: "30 Apr", status: "Due soon", type: "Induction", severity: "amber" as Status, href: "/actions/ACT-002", adminSet: true },
   { title: "3-point contact refresher", region: "Sydney", owner: "Regional manager", due: "Today", status: "Action required", type: "Safety", severity: "red" as Status, href: "/actions/ACT-004", adminSet: true },
-  { title: "SDS and chemical register review", region: "Melbourne", owner: "Regional manager", due: "18 May", status: "Current", type: "Document", severity: "green" as Status, href: "/actions", adminSet: true },
-  { title: "First aid kit audit", region: "Adelaide", owner: "Regional manager", due: "Yesterday", status: "Overdue", type: "Equipment", severity: "red" as Status, href: "/actions/ACT-003", adminSet: true },
-  { title: "Workshop isolation and defect-tag process", region: "Workshop", owner: "Workshop lead", due: "3 May", status: "Due soon", type: "Safety", severity: "amber" as Status, href: "/actions/ACT-007", adminSet: true }
+  { title: "SDS and chemical register review", region: "Melbourne", owner: "Regional manager", due: "18 May", status: "Current", type: "Document", severity: "green" as Status, href: "/actions/ACT-008", adminSet: true },
+  { title: "First aid kit audit", region: "Adelaide", owner: "Regional manager", due: "Yesterday", status: "Overdue", type: "Equipment", severity: "red" as Status, href: "/actions/ACT-009", adminSet: true },
+  { title: "Workshop isolation and defect-tag process", region: "Workshop", owner: "Workshop lead", due: "3 May", status: "Due soon", type: "Safety", severity: "amber" as Status, href: "/actions/ACT-010", adminSet: true }
 ];
 
 export const approvedStockItems = [
