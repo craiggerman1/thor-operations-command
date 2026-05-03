@@ -47,12 +47,11 @@
   --line: #d7e0e7;
   --bg: #edf2f5;
   --panel: #ffffff;
-  --panel-glass: rgba(255, 255, 255, 0.78);
-  --glass: rgba(255, 255, 255, 0.58);
-  --glass-strong: rgba(255, 255, 255, 0.76);
-  --card-glass: rgba(255, 255, 255, 0.72);
+  --panel-glass: rgba(255, 255, 255, 0.86);
+  --glass: rgba(255, 255, 255, 0.68);
+  --glass-strong: rgba(255, 255, 255, 0.82);
   --glass-dark: rgba(8, 28, 45, 0.62);
-  --aero-border: rgba(183, 220, 238, 0.7);
+  --aero-border: rgba(183, 220, 238, 0.62);
   --aero-highlight: rgba(255, 255, 255, 0.88);
   --nav: #0b3659;
   --nav-soft: #144568;
@@ -68,7 +67,7 @@
   --violet: #6959a8;
   --shadow: 0 22px 52px rgba(6, 7, 9, 0.14);
   --tight-shadow: 0 12px 30px rgba(6, 7, 9, 0.11);
-  --aero-shadow: 0 18px 44px rgba(6, 7, 9, 0.12), inset 0 1px 0 var(--aero-highlight);
+  --aero-shadow: 0 18px 44px rgba(6, 7, 9, 0.13), inset 0 1px 0 var(--aero-highlight);
 }
 
 * {
@@ -947,8 +946,8 @@ body.todo-floating-disabled .topbar {
   border: 1px solid var(--aero-border);
   border-radius: 6px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(239, 247, 250, 0.54)),
-    var(--card-glass);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(239, 247, 250, 0.66)),
+    var(--glass);
   box-shadow: var(--aero-shadow);
   backdrop-filter: blur(16px) saturate(1.08);
 }
@@ -1331,14 +1330,10 @@ input,
 textarea {
   border: 1px solid var(--line);
   border-radius: 6px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 251, 253, 0.78)),
-    var(--card-glass);
+  background: #fff;
   color: var(--ink);
   min-height: 42px;
   padding: 0 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(10px) saturate(1.04);
 }
 
 textarea {
@@ -1466,12 +1461,12 @@ textarea {
 .metric-card,
 .panel {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(238, 246, 249, 0.54)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(238, 246, 249, 0.62)),
     var(--glass);
   border: 1px solid var(--aero-border);
   border-radius: 6px;
   box-shadow: var(--aero-shadow);
-  backdrop-filter: blur(20px) saturate(1.1);
+  backdrop-filter: blur(18px) saturate(1.08);
 }
 
 .panel {
@@ -1504,8 +1499,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 18px 18px 16px;
   overflow: hidden;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(239, 247, 250, 0.56)),
-    var(--card-glass);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(239, 247, 250, 0.68));
   transition: transform 180ms ease, box-shadow 180ms ease;
   text-decoration: none;
 }
@@ -1587,11 +1581,9 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-left: 6px solid var(--teal);
   border-radius: 6px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(236, 247, 250, 0.62)),
-    var(--card-glass);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(236, 247, 250, 0.86));
   color: var(--ink);
   box-shadow: var(--tight-shadow);
-  backdrop-filter: blur(16px) saturate(1.08);
   overflow: hidden;
 }
 
@@ -1843,9 +1835,9 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(183, 220, 238, 0.54);
   border-radius: 6px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 251, 0.52)),
-    var(--card-glass);
-  backdrop-filter: blur(16px) saturate(1.08);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(242, 248, 251, 0.64)),
+    var(--glass);
+  backdrop-filter: blur(12px) saturate(1.06);
 }
 
 .state-node,
@@ -3151,11 +3143,8 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(14px) saturate(1.06);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -3610,11 +3599,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .calendar-day-actions span {
@@ -3643,11 +3628,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-left: 6px solid var(--green);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .calendar-detail-job.amber {
@@ -3717,7 +3698,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .calendar-detail-notes {
   padding: 10px;
   border-radius: 6px;
-  background: rgba(244, 248, 251, 0.68);
+  background: #f4f8fb;
 }
 
 .calendar-detail-grid dt {
@@ -3754,11 +3735,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(37, 161, 189, 0.24);
   border-left: 5px solid var(--teal);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(236, 247, 250, 0.72), rgba(255, 255, 255, 0.58)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(236, 247, 250, 0.88);
 }
 
 .staff-source-strip strong,
@@ -3806,10 +3783,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(236, 247, 250, 0.56)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(236, 247, 250, 0.72));
 }
 
 .availability-summary-card span,
@@ -3845,11 +3819,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 7px;
   border: 1px solid rgba(201, 215, 225, 0.82);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 251, 0.52)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(12px) saturate(1.04);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .staff-availability-row.header {
@@ -4234,11 +4204,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .stock-form label {
@@ -4425,11 +4391,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(242, 248, 251, 0.56)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .admin-config-card strong {
@@ -4449,11 +4411,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-left: 6px solid var(--green);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(255, 255, 255, 0.92);
   color: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -4463,9 +4421,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .productivity-site-card:hover {
   transform: translateY(-1px);
   border-color: rgba(37, 171, 195, 0.38);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(244, 251, 253, 0.66)),
-    var(--glass-strong);
+  background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 14px 28px rgba(9, 30, 47, 0.1);
 }
 
@@ -4615,11 +4571,8 @@ body:not([data-access="admin"]) .admin-only-panel {
 .productivity-chart-card {
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(14px) saturate(1.06);
 }
 
 .productivity-detail-metric {
@@ -4933,9 +4886,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-radius: 6px;
   background:
     linear-gradient(180deg, rgba(10, 49, 82, 0.06), transparent 42%),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+    rgba(255, 255, 255, 0.84);
 }
 
 .chat-sidebar-head {
@@ -4952,9 +4903,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .chat-channels button {
   min-height: 68px;
   padding: 11px 12px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(242, 248, 251, 0.56)),
-    var(--card-glass);
+  background: #ffffff;
   color: var(--ink);
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
@@ -5009,11 +4958,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .chat-channel-note strong {
@@ -5031,9 +4976,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-radius: 6px;
   background:
     linear-gradient(150deg, rgba(10, 49, 82, 0.06), transparent 48%),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(16px) saturate(1.08);
+    rgba(255, 255, 255, 0.92);
   min-height: 560px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -5049,7 +4992,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-bottom: 1px solid var(--line);
   background:
     linear-gradient(135deg, rgba(10, 49, 82, 0.08), rgba(37, 161, 189, 0.05)),
-    rgba(255, 255, 255, 0.66);
+    rgba(255, 255, 255, 0.86);
 }
 
 .chat-room-head strong {
@@ -5071,9 +5014,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 10px;
   border: 1px solid rgba(201, 215, 225, 0.78);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(241, 246, 248, 0.68), rgba(255, 255, 255, 0.48)),
-    rgba(255, 255, 255, 0.5);
+  background: rgba(241, 246, 248, 0.74);
 }
 
 .chat-target-head {
@@ -5272,9 +5213,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-radius: 6px;
   background:
     linear-gradient(135deg, rgba(10, 49, 82, 0.08), rgba(37, 161, 189, 0.05)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+    rgba(255, 255, 255, 0.86);
 }
 
 .manager-meetings-head {
@@ -5314,9 +5253,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 12px;
   border: 1px solid rgba(10, 49, 82, 0.16);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
+  background: #ffffff;
   color: var(--blue);
   text-align: left;
   cursor: pointer;
@@ -5351,11 +5288,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 13px;
   border: 1px solid rgba(201, 215, 225, 0.9);
   border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(242, 248, 251, 0.54)),
-    var(--card-glass);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(14px) saturate(1.06);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .manager-meeting-card p {
