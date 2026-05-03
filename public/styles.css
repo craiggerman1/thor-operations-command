@@ -3761,26 +3761,6 @@ body:not([data-access="admin"]) .admin-only-panel {
   line-height: 1;
 }
 
-.availability-window-key {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  margin: 0 0 8px calc(15% + 8px);
-}
-
-.availability-window-key span {
-  display: inline-flex;
-  justify-content: center;
-  min-height: 24px;
-  padding: 5px 6px;
-  border-radius: 4px;
-  background: #eef5fb;
-  color: var(--blue);
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
 .staff-availability-board {
   display: grid;
   gap: 7px;
@@ -3790,11 +3770,11 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .staff-availability-row {
   display: grid;
-  grid-template-columns: minmax(140px, 1.1fr) repeat(7, minmax(86px, 1fr)) 72px;
+  grid-template-columns: minmax(112px, 0.55fr) repeat(7, minmax(148px, 1fr)) 68px;
   gap: 6px;
   align-items: center;
-  min-width: 900px;
-  padding: 8px;
+  min-width: 1260px;
+  padding: 7px;
   border: 1px solid rgba(201, 215, 225, 0.82);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.88);
@@ -3806,19 +3786,44 @@ body:not([data-access="admin"]) .admin-only-panel {
     linear-gradient(90deg, rgba(37, 161, 189, 0.22), transparent),
     #0a3152;
   color: #ffffff;
-  font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .staff-availability-row.header strong,
 .staff-availability-row.header span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #ffffff;
+  font-size: 13px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.staff-availability-row.header span:first-child {
+  justify-content: flex-start;
+}
+
+.staff-availability-row.time-header {
+  min-height: 32px;
+  padding-block: 5px;
+  border-color: rgba(37, 161, 189, 0.18);
+  background: rgba(236, 247, 250, 0.74);
+  color: var(--blue);
+}
+
+.staff-availability-row.time-header > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .staff-name strong {
   color: #071726;
-  font-size: 13px;
+  font-size: 15px;
+  letter-spacing: 0.01em;
 }
 
 .availability-day-cell {
@@ -3830,6 +3835,26 @@ body:not([data-access="admin"]) .admin-only-panel {
   padding: 5px;
   border-radius: 5px;
   background: #f3f7fa;
+}
+
+.availability-day-cell.time-labels {
+  min-height: 26px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.availability-day-cell.time-labels small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border-radius: 4px;
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.05;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .availability-window {
@@ -5941,14 +5966,19 @@ body:not([data-access="admin"]) .admin-only-panel {
     font-size: 24px;
   }
 
-  .availability-window-key {
-    display: none;
+  .staff-availability-row {
+    grid-template-columns: minmax(98px, 0.55fr) repeat(7, minmax(112px, 1fr)) 54px;
+    min-width: 1010px;
+    padding: 7px;
   }
 
-  .staff-availability-row {
-    grid-template-columns: minmax(108px, 0.9fr) repeat(7, minmax(62px, 1fr)) 56px;
-    min-width: 680px;
-    padding: 7px;
+  .staff-availability-row.header strong,
+  .staff-availability-row.header span {
+    font-size: 12px;
+  }
+
+  .staff-name strong {
+    font-size: 14px;
   }
 
   .induction-summary-grid {
@@ -5969,6 +5999,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   .availability-day-cell {
     gap: 3px;
     padding: 4px;
+  }
+
+  .availability-day-cell.time-labels small {
+    font-size: 9px;
   }
 
   .availability-window {

@@ -73,15 +73,20 @@ export default function StaffAvailabilityPage() {
             ))}
           </div>
 
-          <div className="availability-window-key" aria-label="Availability key">
-            {feed.windows.map((windowName) => <span key={windowName}>{windowName}</span>)}
-          </div>
-
           <div className="staff-availability-board">
             <div className="staff-availability-row header">
               <span>Staff name</span>
               {feed.days.map((day) => <strong key={day}>{day}</strong>)}
               <span>Available</span>
+            </div>
+            <div className="staff-availability-row time-header" aria-label="Availability time windows">
+              <span>Time blocks</span>
+              {feed.days.map((day) => (
+                <div className="availability-day-cell time-labels" key={`${day}-windows`}>
+                  {feed.windows.map((windowName) => <small key={`${day}-${windowName}`}>{windowName}</small>)}
+                </div>
+              ))}
+              <span>Total</span>
             </div>
             {feed.staff.map((staff) => (
               <div className="staff-availability-row" key={staff.name}>
