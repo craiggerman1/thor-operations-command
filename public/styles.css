@@ -3849,6 +3849,102 @@ body:not([data-access="admin"]) .admin-only-panel {
   background: var(--red);
 }
 
+.induction-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.induction-board {
+  display: grid;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.induction-row {
+  display: grid;
+  grid-template-columns: minmax(132px, 0.9fr) repeat(14, minmax(118px, 1fr));
+  gap: 6px;
+  align-items: stretch;
+  min-width: 1800px;
+  padding: 8px;
+  border: 1px solid rgba(201, 215, 225, 0.82);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.induction-row.header {
+  min-height: 44px;
+  background:
+    linear-gradient(90deg, rgba(37, 161, 189, 0.22), transparent),
+    #0a3152;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.induction-row.header span,
+.induction-row.header strong {
+  color: #ffffff;
+}
+
+.induction-cell {
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  min-height: 54px;
+  padding: 8px;
+  border: 1px solid rgba(201, 215, 225, 0.72);
+  border-left: 5px solid rgba(168, 169, 173, 0.72);
+  border-radius: 5px;
+  background: #f4f6f8;
+}
+
+.induction-cell strong,
+.induction-cell small {
+  display: block;
+}
+
+.induction-cell strong {
+  color: #071726;
+  font-size: 12px;
+  line-height: 1.12;
+}
+
+.induction-cell small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.induction-cell.green {
+  border-left-color: var(--green);
+  background: #edf8f1;
+}
+
+.induction-cell.amber {
+  border-left-color: var(--amber);
+  background: #fff7e9;
+}
+
+.induction-cell.red {
+  border-left-color: var(--red);
+  background: #fff0ee;
+}
+
+.induction-cell.grey {
+  border-left-color: #a8a9ad;
+  background: #f0f2f4;
+}
+
+.induction-cell.unknown {
+  border-left-color: var(--teal);
+  background: #eef8fb;
+}
+
 .heatmap-row {
   display: grid;
   grid-template-columns: minmax(150px, 1.2fr) repeat(7, minmax(44px, 1fr));
@@ -5808,6 +5904,21 @@ body:not([data-access="admin"]) .admin-only-panel {
   .staff-availability-row {
     grid-template-columns: minmax(108px, 0.9fr) repeat(7, minmax(62px, 1fr)) 56px;
     min-width: 680px;
+    padding: 7px;
+  }
+
+  .induction-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .induction-row {
+    grid-template-columns: minmax(104px, 0.8fr) repeat(14, minmax(92px, 1fr));
+    min-width: 1420px;
+    padding: 7px;
+  }
+
+  .induction-cell {
+    min-height: 48px;
     padding: 7px;
   }
 

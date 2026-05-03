@@ -23,6 +23,7 @@ export const navigationItems: NavItem[] = [
   { label: "Action Centre", href: "/actions", roles: ["admin", "manager"] },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
   { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
+  { label: "Inductions", href: "/inductions", roles: ["admin", "director", "manager"] },
   { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "manager"] },
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },
   { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager"] },

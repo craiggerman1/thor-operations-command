@@ -215,13 +215,14 @@ export const commandPathways = [
   { step: "1", label: "Action Centre", href: "/actions", detail: "Start here when something needs action, ownership, escalation or clearing." },
   { step: "2", label: "Region Health", href: "/overview", detail: "Check whether each state is healthy enough to run the day without surprises." },
   { step: "3", label: "Compliance", href: "/compliance", detail: "Confirm induction, safety and site-readiness issues are complete and green." },
-  { step: "4", label: "Stock Orders", href: "/stock-orders", detail: "Raise supply needs early before chemicals, PPE or parts block the work." },
-  { step: "5", label: "Productivity", href: "/operations", detail: "Review productivity queues, rollover counts, site actions and manager responses." },
-  { step: "6", label: "Asset Tracking", href: "/asset-tracking", detail: "Track Unity GPS-equipped wash vehicles and mobile crews in the field." },
-  { step: "7", label: "Calendar", href: "/calendar", detail: "Review scheduled jobs by day and location before the work starts." },
-  { step: "8", label: "Staff Availability", href: "/staff-availability", detail: "Use the availability heat map to quickly see who can cover work." },
-  { step: "9", label: "Equipment Servicing", href: "/equipment-servicing", detail: "Track odometer and hour readings so servicing and repairs are visible before assets fail." },
-  { step: "10", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
+  { step: "4", label: "Inductions", href: "/inductions", detail: "Check staff induction status by site before assigning work." },
+  { step: "5", label: "Stock Orders", href: "/stock-orders", detail: "Raise supply needs early before chemicals, PPE or parts block the work." },
+  { step: "6", label: "Productivity", href: "/operations", detail: "Review productivity queues, rollover counts, site actions and manager responses." },
+  { step: "7", label: "Asset Tracking", href: "/asset-tracking", detail: "Track Unity GPS-equipped wash vehicles and mobile crews in the field." },
+  { step: "8", label: "Calendar", href: "/calendar", detail: "Review scheduled jobs by day and location before the work starts." },
+  { step: "9", label: "Staff Availability", href: "/staff-availability", detail: "Use the availability heat map to quickly see who can cover work." },
+  { step: "10", label: "Equipment Servicing", href: "/equipment-servicing", detail: "Track odometer and hour readings so servicing and repairs are visible before assets fail." },
+  { step: "11", label: "Chat", href: "/chat", detail: "Keep the management communication trail clear and healthy." }
 ];
 
 export const goLivePathway = [
@@ -442,6 +443,62 @@ export const staffAvailabilitySheet: StaffAvailabilityFeed = {
     { name: "PARTH", availability: [["Not Available", "Not Available", "Not Available", "Not Available"], ["Not Available", "Not Available", "Available", "Not Available"], ["Available", "Available", "Not Available", "Not Available"], ["Not Available", "Not Available", "Not Available", "Not Available"], ["Not Available", "Not Available", "Available", "Not Available"], ["Not Available", "Available", "Available", "Not Available"], ["Available", "Available", "Available", "Available"]] as StaffSheetStatus[][] },
     { name: "ARANI", availability: [["Not Available", "Not Available", "Available", "Available"], ["Not Available", "Not Available", "Available", "Available"], ["Not Available", "Not Available", "Not Available", "Not Available"], ["Not Available", "Not Available", "Not Available", "Not Available"], ["Not Available", "Not Available", "Available", "Available"], ["Not Available", "Not Available", "Available", "Available"], ["Not Available", "Not Available", "Not Available", "Not Available"]] as StaffSheetStatus[][] },
     { name: "SAINATH", availability: [["Not Available", "Not Available", "Not Available", "Not Available"], ["Not Available", "Available", "Not Available", "Not Available"], ["Not Available", "Available", "Not Available", "Not Available"], ["Not Available", "Not Available", "Not Available", "Not Available"], ["Not Available", "Available", "Not Available", "Not Available"], ["Not Available", "Available", "Not Available", "Not Available"], ["Available", "Available", "Available", "Not Available"]] as StaffSheetStatus[][] }
+  ]
+};
+
+export type InductionStatus = "Inducted" | "Not Inducted" | "Expired" | "Expiring Soon" | "Expiring This Month" | "";
+
+export type InductionFeed = {
+  spreadsheetUrl: string;
+  sourceName: string;
+  lastRead: string;
+  sites: { name: string; region: string }[];
+  staff: { name: string; inductions: { site: string; status: InductionStatus; expiry: string }[] }[];
+};
+
+export const staffInductionsSheet: InductionFeed = {
+  spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1MFFxCPAhPzTzB9Q7zPOBLJyNyz04S23NoJ1GZ6-VRlM/edit?gid=0#gid=0",
+  sourceName: "Staff Inductions - Sheet1",
+  lastRead: "3 May 2026",
+  sites: [
+    { name: "Woolworths", region: "Brisbane" },
+    { name: "Mondiale", region: "Brisbane" },
+    { name: "TGE Larapinta", region: "Brisbane" },
+    { name: "TGE Karawatha", region: "Brisbane" },
+    { name: "Big Michael / Morco", region: "Brisbane" },
+    { name: "Cement Australia", region: "Brisbane" },
+    { name: "Allied Pinnacle", region: "Brisbane" },
+    { name: "Americold Bradman", region: "Brisbane" },
+    { name: "DHL", region: "Brisbane" },
+    { name: "Fedex Coomera", region: "Brisbane" },
+    { name: "Norco", region: "Brisbane" },
+    { name: "Autocare", region: "Brisbane" },
+    { name: "Linfox ACR", region: "Brisbane" },
+    { name: "Prixcar", region: "Brisbane" }
+  ],
+  staff: [
+    { name: "CRAIG", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "20/11/2027" }, { site: "Mondiale", status: "Inducted", expiry: "06/01/2027" }, { site: "TGE Larapinta", status: "Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Inducted", expiry: "03/10/2026" }, { site: "Cement Australia", status: "Not Inducted", expiry: "" }, { site: "Allied Pinnacle", status: "Not Inducted", expiry: "" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Inducted", expiry: "04/07/2026" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "HARRY", inductions: [{ site: "Woolworths", status: "Not Inducted", expiry: "" }, { site: "Mondiale", status: "Inducted", expiry: "14/01/2027" }, { site: "TGE Larapinta", status: "Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Inducted", expiry: "13/12/2026" }, { site: "Cement Australia", status: "Not Inducted", expiry: "" }, { site: "Allied Pinnacle", status: "Not Inducted", expiry: "" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Not Inducted", expiry: "" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "AMAN", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "28/11/2027" }, { site: "Mondiale", status: "Inducted", expiry: "12/01/2027" }, { site: "TGE Larapinta", status: "Not Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Inducted", expiry: "16/07/2026" }, { site: "Cement Australia", status: "Inducted", expiry: "03/09/2027" }, { site: "Allied Pinnacle", status: "Inducted", expiry: "07/02/2027" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Not Inducted", expiry: "" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "HARMAN", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "14/01/2028" }, { site: "Mondiale", status: "Inducted", expiry: "12/01/2027" }, { site: "TGE Larapinta", status: "Not Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Inducted", expiry: "07/10/2026" }, { site: "Cement Australia", status: "Not Inducted", expiry: "" }, { site: "Allied Pinnacle", status: "Inducted", expiry: "03/11/2027" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Not Inducted", expiry: "" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "GARRY", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "21/01/2028" }, { site: "Mondiale", status: "Not Inducted", expiry: "" }, { site: "TGE Larapinta", status: "Not Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Not Inducted", expiry: "" }, { site: "Cement Australia", status: "Not Inducted", expiry: "" }, { site: "Allied Pinnacle", status: "Not Inducted", expiry: "" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Not Inducted", expiry: "" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "SAMAR", inductions: [{ site: "Woolworths", status: "Not Inducted", expiry: "" }, { site: "Mondiale", status: "Inducted", expiry: "14/01/2027" }, { site: "TGE Larapinta", status: "Not Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Not Inducted", expiry: "" }, { site: "Cement Australia", status: "Not Inducted", expiry: "" }, { site: "Allied Pinnacle", status: "Not Inducted", expiry: "" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Not Inducted", expiry: "" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "SHANT", inductions: [{ site: "Woolworths", status: "Not Inducted", expiry: "" }, { site: "Mondiale", status: "Not Inducted", expiry: "" }, { site: "TGE Larapinta", status: "Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Not Inducted", expiry: "" }, { site: "Cement Australia", status: "Not Inducted", expiry: "" }, { site: "Allied Pinnacle", status: "Not Inducted", expiry: "" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Not Inducted", expiry: "" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "SHIVAM", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "04/03/2028" }, { site: "Mondiale", status: "Not Inducted", expiry: "" }, { site: "TGE Larapinta", status: "Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Inducted", expiry: "08/04/2027" }, { site: "Cement Australia", status: "Not Inducted", expiry: "" }, { site: "Allied Pinnacle", status: "Not Inducted", expiry: "" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Not Inducted", expiry: "" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "NARINDER", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "06/03/2027" }] },
+    { name: "SAKSHAM", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "07/03/2028" }] },
+    { name: "RITESH", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "23/01/2028" }] },
+    { name: "DARSHAN", inductions: [{ site: "Mondiale", status: "Inducted", expiry: "06/04/2027" }, { site: "TGE Larapinta", status: "Inducted", expiry: "" }, { site: "Cement Australia", status: "Inducted", expiry: "02/09/2027" }] },
+    { name: "BHUMIK", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "25/03/2028" }] },
+    { name: "JOHN", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "21/11/2027" }, { site: "Mondiale", status: "Inducted", expiry: "13/01/2027" }, { site: "TGE Larapinta", status: "Inducted", expiry: "" }, { site: "TGE Karawatha", status: "Not Inducted", expiry: "" }, { site: "Big Michael / Morco", status: "Inducted", expiry: "21/07/2026" }, { site: "Cement Australia", status: "Inducted", expiry: "04/09/2027" }, { site: "Allied Pinnacle", status: "Not Inducted", expiry: "" }, { site: "Americold Bradman", status: "Not Inducted", expiry: "" }, { site: "DHL", status: "Inducted", expiry: "16/07/2027" }, { site: "Fedex Coomera", status: "Not Inducted", expiry: "" }, { site: "Norco", status: "Not Inducted", expiry: "" }, { site: "Autocare", status: "Not Inducted", expiry: "" }, { site: "Linfox ACR", status: "Not Inducted", expiry: "" }, { site: "Prixcar", status: "Not Inducted", expiry: "" }] },
+    { name: "PAWAN", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "11/04/2028" }, { site: "Mondiale", status: "Inducted", expiry: "05/04/2027" }, { site: "Big Michael / Morco", status: "Inducted", expiry: "04/04/2027" }] },
+    { name: "TIM", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "15/01/2028" }] },
+    { name: "STEVE", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "20/01/2028" }] },
+    { name: "YADVINDER", inductions: [] },
+    { name: "JATIN", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "18/04/2028" }] },
+    { name: "PARTH", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "18/04/2028" }] },
+    { name: "ARANI", inductions: [{ site: "Woolworths", status: "Inducted", expiry: "11/04/2028" }] },
+    { name: "SAINATH", inductions: [] }
   ]
 };
 
