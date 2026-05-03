@@ -56,6 +56,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [unitsWashedToday, setUnitsWashedToday] = useState(0);
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
+  const [sessionReady, setSessionReady] = useState(false);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role));
 
@@ -68,6 +69,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       document.body.dataset.access = defaultSession.role;
     }
     document.body.classList.add("is-authenticated");
+    setSessionReady(true);
 
     return () => {
       if (signOutTimer.current) window.clearTimeout(signOutTimer.current);
@@ -75,12 +77,14 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!sessionReady) return;
+
     const activeRole = activeProfile.role;
     const currentNavItem = navigationItems.find((item) => item.href === pathname);
     if (currentNavItem && !currentNavItem.roles.includes(activeRole)) {
       router.push("/home");
     }
-  }, [activeProfile.role, pathname, router]);
+  }, [activeProfile.role, pathname, router, sessionReady]);
 
   useEffect(() => {
     const targetUnits = 184;
@@ -181,7 +185,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>Beta</strong>
               <span>Not for internal operational use</span>
-              <em>Build 0.124</em>
+              <em>Build 0.125</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
