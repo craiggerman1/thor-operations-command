@@ -94,7 +94,7 @@ export default function HomePage() {
       </section>
       {isDirector ? (
         <section className="command-grid route-grid">
-          <Panel wide eyebrow="Director access" title="Owner health view" pill={`${overallScore}% overall`}>
+          <Panel wide eyebrow="Director access" title="Business overall position" pill={`${overallScore}% overall`}>
             <div className="director-layout">
               <Link className={`director-scorecard actionable-card ${overallTone}`} href="/actions">
                 <span>Overall position</span>
@@ -102,13 +102,13 @@ export default function HomePage() {
                 <small>Total nationwide position from open actions, site productivity and open manager To Do items.</small>
               </Link>
               <div className="director-signals">
-                <DirectorSignal label="Productivity" value={`${productivityScore}%`} tone={getTone(productivityScore)} />
-                <DirectorSignal label="Compliance" value={`${complianceScore}%`} tone={getTone(complianceScore)} />
-                <DirectorSignal label="Manager To Do Items" value={openTodoCount.toString()} tone={openTodoCount ? "amber" : "green"} />
-                <DirectorSignal label="Open Action Items" value={openActionItems.length.toString()} tone={openActionItems.length ? "amber" : "green"} />
+                <DirectorSignal label="Productivity" value={`${productivityScore}%`} tone={getTone(productivityScore)} href="/operations" />
+                <DirectorSignal label="Compliance" value={`${complianceScore}%`} tone={getTone(complianceScore)} href="/compliance" />
+                <DirectorSignal label="Manager To Do Items" value={openTodoCount.toString()} tone={openTodoCount ? "amber" : "green"} href="/actions" />
+                <DirectorSignal label="Manager Action Items" value={openActionItems.length.toString()} tone={openActionItems.length ? "amber" : "green"} href="/actions" />
               </div>
               <div className="director-brief">
-                <div className="director-brief-item"><span className="brief-dot" /><strong>{openActionItems.length} national open action items currently influence the owner position.</strong></div>
+                <div className="director-brief-item"><span className="brief-dot" /><strong>{openActionItems.length} national open action items currently influence the business overall position score.</strong></div>
                 <div className="director-brief-item"><span className="brief-dot" /><strong><Tag tone={complianceScore >= 90 ? "green" : "amber"}>{complianceScore >= 90 ? "Stable" : "Watch"}</Tag> Compliance score is driven by open compliance action load.</strong></div>
               </div>
             </div>
@@ -181,6 +181,6 @@ function getTone(score: number) {
   return "red";
 }
 
-function DirectorSignal({ label, value, tone = "green" }: { label: string; value: string; tone?: "green" | "amber" | "red" }) {
-  return <Link className={`director-signal actionable-card ${tone}`} href="/actions"><span>{label}</span><strong>{value}</strong><small>Open national action view</small></Link>;
+function DirectorSignal({ label, value, href, tone = "green" }: { label: string; value: string; href: string; tone?: "green" | "amber" | "red" }) {
+  return <Link className={`director-signal actionable-card ${tone}`} href={href}><span>{label}</span><strong>{value}</strong><small>Open relevant view</small></Link>;
 }
