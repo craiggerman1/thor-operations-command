@@ -84,8 +84,9 @@ export default function ProductivitySitePage() {
     );
   }
 
-  const isVisible = scope === "National" || scope === site.region;
-  const score = getProductivityScore(site);
+  const currentSite = site;
+  const isVisible = scope === "National" || scope === currentSite.region;
+  const score = getProductivityScore(currentSite);
   const tone = getProductivityTone(score);
   const trend = getProductivityTrend(score);
   const chartPoints = trend.map((point, index) => {
@@ -95,7 +96,7 @@ export default function ProductivitySitePage() {
   });
   const linePoints = chartPoints.map((point) => `${point.x},${point.y}`).join(" ");
   const yAxisTicks = [100, 80, 60, 40, 20, 0];
-  const siteKey = getSiteKey(site.region, site.site);
+  const siteKey = getSiteKey(currentSite.region, currentSite.site);
   const savedResponse = responses[siteKey];
 
   function updateResponse(response: string) {
@@ -104,8 +105,8 @@ export default function ProductivitySitePage() {
       [siteKey]: {
         response,
         updatedAt: new Date().toISOString(),
-        region: site.region,
-        site: site.site
+        region: currentSite.region,
+        site: currentSite.site
       }
     };
     setResponses(nextResponses);
@@ -115,7 +116,7 @@ export default function ProductivitySitePage() {
   if (!isVisible) {
     return (
       <TocShell>
-        <PageIntro title="Productivity" detail={`${site.site} is outside the current signed-in scope.`} />
+        <PageIntro title="Productivity" detail={`${currentSite.site} is outside the current signed-in scope.`} />
         <section className="command-grid route-grid">
           <Panel wide eyebrow="Restricted scope" title="Site not visible">
             <div className="empty-state">Change scope or return to the Productivity page to view sites available to this user.</div>
@@ -128,10 +129,10 @@ export default function ProductivitySitePage() {
 
   return (
     <TocShell>
-      <PageIntro title="Productivity" detail={`${site.site} productivity detail.`} />
+      <PageIntro title="Productivity" detail={`${currentSite.site} productivity detail.`} />
       <FlowHeading eyebrow="Productivity Detail" title="Review the site signal, productivity trend and manager action required." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow={site.region} title={site.site} pill={`${score}% productivity`}>
+        <Panel wide eyebrow={currentSite.region} title={currentSite.site} pill={`${score}% productivity`}>
           <div className={`productivity-score-card ${tone}`}>
             <div>
               <span className="eyebrow">Site productivity score</span>
@@ -144,18 +145,18 @@ export default function ProductivitySitePage() {
           <div className="productivity-detail-grid">
             <article className="productivity-detail-metric">
               <span>Units</span>
-              <strong>{site.units}</strong>
+              <strong>{currentSite.units}</strong>
               <small>Washed units in the current reporting window.</small>
             </article>
             <article className="productivity-detail-metric">
               <span>Labour hours</span>
-              <strong>{site.labourHours}</strong>
+              <strong>{currentSite.labourHours}</strong>
               <small>Operational labour hours used for the productivity signal.</small>
             </article>
             <article className="productivity-detail-metric">
               <span>Current queue</span>
-              <strong>{site.queue}</strong>
-              <small>{site.action}</small>
+              <strong>{currentSite.queue}</strong>
+              <small>{currentSite.action}</small>
             </article>
           </div>
 
