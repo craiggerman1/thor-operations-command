@@ -154,7 +154,7 @@ export default function StockOrdersPage() {
                     <div className="stock-detail"><span>{order.status}</span><span>{order.update}</span></div>
                     <div className="stock-detail"><span>Tracking</span><span>{order.trackingNumber || "Pending"}</span></div>
                     <div className="meta-row"><Tag tone={order.urgency === "Urgent" ? "red" : "green"}>{order.urgency}</Tag>{order.updateRequested ? <Tag tone="amber">Update requested</Tag> : null}</div>
-                    {role === "admin" ? (
+                    {role === "admin" && scope === "National" ? (
                       <div className="stock-actions">
                         <Link className="node-action" href="/national-requests">Review In National Requests</Link>
                       </div>

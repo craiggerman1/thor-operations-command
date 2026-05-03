@@ -58,7 +58,8 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
   const [sessionReady, setSessionReady] = useState(false);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
-  const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role));
+  const currentScope = session.scope || activeProfile.regions[0] || "National";
+  const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || currentScope === "National"));
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -88,10 +89,10 @@ export function TocShell({ children }: { children: ReactNode }) {
 
     const activeRole = activeProfile.role;
     const currentNavItem = navigationItems.find((item) => item.href === pathname);
-    if (currentNavItem && !currentNavItem.roles.includes(activeRole)) {
+    if (currentNavItem && (!currentNavItem.roles.includes(activeRole) || (currentNavItem.nationalOnly && currentScope !== "National"))) {
       router.push("/home");
     }
-  }, [activeProfile.role, pathname, router, sessionReady]);
+  }, [activeProfile.role, currentScope, pathname, router, sessionReady]);
 
   useEffect(() => {
     const targetUnits = 184;
@@ -186,7 +187,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.142</em>
+              <em>Build 0.143</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -203,7 +204,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </label>
             <label className="select-wrap region-control">
               <span>Region</span>
-              <select value={session.scope || activeProfile.regions[0]} onChange={(event) => updateScope(event.target.value)}>
+              <select value={currentScope} onChange={(event) => updateScope(event.target.value)}>
                 {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
               </select>
             </label>
