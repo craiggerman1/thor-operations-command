@@ -21,6 +21,7 @@ const broadcastKey = "toc.urgentBroadcast";
 const acknowledgedKey = "toc.urgentBroadcastAcknowledged";
 const directorBroadcastKey = "toc.directorBroadcast";
 const directorAcknowledgedKey = "toc.directorBroadcastAcknowledged";
+const broadcastApi = "/api/broadcasts";
 
 function createId() {
   return `urgent-${Date.now()}-${Math.round(Math.random() * 100000)}`;
@@ -87,6 +88,7 @@ function readSessionScope() {
 
 function writeBroadcasts(nextBroadcasts: UrgentBroadcastMessage[]) {
   localStorage.setItem(broadcastKey, JSON.stringify(nextBroadcasts));
+  syncRemoteBroadcasts("urgent", { broadcasts: nextBroadcasts });
   window.dispatchEvent(new Event("toc.urgentBroadcast.updated"));
 }
 
@@ -100,15 +102,48 @@ function readDirectorBroadcast() {
   }
 }
 
+function cleanRemoteDirectorBroadcast(raw: unknown) {
+  if (!raw || typeof raw !== "object") return null as DirectorBroadcastMessage | null;
+
+  const broadcast = raw as Partial<DirectorBroadcastMessage>;
+  return {
+    message: broadcast.message || "",
+    version: broadcast.version || Date.now().toString(),
+    active: Boolean(broadcast.active)
+  };
+}
+
 function writeDirectorBroadcast(nextBroadcast: DirectorBroadcastMessage) {
   localStorage.setItem(directorBroadcastKey, JSON.stringify(nextBroadcast));
+  syncRemoteBroadcasts("director", { broadcast: nextBroadcast });
   window.dispatchEvent(new Event("toc.directorBroadcast.updated"));
 }
 
 function deleteDirectorBroadcast() {
   localStorage.removeItem(directorBroadcastKey);
   localStorage.removeItem(directorAcknowledgedKey);
+  syncRemoteBroadcasts("clear-director", {});
   window.dispatchEvent(new Event("toc.directorBroadcast.updated"));
+}
+
+function syncRemoteBroadcasts(kind: "urgent" | "director" | "clear-director", payload: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+
+  fetch(broadcastApi, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, ...payload })
+  }).catch(() => {
+    // Local browser storage remains the fallback until database-backed broadcasts are connected.
+  });
+}
+
+function mergeBroadcasts(localBroadcasts: UrgentBroadcastMessage[], remoteBroadcasts: UrgentBroadcastMessage[]) {
+  const broadcastMap = new Map<string, UrgentBroadcastMessage>();
+  [...remoteBroadcasts, ...localBroadcasts].forEach((broadcast) => {
+    broadcastMap.set(broadcast.id, broadcast);
+  });
+  return Array.from(broadcastMap.values());
 }
 
 export function UrgentBroadcastBanner() {
@@ -117,10 +152,21 @@ export function UrgentBroadcastBanner() {
   const [sessionScope, setSessionScope] = useState("National");
 
   useEffect(() => {
-    function syncBroadcast() {
-      setBroadcasts(readBroadcasts());
+    async function syncBroadcast() {
+      const localBroadcasts = readBroadcasts();
+      setBroadcasts(localBroadcasts);
       setAcknowledgedVersions(readAcknowledged());
       setSessionScope(readSessionScope());
+
+      try {
+        const response = await fetch(broadcastApi, { cache: "no-store" });
+        if (!response.ok) return;
+        const remoteState = await response.json();
+        const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
+        setBroadcasts(mergeBroadcasts(localBroadcasts, remoteBroadcasts));
+      } catch {
+        setBroadcasts(localBroadcasts);
+      }
     }
 
     syncBroadcast();
@@ -175,8 +221,19 @@ export function UrgentBroadcastControls() {
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    function syncBroadcasts() {
-      setBroadcasts(readBroadcasts());
+    async function syncBroadcasts() {
+      const localBroadcasts = readBroadcasts();
+      setBroadcasts(localBroadcasts);
+
+      try {
+        const response = await fetch(broadcastApi, { cache: "no-store" });
+        if (!response.ok) return;
+        const remoteState = await response.json();
+        const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
+        setBroadcasts(mergeBroadcasts(localBroadcasts, remoteBroadcasts));
+      } catch {
+        setBroadcasts(localBroadcasts);
+      }
     }
 
     syncBroadcasts();
@@ -323,9 +380,19 @@ export function DirectorBroadcastBanner() {
   const [acknowledgedVersion, setAcknowledgedVersion] = useState("");
 
   useEffect(() => {
-    function syncBroadcast() {
-      setBroadcast(readDirectorBroadcast());
+    async function syncBroadcast() {
+      const localBroadcast = readDirectorBroadcast();
+      setBroadcast(localBroadcast);
       setAcknowledgedVersion(localStorage.getItem(directorAcknowledgedKey) || "");
+
+      try {
+        const response = await fetch(broadcastApi, { cache: "no-store" });
+        if (!response.ok) return;
+        const remoteState = await response.json();
+        setBroadcast(cleanRemoteDirectorBroadcast(remoteState.directorBroadcast) || localBroadcast);
+      } catch {
+        setBroadcast(localBroadcast);
+      }
     }
 
     syncBroadcast();
@@ -362,10 +429,22 @@ export function DirectorBroadcastControls() {
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    function syncBroadcast() {
+    async function syncBroadcast() {
       const current = readDirectorBroadcast();
       setBroadcast(current);
       setMessage(current?.message || "");
+
+      try {
+        const response = await fetch(broadcastApi, { cache: "no-store" });
+        if (!response.ok) return;
+        const remoteState = await response.json();
+        const remoteBroadcast = cleanRemoteDirectorBroadcast(remoteState.directorBroadcast);
+        if (!remoteBroadcast) return;
+        setBroadcast(remoteBroadcast);
+        setMessage(remoteBroadcast.message);
+      } catch {
+        setBroadcast(current);
+      }
     }
 
     syncBroadcast();
