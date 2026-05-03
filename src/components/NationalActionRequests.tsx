@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { actionItems } from "@/lib/toc-data";
 import { Tag } from "@/components/TocCards";
 
@@ -31,6 +33,7 @@ function readRequests() {
 }
 
 export function NationalActionRequests() {
+  const router = useRouter();
   const [requests, setRequests] = useState<NationalActionRequest[]>([]);
 
   useEffect(() => {
@@ -54,6 +57,16 @@ export function NationalActionRequests() {
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
   }
 
+  function openRequest(requestId: string) {
+    router.push(`/national-requests/${encodeURIComponent(requestId)}`);
+  }
+
+  function openRequestFromKeyboard(event: KeyboardEvent<HTMLElement>, requestId: string) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openRequest(requestId);
+  }
+
   const pendingRequests = requests.filter((request) => request.status === "Awaiting national review");
   const openActionItems = actionItems.filter((item) => item.status !== "Closed");
 
@@ -66,7 +79,14 @@ export function NationalActionRequests() {
       </div>
       <div className="national-request-list">
         {requests.length ? requests.map((request) => (
-          <article className="national-request-card" key={request.id}>
+          <article
+            className="national-request-card clickable-request-card"
+            key={request.id}
+            onClick={() => openRequest(request.id)}
+            onKeyDown={(event) => openRequestFromKeyboard(event, request.id)}
+            role="button"
+            tabIndex={0}
+          >
             <div className="national-request-head">
               <div>
                 <span className="eyebrow">{request.source} - {request.region}</span>
@@ -80,9 +100,10 @@ export function NationalActionRequests() {
               <div><span>Evidence / reference</span><p>{request.evidence}</p></div>
             </div>
             <div className="stock-actions">
-              <Link className="node-action" href={`/actions/${request.actionId}`}>Open action</Link>
-              <button type="button" onClick={() => updateRequest(request.id, "Approved by national")}>Approve Close-Out</button>
-              <button type="button" onClick={() => updateRequest(request.id, "Returned to manager")}>Return To Manager</button>
+              <Link className="node-action" href={`/national-requests/${encodeURIComponent(request.id)}`} onClick={(event) => event.stopPropagation()}>Open request</Link>
+              <Link className="node-action" href={`/actions/${request.actionId}`} onClick={(event) => event.stopPropagation()}>Open action</Link>
+              <button type="button" onClick={(event) => { event.stopPropagation(); updateRequest(request.id, "Approved by national"); }}>Approve Close-Out</button>
+              <button type="button" onClick={(event) => { event.stopPropagation(); updateRequest(request.id, "Returned to manager"); }}>Return To Manager</button>
             </div>
           </article>
         )) : (

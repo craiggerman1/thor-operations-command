@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
+import { stockOrders } from "@/lib/toc-data";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
 
@@ -22,6 +23,15 @@ type WeatherState = {
   icon: "clear" | "cloud" | "rain" | "storm";
   warning?: string;
   warningActive?: boolean;
+};
+
+type NationalActionStorageRequest = {
+  status?: string;
+};
+
+type StockOrderStorageRequest = {
+  status?: string;
+  updateRequested?: boolean;
 };
 
 const weatherByScope: Record<string, WeatherState> = {
@@ -48,12 +58,28 @@ function getStoredScope() {
 
 const accessRoleOptions = Object.values(sessionProfiles);
 
+function getNationalRequestCount() {
+  if (typeof window === "undefined") return 0;
+
+  try {
+    const actionRequests = JSON.parse(localStorage.getItem("toc.nationalActionRequests") || "[]") as NationalActionStorageRequest[];
+    const storedOrders = localStorage.getItem("toc.stockOrders");
+    const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders;
+    const pendingActions = actionRequests.filter((request) => request.status === "Awaiting national review").length;
+    const pendingStock = stockRequests.filter((order) => order.updateRequested || ["Request submitted", "Awaiting national approval", "Cancellation requested"].includes(order.status || "")).length;
+    return pendingActions + pendingStock;
+  } catch {
+    return 0;
+  }
+}
+
 export function TocShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [unitsWashedToday, setUnitsWashedToday] = useState(0);
+  const [nationalRequestCount, setNationalRequestCount] = useState(0);
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
   const [sessionReady, setSessionReady] = useState(false);
@@ -81,6 +107,22 @@ export function TocShell({ children }: { children: ReactNode }) {
     return () => {
       if (signOutTimer.current) window.clearTimeout(signOutTimer.current);
       window.removeEventListener("toc.sessionchange", syncSession);
+    };
+  }, []);
+
+  useEffect(() => {
+    function syncNationalRequestCount() {
+      setNationalRequestCount(getNationalRequestCount());
+    }
+
+    syncNationalRequestCount();
+    window.addEventListener("storage", syncNationalRequestCount);
+    window.addEventListener("toc.nationalActionRequests.updated", syncNationalRequestCount);
+    window.addEventListener("toc.stockOrders.updated", syncNationalRequestCount);
+    return () => {
+      window.removeEventListener("storage", syncNationalRequestCount);
+      window.removeEventListener("toc.nationalActionRequests.updated", syncNationalRequestCount);
+      window.removeEventListener("toc.stockOrders.updated", syncNationalRequestCount);
     };
   }, []);
 
@@ -169,6 +211,7 @@ export function TocShell({ children }: { children: ReactNode }) {
           {visibleNav.map(({ label, href }) => (
             <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)}>
               {label}
+              {label === "National Requests" && nationalRequestCount > 0 ? <span className="nav-request-badge">{nationalRequestCount}</span> : null}
             </Link>
           ))}
         </nav>
@@ -187,7 +230,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.146</em>
+              <em>Build 0.147</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>

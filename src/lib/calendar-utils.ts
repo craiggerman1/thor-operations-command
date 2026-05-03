@@ -13,6 +13,22 @@ export function getCalendarDays() {
   return calendarWeeks.flatMap((week) => week);
 }
 
+export function getVisibleCalendarDays(weeks: CalendarDay[][], today = new Date()) {
+  const weekStart = getThorCalendarWeekStart(today);
+  return weeks
+    .flatMap((week) => week)
+    .filter((day) => {
+      const dayDate = getCalendarDate(day);
+      return dayDate ? dayDate.getTime() >= weekStart.getTime() : true;
+    })
+    .slice(0, 28);
+}
+
+export function isCurrentCalendarDay(day: CalendarDay, today = new Date()) {
+  const dayDate = getCalendarDate(day);
+  return Boolean(dayDate && dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate());
+}
+
 export function getCalendarDayBySlug(slug: string) {
   return getCalendarDays().find((day) => getCalendarDaySlug(day) === slug);
 }
@@ -78,10 +94,18 @@ export function updateCalendarJob(weeks: CalendarDay[][], daySlug: string, jobIn
   }));
 }
 
-function getCalendarDate(day: CalendarDay) {
+export function getCalendarDate(day: CalendarDay) {
   const monthIndex = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(day.month);
   if (monthIndex < 0) return null;
   return new Date(calendarYear, monthIndex, Number(day.date));
+}
+
+function getThorCalendarWeekStart(today: Date) {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const daysSinceThursday = (start.getDay() + 3) % 7;
+  start.setDate(start.getDate() - daysSinceThursday);
+  start.setHours(0, 0, 0, 0);
+  return start;
 }
 
 function getRecurrenceDays(job: CalendarJob) {

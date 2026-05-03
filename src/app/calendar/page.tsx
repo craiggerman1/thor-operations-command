@@ -12,9 +12,12 @@ import {
   calendarWeekdays,
   getCalendarDaySlug,
   getStoredCalendarWeeks,
+  getVisibleCalendarDays,
+  isCurrentCalendarDay,
   saveStoredCalendarWeeks,
   updateCalendarJob
 } from "@/lib/calendar-utils";
+import { getCalendarForecast } from "@/lib/calendar-weather";
 
 type CalendarViewMode = "calendar" | "list";
 type VisibleJob = CalendarJob & { originalIndex: number };
@@ -48,7 +51,7 @@ export default function CalendarPage() {
   const [calendarData, setCalendarData] = useState(getStoredCalendarWeeks);
   const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
-  const calendarDays = useMemo(() => calendarData.flatMap((week) => week), [calendarData]);
+  const calendarDays = useMemo(() => getVisibleCalendarDays(calendarData), [calendarData]);
   const totalVisibleJobs = calendarDays.reduce((total, day) => total + getVisibleJobs(day.jobs).length, 0);
 
   function getVisibleJobs(jobs: CalendarJob[]): VisibleJob[] {
@@ -144,9 +147,11 @@ export default function CalendarPage() {
                   const daySlug = getCalendarDaySlug(day);
                   const dayLabel = `${day.day} ${day.date} ${day.month}`;
                   const visibleJobs = getVisibleJobs(day.jobs);
+                  const forecast = getCalendarForecast(day, scope);
+                  const isToday = isCurrentCalendarDay(day);
                   return (
                     <article
-                      className={`calendar-date ${day.today ? "today" : ""}`}
+                      className={`calendar-date ${isToday ? "today" : ""}`}
                       key={daySlug}
                       onClick={() => openDay(daySlug)}
                       onKeyDown={(event) => openDayFromKeyboard(event, daySlug)}
@@ -155,6 +160,7 @@ export default function CalendarPage() {
                     >
                       <div className="calendar-date-head">
                         <span><strong>{day.date}</strong><em>{day.month}</em><i className="calendar-week-label">{day.week}</i></span>
+                        <span className={`calendar-weather-icon ${forecast.icon}`} title={forecast.label} aria-label={forecast.label} />
                         <small>{visibleJobs.length ? `${visibleJobs.length} jobs` : "No jobs"}</small>
                       </div>
                       <div className="calendar-date-jobs">
@@ -178,6 +184,7 @@ export default function CalendarPage() {
                 const daySlug = getCalendarDaySlug(day);
                 const dayLabel = `${day.day} ${day.date} ${day.month}`;
                 const visibleJobs = getVisibleJobs(day.jobs);
+                const forecast = getCalendarForecast(day, scope);
                 return (
                   <article
                     className="calendar-list-day"
@@ -188,7 +195,7 @@ export default function CalendarPage() {
                     tabIndex={0}
                   >
                     <div>
-                      <strong>{dayLabel} <span className="calendar-week-label">{day.week}</span></strong>
+                      <strong>{dayLabel} <span className="calendar-week-label">{day.week}</span><span className={`calendar-weather-icon inline ${forecast.icon}`} title={forecast.label} aria-label={forecast.label} /></strong>
                       <small>{visibleJobs.length ? `${visibleJobs.length} visible jobs for ${scope}` : `No visible jobs for ${scope}`}</small>
                     </div>
                     <div className="calendar-list-jobs">
