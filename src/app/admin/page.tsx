@@ -28,7 +28,7 @@ const permissionGroups = [
   { area: "National command", admin: "Full control", manager: "No", director: "Summary only" },
   { area: "Admin Settings", admin: "Full control", manager: "No", director: "No" },
   { area: "Assigned region work", admin: "When assigned", manager: "Full within assigned regions", director: "No" },
-  { area: "Director message", admin: "View via Director page", manager: "Acknowledge only", director: "Create and redeploy" },
+  { area: "Director message", admin: "Control via Admin Settings", manager: "Acknowledge only", director: "Create and redeploy" },
   { area: "Action close-out", admin: "Approve and control", manager: "Submit for national approval", director: "Summary only" }
 ];
 
@@ -84,7 +84,7 @@ export default function AdminPage() {
           </div>
           <AdminAccessManager />
         </Panel>
-        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.122">
+        <Panel wide eyebrow="Access model" title="Role visibility blueprint" pill="Build 0.123">
           <div className="role-blueprint-grid">
             {Object.values(sessionProfiles).map((profile) => {
               const pages = navigationItems.filter((item) => item.roles.includes(profile.role)).map((item) => item.label);

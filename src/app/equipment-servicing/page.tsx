@@ -1,8 +1,50 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { equipmentAssets, equipmentServiceSummary, servicingDataFlow } from "@/lib/toc-data";
+import { equipmentAssets, servicingDataFlow } from "@/lib/toc-data";
+
+function getStoredScope() {
+  if (typeof window === "undefined") return "National";
+
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return session?.scope || "National";
+  } catch {
+    return "National";
+  }
+}
+
+function getSeverityCount(assets: typeof equipmentAssets, severity: "red" | "amber" | "blue") {
+  return assets.filter((asset) => asset.severity === severity).length;
+}
 
 export default function EquipmentServicingPage() {
+  const [scope, setScope] = useState("National");
+  const visibleAssets = useMemo(() => equipmentAssets.filter((asset) => scope === "National" || asset.region === scope), [scope]);
+  const equipmentServiceSummary = [
+    { label: "Assets in scope", value: visibleAssets.length.toString(), detail: scope === "National" ? "All national equipment" : `${scope} controlled assets`, severity: "blue" as const },
+    { label: "Action required", value: getSeverityCount(visibleAssets, "red").toString(), detail: "Service items needing action", severity: "red" as const },
+    { label: "Watch", value: getSeverityCount(visibleAssets, "amber").toString(), detail: "Assets getting close to service point", severity: "amber" as const },
+    { label: "Readings", value: "Pending", detail: "Thor Portal feed planned", severity: "amber" as const }
+  ];
+
+  useEffect(() => {
+    function syncScope(event?: Event) {
+      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
+      setScope(nextScope);
+    }
+
+    syncScope();
+    window.addEventListener("storage", syncScope);
+    window.addEventListener("toc.scopechange", syncScope);
+    return () => {
+      window.removeEventListener("storage", syncScope);
+      window.removeEventListener("toc.scopechange", syncScope);
+    };
+  }, []);
+
   return (
     <TocShell>
       <PageIntro
@@ -20,7 +62,7 @@ export default function EquipmentServicingPage() {
         ))}
       </section>
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Thor Portal data feed" title="Odometer and hour tracking" pill="Feed planned">
+        <Panel wide eyebrow="Thor Portal data feed" title={`${scope} odometer and hour tracking`} pill={`${visibleAssets.length} assets`}>
           <div className="equipment-table">
             <div className="equipment-row header">
               <span>Asset</span>
@@ -30,7 +72,7 @@ export default function EquipmentServicingPage() {
               <span>Next service</span>
               <span>Status</span>
             </div>
-            {equipmentAssets.map((asset) => (
+            {visibleAssets.map((asset) => (
               <article className="equipment-row" key={asset.asset}>
                 <strong>{asset.asset}</strong>
                 <span>{asset.category}</span>
@@ -43,6 +85,7 @@ export default function EquipmentServicingPage() {
                 </small>
               </article>
             ))}
+            {visibleAssets.length ? null : <div className="empty-state">No equipment assets are currently assigned to {scope}.</div>}
           </div>
         </Panel>
 
