@@ -3658,6 +3658,197 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 8px;
 }
 
+.staff-source-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(37, 161, 189, 0.24);
+  border-left: 5px solid var(--teal);
+  border-radius: 6px;
+  background: rgba(236, 247, 250, 0.88);
+}
+
+.staff-source-strip strong,
+.staff-source-strip small {
+  display: block;
+}
+
+.staff-source-strip strong {
+  color: var(--blue);
+}
+
+.staff-source-strip small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.staff-source-strip a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--blue);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.availability-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.availability-summary-card {
+  display: grid;
+  gap: 3px;
+  min-height: 92px;
+  padding: 11px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(236, 247, 250, 0.72));
+}
+
+.availability-summary-card span,
+.availability-summary-card small {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.availability-summary-card span {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.availability-summary-card strong {
+  color: var(--blue);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.availability-window-key {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 8px calc(15% + 8px);
+}
+
+.availability-window-key span {
+  display: inline-flex;
+  justify-content: center;
+  min-height: 24px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  background: #eef5fb;
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.staff-availability-board {
+  display: grid;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.staff-availability-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) repeat(7, minmax(86px, 1fr)) 72px;
+  gap: 6px;
+  align-items: center;
+  min-width: 900px;
+  padding: 8px;
+  border: 1px solid rgba(201, 215, 225, 0.82);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.staff-availability-row.header {
+  min-height: 42px;
+  background:
+    linear-gradient(90deg, rgba(37, 161, 189, 0.22), transparent),
+    #0a3152;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.staff-availability-row.header strong,
+.staff-availability-row.header span {
+  color: #ffffff;
+}
+
+.staff-name strong {
+  color: #071726;
+  font-size: 13px;
+}
+
+.availability-day-cell {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 34px;
+  align-items: center;
+  padding: 5px;
+  border-radius: 5px;
+  background: #f3f7fa;
+}
+
+.availability-window {
+  display: block;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 4px;
+}
+
+.availability-window.green {
+  background: #1f8f5f;
+  box-shadow: 0 0 0 1px rgba(31, 143, 95, 0.08), 0 8px 16px rgba(31, 143, 95, 0.16);
+}
+
+.availability-window.amber {
+  background: var(--amber);
+}
+
+.availability-window.red {
+  background: #d45a55;
+}
+
+.staff-total {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 28px;
+  border-radius: 999px;
+  background: #e6f3f7;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.brief-dot.amber-dot {
+  background: var(--amber);
+}
+
+.brief-dot.red-dot {
+  background: var(--red);
+}
+
 .heatmap-row {
   display: grid;
   grid-template-columns: minmax(150px, 1.2fr) repeat(7, minmax(44px, 1fr));
@@ -5587,6 +5778,46 @@ body:not([data-access="admin"]) .admin-only-panel {
   .heatmap-row {
     grid-template-columns: minmax(120px, 1fr) repeat(7, 32px);
     overflow-x: auto;
+  }
+
+  .staff-source-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .staff-source-strip a {
+    width: fit-content;
+  }
+
+  .availability-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .availability-summary-card {
+    min-height: 78px;
+  }
+
+  .availability-summary-card strong {
+    font-size: 24px;
+  }
+
+  .availability-window-key {
+    display: none;
+  }
+
+  .staff-availability-row {
+    grid-template-columns: minmax(108px, 0.9fr) repeat(7, minmax(62px, 1fr)) 56px;
+    min-width: 680px;
+    padding: 7px;
+  }
+
+  .availability-day-cell {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .availability-window {
+    height: 20px;
   }
 
   .compliance-card {
