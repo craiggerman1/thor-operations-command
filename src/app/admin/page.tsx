@@ -14,13 +14,13 @@ const pageSettings = [
   { page: "Inductions", owner: "Induction source and site mapping", control: "Manage read-only sheet source, site-region mapping and induction status display rules.", state: "Mapped" },
   { page: "Stock Orders", owner: "Stock catalogue and order review", control: "Approve orderable items, review requests, update tracking and manage national responses.", state: "Active" },
   { page: "Productivity", owner: "Productivity scoring", control: "Configure site score sources, manager response requirements and national review rules.", state: "Mapped" },
-  { page: "Asset Tracking", owner: "Unity GPS integration", control: "Connect GPS asset feeds, map assets to regions and configure status visibility.", state: "Planned" },
+  { page: "Asset Tracking", owner: "Unity GPS integration", control: "Connect GPS asset feeds, map assets to regions and configure status visibility.", state: "Ready" },
   { page: "Calendar", owner: "Schedule control", control: "Manage calendar source, operating-week display, recurring job rules and regional schedule visibility.", state: "Mapped" },
   { page: "Staff Availability", owner: "Availability feed", control: "Manage read-only sheet source, availability windows, display status rules and region relevance.", state: "Mapped" },
-  { page: "Equipment Servicing", owner: "Service feed integration", control: "Connect odometer/hour data, map assets to regions and define service alert thresholds.", state: "Planned" },
+  { page: "Equipment Servicing", owner: "Service feed integration", control: "Connect odometer/hour data, map assets to regions and define service alert thresholds.", state: "Ready" },
   { page: "Chat", owner: "Manager communications", control: "Set manager chat audiences, meeting links and future database-backed communication rules.", state: "Mapped" },
   { page: "Admin Settings", owner: "TOC control room", control: "Register users, assign access levels, assign regions, tune page settings and manage global notices.", state: "Active" },
-  { page: "Jobsheets", owner: "Thor Portal integration", control: "Connect jobsheet feed, approval queue visibility and manager action routing.", state: "Planned" },
+  { page: "Jobsheets", owner: "Thor Portal integration", control: "Connect jobsheet feed, approval queue visibility and manager action routing.", state: "Ready" },
   { page: "To Do", owner: "Personal and shared tasks", control: "Configure shared task routing, importance handling and future user-specific persistence.", state: "Mapped" }
 ];
 
@@ -41,9 +41,9 @@ export default function AdminPage() {
         </Panel>
         <Panel wide eyebrow="System tuning" title="TOC configuration switches" pill="Admin only">
           <div className="admin-settings-grid">
-            <article className="admin-setting-card"><strong>Data feed mode</strong><small>Integration staging</small><span>Portal, Unity and Fleetio API/webhook feeds remain offline until database and API credentials are connected.</span></article>
+            <article className="admin-setting-card"><strong>Data feed mode</strong><small>Offline</small><span>Portal, Unity and Fleetio API/webhook feeds are controlled from this admin area once credentials are connected.</span></article>
             <article className="admin-setting-card"><strong>Build environment</strong><small>Protected Vercel production</small><span>Use the header development switcher to test access levels and region scope while TOC is being built.</span></article>
-            <article className="admin-setting-card"><strong>Audit readiness</strong><small>Database planned</small><span>User, access, alert and setting changes will be logged once database-backed admin settings are connected.</span></article>
+            <article className="admin-setting-card"><strong>Audit readiness</strong><small>Database required</small><span>User, access, alert and setting changes will be logged through database-backed admin settings.</span></article>
           </div>
         </Panel>
         <Panel wide eyebrow="Compliance setup" title="Admin-set compliance items" pill={`${compliance.length} active`}>
@@ -76,7 +76,7 @@ export default function AdminPage() {
                   <small>{setting.owner}</small>
                 </div>
                 <p>{setting.control}</p>
-                <div className="meta-row"><Tag tone={setting.state === "Active" ? "green" : setting.state === "Planned" ? "amber" : "blue"}>{setting.state}</Tag></div>
+                <div className="meta-row"><Tag tone={setting.state === "Active" ? "green" : setting.state === "Ready" ? "amber" : "blue"}>{setting.state}</Tag></div>
               </article>
             ))}
           </div>

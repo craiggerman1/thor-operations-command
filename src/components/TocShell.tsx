@@ -25,7 +25,7 @@ type WeatherState = {
 };
 
 const weatherByScope: Record<string, WeatherState> = {
-  National: { location: "National", summary: "Weather feed staging", temp: "--", icon: "cloud", warning: "BOM warning feed not connected yet", warningActive: false },
+  National: { location: "National", summary: "Weather feed offline", temp: "--", icon: "cloud", warning: "BOM warning feed offline", warningActive: false },
   Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning feed pending", warningActive: false },
   Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning feed pending", warningActive: false },
   Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning feed pending", warningActive: false },
@@ -171,11 +171,6 @@ export function TocShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="rail-card offline-feed-card">
-          <span className="label">Data feeds</span>
-          <strong>Integration staging</strong>
-          <small>Portal, Unity and Fleetio feeds are not connected yet.</small>
-        </div>
       </aside>
 
       <main className="workspace">
@@ -185,14 +180,13 @@ export function TocShell({ children }: { children: ReactNode }) {
           <div className="title-block">
             <span className="eyebrow">Thor Mobile Truck Wash</span>
             <div className="title-line">
-              <span className="live-beacon" aria-label="Live data feeds are not connected yet" />
+              <span className="live-beacon" aria-label="Live data feeds are offline" />
               <h1>Thor Operations Command</h1>
-              <span className="live-label">OFFLINE - DATA PENDING</span>
+              <span className="live-label">OFFLINE</span>
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
-              <strong>Beta</strong>
-              <span>Not for internal operational use</span>
-              <em>Build 0.138</em>
+              <strong>BETA</strong>
+              <em>Build 0.139</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -262,20 +256,22 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
 
   return (
     <section className="page-title">
-      <div className="page-title-copy">
-        {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
-        <h2>{title}</h2>
-        {detail ? <p>{detail}</p> : null}
-      </div>
-      <aside className={`page-weather-card ${weather.warningActive ? "has-warning active-warning" : ""}`} aria-label={`${weather.location} weather`}>
-        <span className={`weather-logo ${weather.icon}`} aria-hidden="true" />
-        <div>
-          <span className="eyebrow">{weather.location} weather</span>
-          <strong>{weather.temp}</strong>
-          <small>{weather.summary}</small>
-          <em>{weather.warning || "No active warnings shown"}</em>
+      <div className={`page-title-copy ${weather.warningActive ? "has-warning active-warning" : ""}`}>
+        <div className="page-title-text">
+          {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+          <h2>{title}</h2>
+          {detail ? <p>{detail}</p> : null}
         </div>
-      </aside>
+        <div className="page-title-weather" aria-label={`${weather.location} weather`}>
+          <span className={`weather-logo ${weather.icon}`} aria-hidden="true" />
+          <div>
+            <span className="eyebrow">{weather.location} weather</span>
+            <strong>{weather.temp}</strong>
+            <small>{weather.summary}</small>
+            <em>{weather.warning || "No active warnings shown"}</em>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

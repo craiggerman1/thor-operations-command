@@ -150,7 +150,7 @@ export default function CalendarDayPage() {
                     <div><dt>Crew</dt><dd>{job.crew}</dd></div>
                     <div><dt>Location</dt><dd>{job.location}</dd></div>
                     <div><dt>Site</dt><dd>{job.site}</dd></div>
-                    <div><dt>Source</dt><dd>Portal schedule feed planned</dd></div>
+                    <div><dt>Source</dt><dd>Portal schedule feed</dd></div>
                     <div><dt>Recurring</dt><dd>{job.recurrence === "Custom" ? `Every ${job.recurrenceIntervalWeeks || 3} weeks` : job.recurrence && job.recurrence !== "None" ? job.recurrence : "None"}</dd></div>
                   </dl>
                   <div className="calendar-detail-notes">

@@ -248,7 +248,7 @@ export default function ChatPage() {
       <PageIntro title="Chat" detail="Ensure healthy communication between management." />
       <FlowHeading eyebrow="Chat" title="Keep manager communication clear, useful and tied to operational decisions." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Internal comms" title="Manager communications" pill="Database planned">
+        <Panel wide eyebrow="Internal comms" title="Manager communications" pill="Offline">
           <div className="chat-layout">
             <aside className="chat-channels" aria-label="Chat targeting">
               <div className="chat-sidebar-head">
@@ -285,7 +285,7 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="chat-channel-note">
-                <strong>Comms staging</strong>
+                <strong>Comms status</strong>
                 <small>Messages save in this browser until database-backed chat is connected.</small>
               </div>
             </aside>
@@ -320,9 +320,9 @@ export default function ChatPage() {
               <div>
                 <span className="eyebrow">Teams meetings</span>
                 <strong>Manager meeting hub</strong>
-                <small>Launch scheduled or on-demand manager meetings from TOC. Microsoft Graph integration is staged for live meeting creation later.</small>
+                <small>Launch scheduled or on-demand manager meetings from TOC. Microsoft Graph controls will create live meetings once connected.</small>
               </div>
-              <Tag>Teams staging</Tag>
+              <Tag>Teams offline</Tag>
             </div>
             <div className="meeting-action-strip">
               <button type="button" onClick={() => openMeeting(managerMeetings[0])}>

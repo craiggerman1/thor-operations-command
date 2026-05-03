@@ -24,7 +24,7 @@ function getStaffTotal(staff: StaffAvailabilityFeed["staff"][number]) {
 
 export default function StaffAvailabilityPage() {
   const [feed, setFeed] = useState<StaffAvailabilityFeed>(staffAvailabilitySheet);
-  const [feedStatus, setFeedStatus] = useState("Google Sheet read-only feed staging");
+  const [feedStatus, setFeedStatus] = useState("Google Sheet read-only feed loading");
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
 
   useEffect(() => {

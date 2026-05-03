@@ -134,7 +134,7 @@ export const actionItems = [
     severity: "amber" as Status,
     dueDate: "Tomorrow 9:00 am",
     href: "/actions/ACT-005",
-    detail: "Hour readings are required so servicing can be planned before plant failure.",
+    detail: "Hour readings are required so servicing can be scheduled before plant failure.",
     status: "Due soon",
     closeFlow: "Workshop or manager close-out routes to national review.",
     closeActions: ["Collect current hour reading", "Check service due position", "Submit reading and service note"]
@@ -305,7 +305,7 @@ export const equipmentServiceSummary = [
   { label: "Wash vehicles", value: "2", detail: "Need odometer review", severity: "amber" as Status },
   { label: "Wash plants", value: "1", detail: "Hour reading due", severity: "red" as Status },
   { label: "Pony machines", value: "3", detail: "Mechanical service watch", severity: "blue" as Status },
-  { label: "Portal readings", value: "Pending", detail: "Thor Portal feed planned", severity: "amber" as Status }
+  { label: "Portal readings", value: "Pending", detail: "Thor Portal feed offline", severity: "amber" as Status }
 ];
 
 export const equipmentAssets = [
@@ -385,9 +385,9 @@ export const washRolloverCounters = [
 ];
 
 export const outlookReminders = [
-  { region: "National", time: "Today 3:00 pm", title: "Review Portal approvals before admin close", source: "Outlook planned", severity: "amber" as Status },
-  { region: "Sydney", time: "Tomorrow 1:00 pm", title: "Night crew induction follow-up", source: "Calendar planned", severity: "red" as Status },
-  { region: "Workshop", time: "Friday 10:00 am", title: "Workshop parts and service review", source: "Calendar planned", severity: "amber" as Status }
+  { region: "National", time: "Today 3:00 pm", title: "Review Portal approvals before admin close", source: "Outlook reminder", severity: "amber" as Status },
+  { region: "Sydney", time: "Tomorrow 1:00 pm", title: "Night crew induction follow-up", source: "Calendar reminder", severity: "red" as Status },
+  { region: "Workshop", time: "Friday 10:00 am", title: "Workshop parts and service review", source: "Calendar reminder", severity: "amber" as Status }
 ];
 
 export const rosterWindows = [

@@ -35,7 +35,7 @@ function getInduction(feed: InductionFeed, staffName: string, siteName: string) 
 export default function InductionsPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<InductionFeed>(staffInductionsSheet);
-  const [feedStatus, setFeedStatus] = useState("Google Sheet read-only feed staging");
+  const [feedStatus, setFeedStatus] = useState("Google Sheet read-only feed loading");
   const visibleSites = useMemo(() => feed.sites.filter((site) => scope === "National" || site.region === scope), [feed.sites, scope]);
   const inductionCells = visibleSites.length * feed.staff.length;
   const inductedCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => getInduction(feed, staff.name, site.name).status === "Inducted").length, 0);
