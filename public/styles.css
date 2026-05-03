@@ -4819,9 +4819,9 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .chat-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 0.34fr) minmax(420px, 1fr) minmax(220px, 0.32fr);
+  grid-template-columns: minmax(280px, 0.34fr) minmax(0, 1fr);
   gap: 14px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .chat-channels {
@@ -4899,8 +4899,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   text-align: center;
 }
 
-.chat-channel-note,
-.chat-context-panel {
+.chat-channel-note {
   display: grid;
   gap: 7px;
   padding: 12px;
@@ -4909,13 +4908,11 @@ body:not([data-access="admin"]) .admin-only-panel {
   background: rgba(255, 255, 255, 0.82);
 }
 
-.chat-channel-note strong,
-.chat-context-panel strong {
+.chat-channel-note strong {
   color: var(--blue);
 }
 
-.chat-channel-note small,
-.chat-context-panel small {
+.chat-channel-note small {
   color: var(--muted);
   font-weight: 800;
   line-height: 1.35;
@@ -4927,9 +4924,9 @@ body:not([data-access="admin"]) .admin-only-panel {
   background:
     linear-gradient(150deg, rgba(10, 49, 82, 0.06), transparent 48%),
     rgba(255, 255, 255, 0.92);
-  min-height: 610px;
+  min-height: 560px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
 }
 
@@ -4961,9 +4958,10 @@ body:not([data-access="admin"]) .admin-only-panel {
 .chat-target-panel {
   display: grid;
   gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(241, 246, 248, 0.84);
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.78);
+  border-radius: 6px;
+  background: rgba(241, 246, 248, 0.74);
 }
 
 .chat-target-head {
@@ -4980,12 +4978,12 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .chat-recipient-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
 .chat-recipient-grid button {
-  min-height: 50px;
+  min-height: 48px;
   border: 1px solid rgba(201, 215, 225, 0.9);
   border-radius: 6px;
   padding: 8px 10px;
@@ -5026,7 +5024,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   display: grid;
   gap: 12px;
   align-content: start;
-  max-height: 460px;
+  max-height: 510px;
   overflow: auto;
   padding: 18px;
   background:
@@ -5151,32 +5149,6 @@ body:not([data-access="admin"]) .admin-only-panel {
 .chat-form input {
   flex: 1;
   min-width: 0;
-}
-
-.chat-context-panel {
-  align-content: start;
-}
-
-.chat-context-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.chat-context-list span {
-  border: 1px solid rgba(201, 215, 225, 0.86);
-  border-radius: 999px;
-  padding: 5px 8px;
-  background: #eef5fb;
-  color: var(--blue);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.chat-context-footer {
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(201, 215, 225, 0.72);
 }
 
 .manager-meetings {
@@ -5839,6 +5811,14 @@ body:not([data-access="admin"]) .admin-only-panel {
   .meeting-card-footer {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .chat-room {
+    min-height: 520px;
+  }
+
+  .chat-recipient-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .chat-message {

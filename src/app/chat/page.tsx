@@ -264,20 +264,6 @@ export default function ChatPage() {
               <button className={mode === "multi" ? "active" : ""} type="button" onClick={() => selectMode("multi")}>
                 <span><strong>Multi-manager</strong><small>Selected managers only</small></span><em>{selectedRecipients.length}</em>
               </button>
-              <div className="chat-channel-note">
-                <strong>Comms staging</strong>
-                <small>Messages save in this browser until database-backed chat is connected.</small>
-              </div>
-            </aside>
-            <div className="chat-room">
-              <div className="chat-room-head">
-                <div>
-                  <span className="eyebrow">{mode === "group" ? "Visible group chat" : "Targeted message"}</span>
-                  <strong>{audienceLabel}</strong>
-                  <small>{modeSummary}</small>
-                </div>
-                <Tag>{mode === "group" ? "All visible" : "Targeted"}</Tag>
-              </div>
               <div className="chat-target-panel">
                 <div className="chat-target-head">
                   <span className="eyebrow">Recipients</span>
@@ -298,6 +284,20 @@ export default function ChatPage() {
                   ))}
                 </div>
               </div>
+              <div className="chat-channel-note">
+                <strong>Comms staging</strong>
+                <small>Messages save in this browser until database-backed chat is connected.</small>
+              </div>
+            </aside>
+            <div className="chat-room">
+              <div className="chat-room-head">
+                <div>
+                  <span className="eyebrow">{mode === "group" ? "Visible group chat" : "Targeted message"}</span>
+                  <strong>{audienceLabel}</strong>
+                  <small>{modeSummary}</small>
+                </div>
+                <Tag>{mode === "group" ? "All visible" : "Targeted"}</Tag>
+              </div>
               <div className="chat-messages">
                 {visibleMessages.map((message) => (
                   <article key={message.id} className={`chat-message ${message.own ? "own" : ""}`}>
@@ -314,21 +314,6 @@ export default function ChatPage() {
                 <button type="submit">Send</button>
               </form>
             </div>
-            <aside className="chat-context-panel" aria-label="Conversation context">
-              <div>
-                <span className="eyebrow">Active thread</span>
-                <strong>{audienceLabel}</strong>
-                <small>{modeSummary}</small>
-              </div>
-              <div className="chat-context-list">
-                {selectedManagerLabels.slice(0, 6).map((label) => <span key={label}>{label}</span>)}
-                {selectedManagerLabels.length > 6 ? <span>+{selectedManagerLabels.length - 6} more</span> : null}
-              </div>
-              <div className="chat-context-footer">
-                <strong>Future live state</strong>
-                <small>Database chat will add read receipts, user identity, attachments and searchable history.</small>
-              </div>
-            </aside>
           </div>
           <div className="manager-meetings">
             <div className="manager-meetings-head">
