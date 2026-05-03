@@ -660,6 +660,11 @@ body.todo-floating-disabled .urgent-broadcast-stack {
   animation: urgentBroadcastPulse 0.78s ease-in-out infinite;
 }
 
+.urgent-broadcast-banner > div,
+.director-broadcast-banner > div {
+  min-width: 0;
+}
+
 .urgent-broadcast-banner span,
 .urgent-broadcast-banner strong {
   display: block;
@@ -675,6 +680,7 @@ body.todo-floating-disabled .urgent-broadcast-stack {
 .urgent-broadcast-banner strong {
   margin-top: 2px;
   font-size: 17px;
+  overflow-wrap: anywhere;
 }
 
 .urgent-broadcast-banner button {
@@ -724,6 +730,7 @@ body.todo-floating-disabled .director-broadcast-banner {
 .director-broadcast-banner strong {
   margin-top: 3px;
   font-size: 19px;
+  overflow-wrap: anywhere;
 }
 
 .director-broadcast-banner button {
@@ -5498,13 +5505,32 @@ body:not([data-access="admin"]) .admin-only-panel {
   }
 
   .urgent-broadcast-stack {
+    position: relative;
+    z-index: 70;
+    width: 100%;
     margin-right: 0;
+    margin-bottom: 10px;
   }
 
+  .urgent-broadcast-banner,
   .director-broadcast-banner {
     align-items: stretch;
     flex-direction: column;
+    width: 100%;
     margin-right: 0;
+    margin-bottom: 10px;
+    padding: 12px;
+  }
+
+  .urgent-broadcast-banner button,
+  .director-broadcast-banner button {
+    width: 100%;
+  }
+
+  .urgent-broadcast-banner strong,
+  .director-broadcast-banner strong {
+    font-size: 15px;
+    line-height: 1.25;
   }
 
   .topbar-actions {
@@ -6039,6 +6065,30 @@ body:not([data-access="admin"]) .admin-only-panel {
 
   .workspace {
     padding: 8px;
+  }
+
+  .urgent-broadcast-stack {
+    gap: 8px;
+  }
+
+  .urgent-broadcast-banner,
+  .director-broadcast-banner {
+    padding: 10px;
+  }
+
+  .urgent-broadcast-banner span,
+  .director-broadcast-banner span {
+    font-size: 10px;
+  }
+
+  .urgent-broadcast-banner strong,
+  .director-broadcast-banner strong {
+    font-size: 14px;
+  }
+
+  .urgent-broadcast-banner button,
+  .director-broadcast-banner button {
+    min-height: 34px;
   }
 
   .topbar {
