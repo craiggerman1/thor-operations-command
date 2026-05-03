@@ -3983,6 +3983,17 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-left: 6px solid var(--green);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.92);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.productivity-site-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 171, 195, 0.38);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 28px rgba(9, 30, 47, 0.1);
 }
 
 .productivity-score-card {
@@ -4010,34 +4021,23 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .productivity-site-card strong {
   display: block;
+  margin: 2px 0 6px;
   color: #071726;
   font-size: 20px;
-}
-
-.productivity-site-link {
-  display: inline-flex;
-  width: fit-content;
-  color: #071726;
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1.15;
-  text-decoration: none;
-}
-
-.productivity-site-link:hover {
-  color: var(--blue);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
 }
 
 .productivity-site-card p {
-  margin: 0;
+  margin: 8px 0 0;
 }
 
 .productivity-site-footer {
   display: grid;
   gap: 8px;
+}
+
+.productivity-site-footer strong {
+  color: var(--blue);
+  font-size: 16px;
 }
 
 .productivity-response,
@@ -4061,6 +4061,14 @@ body:not([data-access="admin"]) .admin-only-panel {
 .productivity-response textarea {
   min-height: 38px;
   resize: vertical;
+}
+
+.productivity-detail-response {
+  margin-top: 14px;
+}
+
+.productivity-detail-response textarea {
+  min-height: 96px;
 }
 
 .productivity-response small {

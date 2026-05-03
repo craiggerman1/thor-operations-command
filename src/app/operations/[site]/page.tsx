@@ -15,6 +15,15 @@ import {
   getProductivityTrend
 } from "@/lib/productivity-utils";
 
+type ProductivityResponse = {
+  response: string;
+  updatedAt: string;
+  region: string;
+  site: string;
+};
+
+const productivityResponseStorageKey = "toc.productivityResponses";
+
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
 
@@ -26,15 +35,31 @@ function getStoredScope() {
   }
 }
 
+function getSiteKey(region: string, site: string) {
+  return `${region}:${site}`;
+}
+
+function getProductivityResponses() {
+  if (typeof window === "undefined") return {} as Record<string, ProductivityResponse>;
+
+  try {
+    return JSON.parse(localStorage.getItem(productivityResponseStorageKey) || "{}") as Record<string, ProductivityResponse>;
+  } catch {
+    return {};
+  }
+}
+
 export default function ProductivitySitePage() {
   const params = useParams<{ site: string }>();
   const site = getProductivitySiteBySlug(params.site);
   const [scope, setScope] = useState("National");
+  const [responses, setResponses] = useState<Record<string, ProductivityResponse>>({});
 
   useEffect(() => {
     function syncScope(event?: Event) {
       const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
       setScope(nextScope);
+      setResponses(getProductivityResponses());
     }
 
     syncScope();
@@ -70,6 +95,22 @@ export default function ProductivitySitePage() {
   });
   const linePoints = chartPoints.map((point) => `${point.x},${point.y}`).join(" ");
   const yAxisTicks = [100, 80, 60, 40, 20, 0];
+  const siteKey = getSiteKey(site.region, site.site);
+  const savedResponse = responses[siteKey];
+
+  function updateResponse(response: string) {
+    const nextResponses = {
+      ...responses,
+      [siteKey]: {
+        response,
+        updatedAt: new Date().toISOString(),
+        region: site.region,
+        site: site.site
+      }
+    };
+    setResponses(nextResponses);
+    localStorage.setItem(productivityResponseStorageKey, JSON.stringify(nextResponses));
+  }
 
   if (!isVisible) {
     return (
@@ -147,6 +188,16 @@ export default function ProductivitySitePage() {
               </svg>
             </div>
           </div>
+
+          <label className="productivity-response productivity-detail-response">
+            <span>Manager response on actions that will be taken to increase productivity</span>
+            <textarea
+              value={savedResponse?.response || ""}
+              onChange={(event) => updateResponse(event.target.value)}
+              placeholder="Enter the action plan for this site"
+            />
+            {savedResponse?.response ? <small>Response visible to admin and national review. Last updated {new Date(savedResponse.updatedAt).toLocaleString()}.</small> : null}
+          </label>
 
           <div className="productivity-detail-actions">
             <Link className="calendar-back-link" href="/operations">Back to productivity</Link>
