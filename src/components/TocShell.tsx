@@ -64,7 +64,7 @@ function getNationalRequestCount() {
   try {
     const actionRequests = JSON.parse(localStorage.getItem("toc.nationalActionRequests") || "[]") as NationalActionStorageRequest[];
     const storedOrders = localStorage.getItem("toc.stockOrders");
-    const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders;
+    const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders as StockOrderStorageRequest[];
     const pendingActions = actionRequests.filter((request) => request.status === "Awaiting national review").length;
     const pendingStock = stockRequests.filter((order) => order.updateRequested || ["Request submitted", "Awaiting national approval", "Cancellation requested"].includes(order.status || "")).length;
     return pendingActions + pendingStock;
