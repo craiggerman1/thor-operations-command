@@ -1683,6 +1683,14 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
+.panel.admin-broadcast-panel {
+  border-top-color: rgba(13, 58, 87, 0.86);
+}
+
+.panel.admin-broadcast-panel .panel-head {
+  margin-bottom: 10px;
+}
+
 .urgent-broadcast-form,
 .urgent-broadcast-list {
   display: grid;
@@ -2785,6 +2793,15 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 8px;
   align-content: start;
   border-left: 5px solid rgba(37, 161, 189, 0.72);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.admin-page-setting-card:hover {
+  border-left-color: var(--cyan);
+  box-shadow: 0 14px 30px rgba(5, 31, 48, 0.12);
+  transform: translateY(-1px);
 }
 
 .admin-page-setting-card strong,
@@ -2807,6 +2824,21 @@ body:not([data-access="admin"]) .admin-only-panel {
   margin: 0;
   color: #27384a;
   line-height: 1.36;
+}
+
+.admin-setting-detail {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-setting-detail p {
+  margin: 0;
+  color: #27384a;
+  line-height: 1.45;
+}
+
+.compact-config-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .admin-access-summary span {
