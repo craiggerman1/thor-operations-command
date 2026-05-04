@@ -4563,15 +4563,17 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .stock-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+  grid-template-columns: minmax(330px, 0.72fr) minmax(0, 1.28fr);
   gap: 12px;
   align-items: start;
+  min-width: 0;
 }
 
 .stock-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-self: start;
+  min-width: 0;
   gap: 9px;
   padding: 12px;
   border: 1px solid rgba(201, 215, 225, 0.86);
@@ -4582,6 +4584,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .stock-form label {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .stock-form label span {
@@ -4600,10 +4603,20 @@ body:not([data-access="admin"]) .admin-only-panel {
   min-height: 72px;
 }
 
+.stock-form input,
+.stock-form select,
+.stock-form textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .stock-queue-wrap {
   display: grid;
   gap: 8px;
   align-content: start;
+  min-width: 0;
 }
 
 .stock-list {
@@ -5901,6 +5914,10 @@ body:not([data-access="admin"]) .admin-only-panel {
 
   .wide-panel {
     grid-column: span 2;
+  }
+
+  .stock-layout {
+    grid-template-columns: 1fr;
   }
 }
 
