@@ -103,24 +103,32 @@ export default function InductionsPage() {
           </div>
           {visibleSites.length ? (
             <div className="induction-board">
-              <div className="induction-row header">
-                <span>Staff name</span>
-                {visibleSites.map((site) => <strong key={site.name}>{site.name}</strong>)}
-              </div>
-              {feed.staff.map((staff) => (
-                <div className="induction-row" key={staff.name}>
-                  <span className="staff-name"><strong>{staff.name}</strong></span>
-                  {visibleSites.map((site) => {
-                    const induction = getInduction(feed, staff.name, site.name);
-                    return (
-                      <div className={`induction-cell ${getInductionTone(induction.status)}`} key={`${staff.name}-${site.name}`}>
-                        <strong>{induction.status || "Not supplied"}</strong>
-                        {induction.expiry ? <small>Exp {induction.expiry}</small> : <small>No expiry</small>}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+              <table className="induction-table">
+                <thead>
+                  <tr>
+                    <th className="induction-staff-column">Staff name</th>
+                    {visibleSites.map((site) => <th key={site.name}>{site.name}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {feed.staff.map((staff) => (
+                    <tr key={staff.name}>
+                      <th className="induction-staff-column" scope="row">{staff.name}</th>
+                      {visibleSites.map((site) => {
+                        const induction = getInduction(feed, staff.name, site.name);
+                        return (
+                          <td key={`${staff.name}-${site.name}`}>
+                            <div className={`induction-cell ${getInductionTone(induction.status)}`}>
+                              <strong>{induction.status || "Not supplied"}</strong>
+                              {induction.expiry ? <small>Exp {induction.expiry}</small> : <small>No expiry</small>}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="empty-state">No induction sheet sites are mapped to {scope} yet.</div>

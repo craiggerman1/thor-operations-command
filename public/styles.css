@@ -4246,18 +4246,72 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .induction-board {
-  display: grid;
-  gap: 7px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   border-radius: 6px;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(10, 49, 82, 0.62) rgba(201, 215, 225, 0.52);
+}
+
+.induction-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 6px 7px;
+}
+
+.induction-table th,
+.induction-table td {
+  min-width: 118px;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.induction-table thead th {
+  min-height: 44px;
+  padding: 13px 10px;
+  color: #ffffff;
+  background:
+    linear-gradient(90deg, rgba(37, 161, 189, 0.22), transparent),
+    #0a3152;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.12;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.induction-table .induction-staff-column {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  min-width: 148px;
+  max-width: 178px;
+  color: #071726;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(238, 246, 249, 0.94));
+  box-shadow: 12px 0 18px rgba(7, 23, 38, 0.12);
+  text-align: left;
+}
+
+.induction-table thead .induction-staff-column {
+  z-index: 7;
+  color: #ffffff;
+  background: #0a3152;
+}
+
+.induction-table tbody .induction-staff-column {
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
 }
 
 .induction-row {
@@ -6500,6 +6554,21 @@ body:not([data-access="admin"]) .admin-only-panel {
     grid-template-columns: minmax(104px, 0.8fr) repeat(14, minmax(92px, 1fr));
     min-width: 1420px;
     padding: 7px;
+  }
+
+  .induction-table th,
+  .induction-table td {
+    min-width: 102px;
+  }
+
+  .induction-table .induction-staff-column {
+    min-width: 118px;
+    max-width: 138px;
+  }
+
+  .induction-table thead th {
+    padding: 10px 8px;
+    font-size: 11px;
   }
 
   .induction-row.header span,
