@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
-import { stockOrders } from "@/lib/toc-data";
+import { actionItems, stockOrders } from "@/lib/toc-data";
+import { getOpenActionItems } from "@/lib/action-state";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
 
@@ -30,6 +31,7 @@ type NationalActionStorageRequest = {
 };
 
 type StockOrderStorageRequest = {
+  region?: string;
   status?: string;
   updateRequested?: boolean;
 };
@@ -73,13 +75,51 @@ function getNationalRequestCount() {
   }
 }
 
+function isActionVisibleForScope(region: string, scope: string) {
+  return scope === "National" || region === scope || region === "National";
+}
+
+function getScopedStockRequestCount(scope: string) {
+  if (typeof window === "undefined") return 0;
+
+  try {
+    const storedOrders = localStorage.getItem("toc.stockOrders");
+    const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders as StockOrderStorageRequest[];
+    return stockRequests.filter((order) => {
+      const visibleForScope = scope === "National" || order.region === scope;
+      const needsAction = order.updateRequested || ["Request submitted", "Awaiting national approval", "Cancellation requested", "Open"].includes(order.status || "");
+      return visibleForScope && needsAction;
+    }).length;
+  } catch {
+    return 0;
+  }
+}
+
+function getNavBadgeCounts(scope: string) {
+  const scopedActions = getOpenActionItems(actionItems).filter((item) => isActionVisibleForScope(item.region, scope));
+  const countBySource = (sources: string[]) => scopedActions.filter((item) => sources.includes(item.source)).length;
+  const countByDirective = (directives: string[]) => scopedActions.filter((item) => directives.includes(item.directive)).length;
+
+  return {
+    "Action Centre": scopedActions.length,
+    "Region Health": scopedActions.length,
+    "Equipment Servicing": countBySource(["Equipment Servicing", "Workshop"]),
+    Compliance: countBySource(["Compliance"]),
+    "Staff Availability": countBySource(["Roster"]),
+    Jobsheets: countBySource(["Thor Portal"]),
+    "Stock Orders": countBySource(["Stock Orders"]) + getScopedStockRequestCount(scope),
+    "To Do": countByDirective(["To Do"]),
+    "National Requests": scope === "National" ? getNationalRequestCount() : 0
+  } as Record<string, number>;
+}
+
 export function TocShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [unitsWashedToday, setUnitsWashedToday] = useState(0);
-  const [nationalRequestCount, setNationalRequestCount] = useState(0);
+  const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, number>>({});
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
   const [sessionReady, setSessionReady] = useState(false);
@@ -111,18 +151,22 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    function syncNationalRequestCount() {
-      setNationalRequestCount(getNationalRequestCount());
+    function syncNavBadgeCounts() {
+      setNavBadgeCounts(getNavBadgeCounts(getStoredScope()));
     }
 
-    syncNationalRequestCount();
-    window.addEventListener("storage", syncNationalRequestCount);
-    window.addEventListener("toc.nationalActionRequests.updated", syncNationalRequestCount);
-    window.addEventListener("toc.stockOrders.updated", syncNationalRequestCount);
+    syncNavBadgeCounts();
+    window.addEventListener("storage", syncNavBadgeCounts);
+    window.addEventListener("toc.scopechange", syncNavBadgeCounts);
+    window.addEventListener("toc.actionState.updated", syncNavBadgeCounts);
+    window.addEventListener("toc.nationalActionRequests.updated", syncNavBadgeCounts);
+    window.addEventListener("toc.stockOrders.updated", syncNavBadgeCounts);
     return () => {
-      window.removeEventListener("storage", syncNationalRequestCount);
-      window.removeEventListener("toc.nationalActionRequests.updated", syncNationalRequestCount);
-      window.removeEventListener("toc.stockOrders.updated", syncNationalRequestCount);
+      window.removeEventListener("storage", syncNavBadgeCounts);
+      window.removeEventListener("toc.scopechange", syncNavBadgeCounts);
+      window.removeEventListener("toc.actionState.updated", syncNavBadgeCounts);
+      window.removeEventListener("toc.nationalActionRequests.updated", syncNavBadgeCounts);
+      window.removeEventListener("toc.stockOrders.updated", syncNavBadgeCounts);
     };
   }, []);
 
@@ -211,7 +255,7 @@ export function TocShell({ children }: { children: ReactNode }) {
           {visibleNav.map(({ label, href }) => (
             <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)}>
               {label}
-              {label === "National Requests" && nationalRequestCount > 0 ? <span className="nav-request-badge">{nationalRequestCount}</span> : null}
+              {navBadgeCounts[label] > 0 ? <span className="nav-request-badge">{navBadgeCounts[label]}</span> : null}
             </Link>
           ))}
         </nav>
@@ -230,7 +274,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.149</em>
+              <em>Build 0.150</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
