@@ -3305,6 +3305,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .calendar-date {
+  position: relative;
   width: 100%;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -3335,11 +3336,39 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .calendar-date.today {
-  border-color: rgba(18, 132, 82, 0.82);
+  border-color: rgba(37, 161, 189, 0.95);
   background:
-    linear-gradient(135deg, rgba(18, 132, 82, 0.1), transparent 44%),
+    linear-gradient(135deg, rgba(37, 161, 189, 0.18), transparent 46%),
     rgba(255, 255, 255, 0.96);
-  box-shadow: 0 0 0 3px rgba(18, 132, 82, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  box-shadow: 0 0 0 4px rgba(37, 161, 189, 0.24), 0 16px 34px rgba(7, 23, 38, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.calendar-date.today::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 6px;
+  border-left: 6px solid var(--teal);
+}
+
+.today-marker {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+  box-shadow: 0 8px 16px rgba(37, 161, 189, 0.2);
 }
 
 .calendar-date.selected {

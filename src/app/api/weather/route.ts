@@ -40,6 +40,10 @@ function buildForecast(data: OpenMeteoResponse): TocWeatherDay[] {
   });
 }
 
+function isSevereWeatherSignal(signal: string | undefined) {
+  return signal === "Storm risk" || signal === "Wet and windy";
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope") || "National";
@@ -81,7 +85,7 @@ export async function GET(request: Request) {
       },
       forecast,
       warning: {
-        active: Boolean(strongestSignal),
+        active: isSevereWeatherSignal(strongestSignal),
         message: strongestSignal || "No severe forecast signal"
       }
     };

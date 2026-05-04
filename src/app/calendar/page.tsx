@@ -178,6 +178,7 @@ export default function CalendarPage() {
                       role="button"
                       tabIndex={0}
                     >
+                      {isToday ? <span className="today-marker">Today</span> : null}
                       <div className="calendar-date-head">
                         <span><strong>{day.date}</strong><em>{day.month}</em><i className="calendar-week-label">{day.week}</i></span>
                         <span className={`calendar-weather-chip ${forecast.icon}`} title={forecast.label} aria-label={forecast.label}>
