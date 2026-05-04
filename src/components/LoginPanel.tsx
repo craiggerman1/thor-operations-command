@@ -57,7 +57,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.150</span>
+            <span>Build 0.151</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>
@@ -75,7 +75,7 @@ export function LoginPanel() {
             Developer quick sign in
           </button>
         </div>
-        <small className="login-note">Developer use only while TOC is being built. Full authentication and permissions will be connected later.</small>
+        <small className="login-note">Developer use only while TOC is being built. Full authentication and permissions will move to the controlled TOC user system.</small>
       </form>
 
       {signingIn ? (

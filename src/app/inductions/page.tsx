@@ -35,7 +35,7 @@ function getInduction(feed: InductionFeed, staffName: string, siteName: string) 
 export default function InductionsPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<InductionFeed>(staffInductionsSheet);
-  const [feedStatus, setFeedStatus] = useState("Google Sheet read-only feed loading");
+  const [feedStatus, setFeedStatus] = useState("Source loading");
   const visibleSites = useMemo(() => feed.sites.filter((site) => scope === "National" || site.region === scope), [feed.sites, scope]);
   const inductionCells = visibleSites.length * feed.staff.length;
   const inductedCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => getInduction(feed, staff.name, site.name).status === "Inducted").length, 0);
@@ -69,7 +69,7 @@ export default function InductionsPage() {
       .then((nextFeed: InductionFeed) => {
         if (!isActive) return;
         setFeed(nextFeed);
-        setFeedStatus("Google Sheet read-only feed connected");
+        setFeedStatus("Source connected");
       })
       .catch(() => {
         if (!isActive) return;
@@ -87,12 +87,12 @@ export default function InductionsPage() {
       <PageIntro title="Inductions" detail="Staff induction status by site, filtered to the signed-in region." />
       <FlowHeading eyebrow="Inductions" title="Confirm the right staff are inducted for the right customer sites before work is assigned." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Google Sheets feed" title={`${scope} induction register`} pill={`${visibleSites.length} sites`}>
+        <Panel wide eyebrow="Induction source" title={`${scope} induction register`} pill={`${visibleSites.length} sites`}>
           <div className="staff-source-strip">
             <div>
-              <span className="eyebrow">Read-only source</span>
+              <span className="eyebrow">Controlled source</span>
               <strong>{feed.sourceName}</strong>
-              <small>{feedStatus}. Google Sheet data has not been edited.</small>
+              <small>{feedStatus}. Source data has not been edited by TOC.</small>
             </div>
             <a href={feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
           </div>

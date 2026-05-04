@@ -36,15 +36,22 @@ type StockOrderStorageRequest = {
   updateRequested?: boolean;
 };
 
+type NavBadgeTone = "red" | "amber" | "blue";
+
+type NavBadge = {
+  count: number;
+  tone: NavBadgeTone;
+};
+
 const weatherByScope: Record<string, WeatherState> = {
-  National: { location: "Gold Coast, Australia", summary: "Head office weather feed", temp: "--", icon: "cloud", warning: "BOM warning feed pending", warningActive: false },
-  Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning feed pending", warningActive: false },
-  Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning feed pending", warningActive: false },
-  Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning feed pending", warningActive: false },
-  Adelaide: { location: "Adelaide", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning feed pending", warningActive: false },
-  Perth: { location: "Perth", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning feed pending", warningActive: false },
-  Canberra: { location: "Canberra", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning feed pending", warningActive: false },
-  Workshop: { location: "Gold Coast, Australia", summary: "Head office workshop weather feed", temp: "--", icon: "cloud", warning: "BOM warning feed pending", warningActive: false }
+  National: { location: "Gold Coast, Australia", summary: "Head office weather source", temp: "--", icon: "cloud", warning: "BOM warning source awaiting connection", warningActive: false },
+  Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning source awaiting connection", warningActive: false },
+  Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning source awaiting connection", warningActive: false },
+  Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning source awaiting connection", warningActive: false },
+  Adelaide: { location: "Adelaide", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning source awaiting connection", warningActive: false },
+  Perth: { location: "Perth", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning source awaiting connection", warningActive: false },
+  Canberra: { location: "Canberra", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning source awaiting connection", warningActive: false },
+  Workshop: { location: "Gold Coast, Australia", summary: "Head office workshop weather source", temp: "--", icon: "cloud", warning: "BOM warning source awaiting connection", warningActive: false }
 };
 
 function getStoredScope() {
@@ -99,18 +106,23 @@ function getNavBadgeCounts(scope: string) {
   const scopedActions = getOpenActionItems(actionItems).filter((item) => isActionVisibleForScope(item.region, scope));
   const countBySource = (sources: string[]) => scopedActions.filter((item) => sources.includes(item.source)).length;
   const countByDirective = (directives: string[]) => scopedActions.filter((item) => directives.includes(item.directive)).length;
+  const urgentActionCount = scopedActions.filter((item) => item.severity === "red" || item.directive === "National Ops Directive").length;
+  const complianceCount = countBySource(["Compliance"]);
+  const stockCount = countBySource(["Stock Orders"]) + getScopedStockRequestCount(scope);
+  const nationalRequestCount = scope === "National" ? getNationalRequestCount() : 0;
+  const makeBadge = (count: number, tone: NavBadgeTone = "blue") => ({ count, tone });
 
   return {
-    "Action Centre": scopedActions.length,
-    "Region Health": scopedActions.length,
-    "Equipment Servicing": countBySource(["Equipment Servicing", "Workshop"]),
-    Compliance: countBySource(["Compliance"]),
-    "Staff Availability": countBySource(["Roster"]),
-    Jobsheets: countBySource(["Thor Portal"]),
-    "Stock Orders": countBySource(["Stock Orders"]) + getScopedStockRequestCount(scope),
-    "To Do": countByDirective(["To Do"]),
-    "National Requests": scope === "National" ? getNationalRequestCount() : 0
-  } as Record<string, number>;
+    "Action Centre": makeBadge(scopedActions.length, urgentActionCount ? "red" : "amber"),
+    "Region Health": makeBadge(scopedActions.length, urgentActionCount ? "red" : "amber"),
+    "Equipment Servicing": makeBadge(countBySource(["Equipment Servicing", "Workshop"]), "amber"),
+    Compliance: makeBadge(complianceCount, complianceCount ? "red" : "blue"),
+    "Staff Availability": makeBadge(countBySource(["Roster"]), "amber"),
+    Jobsheets: makeBadge(countBySource(["Thor Portal"]), "amber"),
+    "Stock Orders": makeBadge(stockCount, stockCount > 2 ? "red" : "amber"),
+    "To Do": makeBadge(countByDirective(["To Do"]), "blue"),
+    "National Requests": makeBadge(nationalRequestCount, "red")
+  } as Record<string, NavBadge>;
 }
 
 export function TocShell({ children }: { children: ReactNode }) {
@@ -119,7 +131,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [unitsWashedToday, setUnitsWashedToday] = useState(0);
-  const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, number>>({});
+  const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, NavBadge>>({});
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
   const [sessionReady, setSessionReady] = useState(false);
@@ -252,12 +264,15 @@ export function TocShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="rail-nav" aria-label="Primary">
-          {visibleNav.map(({ label, href }) => (
-            <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)}>
-              {label}
-              {navBadgeCounts[label] > 0 ? <span className="nav-request-badge">{navBadgeCounts[label]}</span> : null}
-            </Link>
-          ))}
+          {visibleNav.map(({ label, href }) => {
+            const badge = navBadgeCounts[label];
+            return (
+              <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)}>
+                {label}
+                {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 
@@ -274,7 +289,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.150</em>
+              <em>Build 0.151</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>

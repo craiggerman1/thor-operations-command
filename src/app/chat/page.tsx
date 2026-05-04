@@ -30,7 +30,7 @@ type ManagerMeeting = {
   audience: string;
   time: string;
   purpose: string;
-  status: "Ready" | "Staged" | "Planned";
+  status: "Ready" | "Queued" | "Scheduled";
   link: string;
 };
 
@@ -80,7 +80,7 @@ const managerMeetings: ManagerMeeting[] = [
     audience: "All managers",
     time: "Today 14:30",
     purpose: "Daily risk, blockers, region health and urgent action review.",
-    status: "Staged",
+    status: "Scheduled",
     link: "https://teams.microsoft.com/"
   },
   {
@@ -98,7 +98,7 @@ const managerMeetings: ManagerMeeting[] = [
     audience: "National + region managers",
     time: "Weekly",
     purpose: "Review site scores, manager responses and improvement actions.",
-    status: "Planned",
+    status: "Queued",
     link: "https://teams.microsoft.com/"
   }
 ];
@@ -248,7 +248,7 @@ export default function ChatPage() {
       <PageIntro title="Chat" detail="Ensure healthy communication between management." />
       <FlowHeading eyebrow="Chat" title="Keep manager communication clear, useful and tied to operational decisions." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Internal comms" title="Manager communications" pill="Offline">
+        <Panel wide eyebrow="Internal comms" title="Manager communications" pill="Comms routing">
           <div className="chat-layout">
             <aside className="chat-channels" aria-label="Chat targeting">
               <div className="chat-sidebar-head">
@@ -286,7 +286,7 @@ export default function ChatPage() {
               </div>
               <div className="chat-channel-note">
                 <strong>Comms status</strong>
-                <small>Messages save in this browser until database-backed chat is connected.</small>
+                <small>Messages are available in this TOC session. Team-wide persistence will move into the central TOC data layer.</small>
               </div>
             </aside>
             <div className="chat-room">
@@ -320,9 +320,9 @@ export default function ChatPage() {
               <div>
                 <span className="eyebrow">Teams meetings</span>
                 <strong>Manager meeting hub</strong>
-                <small>Launch scheduled or on-demand manager meetings from TOC. Microsoft Graph controls will create live meetings once connected.</small>
+                <small>Launch scheduled or on-demand manager meetings from TOC. Microsoft Graph controls will manage live meeting creation from the TOC data layer.</small>
               </div>
-              <Tag>Teams offline</Tag>
+              <Tag>Teams routing</Tag>
             </div>
             <div className="meeting-action-strip">
               <button type="button" onClick={() => openMeeting(managerMeetings[0])}>

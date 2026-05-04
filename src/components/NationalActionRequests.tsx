@@ -84,6 +84,12 @@ export function NationalActionRequests() {
         <article><span>Awaiting review</span><strong>{pendingRequests.length}</strong></article>
         <article><span>Open actions</span><strong>{openActionItems.length}</strong></article>
       </div>
+      <div className="request-lifecycle-strip" aria-label="National request lifecycle">
+        <span>Submitted</span>
+        <span>Under review</span>
+        <span>Approved or returned</span>
+        <span>Closed</span>
+      </div>
       <div className="national-request-list">
         {visibleRequests.length ? visibleRequests.map((request) => (
           <article

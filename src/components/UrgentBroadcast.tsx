@@ -134,7 +134,7 @@ function syncRemoteBroadcasts(kind: "urgent" | "director" | "clear-director", pa
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind, ...payload })
   }).catch(() => {
-    // Local browser storage remains the fallback until database-backed broadcasts are connected.
+    // Local browser storage remains the fallback until central broadcast storage is active.
   });
 }
 

@@ -916,6 +916,21 @@ body.todo-floating-disabled .topbar {
   box-shadow: 0 8px 16px rgba(121, 14, 14, 0.36);
 }
 
+.nav-request-badge.red {
+  background: #e33935;
+  box-shadow: 0 8px 16px rgba(121, 14, 14, 0.36), 0 0 0 3px rgba(227, 57, 53, 0.1);
+}
+
+.nav-request-badge.amber {
+  background: #d98b16;
+  box-shadow: 0 8px 16px rgba(121, 77, 14, 0.28), 0 0 0 3px rgba(217, 139, 22, 0.1);
+}
+
+.nav-request-badge.blue {
+  background: #2383a0;
+  box-shadow: 0 8px 16px rgba(14, 87, 121, 0.28), 0 0 0 3px rgba(35, 131, 160, 0.1);
+}
+
 .build-notice strong {
   min-height: 30px;
   padding: 0 13px;
@@ -1702,6 +1717,25 @@ body:not([data-access="admin"]) .admin-only-panel {
 .urgent-broadcast-controls {
   display: grid;
   gap: 10px;
+}
+
+@media (max-width: 1320px) {
+  .topbar {
+    gap: 14px;
+  }
+
+  .topbar-actions {
+    max-width: min(720px, 62%);
+    gap: 9px;
+  }
+
+  h1 {
+    font-size: clamp(29px, 2.55vw, 38px);
+  }
+
+  .session-chip {
+    min-width: 102px;
+  }
 }
 
 .panel.admin-broadcast-panel {
@@ -4561,6 +4595,31 @@ body:not([data-access="admin"]) .admin-only-panel {
   color: var(--blue);
   font-size: 26px;
   line-height: 1;
+}
+
+.request-lifecycle-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(183, 220, 238, 0.58);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(222, 249, 255, 0.36)),
+    rgba(255, 255, 255, 0.78);
+}
+
+.request-lifecycle-strip span {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: rgba(10, 49, 82, 0.08);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
 }
 
 .national-request-card {

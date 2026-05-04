@@ -24,7 +24,7 @@ function getStaffTotal(staff: StaffAvailabilityFeed["staff"][number]) {
 
 export default function StaffAvailabilityPage() {
   const [feed, setFeed] = useState<StaffAvailabilityFeed>(staffAvailabilitySheet);
-  const [feedStatus, setFeedStatus] = useState("Google Sheet read-only feed loading");
+  const [feedStatus, setFeedStatus] = useState("Source loading");
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function StaffAvailabilityPage() {
       .then((nextFeed: StaffAvailabilityFeed) => {
         if (!isActive) return;
         setFeed(nextFeed);
-        setFeedStatus("Google Sheet read-only feed connected");
+        setFeedStatus("Source connected");
       })
       .catch(() => {
         if (!isActive) return;
@@ -50,15 +50,15 @@ export default function StaffAvailabilityPage() {
 
   return (
     <TocShell>
-      <PageIntro title="Staff Availability" detail="Google Sheets availability view for staff coverage by day and time window." />
+      <PageIntro title="Staff Availability" detail="Staff coverage by day and time window." />
       <FlowHeading eyebrow="Staff Availability" title="Read the coverage by staff name, day and shift window before roster gaps become urgent." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Google Sheets feed" title="Staff coverage by day and time window" pill={`${feed.staff.length} staff listed`}>
+        <Panel wide eyebrow="Availability source" title="Staff coverage by day and time window" pill={`${feed.staff.length} staff listed`}>
           <div className="staff-source-strip">
             <div>
-              <span className="eyebrow">Read-only source</span>
+              <span className="eyebrow">Controlled source</span>
               <strong>{feed.sourceName}</strong>
-              <small>{feedStatus}. Google Sheet data has not been edited.</small>
+              <small>{feedStatus}. Source data has not been edited by TOC.</small>
             </div>
             <a href={feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
           </div>

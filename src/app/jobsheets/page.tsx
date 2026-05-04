@@ -7,11 +7,12 @@ export default function JobsheetsPage() {
       <PageIntro title="Jobsheets" detail="Jobsheet integration and Thor Portal approval flow." />
       <FlowHeading eyebrow="Jobsheets" title="Track jobsheet approvals and Thor Portal action flow." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Jobsheets" title="Jobsheet flow" pill="Offline">
+        <Panel wide eyebrow="Jobsheets" title="Jobsheet flow" pill="Connection status">
           <div className="brief-item">
             <span className="brief-dot" />
             <div>
-              <strong>Jobsheet feed offline.</strong>
+              <strong>Thor Portal jobsheet source awaiting activation.</strong>
+              <small>Approval flow, manager review items and admin blockers will land here once the source is enabled.</small>
             </div>
           </div>
         </Panel>

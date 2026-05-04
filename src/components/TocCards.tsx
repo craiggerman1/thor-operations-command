@@ -117,14 +117,14 @@ export function AdminHintControls() {
     window.dispatchEvent(new CustomEvent("toc.pageHintsRedeployed"));
     window.dispatchEvent(new CustomEvent("toc.pageHintsSettingChanged"));
     setHintsEnabled(true);
-    setMessage("Page hints redeployed for this browser. Database-backed user reset will make this national later.");
+    setMessage("Page hints redeployed for this browser. National user reset will activate through central user settings.");
   }
 
   function toggleHints(nextEnabled: boolean) {
     localStorage.setItem(hintEnabledKey, nextEnabled ? "true" : "false");
     window.dispatchEvent(new CustomEvent("toc.pageHintsSettingChanged"));
     setHintsEnabled(nextEnabled);
-    setMessage(nextEnabled ? "Page hints turned on." : "Page hints turned off for all users once database-backed settings are connected.");
+    setMessage(nextEnabled ? "Page hints turned on." : "Page hints turned off for all users once central settings are active.");
   }
 
   return (
