@@ -4075,6 +4075,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
+  border-radius: 6px;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(10, 49, 82, 0.62) rgba(201, 215, 225, 0.52);
@@ -4115,6 +4116,29 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .staff-availability-row.header span:first-child {
   justify-content: flex-start;
+}
+
+.staff-availability-row > .staff-name,
+.staff-availability-row.header > span:first-child,
+.staff-availability-row.time-header > span:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  min-width: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 10px 0 18px rgba(7, 23, 38, 0.08);
+}
+
+.staff-availability-row.header > span:first-child {
+  color: #ffffff;
+  background: #0a3152;
+}
+
+.staff-availability-row.time-header > span:first-child {
+  display: flex;
+  align-items: center;
+  background: rgba(236, 247, 250, 0.96);
 }
 
 .staff-availability-row.time-header {
@@ -4230,6 +4254,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
+  border-radius: 6px;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(10, 49, 82, 0.62) rgba(201, 215, 225, 0.52);
@@ -4270,6 +4295,22 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .induction-row.header span:first-child {
   justify-content: flex-start;
+}
+
+.induction-row > .staff-name,
+.induction-row.header > span:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  min-width: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 10px 0 18px rgba(7, 23, 38, 0.08);
+}
+
+.induction-row.header > span:first-child {
+  color: #ffffff;
+  background: #0a3152;
 }
 
 .induction-cell {
