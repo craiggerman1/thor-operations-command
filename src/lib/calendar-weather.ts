@@ -15,9 +15,9 @@ const regionalPattern: Record<string, ForecastIcon[]> = {
 };
 
 const forecastLabel: Record<ForecastIcon, string> = {
-  clear: "Clear forecast",
-  cloud: "Cloud forecast",
-  rain: "Rain forecast",
+  clear: "Clear",
+  cloud: "Cloud",
+  rain: "Rain",
   storm: "Storm risk"
 };
 
@@ -25,9 +25,11 @@ export function getCalendarForecast(day: CalendarDay, scope: string) {
   const pattern = regionalPattern[scope] || goldCoastPattern;
   const dateNumber = Number(day.date) || 1;
   const icon = pattern[(dateNumber - 1) % pattern.length];
-  const location = scope === "National" || scope === "Workshop" ? "Gold Coast, Australia" : scope;
+  const location = scope === "National" || scope === "Workshop" ? "Gold Coast" : scope;
+  const condition = forecastLabel[icon];
   return {
     icon,
-    label: `${location}: ${forecastLabel[icon]}`
+    condition,
+    label: `${location}: ${condition}`
   };
 }

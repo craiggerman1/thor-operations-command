@@ -20,6 +20,7 @@ type StoredSession = {
 
 type WeatherState = {
   location: string;
+  condition: string;
   summary: string;
   temp: string;
   icon: "clear" | "cloud" | "rain" | "storm";
@@ -45,14 +46,14 @@ type NavBadge = {
 };
 
 const weatherByScope: Record<string, WeatherState> = {
-  National: { location: "Gold Coast, Australia", summary: "Head office weather source", temp: "--", icon: "cloud", warning: "BOM warning source awaiting connection", warningActive: false },
-  Brisbane: { location: "Brisbane", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning source awaiting connection", warningActive: false },
-  Sydney: { location: "Sydney", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning source awaiting connection", warningActive: false },
-  Melbourne: { location: "Melbourne", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning source awaiting connection", warningActive: false },
-  Adelaide: { location: "Adelaide", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning source awaiting connection", warningActive: false },
-  Perth: { location: "Perth", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning source awaiting connection", warningActive: false },
-  Canberra: { location: "Canberra", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning source awaiting connection", warningActive: false },
-  Workshop: { location: "Gold Coast, Australia", summary: "Head office workshop weather source", temp: "--", icon: "cloud", warning: "BOM warning source awaiting connection", warningActive: false }
+  National: { location: "Gold Coast", condition: "Cloud", summary: "Head office weather source", temp: "--", icon: "cloud", warning: "BOM warning source awaiting connection", warningActive: false },
+  Brisbane: { location: "Brisbane", condition: "Storm risk", summary: "Warm, check storm risk", temp: "28 C", icon: "storm", warning: "Warning source awaiting connection", warningActive: false },
+  Sydney: { location: "Sydney", condition: "Cloud", summary: "Cloud and coastal change", temp: "22 C", icon: "cloud", warning: "Warning source awaiting connection", warningActive: false },
+  Melbourne: { location: "Melbourne", condition: "Rain", summary: "Cooler operating window", temp: "18 C", icon: "rain", warning: "Warning source awaiting connection", warningActive: false },
+  Adelaide: { location: "Adelaide", condition: "Clear", summary: "Dry, watch afternoon wind", temp: "24 C", icon: "clear", warning: "Warning source awaiting connection", warningActive: false },
+  Perth: { location: "Perth", condition: "Clear", summary: "Clear field conditions", temp: "25 C", icon: "clear", warning: "Warning source awaiting connection", warningActive: false },
+  Canberra: { location: "Canberra", condition: "Cloud", summary: "Cool morning conditions", temp: "16 C", icon: "cloud", warning: "Warning source awaiting connection", warningActive: false },
+  Workshop: { location: "Gold Coast", condition: "Cloud", summary: "Workshop weather source", temp: "--", icon: "cloud", warning: "BOM warning source awaiting connection", warningActive: false }
 };
 
 function getStoredScope() {
@@ -286,7 +287,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.152</em>
+              <em>Build 0.153</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -365,9 +366,10 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
         <div className="page-title-weather" aria-label={`${weather.location} weather`}>
           <span className={`weather-logo ${weather.icon}`} aria-hidden="true" />
           <div>
-            <span className="eyebrow">{weather.location} weather</span>
+            <span className="eyebrow">{weather.location} Weather</span>
             <strong>{weather.temp}</strong>
-            <small>{weather.summary}</small>
+            <small>{weather.condition}</small>
+            <b>{weather.summary}</b>
             <em>{weather.warning || "No active warnings shown"}</em>
           </div>
         </div>

@@ -160,7 +160,10 @@ export default function CalendarPage() {
                     >
                       <div className="calendar-date-head">
                         <span><strong>{day.date}</strong><em>{day.month}</em><i className="calendar-week-label">{day.week}</i></span>
-                        <span className={`calendar-weather-icon ${forecast.icon}`} title={forecast.label} aria-label={forecast.label} />
+                        <span className={`calendar-weather-chip ${forecast.icon}`} title={forecast.label} aria-label={forecast.label}>
+                          <i className={`calendar-weather-icon ${forecast.icon}`} aria-hidden="true" />
+                          <em>{forecast.condition}</em>
+                        </span>
                         <small>{visibleJobs.length ? `${visibleJobs.length} jobs` : "No jobs"}</small>
                       </div>
                       <div className="calendar-date-jobs">
@@ -195,7 +198,7 @@ export default function CalendarPage() {
                     tabIndex={0}
                   >
                     <div>
-                      <strong>{dayLabel} <span className="calendar-week-label">{day.week}</span><span className={`calendar-weather-icon inline ${forecast.icon}`} title={forecast.label} aria-label={forecast.label} /></strong>
+                      <strong>{dayLabel} <span className="calendar-week-label">{day.week}</span><span className={`calendar-weather-chip inline ${forecast.icon}`} title={forecast.label} aria-label={forecast.label}><i className={`calendar-weather-icon ${forecast.icon}`} aria-hidden="true" /><em>{forecast.condition}</em></span></strong>
                       <small>{visibleJobs.length ? `${visibleJobs.length} visible jobs for ${scope}` : `No visible jobs for ${scope}`}</small>
                     </div>
                     <div className="calendar-list-jobs">
