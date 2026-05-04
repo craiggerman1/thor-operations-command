@@ -11,6 +11,7 @@ import { getOpenActionItems } from "@/lib/action-state";
 import { getScopedActionItems } from "@/lib/scope-utils";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
+import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 
 type StoredSession = {
   role?: AccessRole;
@@ -23,7 +24,7 @@ type WeatherState = {
   condition: string;
   summary: string;
   temp: string;
-  icon: "clear" | "cloud" | "rain" | "storm";
+  icon: WeatherIcon;
   warning?: string;
   warningActive?: boolean;
 };
@@ -287,7 +288,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.165</em>
+              <em>Build 0.166</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -338,7 +339,7 @@ export function TocShell({ children }: { children: ReactNode }) {
 
 export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title: string; detail?: string }) {
   const [scope, setScope] = useState("National");
-  const weather = weatherByScope[scope] || weatherByScope.National;
+  const [weather, setWeather] = useState<WeatherState>(weatherByScope.National);
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -354,6 +355,37 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
       window.removeEventListener("toc.scopechange", syncScope);
     };
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    const fallbackWeather = weatherByScope[scope] || weatherByScope.National;
+    setWeather(fallbackWeather);
+
+    fetch(`/api/weather?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Weather feed unavailable")))
+      .then((payload: TocWeatherPayload) => {
+        if (!isActive) return;
+        const apparentTemp = payload.current.apparentTemp !== null ? `Feels ${Math.round(payload.current.apparentTemp)} C` : payload.current.condition;
+        const wind = payload.current.wind !== null ? `Wind ${Math.round(payload.current.wind)} km/h` : "Wind not supplied";
+        setWeather({
+          location: payload.location,
+          condition: payload.current.condition,
+          summary: `${apparentTemp} - ${wind}`,
+          temp: payload.current.temp !== null ? `${Math.round(payload.current.temp)} C` : "--",
+          icon: payload.current.icon,
+          warning: payload.warning.message,
+          warningActive: payload.warning.active
+        });
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setWeather({ ...fallbackWeather, warning: "Live weather feed unavailable", warningActive: false });
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [scope]);
 
   return (
     <section className="page-title">

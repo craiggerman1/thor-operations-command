@@ -18,6 +18,7 @@ import {
   updateCalendarJob
 } from "@/lib/calendar-utils";
 import { getCalendarForecast } from "@/lib/calendar-weather";
+import type { TocWeatherDay, TocWeatherPayload } from "@/lib/weather";
 
 type CalendarViewMode = "calendar" | "list";
 type VisibleJob = CalendarJob & { originalIndex: number };
@@ -50,6 +51,7 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("calendar");
   const [calendarData, setCalendarData] = useState(getStoredCalendarWeeks);
   const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
+  const [weatherForecast, setWeatherForecast] = useState<TocWeatherDay[]>([]);
   const [saveMessage, setSaveMessage] = useState("");
   const calendarDays = useMemo(() => getVisibleCalendarDays(calendarData), [calendarData]);
   const totalVisibleJobs = calendarDays.reduce((total, day) => total + getVisibleJobs(day.jobs).length, 0);
@@ -75,6 +77,24 @@ export default function CalendarPage() {
       window.removeEventListener("toc.scopechange", syncScope);
     };
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    fetch(`/api/weather?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Weather feed unavailable")))
+      .then((payload: TocWeatherPayload) => {
+        if (!isActive) return;
+        setWeatherForecast(payload.forecast || []);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setWeatherForecast([]);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [scope]);
 
   function openEditor(daySlug: string, dayLabel: string, jobIndex: number, job: CalendarJob) {
     setEditTarget({ daySlug, dayLabel, jobIndex, job: { ...job, recurrence: job.recurrence || "None", recurrenceIntervalWeeks: job.recurrenceIntervalWeeks || 3 } });
@@ -147,7 +167,7 @@ export default function CalendarPage() {
                   const daySlug = getCalendarDaySlug(day);
                   const dayLabel = `${day.day} ${day.date} ${day.month}`;
                   const visibleJobs = getVisibleJobs(day.jobs);
-                  const forecast = getCalendarForecast(day, scope);
+                  const forecast = getCalendarForecast(day, scope, weatherForecast);
                   const isToday = isCurrentCalendarDay(day);
                   return (
                     <article
@@ -187,7 +207,7 @@ export default function CalendarPage() {
                 const daySlug = getCalendarDaySlug(day);
                 const dayLabel = `${day.day} ${day.date} ${day.month}`;
                 const visibleJobs = getVisibleJobs(day.jobs);
-                const forecast = getCalendarForecast(day, scope);
+                const forecast = getCalendarForecast(day, scope, weatherForecast);
                 return (
                   <article
                     className="calendar-list-day"
