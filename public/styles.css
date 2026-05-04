@@ -4033,15 +4033,17 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .availability-summary-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: 170px repeat(7, minmax(154px, 1fr)) 72px;
+  gap: 6px;
+  min-width: 1360px;
   margin-bottom: 12px;
+  padding-inline: 7px;
 }
 
 .availability-summary-card {
   display: grid;
   gap: 3px;
-  min-height: 92px;
+  min-height: 86px;
   padding: 11px;
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
@@ -4064,6 +4066,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   color: var(--blue);
   font-size: 28px;
   line-height: 1;
+}
+
+.availability-summary-spacer {
+  display: block;
 }
 
 .staff-availability-board {

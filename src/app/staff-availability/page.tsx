@@ -63,17 +63,18 @@ export default function StaffAvailabilityPage() {
             <a href={feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
           </div>
 
-          <div className="availability-summary-grid" aria-label="Daily availability summary">
-            {daySummaries.map((summary) => (
-              <article className="availability-summary-card" key={summary.day}>
-                <span>{summary.day}</span>
-                <strong>{summary.percentage}%</strong>
-                <small>{summary.available} of {summary.total} windows available</small>
-              </article>
-            ))}
-          </div>
-
           <div className="staff-availability-board">
+            <div className="availability-summary-grid" aria-label="Daily availability summary">
+              <span className="availability-summary-spacer" aria-hidden="true" />
+              {daySummaries.map((summary) => (
+                <article className="availability-summary-card" key={summary.day}>
+                  <span>{summary.day}</span>
+                  <strong>{summary.percentage}%</strong>
+                  <small>{summary.available} of {summary.total} windows available</small>
+                </article>
+              ))}
+              <span className="availability-summary-spacer" aria-hidden="true" />
+            </div>
             <div className="staff-availability-row header">
               <span>Staff name</span>
               {feed.days.map((day) => <strong key={day}>{day}</strong>)}
