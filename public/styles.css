@@ -4118,9 +4118,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   justify-content: flex-start;
 }
 
-.staff-availability-row > .staff-name,
-.staff-availability-row.header > span:first-child,
-.staff-availability-row.time-header > span:first-child {
+.staff-availability-row > .staff-name {
   position: sticky;
   left: 0;
   z-index: 4;
@@ -4132,17 +4130,29 @@ body:not([data-access="admin"]) .admin-only-panel {
   box-shadow: 10px 0 18px rgba(7, 23, 38, 0.08);
 }
 
+.staff-availability-row.header > span:first-child,
+.staff-availability-row.time-header > span:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  min-width: 0;
+  height: 100%;
+  padding-inline: 8px;
+}
+
 .staff-availability-row.header > span:first-child {
   color: #ffffff;
-  background: #0a3152;
-  box-shadow: 10px 0 18px rgba(7, 23, 38, 0.18);
+  background: transparent;
+  box-shadow: none;
 }
 
 .staff-availability-row.time-header > span:first-child {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  background: rgba(236, 247, 250, 0.96);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .staff-availability-row.time-header {
