@@ -4,13 +4,38 @@ import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCard
 import { AdminAccessManager } from "@/components/AdminAccessManager";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { pageSettings } from "@/lib/admin-settings";
+import { getSupabaseRegionsStatus } from "@/lib/supabase";
 
-export default function AdminPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminPage() {
+  const databaseStatus = await getSupabaseRegionsStatus();
+
   return (
     <TocShell>
       <PageIntro title="Admin Settings" detail="Site settings, user access, permissions, region visibility and admin setup controls." />
       <FlowHeading eyebrow="Admin Settings" title="Use admin settings to manage access, permissions and reusable guidance for managers." />
       <section className="command-grid route-grid">
+        <Panel
+          wide
+          eyebrow="Database connection"
+          title="Supabase status"
+          pill={databaseStatus.connected ? "Connected" : databaseStatus.configured ? "Check needed" : "Not configured"}
+        >
+          <div className="director-brief-item">
+            <span className={`brief-dot ${databaseStatus.connected ? "" : "amber-dot"}`} />
+            <strong>
+              {databaseStatus.connected
+                ? "TOC can read the Supabase regions table."
+                : "TOC database connection is not confirmed yet."}
+            </strong>
+            <small>
+              {databaseStatus.connected
+                ? `${databaseStatus.regionCount} active regions loaded from Supabase.`
+                : databaseStatus.message}
+            </small>
+          </div>
+        </Panel>
         <Panel wide eyebrow="Page settings" title="TOC page control sections" pill={`${pageSettings.length} pages`}>
           <div className="admin-page-settings-grid">
             {pageSettings.map((setting) => (
