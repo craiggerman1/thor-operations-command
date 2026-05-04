@@ -21,7 +21,7 @@ export type NationalActionRequest = {
   status: "Awaiting national review" | "Approved by national" | "Returned to manager";
 };
 
-export const nationalActionRequestsKey = "toc.nationalActionRequests";
+export const nationalActionRequestsKey = "toc.nationalActionRequests.databaseReady";
 
 function readRequests() {
   if (typeof window === "undefined") return [] as NationalActionRequest[];

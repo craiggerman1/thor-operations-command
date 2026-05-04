@@ -23,193 +23,44 @@ export type CalendarDay = {
   jobs: CalendarJob[];
 };
 
-export const metrics = [
-  { label: "Jobsheets", value: "25", detail: "Waiting on manager action", status: "amber" as Status, href: "/jobsheets" },
-  { label: "Assets online", value: "5/8", detail: "Unity and GPS ready", status: "blue" as Status, href: "/asset-tracking" },
-  { label: "Risk flags", value: "13", detail: "Compliance, staffing, data", status: "red" as Status, href: "/actions" }
-];
+export type Metric = {
+  label: string;
+  value: string;
+  detail: string;
+  status: Status;
+  href: string;
+};
 
-export const commandSignals = [
-  {
-    title: "Approvals are holding admin flow",
-    source: "Thor Portal",
-    severity: "amber" as Status,
-    owner: "Regional managers",
-    action: "Review jobsheets",
-    href: "/jobsheets",
-    detail: "Manager-approved jobsheets are the gate before invoicing can move cleanly."
-  },
-  {
-    title: "Compliance exceptions need ownership",
-    source: "Compliance",
-    severity: "red" as Status,
-    owner: "Managers",
-    action: "Open compliance",
-    href: "/compliance",
-    detail: "Inductions, safety checks and site-readiness items must be current before operational risk builds."
-  },
-  {
-    title: "Roster and productivity pressure",
-    source: "Roster",
-    severity: "amber" as Status,
-    owner: "Productivity",
-    action: "Check coverage",
-    href: "/actions",
-    detail: "Next-shift gaps should be resolved before they become missed washes or client pressure."
-  },
-  {
-    title: "Asset service watch",
-    source: "Equipment Servicing",
-    severity: "amber" as Status,
-    owner: "Workshop",
-    action: "Open servicing",
-    href: "/equipment-servicing",
-    detail: "Vehicles, wash plants, generators and Pony machines need odometer/hour visibility before servicing becomes reactive."
-  }
-];
+export type CommandSignal = {
+  title: string;
+  source: string;
+  severity: Status;
+  owner: string;
+  action: string;
+  href: string;
+  detail: string;
+};
 
-export const actionItems = [
-  {
-    id: "ACT-001",
-    title: "National Woolworths Fleetio accuracy check",
-    source: "National ops",
-    directive: "National Ops Directive",
-    region: "National",
-    severity: "red" as Status,
-    dueDate: "Today 3:00 pm",
-    href: "/actions/ACT-001",
-    detail: "Confirm Fleetio wash records are clean before invoicing and client reporting move forward.",
-    status: "Open",
-    closeFlow: "Manager close-out requires national approval before final closure.",
-    closeActions: ["Review Fleetio wash records for assigned region", "Confirm registration, wash type and site data are accurate", "Submit manager close-out note for national approval"]
-  },
-  {
-    id: "ACT-002",
-    title: "Primary Connect induction exceptions",
-    source: "Compliance",
-    directive: "National Ops Directive",
-    region: "Brisbane",
-    severity: "red" as Status,
-    dueDate: "Today 5:00 pm",
-    href: "/actions/ACT-002",
-    detail: "Induction and site-readiness exceptions need manager ownership before site risk builds.",
-    status: "Overdue",
-    closeFlow: "Close-out routes to national manager approval.",
-    closeActions: ["Open compliance exceptions for Brisbane", "Confirm each outstanding induction owner", "Record corrective action and submit evidence note"]
-  },
-  {
-    id: "ACT-003",
-    title: "Friday PM roster coverage gap",
-    source: "Roster",
-    directive: "Scheduled Directive",
-    region: "Adelaide",
-    severity: "amber" as Status,
-    dueDate: "Today 12:00 pm",
-    href: "/actions/ACT-003",
-    detail: "Coverage gap may affect scheduled wash delivery if not confirmed before shift start.",
-    status: "Due today",
-    closeFlow: "Manager close-out routes to national review.",
-    closeActions: ["Check staff availability for Friday PM", "Confirm backup coverage", "Submit final roster coverage note"]
-  },
-  {
-    id: "ACT-004",
-    title: "Portal approvals holding admin flow",
-    source: "Thor Portal",
-    directive: "To Do",
-    region: "Sydney",
-    severity: "blue" as Status,
-    dueDate: "Today 4:00 pm",
-    href: "/actions/ACT-004",
-    detail: "Approval delays can block invoicing, client reporting and admin close.",
-    status: "Open",
-    closeFlow: "Manager resolution is sent to national approval.",
-    closeActions: ["Review outstanding jobsheets", "Clear manager approval blockers", "Submit note confirming admin flow is clear"]
-  },
-  {
-    id: "ACT-005",
-    title: "Wash plant hour reading due",
-    source: "Equipment Servicing",
-    directive: "Scheduled Directive",
-    region: "Brisbane",
-    severity: "amber" as Status,
-    dueDate: "Tomorrow 9:00 am",
-    href: "/actions/ACT-005",
-    detail: "Hour readings are required so servicing can be scheduled before plant failure.",
-    status: "Due soon",
-    closeFlow: "Workshop or manager close-out routes to national review.",
-    closeActions: ["Collect current hour reading", "Check service due position", "Submit reading and service note"]
-  },
-  {
-    id: "ACT-006",
-    title: "Chemical stock request overdue",
-    source: "Stock Orders",
-    directive: "To Do",
-    region: "Perth",
-    severity: "blue" as Status,
-    dueDate: "Today 2:00 pm",
-    href: "/actions/ACT-006",
-    detail: "Stock needs should be raised early so supply does not block scheduled wash work.",
-    status: "Open",
-    closeFlow: "Close-out requires national stock approval.",
-    closeActions: ["Check current chemical stock level", "Submit stock order request if needed", "Record expected run-out risk"]
-  },
-  {
-    id: "ACT-007",
-    title: "Workshop parts shelf minimum check",
-    source: "Workshop",
-    directive: "Scheduled Directive",
-    region: "Workshop",
-    severity: "blue" as Status,
-    dueDate: "Friday 10:00 am",
-    href: "/actions/ACT-007",
-    detail: "Parts shelf minimums need confirmation so service work is not delayed.",
-    status: "Scheduled",
-    closeFlow: "Workshop close-out routes to national approval.",
-    closeActions: ["Check parts shelf minimums", "List missing critical items", "Submit workshop close-out for national review"]
-  },
-  {
-    id: "ACT-008",
-    title: "SDS and chemical register review",
-    source: "Compliance",
-    directive: "Scheduled Directive",
-    region: "Melbourne",
-    severity: "amber" as Status,
-    dueDate: "18 May 10:00 am",
-    href: "/actions/ACT-008",
-    detail: "Chemical register and SDS records need confirmation so site compliance remains current.",
-    status: "Scheduled",
-    closeFlow: "Manager close-out routes to national compliance review.",
-    closeActions: ["Review current SDS register", "Confirm chemical list matches current stock", "Submit confirmation note for national review"]
-  },
-  {
-    id: "ACT-009",
-    title: "First aid kit audit",
-    source: "Compliance",
-    directive: "To Do",
-    region: "Adelaide",
-    severity: "blue" as Status,
-    dueDate: "Today 1:00 pm",
-    href: "/actions/ACT-009",
-    detail: "First aid kit audit is overdue and needs manager confirmation before site readiness can be marked healthy.",
-    status: "Overdue",
-    closeFlow: "Close-out requires national compliance approval.",
-    closeActions: ["Check first aid kit stock", "Record missing items or confirm complete", "Submit audit note for national approval"]
-  },
-  {
-    id: "ACT-010",
-    title: "Workshop isolation and defect-tag process",
-    source: "Compliance",
-    directive: "Scheduled Directive",
-    region: "Workshop",
-    severity: "amber" as Status,
-    dueDate: "3 May 10:00 am",
-    href: "/actions/ACT-010",
-    detail: "Workshop isolation and defect-tag process must be confirmed for safe repair and return-to-service control.",
-    status: "Due soon",
-    closeFlow: "Workshop close-out routes to national compliance approval.",
-    closeActions: ["Review isolation and defect-tag setup", "Confirm staff understand tag process", "Submit workshop compliance note"]
-  }
-];
+export type ActionItemSeed = {
+  id: string;
+  title: string;
+  source: string;
+  directive: "National Ops Directive" | "Scheduled Directive" | "To Do";
+  region: string;
+  severity: Status;
+  dueDate: string;
+  href: string;
+  detail: string;
+  status: string;
+  closeFlow: string;
+  closeActions: string[];
+};
+
+export const metrics: Metric[] = [];
+
+export const commandSignals: CommandSignal[] = [];
+
+export const actionItems: ActionItemSeed[] = [];
 
 export const commandPathways = [
   { step: "1", label: "Action Centre", href: "/actions", detail: "Start here when something needs action, ownership, escalation or clearing." },
@@ -245,131 +96,53 @@ export const integrationReadiness = [
   { system: "Outlook", purpose: "Calendar reminders, manager follow-ups and escalation dates", status: "Source mapping", severity: "blue" as Status }
 ];
 
-export const regions = [
-  { name: "Brisbane", readiness: 62, portal: 7, wash: 82, risks: 2, note: "Action pressure from compliance exceptions and plant readings." },
-  { name: "Sydney", readiness: 78, portal: 4, wash: 76, risks: 3, note: "Portal approvals are holding admin flow." },
-  { name: "Melbourne", readiness: 96, portal: 5, wash: 79, risks: 1, note: "Healthy. Maintain approval discipline and wash output." },
-  { name: "Adelaide", readiness: 44, portal: 2, wash: 62, risks: 2, note: "Roster coverage gap is pulling health down." },
-  { name: "Perth", readiness: 82, portal: 3, wash: 71, risks: 1, note: "Stock request requires manager follow-up." },
-  { name: "Canberra", readiness: 97, portal: 1, wash: 58, risks: 2, note: "Healthy. Keep GPS and Fleetio checks current." },
-  { name: "Workshop", readiness: 88, portal: 3, wash: 68, risks: 2, note: "Scheduled workshop directive remains open." }
-];
+export type RegionHealthSeed = {
+  name: string;
+  readiness: number;
+  portal: number;
+  wash: number;
+  risks: number;
+  note: string;
+};
 
-export const approvals = [
-  { id: "TOC-1014", region: "Brisbane", site: "Primary Connect Larapinta", count: 38, age: "2h 10m", risk: "Data check" },
-  { id: "TOC-1015", region: "Sydney", site: "Woolworths Minchinbury", count: 26, age: "3h 45m", risk: "Photo missing" },
-  { id: "TOC-1016", region: "Melbourne", site: "Woolworths Melbourne DC", count: 31, age: "1h 35m", risk: "Ready" },
-  { id: "TOC-1017", region: "Adelaide", site: "Primary Connect Adelaide", count: 14, age: "4h 05m", risk: "Wash type query" }
-];
+export const regions: RegionHealthSeed[] = [];
 
-export const tasks = [
-  { title: "Correct Fleetio wash type mismatch", owner: "Regional manager", region: "Brisbane", priority: "High" },
-  { title: "Confirm night crew site sign-out discipline", owner: "Regional manager", region: "Sydney", priority: "High" },
-  { title: "Fill Friday PM roster gap", owner: "Regional manager", region: "Adelaide", priority: "Medium" },
-  { title: "Confirm parts shelf minimum stock levels", owner: "Workshop lead", region: "Workshop", priority: "Medium" }
-];
+export const approvals: { id: string; region: string; site: string; count: number; age: string; risk: string }[] = [];
 
-export const nationalTasks = [
-  { title: "Woolworths Fleetio accuracy check", owner: "National admin", priority: "High" },
-  { title: "Review all manager approvals before invoicing", owner: "National ops", priority: "High" },
-  { title: "Primary Connect compliance pack refresh", owner: "National ops", priority: "Medium" }
-];
+export const tasks: { title: string; owner: string; region: string; priority: string }[] = [];
 
-export const washes = [
-  { site: "Primary Connect Larapinta", region: "Brisbane", target: 90, actual: 82, internal: 21, exceptions: 3 },
-  { site: "Woolworths Minchinbury", region: "Sydney", target: 82, actual: 76, internal: 16, exceptions: 4 },
-  { site: "Woolworths Melbourne DC", region: "Melbourne", target: 84, actual: 79, internal: 19, exceptions: 1 },
-  { site: "Primary Connect Adelaide", region: "Adelaide", target: 70, actual: 62, internal: 8, exceptions: 3 },
-  { site: "Primary Connect Perth", region: "Perth", target: 78, actual: 71, internal: 13, exceptions: 2 }
-];
+export const nationalTasks: { title: string; owner: string; priority: string }[] = [];
 
-export const productivitySites = [
-  { site: "Primary Connect Larapinta", region: "Brisbane", productivityScore: 84, queue: "Fleetio exception follow-up", action: "Refine data discipline and clear wash type mismatches.", units: 82, labourHours: 18 },
-  { site: "Weekend parked fleet", region: "Brisbane", productivityScore: 76, queue: "Weekend output watch", action: "Confirm crew mix before parked fleet volume peaks.", units: 64, labourHours: 16 },
-  { site: "Woolworths Minchinbury", region: "Sydney", productivityScore: 68, queue: "Rollover pressure", action: "Review night bay pace and reduce rollover into next shift.", units: 76, labourHours: 20 },
-  { site: "Woolworths Melbourne DC", region: "Melbourne", productivityScore: 81, queue: "Healthy", action: "Maintain current output and approve any delayed jobsheets.", units: 79, labourHours: 17 },
-  { site: "Primary Connect Adelaide", region: "Adelaide", productivityScore: 46, queue: "Staffing action", action: "Fix crew coverage gap before the next wash window.", units: 62, labourHours: 19 },
-  { site: "Primary Connect Perth", region: "Perth", productivityScore: 73, queue: "Stock watch", action: "Confirm chemical stock before weekend operations.", units: 71, labourHours: 18 },
-  { site: "Canberra fleet wash run", region: "Canberra", productivityScore: 88, queue: "Healthy", action: "Keep site readiness and GPS checks current.", units: 58, labourHours: 11 },
-  { site: "Workshop productivity", region: "Workshop", productivityScore: 64, queue: "Parts queue", action: "Clear parts availability items before service work stacks up.", units: 7, labourHours: 9 }
-];
+export const washes: { site: string; region: string; target: number; actual: number; internal: number; exceptions: number }[] = [];
 
-export const serviceSchedule = [
-  { asset: "Mobile Wash ADL-01", region: "Adelaide", due: "2 days", item: "Pump service and lance inspection", status: "Due soon", severity: "red" as Status },
-  { asset: "Mobile Wash SYD-04", region: "Sydney", due: "6 days", item: "Pressure hose inspection", status: "Watch", severity: "amber" as Status },
-  { asset: "Workshop Parts Ute", region: "Workshop", due: "3 days", item: "Defect check and parts audit", status: "Due soon", severity: "amber" as Status },
-  { asset: "Wash Plant BNE-01", region: "Brisbane", due: "18 days", item: "Preventative service", status: "Scheduled", severity: "green" as Status }
-];
+export type ProductivitySiteSeed = {
+  site: string;
+  region: string;
+  productivityScore: number;
+  queue: string;
+  action: string;
+  units: number;
+  labourHours: number;
+};
 
-export const equipmentServiceSummary = [
-  { label: "Wash vehicles", value: "2", detail: "Need odometer review", severity: "amber" as Status },
-  { label: "Wash plants", value: "1", detail: "Hour reading due", severity: "red" as Status },
-  { label: "Pony machines", value: "3", detail: "Mechanical service watch", severity: "blue" as Status },
-  { label: "Portal readings", value: "Queued", detail: "Thor Portal source activation", severity: "amber" as Status }
-];
+export const productivitySites: ProductivitySiteSeed[] = [];
 
-export const equipmentAssets = [
-  {
-    asset: "Mobile Wash ADL-01",
-    category: "Wash vehicle",
-    region: "Adelaide",
-    readingType: "Odometer",
-    currentReading: "184,220 km",
-    nextService: "186,000 km",
-    remaining: "1,780 km",
-    lastSubmitted: "Awaiting source activation",
-    status: "Watch",
-    severity: "amber" as Status
-  },
-  {
-    asset: "Mobile Wash SYD-04",
-    category: "Wash ute",
-    region: "Sydney",
-    readingType: "Odometer",
-    currentReading: "91,840 km",
-    nextService: "95,000 km",
-    remaining: "3,160 km",
-    lastSubmitted: "Awaiting source activation",
-    status: "On track",
-    severity: "green" as Status
-  },
-  {
-    asset: "Wash Plant BNE-01 Honda",
-    category: "Wash plant",
-    region: "Brisbane",
-    readingType: "Hours",
-    currentReading: "1,246 h",
-    nextService: "1,250 h",
-    remaining: "4 h",
-    lastSubmitted: "Awaiting source activation",
-    status: "Action",
-    severity: "red" as Status
-  },
-  {
-    asset: "Generator MEL-02",
-    category: "Generator",
-    region: "Melbourne",
-    readingType: "Hours",
-    currentReading: "812 h",
-    nextService: "850 h",
-    remaining: "38 h",
-    lastSubmitted: "Awaiting source activation",
-    status: "On track",
-    severity: "green" as Status
-  },
-  {
-    asset: "Pony Machine WKS-03",
-    category: "Pony",
-    region: "Workshop",
-    readingType: "Hours",
-    currentReading: "436 h",
-    nextService: "450 h",
-    remaining: "14 h",
-    lastSubmitted: "Awaiting source activation",
-    status: "Watch",
-    severity: "blue" as Status
-  }
-];
+export const serviceSchedule: { asset: string; region: string; due: string; item: string; status: string; severity: Status }[] = [];
+
+export const equipmentServiceSummary: { label: string; value: string; detail: string; severity: Status }[] = [];
+
+export const equipmentAssets: {
+  asset: string;
+  category: string;
+  region: string;
+  readingType: string;
+  currentReading: string;
+  nextService: string;
+  remaining: string;
+  lastSubmitted: string;
+  status: string;
+  severity: Status;
+}[] = [];
 
 export const servicingDataFlow = [
   { step: "1", title: "Reading captured", detail: "Manager or team leader records odometer or hour reading in Thor Portal." },
@@ -378,31 +151,13 @@ export const servicingDataFlow = [
   { step: "4", title: "Workshop acts", detail: "Jason and workshop users track what needs booking, parts or return-to-service follow-up." }
 ];
 
-export const washRolloverCounters = [
-  { region: "Brisbane", site: "Primary Connect Larapinta", yesterday: 86, today: 82, rollover: 4, trend: "On track", severity: "green" as Status },
-  { region: "Sydney", site: "Woolworths Minchinbury", yesterday: 79, today: 76, rollover: 6, trend: "Watch", severity: "amber" as Status },
-  { region: "Adelaide", site: "Primary Connect Adelaide", yesterday: 66, today: 62, rollover: 8, trend: "Action", severity: "red" as Status }
-];
+export const washRolloverCounters: { region: string; site: string; yesterday: number; today: number; rollover: number; trend: string; severity: Status }[] = [];
 
-export const outlookReminders = [
-  { region: "National", time: "Today 3:00 pm", title: "Review Portal approvals before admin close", source: "Outlook reminder", severity: "amber" as Status },
-  { region: "Sydney", time: "Tomorrow 1:00 pm", title: "Night crew induction follow-up", source: "Calendar reminder", severity: "red" as Status },
-  { region: "Workshop", time: "Friday 10:00 am", title: "Workshop parts and service review", source: "Calendar reminder", severity: "amber" as Status }
-];
+export const outlookReminders: { region: string; time: string; title: string; source: string; severity: Status }[] = [];
 
-export const rosterWindows = [
-  { region: "Brisbane", shift: "Tonight", coverage: "Covered", staff: "6/6", gap: "No roster gap", severity: "green" as Status },
-  { region: "Sydney", shift: "Tonight", coverage: "Watch", staff: "5/6", gap: "One backup staff member preferred", severity: "amber" as Status },
-  { region: "Adelaide", shift: "Tomorrow PM", coverage: "Gap", staff: "3/4", gap: "Confirm one wash hand", severity: "red" as Status },
-  { region: "Workshop", shift: "Tomorrow", coverage: "Watch", staff: "2/3", gap: "Jason to confirm support if defects spike", severity: "amber" as Status }
-];
+export const rosterWindows: { region: string; shift: string; coverage: string; staff: string; gap: string; severity: Status }[] = [];
 
-export const staffAvailability = [
-  { region: "Brisbane", window: "6pm-12am", available: 4, unavailable: 1, status: "Healthy", severity: "green" as Status },
-  { region: "Sydney", window: "12am-6am", available: 2, unavailable: 2, status: "Thin", severity: "amber" as Status },
-  { region: "Adelaide", window: "6pm-12am", available: 1, unavailable: 3, status: "Action", severity: "red" as Status },
-  { region: "Workshop", window: "6am-12pm", available: 2, unavailable: 1, status: "Watch", severity: "amber" as Status }
-];
+export const staffAvailability: { region: string; window: string; available: number; unavailable: number; status: string; severity: Status }[] = [];
 
 export type StaffSheetStatus = "Available" | "Not Available" | "";
 
@@ -548,21 +303,21 @@ export const calendarWeeks: CalendarDay[][] = [
   ]
 ];
 
-export const assets = [
-  { name: "Wash Plant BNE-01", region: "Brisbane", state: "Online", gps: "Larapinta", service: "18 days", status: "green" as Status },
-  { name: "Mobile Wash SYD-04", region: "Sydney", state: "Online", gps: "Minchinbury", service: "6 days", status: "amber" as Status },
-  { name: "Wash Plant MEL-02", region: "Melbourne", state: "Online", gps: "Truganina", service: "22 days", status: "green" as Status },
-  { name: "Mobile Wash ADL-01", region: "Adelaide", state: "Attention", gps: "Gepps Cross", service: "2 days", status: "red" as Status },
-  { name: "Workshop Service Bay", region: "Workshop", state: "Online", gps: "Workshop", service: "Current", status: "green" as Status }
-];
+export const assets: { name: string; region: string; state: string; gps: string; service: string; status: Status }[] = [];
 
-export const compliance = [
-  { title: "Primary Connect site inductions", region: "Brisbane", owner: "Regional manager", due: "30 Apr", status: "Due soon", type: "Induction", severity: "amber" as Status, href: "/actions/ACT-002", adminSet: true },
-  { title: "3-point contact refresher", region: "Sydney", owner: "Regional manager", due: "Today", status: "Action required", type: "Safety", severity: "red" as Status, href: "/actions/ACT-004", adminSet: true },
-  { title: "SDS and chemical register review", region: "Melbourne", owner: "Regional manager", due: "18 May", status: "Current", type: "Document", severity: "green" as Status, href: "/actions/ACT-008", adminSet: true },
-  { title: "First aid kit audit", region: "Adelaide", owner: "Regional manager", due: "Yesterday", status: "Overdue", type: "Equipment", severity: "red" as Status, href: "/actions/ACT-009", adminSet: true },
-  { title: "Workshop isolation and defect-tag process", region: "Workshop", owner: "Workshop lead", due: "3 May", status: "Due soon", type: "Safety", severity: "amber" as Status, href: "/actions/ACT-010", adminSet: true }
-];
+export type ComplianceSeed = {
+  title: string;
+  region: string;
+  owner: string;
+  due: string;
+  status: string;
+  type: string;
+  severity: Status;
+  href: string;
+  adminSet: boolean;
+};
+
+export const compliance: ComplianceSeed[] = [];
 
 export const approvedStockItems = [
   "Heavy duty wash chemical",
@@ -576,12 +331,18 @@ export const approvedStockItems = [
   "Generator service consumables"
 ];
 
-export const stockOrders = [
-  { item: "Heavy duty wash chemical", region: "Brisbane", quantity: 4, urgency: "Urgent", status: "Awaiting national approval", note: "Needed before weekend Primary Connect volume.", update: "National ops reviewing supplier stock today.", trackingNumber: "Pending" },
-  { item: "Gloves", region: "Sydney", quantity: 12, urgency: "Normal", status: "Pending dispatch", note: "Night crew PPE top-up.", update: "Approved. Dispatch ETA to be confirmed.", trackingNumber: "Pending dispatch" },
-  { item: "Spray lance trigger", region: "Adelaide", quantity: 2, urgency: "Urgent", status: "Parts being sourced", note: "Required for mobile wash unit.", update: "Jason checking workshop parts shelf before ordering.", trackingNumber: "Workshop supply" },
-  { item: "Pressure hose", region: "Workshop", quantity: 1, urgency: "Normal", status: "Open", note: "Workshop stock minimum.", update: "Pending admin review.", trackingNumber: "Pending" }
-];
+export type StockOrderSeed = {
+  item: string;
+  region: string;
+  quantity: number;
+  urgency: string;
+  status: string;
+  note: string;
+  update: string;
+  trackingNumber: string;
+};
+
+export const stockOrders: StockOrderSeed[] = [];
 
 export const adminUsers = [
   { name: "Admin User", id: "TOC-ADMIN", role: "Admin", regions: "National + Brisbane", permissions: "Full command control, Admin Settings, assigned region management" },

@@ -123,6 +123,7 @@ export default function OverviewPage() {
                 </article>
               );
             })}
+            {regions.length ? null : <div className="empty-state">No region health records are loaded yet. Database-backed region health will appear here once connected.</div>}
           </div>
         </Panel>
       </section>

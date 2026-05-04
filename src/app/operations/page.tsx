@@ -76,6 +76,7 @@ export default function OperationsPage() {
                 </Link>
               );
             })}
+            {visibleSites.length ? null : <div className="empty-state">No productivity site records are loaded yet. Database-backed site scores will appear here once connected.</div>}
           </div>
         </Panel>
       </section>

@@ -64,6 +64,7 @@ export default function CompliancePage() {
                 <small>{item.region} - {item.owner} - due {item.due}</small>
               </article>
             ))}
+            {compliance.length ? null : <div className="empty-state">No admin-set compliance register items are loaded yet. Database-backed compliance settings will appear here once connected.</div>}
           </div>
         </Panel>
       </section>

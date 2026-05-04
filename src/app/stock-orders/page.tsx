@@ -20,7 +20,7 @@ type StockOrderRequest = {
   updateRequested?: boolean;
 };
 
-const stockOrderStorageKey = "toc.stockOrders";
+const stockOrderStorageKey = "toc.stockOrders.databaseReady";
 
 function getStoredSession() {
   if (typeof window === "undefined") return { role: "manager", scope: "National" };

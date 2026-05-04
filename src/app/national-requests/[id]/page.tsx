@@ -22,7 +22,7 @@ type StockOrderRequest = {
   updateRequested?: boolean;
 };
 
-const stockOrderStorageKey = "toc.stockOrders";
+const stockOrderStorageKey = "toc.stockOrders.databaseReady";
 
 function getOrderId(order: StockOrderRequest) {
   return order.id || `${order.region}-${order.item}`;

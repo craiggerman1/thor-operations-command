@@ -73,8 +73,8 @@ function getNationalRequestCount() {
   if (typeof window === "undefined") return 0;
 
   try {
-    const actionRequests = JSON.parse(localStorage.getItem("toc.nationalActionRequests") || "[]") as NationalActionStorageRequest[];
-    const storedOrders = localStorage.getItem("toc.stockOrders");
+    const actionRequests = JSON.parse(localStorage.getItem("toc.nationalActionRequests.databaseReady") || "[]") as NationalActionStorageRequest[];
+    const storedOrders = localStorage.getItem("toc.stockOrders.databaseReady");
     const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders as StockOrderStorageRequest[];
     const pendingActions = actionRequests.filter((request) => request.status === "Awaiting national review").length;
     const pendingStock = stockRequests.filter((order) => order.updateRequested || ["Request submitted", "Awaiting national approval", "Cancellation requested"].includes(order.status || "")).length;
@@ -88,7 +88,7 @@ function getScopedStockRequestCount(scope: string) {
   if (typeof window === "undefined") return 0;
 
   try {
-    const storedOrders = localStorage.getItem("toc.stockOrders");
+    const storedOrders = localStorage.getItem("toc.stockOrders.databaseReady");
     const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders as StockOrderStorageRequest[];
     return stockRequests.filter((order) => {
       const visibleForScope = scope === "National" || order.region === scope;
@@ -287,7 +287,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.157</em>
+              <em>Build 0.158</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>

@@ -36,7 +36,7 @@ export default function HomePage() {
   const visibleActionItems = getScopedActionItems(openActionItems, scope, activeRole);
   const visibleProductivitySites = isNationalScope(scope) ? productivitySites : productivitySites.filter((site) => site.region === scope);
   const productivityBasis = visibleProductivitySites.length ? visibleProductivitySites : productivitySites;
-  const productivityScore = Math.round(productivityBasis.reduce((total, site) => total + site.productivityScore, 0) / productivityBasis.length);
+  const productivityScore = productivityBasis.length ? Math.round(productivityBasis.reduce((total, site) => total + site.productivityScore, 0) / productivityBasis.length) : 100;
   const complianceOpenItems = visibleActionItems.filter((item) => item.source === "Compliance").length;
   const actionScore = getScoreFromOpenItems(visibleActionItems.length, 8);
   const complianceScore = getScoreFromOpenItems(complianceOpenItems, 18);
@@ -165,6 +165,7 @@ export default function HomePage() {
                 </div>
               </Link>
             ))}
+            {visibleActionItems.length ? null : <div className="empty-state">No command signals are currently open. Database-backed action signals will appear here once connected.</div>}
           </div>
         </Panel>
         <Panel wide className="admin-only-panel" eyebrow="Admin roadmap" title="Go Live Pathway" pill="Field-use readiness">
