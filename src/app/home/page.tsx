@@ -9,6 +9,7 @@ import { actionItems, goLivePathway, productivitySites } from "@/lib/toc-data";
 import { metrics } from "@/lib/toc-data";
 import { useEffect, useState } from "react";
 import type { AccessRole } from "@/lib/access";
+import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
 
 function getStoredSession() {
   const fallback = { role: "admin" as AccessRole, scope: "National" };
@@ -29,9 +30,9 @@ export default function HomePage() {
   const [scope, setScope] = useState("National");
   const [activeRole, setActiveRole] = useState<AccessRole>("admin");
   const [openTodoCount, setOpenTodoCount] = useState(0);
+  const [openActionItems, setOpenActionItems] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
   const operatingWeek = getThorOperatingWeek();
-  const visibleActionItems = actionItems.filter((item) => scope === "National" || item.region === scope || item.region === "National");
-  const openActionItems = actionItems.filter((item) => item.status !== "Closed");
+  const visibleActionItems = openActionItems.filter((item) => scope === "National" || item.region === scope || item.region === "National");
   const productivityScore = Math.round(productivitySites.reduce((total, site) => total + site.productivityScore, 0) / productivitySites.length);
   const complianceOpenItems = openActionItems.filter((item) => item.source === "Compliance").length;
   const actionScore = getScoreFromOpenItems(openActionItems.length, 8);
@@ -65,17 +66,24 @@ export default function HomePage() {
       setOpenTodoCount(getOpenTodoCount());
     }
 
+    function syncActions() {
+      setOpenActionItems(getOpenActionItems(actionItems));
+    }
+
     syncSession();
     syncTodos();
+    syncActions();
     window.addEventListener("storage", syncSession);
     window.addEventListener("toc.scopechange", syncSession);
     window.addEventListener("storage", syncTodos);
     window.addEventListener("toc.todos.updated", syncTodos);
+    window.addEventListener("toc.actionState.updated", syncActions);
     return () => {
       window.removeEventListener("storage", syncSession);
       window.removeEventListener("toc.scopechange", syncSession);
       window.removeEventListener("storage", syncTodos);
       window.removeEventListener("toc.todos.updated", syncTodos);
+      window.removeEventListener("toc.actionState.updated", syncActions);
     };
   }, []);
 

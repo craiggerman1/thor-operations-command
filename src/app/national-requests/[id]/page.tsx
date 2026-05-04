@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
+import { setActionOverride } from "@/lib/action-state";
 import { stockOrders } from "@/lib/toc-data";
 
 type StockOrderRequest = {
@@ -54,6 +55,7 @@ function getStoredScope() {
 }
 
 export default function NationalRequestDetailPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const requestId = decodeURIComponent(params.id);
   const [scope, setScope] = useState("National");
@@ -83,11 +85,16 @@ export default function NationalRequestDetailPage() {
   const stockOrder = useMemo(() => orders.find((order) => getOrderId(order) === requestId), [orders, requestId]);
 
   function saveActionRequest(status: NationalActionRequest["status"]) {
-    const nextRequests = actionRequests.map((request) => request.id === requestId ? { ...request, status } : request);
+    if (actionRequest && status === "Approved by national") setActionOverride(actionRequest.actionId, "Closed");
+    if (actionRequest && status === "Returned to manager") setActionOverride(actionRequest.actionId, "Returned to manager");
+    const nextRequests = status === "Approved by national"
+      ? actionRequests.filter((request) => request.id !== requestId)
+      : actionRequests.map((request) => request.id === requestId ? { ...request, status } : request);
     setActionRequests(nextRequests);
     localStorage.setItem(nationalActionRequestsKey, JSON.stringify(nextRequests));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
     setMessage(status === "Approved by national" ? "Close-out approved and removed from the pending review count." : "Returned to manager for further action.");
+    if (status === "Approved by national") window.setTimeout(() => router.push("/national-requests"), 550);
   }
 
   function saveStockOrder(updates: Partial<StockOrderRequest>) {
@@ -130,8 +137,8 @@ export default function NationalRequestDetailPage() {
               </div>
               <div className="stock-actions">
                 <Link className="node-action" href={`/actions/${actionRequest.actionId}`}>Open source action</Link>
-                <button type="button" onClick={() => saveActionRequest("Approved by national")}>Approve Close-Out</button>
-                <button type="button" onClick={() => saveActionRequest("Returned to manager")}>Return To Manager</button>
+                <button className="review-decision-button approve" type="button" onClick={() => saveActionRequest("Approved by national")}>Approve Close-Out</button>
+                <button className="review-decision-button return" type="button" onClick={() => saveActionRequest("Returned to manager")}>Return To Manager</button>
               </div>
             </div>
           </Panel>
@@ -145,8 +152,8 @@ export default function NationalRequestDetailPage() {
               <label className="admin-tracking-field"><span>National update</span><input value={stockOrder.update} onChange={(event) => saveStockOrder({ update: event.target.value, status: "Updated by national" })} /></label>
               <label className="admin-tracking-field"><span>Tracking number</span><input value={stockOrder.trackingNumber || ""} onChange={(event) => saveStockOrder({ trackingNumber: event.target.value || "Pending" })} placeholder="Add tracking number" /></label>
               <div className="stock-actions">
-                <button type="button" onClick={() => saveStockOrder({ status: "Approved by national", update: stockOrder.update || "Approved by national." })}>Approve Request</button>
-                <button type="button" onClick={() => saveStockOrder({ status: "Returned to manager", update: "Returned to manager for clarification." })}>Return To Manager</button>
+                <button className="review-decision-button approve" type="button" onClick={() => saveStockOrder({ status: "Approved by national", update: stockOrder.update || "Approved by national." })}>Approve Request</button>
+                <button className="review-decision-button return" type="button" onClick={() => saveStockOrder({ status: "Returned to manager", update: "Returned to manager for clarification." })}>Return To Manager</button>
                 <button type="button" className="danger-button" onClick={deleteStockOrder}>Delete Order</button>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { actionItems, productivitySites, regions } from "@/lib/toc-data";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
 
 type HealthTone = "red" | "amber" | "yellow" | "green";
 
@@ -52,6 +53,7 @@ function getRegionHealthScore(openActionCount: number, productivityScore: number
 
 export default function OverviewPage() {
   const [scope, setScope] = useState("National");
+  const [openActionItems, setOpenActionItems] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -59,12 +61,19 @@ export default function OverviewPage() {
       setScope(nextScope);
     }
 
+    function syncActions() {
+      setOpenActionItems(getOpenActionItems(actionItems));
+    }
+
     syncScope();
+    syncActions();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
+    window.addEventListener("toc.actionState.updated", syncActions);
     return () => {
       window.removeEventListener("storage", syncScope);
       window.removeEventListener("toc.scopechange", syncScope);
+      window.removeEventListener("toc.actionState.updated", syncActions);
     };
   }, []);
 
@@ -80,7 +89,7 @@ export default function OverviewPage() {
           </div>
           <div className="ops-map">
             {regions.map((region) => {
-              const openActions = actionItems.filter((item) => item.region === region.name || item.region === "National");
+              const openActions = openActionItems.filter((item) => item.region === region.name || item.region === "National");
               const productivityScore = getProductivityScore(region.name);
               const healthScore = getRegionHealthScore(openActions.length, productivityScore);
               const tone = getHealthTone(healthScore);

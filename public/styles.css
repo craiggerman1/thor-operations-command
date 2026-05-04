@@ -2819,6 +2819,37 @@ body:not([data-access="admin"]) .admin-only-panel {
   transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
+.review-decision-button {
+  border: 0;
+  border-radius: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 1000;
+  box-shadow: 0 10px 22px rgba(7, 23, 38, 0.16);
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.review-decision-button:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(7, 23, 38, 0.2);
+}
+
+.review-decision-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 6px 14px rgba(7, 23, 38, 0.16);
+}
+
+.review-decision-button.approve {
+  background: linear-gradient(135deg, #15834f, #0f6d41);
+}
+
+.review-decision-button.return {
+  background: linear-gradient(135deg, #d29416, #a86f0b);
+}
+
 .admin-page-setting-card:hover {
   border-left-color: var(--cyan);
   box-shadow: 0 14px 30px rgba(5, 31, 48, 0.12);

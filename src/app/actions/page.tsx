@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { actionItems } from "@/lib/toc-data";
+import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
 
 const directivePriority = {
   "National Ops Directive": 1,
@@ -10,7 +14,22 @@ const directivePriority = {
 };
 
 export default function ActionsPage() {
-  const sortedActions = [...actionItems].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
+  const [openActions, setOpenActions] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
+  const sortedActions = [...openActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
+
+  useEffect(() => {
+    function syncActions() {
+      setOpenActions(getOpenActionItems(actionItems));
+    }
+
+    syncActions();
+    window.addEventListener("storage", syncActions);
+    window.addEventListener("toc.actionState.updated", syncActions);
+    return () => {
+      window.removeEventListener("storage", syncActions);
+      window.removeEventListener("toc.actionState.updated", syncActions);
+    };
+  }, []);
 
   return (
     <TocShell>
@@ -33,6 +52,7 @@ export default function ActionsPage() {
                 </div>
               </Link>
             ))}
+            {sortedActions.length ? null : <div className="empty-state">No open action items currently require manager close-out.</div>}
           </div>
         </Panel>
       </section>

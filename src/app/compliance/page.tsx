@@ -1,13 +1,32 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { actionItems, compliance } from "@/lib/toc-data";
+import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
 
 export default function CompliancePage() {
-  const complianceActions = actionItems.filter((item) => item.source === "Compliance");
+  const [openActionItems, setOpenActionItems] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
+  const complianceActions = openActionItems.filter((item) => item.source === "Compliance");
   const urgentActions = complianceActions.filter((item) => item.severity === "red").length;
   const dueSoonActions = complianceActions.filter((item) => item.severity === "amber").length;
   const readiness = Math.max(10, 100 - complianceActions.length * 12 - urgentActions * 8);
+
+  useEffect(() => {
+    function syncActions() {
+      setOpenActionItems(getOpenActionItems(actionItems));
+    }
+
+    syncActions();
+    window.addEventListener("storage", syncActions);
+    window.addEventListener("toc.actionState.updated", syncActions);
+    return () => {
+      window.removeEventListener("storage", syncActions);
+      window.removeEventListener("toc.actionState.updated", syncActions);
+    };
+  }, []);
 
   return (
     <TocShell>

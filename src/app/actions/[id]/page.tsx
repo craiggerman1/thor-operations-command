@@ -6,6 +6,7 @@ import { FormEvent, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { actionItems } from "@/lib/toc-data";
+import { setActionOverride } from "@/lib/action-state";
 import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
 
 const sourceLinks: Record<string, string> = {
@@ -70,6 +71,7 @@ export default function ActionDetailPage() {
     };
 
     localStorage.setItem(nationalActionRequestsKey, JSON.stringify([nextRequest, ...readNationalRequests()]));
+    setActionOverride(currentAction.id, "Awaiting national review");
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
     setMessage("Submitted to National Requests for approval.");
   }
