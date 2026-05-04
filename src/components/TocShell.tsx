@@ -8,6 +8,7 @@ import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/
 import type { AccessRole } from "@/lib/access";
 import { actionItems, stockOrders } from "@/lib/toc-data";
 import { getOpenActionItems } from "@/lib/action-state";
+import { getScopedActionItems } from "@/lib/scope-utils";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
 
@@ -82,10 +83,6 @@ function getNationalRequestCount() {
   }
 }
 
-function isActionVisibleForScope(region: string, scope: string) {
-  return scope === "National" || region === scope || region === "National";
-}
-
 function getScopedStockRequestCount(scope: string) {
   if (typeof window === "undefined") return 0;
 
@@ -102,8 +99,8 @@ function getScopedStockRequestCount(scope: string) {
   }
 }
 
-function getNavBadgeCounts(scope: string) {
-  const scopedActions = getOpenActionItems(actionItems).filter((item) => isActionVisibleForScope(item.region, scope));
+function getNavBadgeCounts(scope: string, role?: AccessRole) {
+  const scopedActions = getScopedActionItems(getOpenActionItems(actionItems), scope, role);
   const countBySource = (sources: string[]) => scopedActions.filter((item) => sources.includes(item.source)).length;
   const countByDirective = (directives: string[]) => scopedActions.filter((item) => directives.includes(item.directive)).length;
   const urgentActionCount = scopedActions.filter((item) => item.severity === "red" || item.directive === "National Ops Directive").length;
@@ -164,7 +161,7 @@ export function TocShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function syncNavBadgeCounts() {
-      setNavBadgeCounts(getNavBadgeCounts(getStoredScope()));
+      setNavBadgeCounts(getNavBadgeCounts(getStoredScope(), session.role || defaultSession.role));
     }
 
     syncNavBadgeCounts();
@@ -180,7 +177,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       window.removeEventListener("toc.nationalActionRequests.updated", syncNavBadgeCounts);
       window.removeEventListener("toc.stockOrders.updated", syncNavBadgeCounts);
     };
-  }, []);
+  }, [session.role]);
 
   useEffect(() => {
     if (!sessionReady) return;
@@ -289,7 +286,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.151</em>
+              <em>Build 0.152</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>

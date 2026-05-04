@@ -10,6 +10,7 @@ import { metrics } from "@/lib/toc-data";
 import { useEffect, useState } from "react";
 import type { AccessRole } from "@/lib/access";
 import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
+import { getScopedActionItems, isNationalScope } from "@/lib/scope-utils";
 
 function getStoredSession() {
   const fallback = { role: "admin" as AccessRole, scope: "National" };
@@ -32,26 +33,48 @@ export default function HomePage() {
   const [openTodoCount, setOpenTodoCount] = useState(0);
   const [openActionItems, setOpenActionItems] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
   const operatingWeek = getThorOperatingWeek();
-  const visibleActionItems = openActionItems.filter((item) => scope === "National" || item.region === scope || item.region === "National");
-  const productivityScore = Math.round(productivitySites.reduce((total, site) => total + site.productivityScore, 0) / productivitySites.length);
-  const complianceOpenItems = openActionItems.filter((item) => item.source === "Compliance").length;
-  const actionScore = getScoreFromOpenItems(openActionItems.length, 8);
+  const visibleActionItems = getScopedActionItems(openActionItems, scope, activeRole);
+  const visibleProductivitySites = isNationalScope(scope) ? productivitySites : productivitySites.filter((site) => site.region === scope);
+  const productivityBasis = visibleProductivitySites.length ? visibleProductivitySites : productivitySites;
+  const productivityScore = Math.round(productivityBasis.reduce((total, site) => total + site.productivityScore, 0) / productivityBasis.length);
+  const complianceOpenItems = visibleActionItems.filter((item) => item.source === "Compliance").length;
+  const actionScore = getScoreFromOpenItems(visibleActionItems.length, 8);
   const complianceScore = getScoreFromOpenItems(complianceOpenItems, 18);
   const todoScore = getScoreFromOpenItems(openTodoCount, 7);
   const overallScore = Math.round(productivityScore * 0.34 + complianceScore * 0.24 + actionScore * 0.25 + todoScore * 0.17);
   const overallTone = getTone(overallScore);
   const isDirector = activeRole === "director";
-  const riskMetric = metrics.find((metric) => metric.label === "Risk flags");
+  const isScopedRegion = !isNationalScope(scope);
+  const jobsheetActions = visibleActionItems.filter((item) => item.source === "Thor Portal").length;
   const commandMetrics = [
     {
       label: "Operating week",
       value: operatingWeek.name,
       detail: operatingWeek.detail,
       status: "green",
-      href: "/overview"
+      href: "/calendar"
     },
-    ...(riskMetric ? [riskMetric] : []),
-    ...metrics.filter((metric) => metric.label !== "Risk flags")
+    {
+      label: "Risk flags",
+      value: visibleActionItems.length.toString(),
+      detail: isScopedRegion ? `${scope} action pressure` : "Compliance, staffing, data",
+      status: visibleActionItems.some((item) => item.severity === "red") ? "red" : visibleActionItems.length ? "amber" : "green",
+      href: "/actions"
+    },
+    {
+      label: "Jobsheets",
+      value: isScopedRegion ? jobsheetActions.toString() : metrics.find((metric) => metric.label === "Jobsheets")?.value || "0",
+      detail: isScopedRegion ? `${scope} jobsheet actions` : "Waiting on manager action",
+      status: jobsheetActions ? "amber" : "green",
+      href: "/jobsheets"
+    },
+    {
+      label: "Assets online",
+      value: isScopedRegion ? "Region" : metrics.find((metric) => metric.label === "Assets online")?.value || "0",
+      detail: isScopedRegion ? `${scope} asset view` : "Unity and GPS ready",
+      status: "blue",
+      href: "/asset-tracking"
+    }
   ];
 
   useEffect(() => {
@@ -113,10 +136,10 @@ export default function HomePage() {
                 <DirectorSignal label="Productivity" value={`${productivityScore}%`} tone={getTone(productivityScore)} href="/operations" />
                 <DirectorSignal label="Compliance" value={`${complianceScore}%`} tone={getTone(complianceScore)} href="/compliance" />
                 <DirectorSignal label="Manager To Do Items" value={openTodoCount.toString()} tone={openTodoCount ? "amber" : "green"} href="/actions" />
-                <DirectorSignal label="Manager Action Items" value={openActionItems.length.toString()} tone={openActionItems.length ? "amber" : "green"} href="/actions" />
+                <DirectorSignal label="Manager Action Items" value={visibleActionItems.length.toString()} tone={visibleActionItems.length ? "amber" : "green"} href="/actions" />
               </div>
               <div className="director-brief">
-                <div className="director-brief-item"><span className="brief-dot" /><strong>{openActionItems.length} national open action items currently influence the business overall position score.</strong></div>
+                <div className="director-brief-item"><span className="brief-dot" /><strong>{visibleActionItems.length} national open action items currently influence the business overall position score.</strong></div>
                 <div className="director-brief-item"><span className="brief-dot" /><strong><Tag tone={complianceScore >= 90 ? "green" : "amber"}>{complianceScore >= 90 ? "Stable" : "Watch"}</Tag> Compliance score is driven by open compliance action load.</strong></div>
               </div>
             </div>
