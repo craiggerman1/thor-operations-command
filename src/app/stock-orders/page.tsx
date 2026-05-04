@@ -168,6 +168,7 @@ export default function StockOrdersPage() {
                   </article>
                   );
                 })}
+                {visibleOrders.length ? null : <div className="empty-state">No stock order requests are currently loaded. Database-backed stock requests will appear here once connected.</div>}
               </div>
             </div>
           </div>
