@@ -16,6 +16,11 @@ type ActionRow = {
   region?: { name: string } | { name: string }[] | null;
 };
 
+type RegionRow = {
+  id: string;
+  name: string;
+};
+
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -63,6 +68,36 @@ function displayStatus(status: ActionStatus) {
 function displayDueDate(value: string | null) {
   if (!value) return "No due date set";
   return new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function normaliseDirective(value: string): ActionRow["directive_type"] {
+  if (value === "National Ops Directive" || value === "Scheduled Directive" || value === "To Do") return value;
+  return "Scheduled Directive";
+}
+
+function normalisePriority(value: string): ActionRow["priority"] {
+  if (value === "urgent" || value === "high" || value === "normal" || value === "low") return value;
+  return "normal";
+}
+
+function normaliseStatus(value: string): ActionStatus {
+  if (value === "submitted_for_review" || value === "returned_to_manager" || value === "closed") return value;
+  return "open";
+}
+
+async function getRegionId(regionName: string) {
+  if (!regionName || regionName === "National") return null;
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("regions")
+    .select("id,name")
+    .eq("name", regionName)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as RegionRow | null)?.id || null;
 }
 
 function mapAction(row: ActionRow) {
@@ -115,4 +150,69 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({ actions: ((data as ActionRow[] | null) || []).map(mapAction), connected: true });
+}
+
+export async function POST(request: Request) {
+  const supabase = getSupabaseAdminClient();
+
+  if (!supabase) {
+    return NextResponse.json({ actions: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
+  }
+
+  const payload = await request.json();
+  const action = payload.action || "create";
+
+  if (action === "create") {
+    const title = String(payload.title || "").trim();
+    if (!title) return NextResponse.json({ error: "Action title is required." }, { status: 400 });
+
+    const assignedRegionId = await getRegionId(payload.region || "National");
+    const dueAt = payload.dueDate ? new Date(`${payload.dueDate}T17:00:00+10:00`).toISOString() : null;
+
+    const { error } = await supabase.from("action_items").insert({
+      title,
+      detail: payload.detail || "Action item requires manager review and close-out.",
+      source_page: payload.sourcePage || "Action Centre",
+      directive_type: normaliseDirective(payload.directiveType || "Scheduled Directive"),
+      priority: normalisePriority(payload.priority || "normal"),
+      status: "open",
+      assigned_region_id: assignedRegionId,
+      due_at: dueAt
+    });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET(request);
+  }
+
+  if (action === "update") {
+    if (!payload.id) return NextResponse.json({ error: "Action id is required." }, { status: 400 });
+    const updates = payload.updates || {};
+    const dbUpdates: Record<string, string | null> = { updated_at: new Date().toISOString() };
+
+    if (typeof updates.title === "string") dbUpdates.title = updates.title.trim();
+    if (typeof updates.detail === "string") dbUpdates.detail = updates.detail;
+    if (typeof updates.sourcePage === "string") dbUpdates.source_page = updates.sourcePage;
+    if (typeof updates.directiveType === "string") dbUpdates.directive_type = normaliseDirective(updates.directiveType);
+    if (typeof updates.priority === "string") dbUpdates.priority = normalisePriority(updates.priority);
+    if (typeof updates.status === "string") {
+      const status = normaliseStatus(updates.status);
+      dbUpdates.status = status;
+      if (status === "closed") dbUpdates.closed_at = new Date().toISOString();
+    }
+    if (typeof updates.dueDate === "string") dbUpdates.due_at = updates.dueDate ? new Date(`${updates.dueDate}T17:00:00+10:00`).toISOString() : null;
+    if (typeof updates.region === "string") dbUpdates.assigned_region_id = await getRegionId(updates.region);
+
+    const { error } = await supabase.from("action_items").update(dbUpdates).eq("id", payload.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET(request);
+  }
+
+  if (action === "delete") {
+    if (!payload.id) return NextResponse.json({ error: "Action id is required." }, { status: 400 });
+    const { error } = await supabase.from("action_items").delete().eq("id", payload.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET(request);
+  }
+
+  return NextResponse.json({ error: "Unsupported action item operation." }, { status: 400 });
 }

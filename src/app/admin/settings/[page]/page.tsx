@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { AdminActionManager } from "@/components/AdminActionManager";
 import { approvedStockItems, compliance } from "@/lib/toc-data";
 import { pageSettings } from "@/lib/admin-settings";
 
@@ -40,6 +41,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
                 </article>
               ))}
             </div>
+          </Panel>
+        ) : null}
+        {setting.slug === "action-centre" ? (
+          <Panel wide eyebrow="Action Centre" title="Admin-issued action directives">
+            <AdminActionManager />
           </Panel>
         ) : null}
         {setting.slug === "compliance" ? (

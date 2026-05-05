@@ -3068,6 +3068,125 @@ body:not([data-access="admin"]) .admin-only-panel {
   line-height: 1.45;
 }
 
+.admin-action-console {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.admin-action-form,
+.admin-action-card {
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(37, 161, 189, 0.09), transparent 52%),
+    rgba(255, 255, 255, 0.86);
+}
+
+.admin-action-form {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px;
+}
+
+.admin-action-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-action-form label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-action-form textarea {
+  min-height: 86px;
+}
+
+.admin-action-form button,
+.admin-action-card button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.admin-action-form button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.admin-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-action-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.admin-list-head,
+.admin-action-card-head,
+.admin-action-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-action-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-left: 5px solid rgba(37, 161, 189, 0.72);
+}
+
+.admin-action-card p {
+  margin: 0;
+  color: #27384a;
+  line-height: 1.36;
+}
+
+.admin-action-card strong,
+.admin-action-form strong,
+.admin-list-head strong {
+  color: var(--blue);
+}
+
+.admin-action-card small,
+.admin-action-form small,
+.admin-list-head small {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-action-controls {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.admin-action-controls select {
+  min-height: 36px;
+  max-width: 220px;
+}
+
+.admin-action-controls .danger-button {
+  border: 1px solid rgba(191, 62, 57, 0.28);
+  background: rgba(191, 62, 57, 0.12);
+  color: var(--red);
+}
+
 .compact-config-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -6411,6 +6530,8 @@ body:not([data-access="admin"]) .admin-only-panel {
   .role-blueprint-grid,
   .access-rule-grid,
   .admin-access-console,
+  .admin-action-console,
+  .admin-action-grid,
   .admin-access-summary,
   .admin-settings-grid,
   .admin-page-settings-grid,
