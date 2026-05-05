@@ -43,12 +43,17 @@ async function readTodos(request: Request) {
   }
 
   const { role, scope } = getScopedQueryParams(request);
-  const { data, error } = await supabase
+  const url = new URL(request.url);
+  let query = supabase
     .from("todo_items")
     .select("id,title,is_done,is_important,shared_with,owner_role,owner_scope,created_at,updated_at")
-    .eq("owner_role", role)
-    .eq("owner_scope", scope)
     .order("created_at", { ascending: false });
+
+  if (url.searchParams.get("all") !== "true") {
+    query = query.eq("owner_role", role).eq("owner_scope", scope);
+  }
+
+  const { data, error } = await query;
 
   if (error) return { todos: [], connected: false, error: error.message };
   return { todos: ((data as TodoRow[] | null) || []).map(mapTodo), connected: true };
@@ -78,7 +83,8 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("todo_items").insert({
       title,
       is_done: false,
-      is_important: false,
+      is_important: Boolean(payload.important),
+      shared_with: payload.sharedWith || null,
       owner_role: role,
       owner_scope: scope
     });
@@ -96,17 +102,19 @@ export async function POST(request: Request) {
     if (typeof payload.done === "boolean") updates.is_done = payload.done;
     if (typeof payload.important === "boolean") updates.is_important = payload.important;
     if ("sharedWith" in payload) updates.shared_with = payload.sharedWith || null;
+    if (typeof payload.ownerRole === "string") updates.owner_role = payload.ownerRole;
+    if (typeof payload.ownerScope === "string") updates.owner_scope = payload.ownerScope;
 
     const { error } = await supabase.from("todo_items").update(updates).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET(new Request(`${request.url}?role=${encodeURIComponent(role)}&scope=${encodeURIComponent(scope)}`));
+    return GET(new Request(`${request.url}?role=${encodeURIComponent(role)}&scope=${encodeURIComponent(scope)}${payload.all ? "&all=true" : ""}`));
   }
 
   if (action === "delete") {
     if (!payload.id) return NextResponse.json({ error: "To Do item id is required." }, { status: 400 });
     const { error } = await supabase.from("todo_items").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET(new Request(`${request.url}?role=${encodeURIComponent(role)}&scope=${encodeURIComponent(scope)}`));
+    return GET(new Request(`${request.url}?role=${encodeURIComponent(role)}&scope=${encodeURIComponent(scope)}${payload.all ? "&all=true" : ""}`));
   }
 
   return NextResponse.json({ error: "Unsupported To Do action." }, { status: 400 });

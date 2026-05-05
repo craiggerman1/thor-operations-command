@@ -9,6 +9,7 @@ import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
 import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
+import { AdminTodoManager } from "@/components/AdminTodoManager";
 import { pageSettings } from "@/lib/admin-settings";
 
 type PageProps = {
@@ -69,6 +70,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "chat" ? (
           <Panel wide eyebrow="Chat" title="Manager communication control">
             <AdminChatManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "to-do" ? (
+          <Panel wide eyebrow="To Do" title="Manager task routing control">
+            <AdminTodoManager />
           </Panel>
         ) : null}
       </section>
