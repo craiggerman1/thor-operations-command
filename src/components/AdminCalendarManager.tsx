@@ -84,6 +84,7 @@ export function AdminCalendarManager() {
       setJob("");
       setNotes("");
       setMessage("Calendar job created.");
+      window.dispatchEvent(new Event("toc.calendar.updated"));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not create calendar job.");
     } finally {
@@ -98,6 +99,7 @@ export function AdminCalendarManager() {
       const nextJobs = await mutateCalendar({ action: "delete", id, all: true });
       setJobs(nextJobs);
       setMessage("Calendar job deleted.");
+      window.dispatchEvent(new Event("toc.calendar.updated"));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not delete calendar job.");
     }

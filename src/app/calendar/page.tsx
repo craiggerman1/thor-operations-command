@@ -67,10 +67,19 @@ export default function CalendarPage() {
       setScope(nextScope);
     }
 
+    syncScope();
+    window.addEventListener("storage", syncScope);
+    window.addEventListener("toc.scopechange", syncScope);
+    return () => {
+      window.removeEventListener("storage", syncScope);
+      window.removeEventListener("toc.scopechange", syncScope);
+    };
+  }, []);
+
+  useEffect(() => {
     async function syncCalendar() {
       try {
-        const nextScope = getStoredScope();
-        const response = await fetch(`/api/calendar?scope=${encodeURIComponent(nextScope)}`, { cache: "no-store" });
+        const response = await fetch(`/api/calendar?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setCalendarData(payload.weeks || []);
       } catch {
@@ -79,18 +88,9 @@ export default function CalendarPage() {
     }
 
     void syncCalendar();
-    syncScope();
-    window.addEventListener("storage", syncScope);
-    window.addEventListener("storage", syncCalendar);
-    window.addEventListener("toc.scopechange", syncScope);
-    window.addEventListener("toc.scopechange", syncCalendar);
-    return () => {
-      window.removeEventListener("storage", syncScope);
-      window.removeEventListener("storage", syncCalendar);
-      window.removeEventListener("toc.scopechange", syncScope);
-      window.removeEventListener("toc.scopechange", syncCalendar);
-    };
-  }, []);
+    window.addEventListener("toc.calendar.updated", syncCalendar);
+    return () => window.removeEventListener("toc.calendar.updated", syncCalendar);
+  }, [scope]);
 
   useEffect(() => {
     let isActive = true;
@@ -155,6 +155,7 @@ export default function CalendarPage() {
         .then((payload) => {
           setCalendarData(payload.weeks || nextData);
           setSaveMessage("Calendar job saved to the database.");
+          window.dispatchEvent(new Event("toc.calendar.updated"));
         })
         .catch(() => setSaveMessage("Calendar job updated on screen, but database save failed."));
     }
