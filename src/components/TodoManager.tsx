@@ -19,6 +19,18 @@ function getTodoStorageKey() {
   return `toc.todos.${session?.role || "admin"}.${session?.scope || "National"}`;
 }
 
+function getStoredSession() {
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return {
+      role: session?.role || "admin",
+      scope: session?.scope || "National"
+    };
+  } catch {
+    return { role: "admin", scope: "National" };
+  }
+}
+
 function getFloatingSetting() {
   return localStorage.getItem("toc.todoFloating") !== "off";
 }
@@ -35,9 +47,22 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
 
-  function loadTodos() {
+  async function loadTodos() {
     const floatingSetting = getFloatingSetting();
-    setTodos(JSON.parse(localStorage.getItem(getTodoStorageKey()) || "[]"));
+    const session = getStoredSession();
+
+    try {
+      const response = await fetch(`/api/todos?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
+      const payload = await response.json();
+      setTodos(payload.todos || []);
+    } catch {
+      try {
+        setTodos(JSON.parse(localStorage.getItem(getTodoStorageKey()) || "[]"));
+      } catch {
+        setTodos([]);
+      }
+    }
+
     setFloatingEnabled(floatingSetting);
     if (mode === "floating") {
       document.body.classList.toggle("todo-floating-disabled", !floatingSetting);
@@ -45,12 +70,14 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   }
 
   useEffect(() => {
-    loadTodos();
+    void loadTodos();
     window.addEventListener("storage", loadTodos);
     window.addEventListener("toc.todos.updated", loadTodos);
+    window.addEventListener("toc.scopechange", loadTodos);
     return () => {
       window.removeEventListener("storage", loadTodos);
       window.removeEventListener("toc.todos.updated", loadTodos);
+      window.removeEventListener("toc.scopechange", loadTodos);
       if (mode === "floating") {
         document.body.classList.remove("todo-floating-disabled");
       }
@@ -83,9 +110,25 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     };
   }, [mode]);
 
-  function saveTodos(nextTodos: TodoItem[]) {
-    setTodos(nextTodos);
-    localStorage.setItem(getTodoStorageKey(), JSON.stringify(nextTodos));
+  async function saveTodoMutation(payload: Record<string, unknown>, optimisticTodos?: TodoItem[]) {
+    if (optimisticTodos) setTodos(optimisticTodos);
+
+    const session = getStoredSession();
+    try {
+      const response = await fetch("/api/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, role: session.role, scope: session.scope })
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setTodos(result.todos || []);
+        localStorage.setItem(getTodoStorageKey(), JSON.stringify(result.todos || []));
+      }
+    } catch {
+      if (optimisticTodos) localStorage.setItem(getTodoStorageKey(), JSON.stringify(optimisticTodos));
+    }
+
     dispatchTodoUpdate();
   }
 
@@ -93,16 +136,23 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     event.preventDefault();
     const text = todoText.trim();
     if (!text) return;
-    saveTodos([{ id: crypto.randomUUID(), text, done: false, important: false }, ...todos]);
+    const optimistic = [{ id: crypto.randomUUID(), text, done: false, important: false }, ...todos];
+    void saveTodoMutation({ action: "create", text }, optimistic);
     setTodoText("");
   }
 
   function updateTodo(id: string, updates: Partial<TodoItem>) {
-    saveTodos(todos.map((item) => item.id === id ? { ...item, ...updates } : item));
+    const optimistic = todos.map((item) => item.id === id ? { ...item, ...updates } : item);
+    const payload: Record<string, unknown> = { action: "update", id };
+    if ("text" in updates) payload.text = updates.text;
+    if ("done" in updates) payload.done = updates.done;
+    if ("important" in updates) payload.important = updates.important;
+    if ("sharedWith" in updates) payload.sharedWith = updates.sharedWith;
+    void saveTodoMutation(payload, optimistic);
   }
 
   function removeTodo(id: string) {
-    saveTodos(todos.filter((item) => item.id !== id));
+    void saveTodoMutation({ action: "delete", id }, todos.filter((item) => item.id !== id));
   }
 
   function startEditing(todo: TodoItem) {
