@@ -48,6 +48,23 @@ function sourceHref(source: string) {
   return map[source] || "/actions";
 }
 
+function normaliseSourcePage(value: string) {
+  const map: Record<string, string> = {
+    "Action Centre": "action-centre",
+    Compliance: "compliance",
+    Productivity: "productivity",
+    "Equipment Servicing": "equipment-servicing",
+    "Stock Orders": "stock-orders",
+    Jobsheets: "jobsheets",
+    "Thor Portal": "jobsheets",
+    Calendar: "calendar",
+    "Staff Availability": "staff-availability",
+    "To Do": "to-do"
+  };
+
+  return map[value] || value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "action-centre";
+}
+
 function severityForAction(row: ActionRow): Status {
   if (row.directive_type === "National Ops Directive" || row.priority === "urgent" || row.priority === "high") return "red";
   if (row.directive_type === "Scheduled Directive") return "amber";
@@ -172,7 +189,7 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("action_items").insert({
       title,
       detail: payload.detail || "Action item requires manager review and close-out.",
-      source_page: payload.sourcePage || "Action Centre",
+      source_page: normaliseSourcePage(payload.sourcePage || "Action Centre"),
       directive_type: normaliseDirective(payload.directiveType || "Scheduled Directive"),
       priority: normalisePriority(payload.priority || "normal"),
       status: "open",
@@ -191,7 +208,7 @@ export async function POST(request: Request) {
 
     if (typeof updates.title === "string") dbUpdates.title = updates.title.trim();
     if (typeof updates.detail === "string") dbUpdates.detail = updates.detail;
-    if (typeof updates.sourcePage === "string") dbUpdates.source_page = updates.sourcePage;
+    if (typeof updates.sourcePage === "string") dbUpdates.source_page = normaliseSourcePage(updates.sourcePage);
     if (typeof updates.directiveType === "string") dbUpdates.directive_type = normaliseDirective(updates.directiveType);
     if (typeof updates.priority === "string") dbUpdates.priority = normalisePriority(updates.priority);
     if (typeof updates.status === "string") {

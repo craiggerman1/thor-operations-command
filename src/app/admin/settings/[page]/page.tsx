@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminActionManager } from "@/components/AdminActionManager";
-import { approvedStockItems, compliance } from "@/lib/toc-data";
+import { AdminComplianceManager } from "@/components/AdminComplianceManager";
+import { approvedStockItems } from "@/lib/toc-data";
 import { pageSettings } from "@/lib/admin-settings";
 
 type PageProps = {
@@ -50,14 +51,7 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         ) : null}
         {setting.slug === "compliance" ? (
           <Panel wide eyebrow="Compliance" title="Admin-set compliance items">
-            <div className="admin-config-list compact-config-list">
-              {compliance.map((item) => (
-                <article className="admin-config-card" key={item.title}>
-                  <div><strong>{item.title}</strong><small>{item.region} - {item.type} - due {item.due}</small></div>
-                  <div className="meta-row"><Tag tone={item.severity}>{item.status}</Tag><Tag>Counts to Region Health</Tag></div>
-                </article>
-              ))}
-            </div>
+            <AdminComplianceManager />
           </Panel>
         ) : null}
       </section>
