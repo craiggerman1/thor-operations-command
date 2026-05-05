@@ -17,12 +17,24 @@ type AdminAccessUser = {
 const accessUsersKey = "toc.adminAccessUsers";
 
 const initialAccessUsers: AdminAccessUser[] = [];
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isDatabaseUserId(id: string) {
+  return uuidPattern.test(id);
+}
+
+function cleanUsers(users: AdminAccessUser[]) {
+  return users.filter((user) => isDatabaseUserId(user.id));
+}
 
 function readAccessUsers() {
   if (typeof window === "undefined") return initialAccessUsers;
 
   try {
-    return JSON.parse(localStorage.getItem(accessUsersKey) || "null") || initialAccessUsers;
+    const users = JSON.parse(localStorage.getItem(accessUsersKey) || "null") || initialAccessUsers;
+    const clean = cleanUsers(users);
+    if (clean.length !== users.length) localStorage.setItem(accessUsersKey, JSON.stringify(clean));
+    return clean;
   } catch {
     return initialAccessUsers;
   }
@@ -32,7 +44,10 @@ async function fetchAccessUsers() {
   try {
     const response = await fetch("/api/admin/users", { cache: "no-store" });
     const payload = await response.json();
-    return (payload.users || []) as AdminAccessUser[];
+    if (!response.ok || payload.connected === false) throw new Error(payload.error || "User database unavailable.");
+    const users = (payload.users || []) as AdminAccessUser[];
+    localStorage.setItem(accessUsersKey, JSON.stringify(users));
+    return users;
   } catch {
     return readAccessUsers();
   }
@@ -117,7 +132,14 @@ export function AdminAccessManager() {
     const target = users.find((user) => user.id === userId);
     const nextUser = target ? { ...target, ...patch } : null;
     setUsers((current) => current.map((user) => user.id === userId ? { ...user, ...patch } : user));
-    if (nextUser) void saveUserMutation({ action: "update", ...nextUser, id: userId });
+    if (nextUser) {
+      if (!isDatabaseUserId(userId)) {
+        setStatus("This legacy development user has been removed. Register the user again to create a live database profile.");
+        setUsers((current) => current.filter((user) => user.id !== userId));
+        return;
+      }
+      void saveUserMutation({ action: "update", ...nextUser, id: userId });
+    }
   }
 
   function updateUserRole(user: AdminAccessUser, nextRole: AccessRole) {
@@ -143,7 +165,9 @@ export function AdminAccessManager() {
     if (!confirmed) return;
 
     setUsers((current) => current.filter((user) => user.id !== userId));
-    void saveUserMutation({ action: "delete", id: userId });
+    if (isDatabaseUserId(userId)) {
+      void saveUserMutation({ action: "delete", id: userId });
+    }
     setStatus(`${target.name} deregistered.`);
   }
 
@@ -219,7 +243,7 @@ export function AdminAccessManager() {
         {users.map((user) => (
           <article className={`admin-user-card ${user.status === "Disabled" ? "disabled" : ""}`} key={user.id}>
             <div className="admin-user-head">
-              <div><strong>{user.name}</strong><small>{user.email ? `${user.email} - ` : ""}{user.reference} - {user.id}</small></div>
+              <div className="admin-user-title"><strong>{user.name}</strong><small>{user.email ? `${user.email} - ` : ""}{user.reference} - {isDatabaseUserId(user.id) ? user.id : "Legacy local profile"}</small></div>
               <div className="meta-row"><Tag>{roleLabel(user.role)}</Tag><Tag tone={user.status === "Active" ? "green" : "amber"}>{user.status}</Tag></div>
             </div>
             <div className="admin-user-edit-grid">

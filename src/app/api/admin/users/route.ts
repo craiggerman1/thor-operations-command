@@ -21,8 +21,14 @@ type RegionRow = {
   name: string;
 };
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function isUuid(value: unknown) {
+  return typeof value === "string" && uuidPattern.test(value);
 }
 
 function mapRole(role: string): AccessRole {
@@ -143,6 +149,7 @@ export async function POST(request: Request) {
   if (action === "update") {
     const id = payload.id;
     if (!id) return NextResponse.json({ error: "User id is required." }, { status: 400 });
+    if (!isUuid(id)) return NextResponse.json({ error: "This is an old local development user. Please register the user again to create a live database profile." }, { status: 400 });
 
     const updates: Record<string, string | boolean> = { updated_at: new Date().toISOString() };
     if (typeof payload.name === "string") updates.display_name = payload.name;
@@ -164,6 +171,7 @@ export async function POST(request: Request) {
 
   if (action === "delete") {
     if (!payload.id) return NextResponse.json({ error: "User id is required." }, { status: 400 });
+    if (!isUuid(payload.id)) return NextResponse.json({ error: "This is an old local development user and is not stored in the live database." }, { status: 400 });
     const { error: regionDeleteError } = await supabase.from("profile_regions").delete().eq("profile_id", payload.id);
     if (regionDeleteError) return NextResponse.json({ error: regionDeleteError.message }, { status: 500 });
     const { error } = await supabase.from("profiles").delete().eq("id", payload.id);

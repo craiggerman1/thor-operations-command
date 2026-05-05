@@ -2936,6 +2936,21 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
+.admin-user-title {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-user-title strong,
+.admin-user-title small {
+  display: block;
+}
+
+.admin-user-title small {
+  overflow-wrap: anywhere;
+}
+
 .admin-user-card {
   border: 1px solid rgba(201, 215, 225, 0.86);
   border-radius: 6px;
