@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { stockOrders } from "@/lib/toc-data";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -19,8 +18,6 @@ type StockOrderRequest = {
   trackingNumber?: string;
   updateRequested?: boolean;
 };
-
-const stockOrderStorageKey = "toc.stockOrders.databaseReady";
 
 function getStoredSession() {
   if (typeof window === "undefined") return { role: "manager", scope: "National" };
@@ -44,7 +41,8 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
   const approvedStockItems = useMemo(() => stockItems.length ? stockItems : ["Stock catalogue unavailable"], [stockItems]);
   const [scope, setScope] = useState("National");
   const [role, setRole] = useState("manager");
-  const [orders, setOrders] = useState<StockOrderRequest[]>(stockOrders);
+  const [orders, setOrders] = useState<StockOrderRequest[]>([]);
+  const [message, setMessage] = useState("");
   const [selectedItem, setSelectedItem] = useState(approvedStockItems[0]);
   const [quantity, setQuantity] = useState(1);
   const [urgency, setUrgency] = useState("Normal");
@@ -56,12 +54,13 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
   }, [approvedStockItems]);
 
   useEffect(() => {
-    function loadOrders() {
+    async function loadOrders() {
       try {
-        const storedOrders = localStorage.getItem(stockOrderStorageKey);
-        setOrders(storedOrders ? JSON.parse(storedOrders) : stockOrders);
+        const response = await fetch("/api/stock-orders", { cache: "no-store" });
+        const payload = await response.json();
+        setOrders(payload.orders || []);
       } catch {
-        setOrders(stockOrders);
+        setOrders([]);
       }
     }
 
@@ -70,7 +69,7 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
       const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : session.scope;
       setScope(nextScope);
       setRole(session.role);
-      loadOrders();
+      void loadOrders();
     }
 
     syncStockState();
@@ -84,9 +83,20 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
     };
   }, []);
 
-  function saveOrders(nextOrders: StockOrderRequest[]) {
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+  async function mutateStockOrder(payload: Record<string, unknown>) {
+    const response = await fetch("/api/stock-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setMessage(result.error || "Stock order update failed.");
+      return;
+    }
+
+    setOrders(result.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
   }
 
@@ -94,42 +104,30 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
     event.preventDefault();
     if (!selectedItem || selectedItem === "Stock catalogue unavailable") return;
 
-    const nextOrder: StockOrderRequest = {
-      id: `SO-${Date.now()}`,
+    void mutateStockOrder({
+      action: "create",
       item: selectedItem,
       region: scope,
       quantity,
       urgency,
-      status: "Request submitted",
-      note: note || "No additional note supplied.",
-      update: "Awaiting national admin review.",
-      trackingNumber: "Pending"
-    };
-    saveOrders([nextOrder, ...orders]);
+      note: note || "No additional note supplied."
+    });
     setQuantity(1);
     setUrgency("Normal");
     setNote("");
+    setMessage("Stock order request sent to the database.");
   }
 
   function cancelOrder(orderId: string) {
-    const nextOrders = orders.map((order) => getOrderId(order) === orderId
-      ? { ...order, status: "Cancellation requested", update: "Cancellation request sent to national/admin as an action item for review." }
-      : order);
-    saveOrders(nextOrders);
+    void mutateStockOrder({ action: "update", id: orderId, updates: { status: "Cancellation requested", update: "Cancellation request sent to national/admin as an action item for review." } });
   }
 
   function requestUpdate(orderId: string) {
-    const nextOrders = orders.map((order) => getOrderId(order) === orderId
-      ? { ...order, updateRequested: true, update: "Manager requested an update. National admin to respond." }
-      : order);
-    saveOrders(nextOrders);
+    void mutateStockOrder({ action: "update", id: orderId, updates: { status: "Awaiting national approval", update: "Manager requested an update. National admin to respond." } });
   }
 
   function markDelivered(orderId: string) {
-    const nextOrders = orders.map((order) => getOrderId(order) === orderId
-      ? { ...order, status: "Delivered", update: "Manager marked this stock order as delivered.", updateRequested: false }
-      : order);
-    saveOrders(nextOrders);
+    void mutateStockOrder({ action: "update", id: orderId, updates: { status: "Delivered", update: "Manager marked this stock order as delivered." } });
   }
 
   return (
@@ -175,8 +173,9 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
                   </article>
                   );
                 })}
-                {visibleOrders.length ? null : <div className="empty-state">No stock order requests are currently loaded. Database-backed stock requests will appear here once connected.</div>}
+                {visibleOrders.length ? null : <div className="empty-state">No stock order requests are currently loaded.</div>}
               </div>
+              {message ? <small className="admin-hint-message">{message}</small> : null}
             </div>
           </div>
         </Panel>

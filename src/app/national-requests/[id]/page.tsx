@@ -7,7 +7,6 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
 import { setActionOverride } from "@/lib/action-state";
-import { stockOrders } from "@/lib/toc-data";
 
 type StockOrderRequest = {
   id?: string;
@@ -22,8 +21,6 @@ type StockOrderRequest = {
   updateRequested?: boolean;
 };
 
-const stockOrderStorageKey = "toc.stockOrders.databaseReady";
-
 function getOrderId(order: StockOrderRequest) {
   return order.id || `${order.region}-${order.item}`;
 }
@@ -36,12 +33,13 @@ function readActionRequests() {
   }
 }
 
-function readStockOrders() {
+async function readStockOrders() {
   try {
-    const storedOrders = localStorage.getItem(stockOrderStorageKey);
-    return storedOrders ? JSON.parse(storedOrders) as StockOrderRequest[] : stockOrders;
+    const response = await fetch("/api/stock-orders", { cache: "no-store" });
+    const payload = await response.json();
+    return (payload.orders || []) as StockOrderRequest[];
   } catch {
-    return stockOrders;
+    return [];
   }
 }
 
@@ -67,7 +65,7 @@ export default function NationalRequestDetailPage() {
     function syncRequests() {
       setScope(getStoredScope());
       setActionRequests(readActionRequests());
-      setOrders(readStockOrders());
+      void readStockOrders().then(setOrders);
     }
 
     syncRequests();
@@ -97,19 +95,27 @@ export default function NationalRequestDetailPage() {
     if (status === "Approved by national") window.setTimeout(() => router.push("/national-requests"), 550);
   }
 
-  function saveStockOrder(updates: Partial<StockOrderRequest>) {
-    const nextOrders = orders.map((order) => getOrderId(order) === requestId ? { ...order, ...updates, updateRequested: updates.update ? false : order.updateRequested } : order);
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+  async function saveStockOrder(updates: Partial<StockOrderRequest>) {
+    const response = await fetch("/api/stock-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", id: requestId, updates })
+    });
+    const payload = await response.json();
+    if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
     setMessage("Stock request updated for the manager.");
   }
 
-  function deleteStockOrder() {
+  async function deleteStockOrder() {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
-    const nextOrders = orders.filter((order) => getOrderId(order) !== requestId);
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+    const response = await fetch("/api/stock-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id: requestId })
+    });
+    const payload = await response.json();
+    if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
     setMessage("Stock order deleted.");
   }
@@ -149,12 +155,12 @@ export default function NationalRequestDetailPage() {
                 <div><span>Quantity</span><p>{stockOrder.quantity} units requested as {stockOrder.urgency.toLowerCase()} priority.</p></div>
                 <div><span>Manager note</span><p>{stockOrder.note}</p></div>
               </div>
-              <label className="admin-tracking-field"><span>National update</span><input value={stockOrder.update} onChange={(event) => saveStockOrder({ update: event.target.value, status: "Updated by national" })} /></label>
-              <label className="admin-tracking-field"><span>Tracking number</span><input value={stockOrder.trackingNumber || ""} onChange={(event) => saveStockOrder({ trackingNumber: event.target.value || "Pending" })} placeholder="Add tracking number" /></label>
+              <label className="admin-tracking-field"><span>National update</span><input value={stockOrder.update} onChange={(event) => void saveStockOrder({ update: event.target.value, status: "Approved by national" })} /></label>
+              <label className="admin-tracking-field"><span>Tracking number</span><input value={stockOrder.trackingNumber || ""} onChange={(event) => void saveStockOrder({ trackingNumber: event.target.value || "Pending" })} placeholder="Add tracking number" /></label>
               <div className="stock-actions">
-                <button className="review-decision-button approve" type="button" onClick={() => saveStockOrder({ status: "Approved by national", update: stockOrder.update || "Approved by national." })}>Approve Request</button>
-                <button className="review-decision-button return" type="button" onClick={() => saveStockOrder({ status: "Returned to manager", update: "Returned to manager for clarification." })}>Return To Manager</button>
-                <button type="button" className="danger-button" onClick={deleteStockOrder}>Delete Order</button>
+                <button className="review-decision-button approve" type="button" onClick={() => void saveStockOrder({ status: "Approved by national", update: stockOrder.update || "Approved by national." })}>Approve Request</button>
+                <button className="review-decision-button return" type="button" onClick={() => void saveStockOrder({ status: "Returned to manager", update: "Returned to manager for clarification." })}>Return To Manager</button>
+                <button type="button" className="danger-button" onClick={() => void deleteStockOrder()}>Delete Order</button>
               </div>
             </div>
           </Panel>

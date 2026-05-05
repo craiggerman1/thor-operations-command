@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent } from "react";
-import { stockOrders } from "@/lib/toc-data";
 
 type StockOrderRequest = {
   id?: string;
@@ -18,18 +17,17 @@ type StockOrderRequest = {
   updateRequested?: boolean;
 };
 
-const stockOrderStorageKey = "toc.stockOrders.databaseReady";
-
 function getOrderId(order: StockOrderRequest) {
   return order.id || `${order.region}-${order.item}`;
 }
 
-function readOrders() {
+async function fetchOrders() {
   try {
-    const storedOrders = localStorage.getItem(stockOrderStorageKey);
-    return storedOrders ? JSON.parse(storedOrders) as StockOrderRequest[] : stockOrders;
+    const response = await fetch("/api/stock-orders", { cache: "no-store" });
+    const payload = await response.json();
+    return (payload.orders || []) as StockOrderRequest[];
   } catch {
-    return stockOrders;
+    return [];
   }
 }
 
@@ -39,7 +37,7 @@ export function StockOrderAdminReview() {
 
   useEffect(() => {
     function syncOrders() {
-      setOrders(readOrders());
+      void fetchOrders().then(setOrders);
     }
 
     syncOrders();
@@ -51,18 +49,26 @@ export function StockOrderAdminReview() {
     };
   }, []);
 
-  function updateOrder(orderId: string, updates: Partial<StockOrderRequest>) {
-    const nextOrders = orders.map((order) => getOrderId(order) === orderId ? { ...order, ...updates, updateRequested: updates.update ? false : order.updateRequested } : order);
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+  async function updateOrder(orderId: string, updates: Partial<StockOrderRequest>) {
+    const response = await fetch("/api/stock-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", id: orderId, updates })
+    });
+    const payload = await response.json();
+    if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
   }
 
-  function deleteOrder(orderId: string) {
+  async function deleteOrder(orderId: string) {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
-    const nextOrders = orders.filter((order) => getOrderId(order) !== orderId);
-    setOrders(nextOrders);
-    localStorage.setItem(stockOrderStorageKey, JSON.stringify(nextOrders));
+    const response = await fetch("/api/stock-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id: orderId })
+    });
+    const payload = await response.json();
+    if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
   }
 
