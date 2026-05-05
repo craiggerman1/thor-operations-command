@@ -13,6 +13,7 @@ function startDevelopmentSession() {
       label: defaultSession.label,
       scope: "National",
       regions: defaultSession.regions,
+      authMode: "developer",
       createdAt: new Date().toISOString()
     })
   );
@@ -89,6 +90,7 @@ export function LoginPanel() {
       "toc.session",
       JSON.stringify({
         ...profilePayload.profile,
+        authMode: "supabase",
         createdAt: new Date().toISOString()
       })
     );
@@ -110,7 +112,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.219</span>
+            <span>Build 0.220</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>

@@ -13,10 +13,13 @@ import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type StoredSession = {
+  id?: string;
   role?: AccessRole;
   label?: string;
   scope?: string;
   regions?: string[];
+  email?: string;
+  authMode?: "developer" | "supabase";
 };
 
 type WeatherState = {
@@ -61,6 +64,14 @@ function getStoredScope() {
 
 const accessRoleOptions = Object.values(sessionProfiles);
 
+function readStoredSession(): StoredSession | null {
+  try {
+    return JSON.parse(localStorage.getItem("toc.session") || "null");
+  } catch {
+    return null;
+  }
+}
+
 export function TocShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -68,7 +79,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [signingOut, setSigningOut] = useState(false);
   const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, NavBadge>>({});
   const signOutTimer = useRef<number | null>(null);
-  const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
+  const [session, setSession] = useState<StoredSession>({});
   const [sessionReady, setSessionReady] = useState(false);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
@@ -81,30 +92,78 @@ export function TocShell({ children }: { children: ReactNode }) {
   const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || currentScope === "National"));
 
   useEffect(() => {
-    function syncSession(event?: Event) {
-      const eventSession = event instanceof CustomEvent ? event.detail : null;
-      const storedSession = eventSession || JSON.parse(localStorage.getItem("toc.session") || "null");
-      if (storedSession?.role && storedSession.role in sessionProfiles) {
-        setSession(storedSession);
-        document.body.dataset.access = storedSession.role;
-      } else {
-        document.body.dataset.access = defaultSession.role;
+    function applySession(nextSession: StoredSession | null) {
+      if (nextSession?.role && nextSession.role in sessionProfiles) {
+        setSession(nextSession);
+        document.body.dataset.access = nextSession.role;
+        document.body.classList.add("is-authenticated");
+        return true;
       }
+
+      setSession({});
+      document.body.classList.remove("is-authenticated");
+      delete document.body.dataset.access;
+      return false;
     }
 
-    syncSession();
-    document.body.classList.add("is-authenticated");
-    setSessionReady(true);
+    function syncSession(event?: Event) {
+      const eventSession = event instanceof CustomEvent ? event.detail : null;
+      applySession(eventSession || readStoredSession());
+    }
+
+    async function restoreSupabaseSession() {
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) return false;
+
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return false;
+
+      const profileResponse = await fetch("/api/auth/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        cache: "no-store"
+      });
+      const profilePayload = await profileResponse.json();
+      if (!profileResponse.ok || !profilePayload.profile) {
+        await supabase.auth.signOut();
+        return false;
+      }
+
+      const restoredSession = {
+        ...profilePayload.profile,
+        authMode: "supabase" as const,
+        restoredAt: new Date().toISOString()
+      };
+      localStorage.setItem("toc.session", JSON.stringify(restoredSession));
+      return applySession(restoredSession);
+    }
+
+    async function initialiseSession() {
+      const storedSession = readStoredSession();
+      if (applySession(storedSession)) {
+        setSessionReady(true);
+        return;
+      }
+
+      const restored = await restoreSupabaseSession();
+      setSessionReady(true);
+      if (!restored) router.replace("/");
+    }
+
+    void initialiseSession();
     window.addEventListener("toc.sessionchange", syncSession);
 
     return () => {
       if (signOutTimer.current) window.clearTimeout(signOutTimer.current);
       window.removeEventListener("toc.sessionchange", syncSession);
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     async function syncNavBadgeCounts() {
+      if (!sessionReady || !session.role) return;
       try {
         const scope = getStoredScope();
         const response = await fetch(`/api/navigation-badges?scope=${encodeURIComponent(scope)}&role=${encodeURIComponent(session.role || defaultSession.role)}`, { cache: "no-store" });
@@ -130,17 +189,17 @@ export function TocShell({ children }: { children: ReactNode }) {
       window.removeEventListener("toc.nationalActionRequests.updated", syncNavBadgeCounts);
       window.removeEventListener("toc.stockOrders.updated", syncNavBadgeCounts);
     };
-  }, [session.role]);
+  }, [session.role, sessionReady]);
 
   useEffect(() => {
-    if (!sessionReady) return;
+    if (!sessionReady || !session.role) return;
 
     const activeRole = activeProfile.role;
     const currentNavItem = navigationItems.find((item) => item.href === pathname);
     if (currentNavItem && (!currentNavItem.roles.includes(activeRole) || (currentNavItem.nationalOnly && currentScope !== "National"))) {
       router.push("/home");
     }
-  }, [activeProfile.role, currentScope, pathname, router, sessionReady]);
+  }, [activeProfile.role, currentScope, pathname, router, session.role, sessionReady]);
 
   function updateScope(scope: string) {
     const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope, regions: currentRegionOptions };
@@ -172,6 +231,12 @@ export function TocShell({ children }: { children: ReactNode }) {
       router.push("/");
     }, 1450);
   }
+
+  if (!sessionReady) {
+    return <div className="auth-loading-screen">Opening secure TOC session...</div>;
+  }
+
+  if (!session.role) return null;
 
   return (
     <>
@@ -221,7 +286,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.219</em>
+              <em>Build 0.220</em>
             </div>
           </div>
           <div className="topbar-actions">

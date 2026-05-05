@@ -383,6 +383,19 @@ textarea:focus-visible {
   line-height: 1.35;
 }
 
+.auth-loading-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(2, 18, 30, 0.9), rgba(7, 44, 67, 0.84)),
+    url("/assets/thor-lightning-bg.jpg") center / cover no-repeat;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 28px;
+  text-transform: uppercase;
+}
+
 .sign-in-sequence {
   position: fixed;
   left: 50%;
