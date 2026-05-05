@@ -6,6 +6,8 @@ import { FlowHeading, Panel } from "@/components/TocCards";
 import { staffInductionsSheet } from "@/lib/toc-data";
 import type { InductionFeed, InductionStatus } from "@/lib/toc-data";
 
+const sheetRegion = "Brisbane";
+
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
   try {
@@ -36,7 +38,8 @@ export default function InductionsPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<InductionFeed>(staffInductionsSheet);
   const [feedStatus, setFeedStatus] = useState("Source loading");
-  const visibleSites = useMemo(() => feed.sites.filter((site) => scope === "National" || site.region === scope), [feed.sites, scope]);
+  const isBrisbaneScope = scope === sheetRegion;
+  const visibleSites = useMemo(() => isBrisbaneScope ? feed.sites.filter((site) => site.region === sheetRegion) : [], [feed.sites, isBrisbaneScope]);
   const inductionCells = visibleSites.length * feed.staff.length;
   const inductedCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => getInduction(feed, staff.name, site.name).status === "Inducted").length, 0);
   const actionCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => {
@@ -64,6 +67,14 @@ export default function InductionsPage() {
   useEffect(() => {
     let isActive = true;
 
+    if (!isBrisbaneScope) {
+      setFeed(staffInductionsSheet);
+      setFeedStatus("Brisbane source only");
+      return () => {
+        isActive = false;
+      };
+    }
+
     fetch("/api/inductions", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
       .then((nextFeed: InductionFeed) => {
@@ -80,13 +91,19 @@ export default function InductionsPage() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [isBrisbaneScope]);
 
   return (
     <TocShell>
       <PageIntro title="Inductions" detail="Staff induction status by site, filtered to the signed-in region." />
       <FlowHeading eyebrow="Inductions" title="Confirm the right staff are inducted for the right customer sites before work is assigned." />
       <section className="command-grid route-grid">
+        {!isBrisbaneScope ? (
+          <Panel wide eyebrow="Region source" title={`${scope} induction source not connected`} pill="Brisbane only">
+            <div className="empty-state">The current Google Sheet induction register is Brisbane specific. Select Brisbane to view this sheet, or connect a separate induction source for {scope}.</div>
+          </Panel>
+        ) : null}
+        {isBrisbaneScope ? (
         <Panel wide eyebrow="Induction source" title={`${scope} induction register`} pill={`${visibleSites.length} sites`}>
           <div className="staff-source-strip">
             <div>
@@ -134,6 +151,7 @@ export default function InductionsPage() {
             <div className="empty-state">No induction sheet sites are mapped to {scope} yet.</div>
           )}
         </Panel>
+        ) : null}
       </section>
     </TocShell>
   );

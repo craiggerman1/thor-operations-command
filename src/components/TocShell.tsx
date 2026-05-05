@@ -131,7 +131,6 @@ export function TocShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [unitsWashedToday, setUnitsWashedToday] = useState(0);
   const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, NavBadge>>({});
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
@@ -192,25 +191,6 @@ export function TocShell({ children }: { children: ReactNode }) {
       router.push("/home");
     }
   }, [activeProfile.role, currentScope, pathname, router, sessionReady]);
-
-  useEffect(() => {
-    const targetUnits = 184;
-    const duration = 1100;
-    const startedAt = performance.now();
-    let frameId = 0;
-
-    function animateCounter(now: number) {
-      const progress = Math.min((now - startedAt) / duration, 1);
-      const easedProgress = 1 - Math.pow(1 - progress, 3);
-      setUnitsWashedToday(Math.round(targetUnits * easedProgress));
-      if (progress < 1) {
-        frameId = window.requestAnimationFrame(animateCounter);
-      }
-    }
-
-    frameId = window.requestAnimationFrame(animateCounter);
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
 
   function updateScope(scope: string) {
     const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope };
@@ -290,8 +270,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.171</em>
-              <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
+              <em>Build 0.172</em>
             </div>
           </div>
           <div className="topbar-actions">

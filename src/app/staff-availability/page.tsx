@@ -6,6 +6,18 @@ import { FlowHeading, Panel } from "@/components/TocCards";
 import { staffAvailabilitySheet } from "@/lib/toc-data";
 import type { StaffAvailabilityFeed, StaffSheetStatus } from "@/lib/toc-data";
 
+const sheetRegion = "Brisbane";
+
+function getStoredScope() {
+  if (typeof window === "undefined") return "National";
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return session?.scope || "National";
+  } catch {
+    return "National";
+  }
+}
+
 function getStatusTone(status: StaffSheetStatus) {
   if (status === "Available") return "green";
   if (status === "Not Available") return "red";
@@ -23,12 +35,37 @@ function getStaffTotal(staff: StaffAvailabilityFeed["staff"][number]) {
 }
 
 export default function StaffAvailabilityPage() {
+  const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<StaffAvailabilityFeed>(staffAvailabilitySheet);
   const [feedStatus, setFeedStatus] = useState("Source loading");
+  const isBrisbaneScope = scope === sheetRegion;
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
 
   useEffect(() => {
+    function syncScope(event?: Event) {
+      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
+      setScope(nextScope);
+    }
+
+    syncScope();
+    window.addEventListener("storage", syncScope);
+    window.addEventListener("toc.scopechange", syncScope);
+    return () => {
+      window.removeEventListener("storage", syncScope);
+      window.removeEventListener("toc.scopechange", syncScope);
+    };
+  }, []);
+
+  useEffect(() => {
     let isActive = true;
+
+    if (!isBrisbaneScope) {
+      setFeed(staffAvailabilitySheet);
+      setFeedStatus("Brisbane source only");
+      return () => {
+        isActive = false;
+      };
+    }
 
     fetch("/api/staff-availability", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
@@ -46,13 +83,19 @@ export default function StaffAvailabilityPage() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [isBrisbaneScope]);
 
   return (
     <TocShell>
       <PageIntro title="Staff Availability" detail="Staff coverage by day and time window." />
       <FlowHeading eyebrow="Staff Availability" title="Read the coverage by staff name, day and shift window before roster gaps become urgent." />
       <section className="command-grid route-grid">
+        {!isBrisbaneScope ? (
+          <Panel wide eyebrow="Region source" title={`${scope} availability source not connected`} pill="Brisbane only">
+            <div className="empty-state">The current Google Sheet availability source is Brisbane specific. Select Brisbane to view this sheet, or connect a separate source for {scope}.</div>
+          </Panel>
+        ) : null}
+        {isBrisbaneScope ? (
         <Panel wide eyebrow="Availability source" title="Staff coverage by day and time window" pill={`${feed.staff.length} staff listed`}>
           <div className="staff-source-strip">
             <div>
@@ -109,6 +152,7 @@ export default function StaffAvailabilityPage() {
             ))}
           </div>
         </Panel>
+        ) : null}
       </section>
     </TocShell>
   );
