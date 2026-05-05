@@ -5,8 +5,8 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
 import { staffInductionsSheet } from "@/lib/toc-data";
 import type { InductionFeed, InductionStatus } from "@/lib/toc-data";
-
-const sheetRegion = "Brisbane";
+import { sheetSourceDefaults } from "@/lib/sheet-source-settings";
+import type { SheetSourceConfig } from "@/lib/sheet-source-settings";
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -37,9 +37,11 @@ function getInduction(feed: InductionFeed, staffName: string, siteName: string) 
 export default function InductionsPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<InductionFeed>(staffInductionsSheet);
+  const [sourceConfig, setSourceConfig] = useState<SheetSourceConfig>(sheetSourceDefaults.inductions);
   const [feedStatus, setFeedStatus] = useState("Source loading");
-  const isBrisbaneScope = scope === sheetRegion;
-  const visibleSites = useMemo(() => isBrisbaneScope ? feed.sites.filter((site) => site.region === sheetRegion) : [], [feed.sites, isBrisbaneScope]);
+  const sheetRegion = sourceConfig.region;
+  const isMappedScope = scope === sheetRegion;
+  const visibleSites = useMemo(() => isMappedScope ? feed.sites.filter((site) => site.region === sheetRegion) : [], [feed.sites, isMappedScope, sheetRegion]);
   const inductionCells = visibleSites.length * feed.staff.length;
   const inductedCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => getInduction(feed, staff.name, site.name).status === "Inducted").length, 0);
   const actionCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => {
@@ -66,10 +68,33 @@ export default function InductionsPage() {
 
   useEffect(() => {
     let isActive = true;
+    function syncSourceSettings() {
+      fetch("/api/sheet-source-settings?slug=inductions", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Source settings unavailable")))
+        .then((payload) => {
+          if (!isActive) return;
+          setSourceConfig((payload.config || sheetSourceDefaults.inductions) as SheetSourceConfig);
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setSourceConfig(sheetSourceDefaults.inductions);
+        });
+    }
 
-    if (!isBrisbaneScope) {
+    syncSourceSettings();
+    window.addEventListener("toc.sheetSourceSettings.updated", syncSourceSettings);
+    return () => {
+      isActive = false;
+      window.removeEventListener("toc.sheetSourceSettings.updated", syncSourceSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!isMappedScope || !sourceConfig.connected) {
       setFeed(staffInductionsSheet);
-      setFeedStatus("Brisbane source only");
+      setFeedStatus(`${sheetRegion} source only`);
       return () => {
         isActive = false;
       };
@@ -91,27 +116,27 @@ export default function InductionsPage() {
     return () => {
       isActive = false;
     };
-  }, [isBrisbaneScope]);
+  }, [isMappedScope, sheetRegion, sourceConfig.connected]);
 
   return (
     <TocShell>
       <PageIntro title="Inductions" detail="Staff induction status by site, filtered to the signed-in region." />
       <FlowHeading eyebrow="Inductions" title="Confirm the right staff are inducted for the right customer sites before work is assigned." />
       <section className="command-grid route-grid">
-        {!isBrisbaneScope ? (
-          <Panel wide eyebrow="Region source" title={`${scope} induction source not connected`} pill="Brisbane only">
-            <div className="empty-state">The current Google Sheet induction register is Brisbane specific. Select Brisbane to view this sheet, or connect a separate induction source for {scope}.</div>
+        {!isMappedScope ? (
+          <Panel wide eyebrow="Region source" title={`${scope} induction source not connected`} pill={`${sheetRegion} only`}>
+            <div className="empty-state">The current Google Sheet induction register is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or connect a separate induction source for {scope}.</div>
           </Panel>
         ) : null}
-        {isBrisbaneScope ? (
+        {isMappedScope ? (
         <Panel wide eyebrow="Induction source" title={`${scope} induction register`} pill={`${visibleSites.length} sites`}>
           <div className="staff-source-strip">
             <div>
-              <span className="eyebrow">Controlled source</span>
-              <strong>{feed.sourceName}</strong>
+              <span className="eyebrow">{sourceConfig.statusLabel}</span>
+              <strong>{sourceConfig.sourceName || feed.sourceName}</strong>
               <small>{feedStatus}. Source data has not been edited by TOC.</small>
             </div>
-            <a href={feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
+            <a href={sourceConfig.spreadsheetUrl || feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
           </div>
           <div className="induction-summary-grid">
             <article className="availability-summary-card"><span>Readiness</span><strong>{readiness}%</strong><small>{inductedCount} current induction records</small></article>

@@ -5,8 +5,8 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
 import { staffAvailabilitySheet } from "@/lib/toc-data";
 import type { StaffAvailabilityFeed, StaffSheetStatus } from "@/lib/toc-data";
-
-const sheetRegion = "Brisbane";
+import { sheetSourceDefaults } from "@/lib/sheet-source-settings";
+import type { SheetSourceConfig } from "@/lib/sheet-source-settings";
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -37,8 +37,10 @@ function getStaffTotal(staff: StaffAvailabilityFeed["staff"][number]) {
 export default function StaffAvailabilityPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<StaffAvailabilityFeed>(staffAvailabilitySheet);
+  const [sourceConfig, setSourceConfig] = useState<SheetSourceConfig>(sheetSourceDefaults["staff-availability"]);
   const [feedStatus, setFeedStatus] = useState("Source loading");
-  const isBrisbaneScope = scope === sheetRegion;
+  const sheetRegion = sourceConfig.region;
+  const isMappedScope = scope === sheetRegion;
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
 
   useEffect(() => {
@@ -58,10 +60,33 @@ export default function StaffAvailabilityPage() {
 
   useEffect(() => {
     let isActive = true;
+    function syncSourceSettings() {
+      fetch("/api/sheet-source-settings?slug=staff-availability", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Source settings unavailable")))
+        .then((payload) => {
+          if (!isActive) return;
+          setSourceConfig((payload.config || sheetSourceDefaults["staff-availability"]) as SheetSourceConfig);
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setSourceConfig(sheetSourceDefaults["staff-availability"]);
+        });
+    }
 
-    if (!isBrisbaneScope) {
+    syncSourceSettings();
+    window.addEventListener("toc.sheetSourceSettings.updated", syncSourceSettings);
+    return () => {
+      isActive = false;
+      window.removeEventListener("toc.sheetSourceSettings.updated", syncSourceSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!isMappedScope || !sourceConfig.connected) {
       setFeed(staffAvailabilitySheet);
-      setFeedStatus("Brisbane source only");
+      setFeedStatus(`${sheetRegion} source only`);
       return () => {
         isActive = false;
       };
@@ -83,27 +108,27 @@ export default function StaffAvailabilityPage() {
     return () => {
       isActive = false;
     };
-  }, [isBrisbaneScope]);
+  }, [isMappedScope, sheetRegion, sourceConfig.connected]);
 
   return (
     <TocShell>
       <PageIntro title="Staff Availability" detail="Staff coverage by day and time window." />
       <FlowHeading eyebrow="Staff Availability" title="Read the coverage by staff name, day and shift window before roster gaps become urgent." />
       <section className="command-grid route-grid">
-        {!isBrisbaneScope ? (
-          <Panel wide eyebrow="Region source" title={`${scope} availability source not connected`} pill="Brisbane only">
-            <div className="empty-state">The current Google Sheet availability source is Brisbane specific. Select Brisbane to view this sheet, or connect a separate source for {scope}.</div>
+        {!isMappedScope ? (
+          <Panel wide eyebrow="Region source" title={`${scope} availability source not connected`} pill={`${sheetRegion} only`}>
+            <div className="empty-state">The current Google Sheet availability source is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or connect a separate source for {scope}.</div>
           </Panel>
         ) : null}
-        {isBrisbaneScope ? (
+        {isMappedScope ? (
         <Panel wide eyebrow="Availability source" title="Staff coverage by day and time window" pill={`${feed.staff.length} staff listed`}>
           <div className="staff-source-strip">
             <div>
-              <span className="eyebrow">Controlled source</span>
-              <strong>{feed.sourceName}</strong>
+              <span className="eyebrow">{sourceConfig.statusLabel}</span>
+              <strong>{sourceConfig.sourceName || feed.sourceName}</strong>
               <small>{feedStatus}. Source data has not been edited by TOC.</small>
             </div>
-            <a href={feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
+            <a href={sourceConfig.spreadsheetUrl || feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
           </div>
 
           <div className="staff-availability-board">

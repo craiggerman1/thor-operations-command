@@ -11,6 +11,7 @@ import { AdminHomeManager } from "@/components/AdminHomeManager";
 import { AdminIntegrationSourceManager } from "@/components/AdminIntegrationSourceManager";
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
 import { AdminRegionHealthManager } from "@/components/AdminRegionHealthManager";
+import { AdminSheetSourceManager } from "@/components/AdminSheetSourceManager";
 import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
 import { AdminTodoManager } from "@/components/AdminTodoManager";
 import { pageSettings } from "@/lib/admin-settings";
@@ -98,6 +99,16 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "jobsheets" ? (
           <Panel wide eyebrow="Jobsheets" title="Thor Portal source control">
             <AdminIntegrationSourceManager slug="jobsheets" label="Jobsheets" />
+          </Panel>
+        ) : null}
+        {setting.slug === "staff-availability" ? (
+          <Panel wide eyebrow="Staff Availability" title="Availability sheet source control">
+            <AdminSheetSourceManager slug="staff-availability" label="Staff Availability" />
+          </Panel>
+        ) : null}
+        {setting.slug === "inductions" ? (
+          <Panel wide eyebrow="Inductions" title="Induction sheet source control">
+            <AdminSheetSourceManager slug="inductions" label="Inductions" />
           </Panel>
         ) : null}
       </section>
