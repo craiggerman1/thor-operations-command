@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocRole } from "@/lib/toc-auth";
 
 const defaultItems = ["Thor Operations Currently Normal"];
 const settingsKey = "operations_news";
@@ -28,6 +29,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocRole(request, ["admin"]);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 });
 

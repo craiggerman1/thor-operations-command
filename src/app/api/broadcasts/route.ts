@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocRole, requireTocUser } from "@/lib/toc-auth";
 
 type UrgentBroadcastMessage = {
   id: string;
@@ -157,6 +158,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
+  const isAcknowledgement = body.kind === "acknowledge" || body.kind === "acknowledge-director";
+  const permission = isAcknowledgement
+    ? await requireTocUser(request)
+    : await requireTocRole(request, body.kind === "director" || body.kind === "clear-director" ? ["admin", "director"] : ["admin"]);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {

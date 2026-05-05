@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Tag } from "@/components/TocCards";
 import { integrationDefaults } from "@/lib/integration-settings";
+import { tocFetch } from "@/lib/toc-client-auth";
 import type { IntegrationPageSlug, IntegrationSourceConfig } from "@/lib/integration-settings";
 
 async function fetchIntegrationConfig(slug: IntegrationPageSlug) {
@@ -13,11 +14,10 @@ async function fetchIntegrationConfig(slug: IntegrationPageSlug) {
 }
 
 async function mutateIntegrationConfig(body: Record<string, unknown>) {
-  const response = await fetch("/api/integration-settings", {
+  const response = await tocFetch("/api/integration-settings", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Integration settings update failed.");
   return (payload.config || integrationDefaults[body.slug as IntegrationPageSlug]) as IntegrationSourceConfig;

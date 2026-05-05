@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { assignableRegions, sessionProfiles, type AccessRole } from "@/lib/access";
 import { Tag } from "@/components/TocCards";
-import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { getTocRequestHeaders } from "@/lib/toc-client-auth";
 
 type AdminAccessUser = {
   id: string;
@@ -45,30 +45,9 @@ function readAccessUsers() {
   }
 }
 
-function isDevelopmentSession() {
-  try {
-    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
-    return session?.authMode === "developer";
-  } catch {
-    return false;
-  }
-}
-
-async function getAdminRequestHeaders(includeJson = false) {
-  const headers: Record<string, string> = includeJson ? { "Content-Type": "application/json" } : {};
-  const supabase = getSupabaseBrowserClient();
-  const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
-  const token = data.session?.access_token;
-
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (!token && isDevelopmentSession()) headers["x-toc-development-session"] = "true";
-
-  return headers;
-}
-
 async function fetchAccessUsers() {
   try {
-    const response = await fetch("/api/admin/users", { headers: await getAdminRequestHeaders(), cache: "no-store" });
+    const response = await fetch("/api/admin/users", { headers: await getTocRequestHeaders(), cache: "no-store" });
     const payload = await response.json();
     if (!response.ok || payload.connected === false) throw new Error(payload.error || "User database unavailable.");
     const users = (payload.users || []) as AdminAccessUser[];
@@ -235,7 +214,7 @@ export function AdminAccessManager() {
     try {
       const response = await fetch("/api/admin/users", {
         method: "POST",
-        headers: await getAdminRequestHeaders(true),
+        headers: await getTocRequestHeaders(true),
         body: JSON.stringify(payload)
       });
       const result = await response.json();

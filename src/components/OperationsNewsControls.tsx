@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 export const operationsNewsKey = "toc.operationsNews";
 export const defaultOperationsNews = "Thor Operations Currently Normal";
@@ -75,11 +76,10 @@ export function OperationsNewsControls() {
     const items = parseOperationsNews(message);
     saveOperationsNews(message);
     try {
-      const response = await fetch(operationsNewsApi, {
+      const response = await tocFetch(operationsNewsApi, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items })
-      });
+      }, true);
       if (!response.ok) throw new Error("Operations news database update failed.");
       setSavedMessage("Operations news updated for all users.");
     } catch {
@@ -91,11 +91,10 @@ export function OperationsNewsControls() {
     clearOperationsNews();
     setMessage(defaultOperationsNews);
     try {
-      const response = await fetch(operationsNewsApi, {
+      const response = await tocFetch(operationsNewsApi, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: [defaultOperationsNews] })
-      });
+      }, true);
       if (!response.ok) throw new Error("Operations news database reset failed.");
       setSavedMessage("Operations news reset to normal for all users.");
     } catch {

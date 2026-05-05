@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocRole } from "@/lib/toc-auth";
 import { integrationDefaults, isIntegrationSlug, normaliseIntegrationConfig } from "@/lib/integration-settings";
 import type { IntegrationPageSlug, IntegrationSourceConfig } from "@/lib/integration-settings";
 
@@ -70,6 +71,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocRole(request, ["admin"]);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {

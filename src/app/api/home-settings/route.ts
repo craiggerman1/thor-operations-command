@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocRole } from "@/lib/toc-auth";
 import { defaultHomeSettings, normaliseHomeSettings } from "@/lib/home-settings";
 import type { HomeSettingsConfig } from "@/lib/home-settings";
 
@@ -41,6 +42,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocRole(request, ["admin"]);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {

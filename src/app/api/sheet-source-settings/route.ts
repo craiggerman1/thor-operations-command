@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocRole } from "@/lib/toc-auth";
 import { isSheetSourceSlug, normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import type { SheetSourceConfig, SheetSourceSlug } from "@/lib/sheet-source-settings";
 
@@ -51,6 +52,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocRole(request, ["admin"]);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {

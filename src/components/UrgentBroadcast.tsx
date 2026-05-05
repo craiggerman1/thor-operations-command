@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { allRegions } from "@/lib/access";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type UrgentBroadcastMessage = {
   id: string;
@@ -145,21 +146,19 @@ function deleteDirectorBroadcast() {
 function syncRemoteBroadcasts(kind: "urgent" | "director" | "clear-director", payload: Record<string, unknown>) {
   if (typeof window === "undefined") return;
 
-  fetch(broadcastApi, {
+  tocFetch(broadcastApi, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind, ...payload })
-  }).catch(() => {
+  }, true).catch(() => {
     // Local browser storage remains the fallback until central broadcast storage is active.
   });
 }
 
 function syncBroadcastAcknowledgement(kind: "acknowledge" | "acknowledge-director", version: string) {
-  fetch(broadcastApi, {
+  tocFetch(broadcastApi, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind, version, userKey: readSessionUserKey() })
-  }).catch(() => undefined);
+  }, true).catch(() => undefined);
 }
 
 function mergeBroadcasts(localBroadcasts: UrgentBroadcastMessage[], remoteBroadcasts: UrgentBroadcastMessage[]) {

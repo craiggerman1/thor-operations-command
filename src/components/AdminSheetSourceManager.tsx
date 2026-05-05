@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Tag } from "@/components/TocCards";
 import { allRegions } from "@/lib/access";
 import { sheetSourceDefaults } from "@/lib/sheet-source-settings";
+import { tocFetch } from "@/lib/toc-client-auth";
 import type { SheetSourceConfig, SheetSourceSlug } from "@/lib/sheet-source-settings";
 
 async function fetchSheetSourceConfig(slug: SheetSourceSlug) {
@@ -14,11 +15,10 @@ async function fetchSheetSourceConfig(slug: SheetSourceSlug) {
 }
 
 async function mutateSheetSourceConfig(body: Record<string, unknown>) {
-  const response = await fetch("/api/sheet-source-settings", {
+  const response = await tocFetch("/api/sheet-source-settings", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Sheet source settings update failed.");
   return (payload.config || sheetSourceDefaults[body.slug as SheetSourceSlug]) as SheetSourceConfig;

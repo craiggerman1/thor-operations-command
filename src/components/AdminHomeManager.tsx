@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Tag } from "@/components/TocCards";
 import { defaultHomeSettings } from "@/lib/home-settings";
+import { tocFetch } from "@/lib/toc-client-auth";
 import type { HomeRoadmapItem, HomeSettingsConfig, HomeSignalConfig } from "@/lib/home-settings";
 
 async function fetchHomeSettings() {
@@ -13,11 +14,10 @@ async function fetchHomeSettings() {
 }
 
 async function mutateHomeSettings(body: Record<string, unknown>) {
-  const response = await fetch("/api/home-settings", {
+  const response = await tocFetch("/api/home-settings", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Home settings update failed.");
   return (payload.config || defaultHomeSettings) as HomeSettingsConfig;

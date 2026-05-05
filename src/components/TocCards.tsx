@@ -3,6 +3,7 @@
 import type { Status } from "@/lib/toc-data";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 export function Panel({ children, wide = false, title, eyebrow, pill, className = "" }: { children: ReactNode; wide?: boolean; title: string; eyebrow: string; pill?: string; className?: string }) {
   return (
@@ -65,11 +66,10 @@ async function fetchRemoteHintState() {
 }
 
 async function saveRemoteHintState(enabled: boolean, version: string) {
-  const response = await fetch(pageHintsApi, {
+  const response = await tocFetch(pageHintsApi, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ enabled, version })
-  });
+  }, true);
   if (!response.ok) throw new Error("Page hint database update failed.");
   return await response.json() as { enabled?: boolean; version?: string };
 }
