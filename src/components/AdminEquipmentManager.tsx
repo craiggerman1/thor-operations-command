@@ -22,7 +22,7 @@ const assetTypes = ["Wash truck", "Wash ute", "Honda", "Generator", "Pony", "Was
 const statuses = ["Serviceable", "Active", "Service due", "Book service", "Under repair", "Overdue", "Stop use"];
 
 async function fetchEquipment() {
-  const response = await fetch("/api/equipment?scope=National", { cache: "no-store" });
+  const response = await fetch("/api/equipment?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Equipment database read failed.");
   return (payload.assets || []) as EquipmentAsset[];
@@ -67,7 +67,7 @@ export function AdminEquipmentManager() {
     setIsSaving(true);
     setMessage("");
     try {
-      const nextAssets = await mutateEquipment({ action: "create", assetName, assetType, region, status, latestOdometer, latestHours, nextService, serviceNote });
+      const nextAssets = await mutateEquipment({ action: "create", all: true, assetName, assetType, region, status, latestOdometer, latestHours, nextService, serviceNote });
       setAssets(nextAssets);
       setAssetName("");
       setLatestOdometer("");
@@ -86,7 +86,7 @@ export function AdminEquipmentManager() {
   async function updateAsset(id: string, updates: Record<string, unknown>, successMessage: string) {
     setMessage("");
     try {
-      const nextAssets = await mutateEquipment({ action: "update", id, updates });
+      const nextAssets = await mutateEquipment({ action: "update", all: true, id, updates });
       setAssets(nextAssets);
       setMessage(successMessage);
       window.dispatchEvent(new Event("toc.actionState.updated"));
@@ -99,7 +99,7 @@ export function AdminEquipmentManager() {
     if (!window.confirm("Are you sure you want to delete this equipment asset?")) return;
     setMessage("");
     try {
-      const nextAssets = await mutateEquipment({ action: "delete", id });
+      const nextAssets = await mutateEquipment({ action: "delete", all: true, id });
       setAssets(nextAssets);
       setMessage("Equipment asset deleted.");
       window.dispatchEvent(new Event("toc.actionState.updated"));

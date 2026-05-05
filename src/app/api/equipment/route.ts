@@ -61,6 +61,18 @@ async function getRegionId(regionName: string) {
   return (data as RegionRow | null)?.id || null;
 }
 
+function scopedRequest(request: Request, payload: Record<string, unknown>) {
+  const url = new URL(request.url);
+  if (payload.all === true) {
+    url.searchParams.set("all", "true");
+  } else if (typeof payload.scope === "string" && payload.scope) {
+    url.searchParams.set("scope", payload.scope);
+  }
+
+  return new Request(url, { method: "GET", headers: request.headers });
+}
+
+
 function isRiskStatus(status: string) {
   const tone = getStatusTone(status);
   return tone === "red" || tone === "amber";
@@ -160,6 +172,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope") || "National";
+  const showAll = url.searchParams.get("all") === "true" || scope === "National" || scope === "Workshop";
 
   const { data, error } = await supabase
     .from("equipment_assets")
@@ -172,7 +185,7 @@ export async function GET(request: Request) {
 
   const assets = ((data as EquipmentAssetRow[] | null) || [])
     .map(mapAsset)
-    .filter((asset) => scope === "National" || asset.region === scope);
+    .filter((asset) => showAll || asset.region === scope);
   const serviceDue = assets.filter((asset) => asset.severity === "amber" || asset.severity === "red").length;
   const redAssets = assets.filter((asset) => asset.severity === "red").length;
   const greenAssets = assets.filter((asset) => asset.severity === "green").length;
@@ -221,7 +234,7 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await syncLinkedAction(data as EquipmentAssetRow);
-    return GET(request);
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "update") {
@@ -248,7 +261,7 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await syncLinkedAction(data as EquipmentAssetRow);
-    return GET(request);
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "delete") {
@@ -270,7 +283,7 @@ export async function POST(request: Request) {
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
     }
 
-    return GET(request);
+    return GET(scopedRequest(request, payload));
   }
 
   return NextResponse.json({ error: "Unsupported equipment operation." }, { status: 400 });
