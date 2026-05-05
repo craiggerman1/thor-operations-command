@@ -5,12 +5,14 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 import { getThorOperatingWeek } from "@/lib/operating-week";
-import { actionItems, goLivePathway, productivitySites } from "@/lib/toc-data";
+import { productivitySites } from "@/lib/toc-data";
 import { metrics } from "@/lib/toc-data";
 import { useEffect, useState } from "react";
 import type { AccessRole } from "@/lib/access";
-import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
+import type { ActionItem } from "@/lib/action-state";
 import { getScopedActionItems, isNationalScope } from "@/lib/scope-utils";
+import { defaultHomeSettings } from "@/lib/home-settings";
+import type { HomeSettingsConfig, HomeSignalKey } from "@/lib/home-settings";
 
 function getStoredSession() {
   const fallback = { role: "admin" as AccessRole, scope: "National" };
@@ -31,7 +33,8 @@ export default function HomePage() {
   const [scope, setScope] = useState("National");
   const [activeRole, setActiveRole] = useState<AccessRole>("admin");
   const [openTodoCount, setOpenTodoCount] = useState(0);
-  const [openActionItems, setOpenActionItems] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
+  const [openActionItems, setOpenActionItems] = useState<ActionItem[]>([]);
+  const [homeSettings, setHomeSettings] = useState<HomeSettingsConfig>(defaultHomeSettings);
   const operatingWeek = getThorOperatingWeek();
   const visibleActionItems = getScopedActionItems(openActionItems, scope, activeRole);
   const visibleProductivitySites = isNationalScope(scope) ? productivitySites : productivitySites.filter((site) => site.region === scope);
@@ -46,36 +49,42 @@ export default function HomePage() {
   const isDirector = activeRole === "director";
   const isScopedRegion = !isNationalScope(scope);
   const jobsheetActions = visibleActionItems.filter((item) => item.source === "Thor Portal").length;
+  const signalLabels = homeSettings.signals.reduce((labels, signal) => ({ ...labels, [signal.key]: signal.label }), {} as Record<HomeSignalKey, string>);
+  const enabledSignals = new Set(homeSettings.signals.filter((signal) => signal.enabled).map((signal) => signal.key));
   const commandMetrics = [
     {
-      label: "Operating week",
+      key: "operatingWeek" as HomeSignalKey,
+      label: signalLabels.operatingWeek || "Operating week",
       value: operatingWeek.name,
       detail: operatingWeek.detail,
       status: "green",
       href: "/calendar"
     },
     {
-      label: "Risk flags",
+      key: "riskFlags" as HomeSignalKey,
+      label: signalLabels.riskFlags || "Risk flags",
       value: visibleActionItems.length.toString(),
       detail: isScopedRegion ? `${scope} action pressure` : "Compliance, staffing, data",
       status: visibleActionItems.some((item) => item.severity === "red") ? "red" : visibleActionItems.length ? "amber" : "green",
       href: "/actions"
     },
     {
-      label: "Jobsheets",
+      key: "jobsheets" as HomeSignalKey,
+      label: signalLabels.jobsheets || "Jobsheets",
       value: isScopedRegion ? jobsheetActions.toString() : metrics.find((metric) => metric.label === "Jobsheets")?.value || "0",
       detail: isScopedRegion ? `${scope} jobsheet actions` : "Waiting on manager action",
       status: jobsheetActions ? "amber" : "green",
       href: "/jobsheets"
     },
     {
-      label: "Assets online",
+      key: "assetsOnline" as HomeSignalKey,
+      label: signalLabels.assetsOnline || "Assets online",
       value: isScopedRegion ? "Region" : metrics.find((metric) => metric.label === "Assets online")?.value || "0",
       detail: isScopedRegion ? `${scope} asset view` : "Unity and GPS ready",
       status: "blue",
       href: "/asset-tracking"
     }
-  ];
+  ].filter((metric) => enabledSignals.has(metric.key));
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -90,23 +99,36 @@ export default function HomePage() {
     }
 
     function syncActions() {
-      setOpenActionItems(getOpenActionItems(actionItems));
+      fetch("/api/actions", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Action Centre unavailable")))
+        .then((payload) => setOpenActionItems(((payload.actions || []) as ActionItem[]).filter((item) => item.status !== "Closed")))
+        .catch(() => setOpenActionItems([]));
+    }
+
+    function syncHomeSettings() {
+      fetch("/api/home-settings", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Home settings unavailable")))
+        .then((payload) => setHomeSettings((payload.config || defaultHomeSettings) as HomeSettingsConfig))
+        .catch(() => setHomeSettings(defaultHomeSettings));
     }
 
     syncSession();
     syncTodos();
     syncActions();
+    syncHomeSettings();
     window.addEventListener("storage", syncSession);
     window.addEventListener("toc.scopechange", syncSession);
     window.addEventListener("storage", syncTodos);
     window.addEventListener("toc.todos.updated", syncTodos);
     window.addEventListener("toc.actionState.updated", syncActions);
+    window.addEventListener("toc.homeSettings.updated", syncHomeSettings);
     return () => {
       window.removeEventListener("storage", syncSession);
       window.removeEventListener("toc.scopechange", syncSession);
       window.removeEventListener("storage", syncTodos);
       window.removeEventListener("toc.todos.updated", syncTodos);
       window.removeEventListener("toc.actionState.updated", syncActions);
+      window.removeEventListener("toc.homeSettings.updated", syncHomeSettings);
     };
   }, []);
 
@@ -165,12 +187,12 @@ export default function HomePage() {
                 </div>
               </Link>
             ))}
-            {visibleActionItems.length ? null : <div className="empty-state">No command signals are currently open. Database-backed action signals will appear here once connected.</div>}
+            {visibleActionItems.length ? null : <div className="empty-state">No command signals are currently open.</div>}
           </div>
         </Panel>
         <Panel wide className="admin-only-panel" eyebrow="Admin roadmap" title="Go Live Pathway" pill="Field-use readiness">
           <div className="go-live-pathway">
-            {goLivePathway.map((item) => (
+            {homeSettings.roadmap.map((item) => (
               <article className={`go-live-item ${item.severity}`} key={item.step}>
                 <span>{item.step}</span>
                 <strong>{item.title}</strong>

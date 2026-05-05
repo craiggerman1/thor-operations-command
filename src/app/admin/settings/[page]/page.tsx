@@ -7,6 +7,7 @@ import { AdminCalendarManager } from "@/components/AdminCalendarManager";
 import { AdminChatManager } from "@/components/AdminChatManager";
 import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
+import { AdminHomeManager } from "@/components/AdminHomeManager";
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
 import { AdminRegionHealthManager } from "@/components/AdminRegionHealthManager";
 import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
@@ -41,6 +42,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "stock-orders" ? (
           <Panel wide eyebrow="Stock Orders" title="Stock catalogue and order review">
             <AdminStockCatalogManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "home" ? (
+          <Panel wide eyebrow="Home" title="Command entry and roadmap control">
+            <AdminHomeManager />
           </Panel>
         ) : null}
         {setting.slug === "action-centre" ? (
