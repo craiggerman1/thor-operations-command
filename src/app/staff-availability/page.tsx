@@ -27,6 +27,7 @@ function getStatusTone(status: StaffSheetStatus) {
 function getDaySummary(feed: StaffAvailabilityFeed, dayIndex: number) {
   const available = feed.staff.reduce((total, staff) => total + staff.availability[dayIndex].filter((status) => status === "Available").length, 0);
   const total = feed.staff.length * feed.windows.length;
+  if (!total) return { available: 0, total: 0, percentage: 0 };
   return { available, total, percentage: Math.round((available / total) * 100) };
 }
 
@@ -92,7 +93,7 @@ export default function StaffAvailabilityPage() {
       };
     }
 
-    fetch("/api/staff-availability", { cache: "no-store" })
+    fetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
       .then((nextFeed: StaffAvailabilityFeed) => {
         if (!isActive) return;
@@ -108,7 +109,7 @@ export default function StaffAvailabilityPage() {
     return () => {
       isActive = false;
     };
-  }, [isMappedScope, sheetRegion, sourceConfig.connected]);
+  }, [isMappedScope, scope, sheetRegion, sourceConfig.connected]);
 
   return (
     <TocShell>

@@ -1,10 +1,38 @@
 import { NextResponse } from "next/server";
+import { getSupabaseAdminClient } from "@/lib/supabase";
+import { normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import { staffInductionsSheet } from "@/lib/toc-data";
 import type { InductionFeed, InductionStatus } from "@/lib/toc-data";
 
 export const dynamic = "force-dynamic";
 
 const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/1MFFxCPAhPzTzB9Q7zPOBLJyNyz04S23NoJ1GZ6-VRlM/gviz/tq?tqx=out:csv&gid=0";
+const settingsKey = "sheet_source_settings_inductions";
+
+async function readSourceConfig() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return sheetSourceDefaults.inductions;
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", settingsKey)
+    .maybeSingle();
+
+  if (error || !data?.value) return sheetSourceDefaults.inductions;
+  return normaliseSheetSourceConfig("inductions", data.value as Record<string, unknown>);
+}
+
+function scopedEmptyFeed(region: string): InductionFeed {
+  return {
+    ...staffInductionsSheet,
+    sourceName: `${region} induction source not configured`,
+    spreadsheetUrl: "",
+    lastRead: "Not connected",
+    sites: [],
+    staff: []
+  };
+}
 
 function parseCsv(csv: string) {
   const rows: string[][] = [];
@@ -50,7 +78,14 @@ function normalizeStatus(value: string): InductionStatus {
   return "";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const config = await readSourceConfig();
+  const requestedScope = new URL(request.url).searchParams.get("scope") || "National";
+
+  if (!config.connected || requestedScope !== config.region) {
+    return NextResponse.json(scopedEmptyFeed(requestedScope));
+  }
+
   try {
     const response = await fetch(sheetCsvUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`Sheet fetch failed: ${response.status}`);
@@ -80,6 +115,8 @@ export async function GET() {
     }));
     const feed: InductionFeed = {
       ...staffInductionsSheet,
+      sourceName: config.sourceName || staffInductionsSheet.sourceName,
+      spreadsheetUrl: config.spreadsheetUrl || staffInductionsSheet.spreadsheetUrl,
       lastRead: new Date().toLocaleDateString("en-AU", { timeZone: "Australia/Brisbane" }),
       sites,
       staff

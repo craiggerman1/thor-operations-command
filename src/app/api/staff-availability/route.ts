@@ -1,10 +1,37 @@
 import { NextResponse } from "next/server";
+import { getSupabaseAdminClient } from "@/lib/supabase";
+import { normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import { staffAvailabilitySheet } from "@/lib/toc-data";
 import type { StaffAvailabilityFeed, StaffSheetStatus } from "@/lib/toc-data";
 
 export const dynamic = "force-dynamic";
 
 const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/1dFwTlBmOUPeq21LQdv6AzHFztuLDRC-j7io-B_1zWx0/gviz/tq?tqx=out:csv&gid=0";
+const settingsKey = "sheet_source_settings_staff-availability";
+
+async function readSourceConfig() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return sheetSourceDefaults["staff-availability"];
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", settingsKey)
+    .maybeSingle();
+
+  if (error || !data?.value) return sheetSourceDefaults["staff-availability"];
+  return normaliseSheetSourceConfig("staff-availability", data.value as Record<string, unknown>);
+}
+
+function scopedEmptyFeed(region: string): StaffAvailabilityFeed {
+  return {
+    ...staffAvailabilitySheet,
+    sourceName: `${region} availability source not configured`,
+    spreadsheetUrl: "",
+    lastRead: "Not connected",
+    staff: []
+  };
+}
 
 function parseCsv(csv: string) {
   const rows: string[][] = [];
@@ -47,7 +74,14 @@ function normalizeStatus(value: string): StaffSheetStatus {
   return "";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const config = await readSourceConfig();
+  const requestedScope = new URL(request.url).searchParams.get("scope") || "National";
+
+  if (!config.connected || requestedScope !== config.region) {
+    return NextResponse.json(scopedEmptyFeed(requestedScope));
+  }
+
   try {
     const response = await fetch(sheetCsvUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`Sheet fetch failed: ${response.status}`);
@@ -65,6 +99,8 @@ export async function GET() {
 
     const feed: StaffAvailabilityFeed = {
       ...staffAvailabilitySheet,
+      sourceName: config.sourceName || staffAvailabilitySheet.sourceName,
+      spreadsheetUrl: config.spreadsheetUrl || staffAvailabilitySheet.spreadsheetUrl,
       lastRead: new Date().toLocaleDateString("en-AU", { timeZone: "Australia/Brisbane" }),
       staff
     };

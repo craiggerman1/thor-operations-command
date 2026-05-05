@@ -100,7 +100,7 @@ export default function InductionsPage() {
       };
     }
 
-    fetch("/api/inductions", { cache: "no-store" })
+    fetch(`/api/inductions?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
       .then((nextFeed: InductionFeed) => {
         if (!isActive) return;
@@ -116,7 +116,7 @@ export default function InductionsPage() {
     return () => {
       isActive = false;
     };
-  }, [isMappedScope, sheetRegion, sourceConfig.connected]);
+  }, [isMappedScope, scope, sheetRegion, sourceConfig.connected]);
 
   return (
     <TocShell>
