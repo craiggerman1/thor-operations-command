@@ -13,6 +13,22 @@ function getSlugFromRequest(request: Request) {
   return isIntegrationSlug(slug) ? slug : null;
 }
 
+function getScopeFromRequest(request: Request) {
+  const url = new URL(request.url);
+  return url.searchParams.get("scope") || "National";
+}
+
+function buildSourceState(config: IntegrationSourceConfig, scope: string) {
+  return {
+    scope,
+    live: config.connected,
+    label: config.connected ? "Connected" : config.statusLabel,
+    detail: config.connected
+      ? `${config.sourceName} is marked connected for ${scope}.`
+      : `${config.sourceName} is configured for ${scope}. Live feed activation is still controlled from Admin Settings.`
+  };
+}
+
 async function readConfig(slug: IntegrationPageSlug) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return integrationDefaults[slug];
@@ -40,14 +56,17 @@ async function saveConfig(config: IntegrationSourceConfig) {
 
 export async function GET(request: Request) {
   const slug = getSlugFromRequest(request);
+  const scope = getScopeFromRequest(request);
   const supabase = getSupabaseAdminClient();
 
   if (!slug) return NextResponse.json({ error: "Supported integration slug is required." }, { status: 400 });
   if (!supabase) {
-    return NextResponse.json({ config: integrationDefaults[slug], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
+    const config = integrationDefaults[slug];
+    return NextResponse.json({ config, scope, sourceReady: false, sourceState: buildSourceState(config, scope), connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  return NextResponse.json({ config: await readConfig(slug), connected: true });
+  const config = await readConfig(slug);
+  return NextResponse.json({ config, scope, sourceReady: config.connected, sourceState: buildSourceState(config, scope), connected: true });
 }
 
 export async function POST(request: Request) {
@@ -70,5 +89,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Integration settings update failed." }, { status: 500 });
   }
 
-  return NextResponse.json({ config: await readConfig(slug), connected: true });
+  const savedConfig = await readConfig(slug);
+  const scope = typeof payload.scope === "string" && payload.scope.trim() ? payload.scope.trim() : "National";
+  return NextResponse.json({ config: savedConfig, scope, sourceReady: savedConfig.connected, sourceState: buildSourceState(savedConfig, scope), connected: true });
 }
