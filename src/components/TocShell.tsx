@@ -27,6 +27,7 @@ type WeatherState = {
   icon: WeatherIcon;
   warning?: string;
   warningActive?: boolean;
+  warningLink?: string | null;
 };
 
 type NationalActionStorageRequest = {
@@ -288,7 +289,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.169</em>
+              <em>Build 0.170</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -373,8 +374,9 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
           summary: `${apparentTemp} - ${wind}`,
           temp: payload.current.temp !== null ? `${Math.round(payload.current.temp)} C` : "--",
           icon: payload.current.icon,
-          warning: payload.warning.active ? `Forecast alert: ${payload.warning.message}` : payload.warning.message,
-          warningActive: payload.warning.active
+          warning: payload.warning.message,
+          warningActive: payload.warning.active,
+          warningLink: payload.warning.link
         });
       })
       .catch(() => {
@@ -402,7 +404,13 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
             <strong>{weather.temp}</strong>
             <small>{weather.condition}</small>
             <b>{weather.summary}</b>
-            {weather.warningActive ? <span className="weather-alert-pill">{weather.warning}</span> : <em>{weather.warning || "No active forecast alerts"}</em>}
+            {weather.warningActive ? (
+              weather.warningLink ? (
+                <a className="weather-alert-pill" href={weather.warningLink} target="_blank" rel="noreferrer">{weather.warning}</a>
+              ) : (
+                <span className="weather-alert-pill">{weather.warning}</span>
+              )
+            ) : <em>{weather.warning || "BOM: No current warnings"}</em>}
           </div>
         </div>
       </div>

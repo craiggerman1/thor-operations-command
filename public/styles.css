@@ -1106,6 +1106,7 @@ body.todo-floating-disabled .topbar {
   display: inline-flex;
   align-items: center;
   min-height: 18px;
+  max-width: 100%;
   margin-top: 2px;
   padding: 0 7px;
   border-radius: 999px;
@@ -1113,6 +1114,8 @@ body.todo-floating-disabled .topbar {
   color: var(--red);
   font-size: 9px;
   font-weight: 950;
+  line-height: 1.25;
+  text-decoration: none;
   text-transform: uppercase;
 }
 

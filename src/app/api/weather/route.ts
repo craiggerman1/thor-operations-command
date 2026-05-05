@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { describeWeatherCode, getForecastSignal, getWeatherLocation } from "@/lib/weather";
+import { describeWeatherCode, getWeatherLocation } from "@/lib/weather";
 import type { TocWeatherDay, TocWeatherPayload } from "@/lib/weather";
 
 type OpenMeteoResponse = {
@@ -22,6 +22,23 @@ type OpenMeteoResponse = {
   };
 };
 
+type BomWarningItem = {
+  title: string;
+  link: string | null;
+  issuedAt: string | null;
+};
+
+const bomWarningFeeds: Record<string, string> = {
+  National: "https://www.bom.gov.au/fwo/IDZ00056.warnings_qld.xml",
+  Workshop: "https://www.bom.gov.au/fwo/IDZ00056.warnings_qld.xml",
+  Brisbane: "https://www.bom.gov.au/fwo/IDZ00056.warnings_qld.xml",
+  Sydney: "https://www.bom.gov.au/fwo/IDZ00054.warnings_nsw.xml",
+  Canberra: "https://www.bom.gov.au/fwo/IDZ00054.warnings_nsw.xml",
+  Melbourne: "https://www.bom.gov.au/fwo/IDZ00059.warnings_vic.xml",
+  Adelaide: "https://www.bom.gov.au/fwo/IDZ00057.warnings_sa.xml",
+  Perth: "https://www.bom.gov.au/fwo/IDZ00060.warnings_wa.xml"
+};
+
 function buildForecast(data: OpenMeteoResponse): TocWeatherDay[] {
   const times = data.daily?.time || [];
 
@@ -40,8 +57,78 @@ function buildForecast(data: OpenMeteoResponse): TocWeatherDay[] {
   });
 }
 
-function isSevereWeatherSignal(signal: string | undefined) {
-  return signal === "Storm risk" || signal === "Wet and windy" || signal === "Wind watch";
+function decodeXmlText(value: string) {
+  return value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+function extractXmlTag(block: string, tag: string) {
+  const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
+  return match ? decodeXmlText(match[1]) : null;
+}
+
+function parseBomWarnings(xml: string): BomWarningItem[] {
+  return [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)]
+    .map((match) => ({
+      title: extractXmlTag(match[1], "title") || "",
+      link: extractXmlTag(match[1], "link"),
+      issuedAt: extractXmlTag(match[1], "pubDate")
+    }))
+    .filter((item) => item.title && !/no warnings current/i.test(item.title));
+}
+
+async function getBomWarning(scope: string) {
+  const feed = bomWarningFeeds[scope] || bomWarningFeeds.National;
+
+  try {
+    const response = await fetch(feed, {
+      next: { revalidate: 600 },
+      headers: {
+        "User-Agent": "Thor Operations Command weather warning monitor"
+      }
+    });
+
+    if (!response.ok) {
+      return {
+        active: false,
+        message: "BOM warning feed unavailable",
+        source: "BOM",
+        link: feed
+      };
+    }
+
+    const warnings = parseBomWarnings(await response.text());
+    const firstWarning = warnings[0];
+
+    if (!firstWarning) {
+      return {
+        active: false,
+        message: "BOM: No current warnings",
+        source: "BOM",
+        link: feed
+      };
+    }
+
+    return {
+      active: true,
+      message: `BOM: ${firstWarning.title}${warnings.length > 1 ? ` +${warnings.length - 1} more` : ""}`,
+      source: "BOM",
+      link: firstWarning.link || feed
+    };
+  } catch {
+    return {
+      active: false,
+      message: "BOM warning feed unavailable",
+      source: "BOM",
+      link: feed
+    };
+  }
 }
 
 export async function GET(request: Request) {
@@ -70,7 +157,7 @@ export async function GET(request: Request) {
     const data = await response.json() as OpenMeteoResponse;
     const currentMeta = describeWeatherCode(data.current?.weather_code);
     const forecast = buildForecast(data);
-    const strongestSignal = forecast.map(getForecastSignal).find((signal) => signal !== "No severe forecast signal");
+    const bomWarning = await getBomWarning(scope);
     const payload: TocWeatherPayload = {
       scope,
       location: location.location,
@@ -85,8 +172,10 @@ export async function GET(request: Request) {
       },
       forecast,
       warning: {
-        active: isSevereWeatherSignal(strongestSignal),
-        message: strongestSignal || "No severe forecast signal"
+        active: bomWarning.active,
+        message: bomWarning.message,
+        source: bomWarning.source,
+        link: bomWarning.link
       }
     };
 

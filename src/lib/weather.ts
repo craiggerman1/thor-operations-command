@@ -27,6 +27,8 @@ export type TocWeatherPayload = {
   warning: {
     active: boolean;
     message: string;
+    source?: string;
+    link?: string | null;
   };
 };
 
