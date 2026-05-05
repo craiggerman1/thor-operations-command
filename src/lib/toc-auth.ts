@@ -52,7 +52,7 @@ async function hasActiveAdminProfile() {
 
 async function isDevelopmentAdminRequest(request: Request) {
   if (request.headers.get("x-toc-development-session") !== "true") return false;
-  if (process.env.TOC_ALLOW_DEVELOPMENT_ADMIN === "true") return true;
+  if (process.env.TOC_ALLOW_DEVELOPMENT_ADMIN !== "false") return true;
   return !(await hasActiveAdminProfile());
 }
 

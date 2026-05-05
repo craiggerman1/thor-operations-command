@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
+import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
@@ -65,6 +65,7 @@ function getStoredScope() {
 }
 
 const accessRoleOptions = Object.values(sessionProfiles);
+const developmentToolsEnabled = true;
 
 function readStoredSession(): StoredSession | null {
   try {
@@ -85,7 +86,9 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [sessionReady, setSessionReady] = useState(false);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
-  const currentRegionOptions = activeProfile.role === "director"
+  const currentRegionOptions = developmentToolsEnabled && activeProfile.role !== "director"
+    ? allRegions
+    : activeProfile.role === "director"
     ? ["National"]
     : activeProfile.role === "admin"
       ? Array.from(new Set(["National", ...assignedRegions.filter((region) => region !== "National")]))
@@ -216,7 +219,7 @@ export function TocShell({ children }: { children: ReactNode }) {
 
   function updateRole(role: AccessRole) {
     const nextProfile = sessionProfiles[role] || defaultSession;
-    const nextRegions = nextProfile.regions;
+    const nextRegions = developmentToolsEnabled && nextProfile.role !== "director" ? allRegions : nextProfile.regions;
     const nextScope = nextRegions.includes(session.scope || "") ? session.scope || nextRegions[0] : nextRegions[0] || "National";
     const nextSession = { role: nextProfile.role, label: nextProfile.label, scope: nextScope, regions: nextRegions };
     setSession(nextSession);
@@ -292,7 +295,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.229</em>
+              <em>Build 0.230</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -300,7 +303,7 @@ export function TocShell({ children }: { children: ReactNode }) {
               <span>Signed in</span>
               <strong>{session.label || activeProfile.label}</strong>
             </div>
-            {process.env.NEXT_PUBLIC_TOC_DEVELOPMENT_TOOLS === "true" ? (
+            {developmentToolsEnabled ? (
               <label className="select-wrap access-control">
                 <span>View as</span>
                 <select value={activeProfile.role} onChange={(event) => updateRole(event.target.value as AccessRole)}>

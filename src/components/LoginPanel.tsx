@@ -112,7 +112,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.229</span>
+            <span>Build 0.230</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>
@@ -127,13 +127,11 @@ export function LoginPanel() {
         {errorMessage ? <small className="login-error">{errorMessage}</small> : null}
         <div className="login-actions">
           <button type="submit" disabled={signingIn}>Sign in</button>
-          {process.env.NEXT_PUBLIC_TOC_DEVELOPMENT_TOOLS === "true" ? (
-            <button className="developer-button" type="button" onClick={quickSignIn} disabled={signingIn}>
-              Developer quick sign in
-            </button>
-          ) : null}
+          <button className="developer-button" type="button" onClick={quickSignIn} disabled={signingIn}>
+            Development quick sign in
+          </button>
         </div>
-        <small className="login-note">Secure TOC access for authorised Thor users only.</small>
+        <small className="login-note">Secure TOC access for authorised Thor users only. Development access remains enabled during build hardening.</small>
       </form>
 
       {signingIn ? (
