@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { actionItems } from "@/lib/toc-data";
-import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
+import type { ActionItem } from "@/lib/action-state";
 import type { AccessRole } from "@/lib/access";
 import { getScopedActionItems } from "@/lib/scope-utils";
 
@@ -16,7 +15,7 @@ const directivePriority = {
 };
 
 export default function ActionsPage() {
-  const [openActions, setOpenActions] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
+  const [openActions, setOpenActions] = useState<ActionItem[]>([]);
   const [scope, setScope] = useState("National");
   const [role, setRole] = useState<AccessRole>("admin");
   const scopedActions = getScopedActionItems(openActions, scope, role);
@@ -34,12 +33,19 @@ export default function ActionsPage() {
       }
     }
 
-    function syncActions() {
-      setOpenActions(getOpenActionItems(actionItems));
+    async function syncActions() {
+      try {
+        const response = await fetch("/api/actions", { cache: "no-store" });
+        const payload = await response.json();
+        const actions = (payload.actions || []) as ActionItem[];
+        setOpenActions(actions.filter((item) => item.status !== "Closed"));
+      } catch {
+        setOpenActions([]);
+      }
     }
 
     syncSession();
-    syncActions();
+    void syncActions();
     window.addEventListener("storage", syncSession);
     window.addEventListener("toc.scopechange", syncSession);
     window.addEventListener("storage", syncActions);

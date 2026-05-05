@@ -6,9 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
-import { actionItems, stockOrders } from "@/lib/toc-data";
-import { getOpenActionItems } from "@/lib/action-state";
-import { getScopedActionItems } from "@/lib/scope-utils";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
 import { fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
@@ -29,16 +26,6 @@ type WeatherState = {
   warning?: string;
   warningActive?: boolean;
   warningLink?: string | null;
-};
-
-type NationalActionStorageRequest = {
-  status?: string;
-};
-
-type StockOrderStorageRequest = {
-  region?: string;
-  status?: string;
-  updateRequested?: boolean;
 };
 
 type NavBadgeTone = "red" | "amber" | "blue";
@@ -71,60 +58,6 @@ function getStoredScope() {
 }
 
 const accessRoleOptions = Object.values(sessionProfiles);
-
-function getNationalRequestCount() {
-  if (typeof window === "undefined") return 0;
-
-  try {
-    const actionRequests = JSON.parse(localStorage.getItem("toc.nationalActionRequests.databaseReady") || "[]") as NationalActionStorageRequest[];
-    const storedOrders = localStorage.getItem("toc.stockOrders.databaseReady");
-    const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders as StockOrderStorageRequest[];
-    const pendingActions = actionRequests.filter((request) => request.status === "Awaiting national review").length;
-    const pendingStock = stockRequests.filter((order) => order.updateRequested || ["Request submitted", "Awaiting national approval", "Cancellation requested"].includes(order.status || "")).length;
-    return pendingActions + pendingStock;
-  } catch {
-    return 0;
-  }
-}
-
-function getScopedStockRequestCount(scope: string) {
-  if (typeof window === "undefined") return 0;
-
-  try {
-    const storedOrders = localStorage.getItem("toc.stockOrders.databaseReady");
-    const stockRequests = storedOrders ? JSON.parse(storedOrders) as StockOrderStorageRequest[] : stockOrders as StockOrderStorageRequest[];
-    return stockRequests.filter((order) => {
-      const visibleForScope = scope === "National" || order.region === scope;
-      const needsAction = order.updateRequested || ["Request submitted", "Awaiting national approval", "Cancellation requested", "Open"].includes(order.status || "");
-      return visibleForScope && needsAction;
-    }).length;
-  } catch {
-    return 0;
-  }
-}
-
-function getNavBadgeCounts(scope: string, role?: AccessRole) {
-  const scopedActions = getScopedActionItems(getOpenActionItems(actionItems), scope, role);
-  const countBySource = (sources: string[]) => scopedActions.filter((item) => sources.includes(item.source)).length;
-  const countByDirective = (directives: string[]) => scopedActions.filter((item) => directives.includes(item.directive)).length;
-  const urgentActionCount = scopedActions.filter((item) => item.severity === "red" || item.directive === "National Ops Directive").length;
-  const complianceCount = countBySource(["Compliance"]);
-  const stockCount = countBySource(["Stock Orders"]) + getScopedStockRequestCount(scope);
-  const nationalRequestCount = scope === "National" ? getNationalRequestCount() : 0;
-  const makeBadge = (count: number, tone: NavBadgeTone = "blue") => ({ count, tone });
-
-  return {
-    "Action Centre": makeBadge(scopedActions.length, urgentActionCount ? "red" : "amber"),
-    "Region Health": makeBadge(scopedActions.length, urgentActionCount ? "red" : "amber"),
-    "Equipment Servicing": makeBadge(countBySource(["Equipment Servicing", "Workshop"]), "amber"),
-    Compliance: makeBadge(complianceCount, complianceCount ? "red" : "blue"),
-    "Staff Availability": makeBadge(countBySource(["Roster"]), "amber"),
-    Jobsheets: makeBadge(countBySource(["Thor Portal"]), "amber"),
-    "Stock Orders": makeBadge(stockCount, stockCount > 2 ? "red" : "amber"),
-    "To Do": makeBadge(countByDirective(["To Do"]), "blue"),
-    "National Requests": makeBadge(nationalRequestCount, "red")
-  } as Record<string, NavBadge>;
-}
 
 export function TocShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -163,11 +96,18 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    function syncNavBadgeCounts() {
-      setNavBadgeCounts(getNavBadgeCounts(getStoredScope(), session.role || defaultSession.role));
+    async function syncNavBadgeCounts() {
+      try {
+        const scope = getStoredScope();
+        const response = await fetch(`/api/navigation-badges?scope=${encodeURIComponent(scope)}&role=${encodeURIComponent(session.role || defaultSession.role)}`, { cache: "no-store" });
+        const payload = await response.json();
+        setNavBadgeCounts(payload.badges || {});
+      } catch {
+        setNavBadgeCounts({});
+      }
     }
 
-    syncNavBadgeCounts();
+    void syncNavBadgeCounts();
     window.addEventListener("storage", syncNavBadgeCounts);
     window.addEventListener("toc.scopechange", syncNavBadgeCounts);
     window.addEventListener("toc.actionState.updated", syncNavBadgeCounts);
@@ -270,7 +210,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.178</em>
+              <em>Build 0.179</em>
             </div>
           </div>
           <div className="topbar-actions">

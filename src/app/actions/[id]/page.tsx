@@ -2,29 +2,47 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { actionItems } from "@/lib/toc-data";
-import { setActionOverride } from "@/lib/action-state";
-import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
-
-const sourceLinks: Record<string, string> = {
-  Compliance: "/compliance",
-  Roster: "/staff-availability",
-  "Thor Portal": "/jobsheets",
-  "Equipment Servicing": "/equipment-servicing",
-  "Stock Orders": "/stock-orders",
-  Workshop: "/equipment-servicing",
-  "National ops": "/home"
-};
+import type { ActionItem } from "@/lib/action-state";
 
 export default function ActionDetailPage() {
   const params = useParams<{ id: string }>();
-  const action = actionItems.find((item) => item.id === params.id);
+  const [action, setAction] = useState<(ActionItem & { sourceHref?: string }) | null>(null);
+  const [loading, setLoading] = useState(true);
   const [managerResponse, setManagerResponse] = useState("");
   const [evidence, setEvidence] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    async function loadAction() {
+      try {
+        const response = await fetch(`/api/actions?id=${encodeURIComponent(params.id)}`, { cache: "no-store" });
+        const payload = await response.json();
+        setAction((payload.actions || [])[0] || null);
+      } catch {
+        setAction(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadAction();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <TocShell>
+        <PageIntro title="Action Centre" detail="Loading action item." />
+        <section className="command-grid route-grid">
+          <Panel wide eyebrow="Action close-out" title="Loading action">
+            <div className="empty-state">Loading action detail from the database.</div>
+          </Panel>
+        </section>
+      </TocShell>
+    );
+  }
 
   if (!action) {
     return (
@@ -40,38 +58,32 @@ export default function ActionDetailPage() {
   }
 
   const currentAction = action;
-  const sourceHref = sourceLinks[currentAction.source] || "/actions";
-
-  function readNationalRequests() {
-    try {
-      return JSON.parse(localStorage.getItem(nationalActionRequestsKey) || "[]") as NationalActionRequest[];
-    } catch {
-      return [];
-    }
-  }
+  const sourceHref = currentAction.sourceHref || "/actions";
 
   function saveDraft() {
     localStorage.setItem(`toc.actionDraft.${currentAction.id}`, JSON.stringify({ managerResponse, evidence, updatedAt: new Date().toISOString() }));
     setMessage("Draft saved on this device.");
   }
 
-  function submitForNationalApproval(event: FormEvent<HTMLFormElement>) {
+  async function submitForNationalApproval(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextRequest: NationalActionRequest = {
-      id: `NAR-${Date.now()}`,
-      actionId: currentAction.id,
-      title: currentAction.title,
-      region: currentAction.region,
-      source: currentAction.source,
-      directive: currentAction.directive,
-      submittedAt: new Date().toISOString(),
-      managerResponse: managerResponse.trim() || "Manager submitted close-out with no additional response.",
-      evidence: evidence.trim() || "No evidence or reference supplied.",
-      status: "Awaiting national review"
-    };
-
-    localStorage.setItem(nationalActionRequestsKey, JSON.stringify([nextRequest, ...readNationalRequests()]));
-    setActionOverride(currentAction.id, "Awaiting national review");
+    const response = await fetch("/api/national-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "create",
+        actionId: currentAction.id,
+        managerResponse: managerResponse.trim() || "Manager submitted close-out with no additional response.",
+        evidence: evidence.trim() || "No evidence or reference supplied."
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      setMessage(payload.error || "Could not submit this action for national approval.");
+      return;
+    }
+    setAction({ ...currentAction, status: "Awaiting national review" });
+    window.dispatchEvent(new Event("toc.actionState.updated"));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
     setMessage("Submitted to National Requests for approval.");
   }
@@ -107,7 +119,7 @@ export default function ActionDetailPage() {
               <ol className="action-closeout-steps">
                 {currentAction.closeActions.map((step) => <li key={step}>{step}</li>)}
               </ol>
-              <form className="action-closeout-form" onSubmit={submitForNationalApproval}>
+              <form className="action-closeout-form" onSubmit={(event) => void submitForNationalApproval(event)}>
                 <label>
                   <span>Manager response</span>
                   <textarea value={managerResponse} placeholder="Record what was checked, what was fixed, and any remaining risk." onChange={(event) => setManagerResponse(event.target.value)} />

@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
-import { setActionOverride } from "@/lib/action-state";
 
 type StockOrderRequest = {
   id?: string;
@@ -26,11 +25,10 @@ function getOrderId(order: StockOrderRequest) {
 }
 
 function readActionRequests() {
-  try {
-    return JSON.parse(localStorage.getItem(nationalActionRequestsKey) || "[]") as NationalActionRequest[];
-  } catch {
-    return [] as NationalActionRequest[];
-  }
+  return fetch("/api/national-requests", { cache: "no-store" })
+    .then((response) => response.json())
+    .then((payload) => (payload.requests || []) as NationalActionRequest[])
+    .catch(() => [] as NationalActionRequest[]);
 }
 
 async function readStockOrders() {
@@ -64,7 +62,7 @@ export default function NationalRequestDetailPage() {
   useEffect(() => {
     function syncRequests() {
       setScope(getStoredScope());
-      setActionRequests(readActionRequests());
+      void readActionRequests().then(setActionRequests);
       void readStockOrders().then(setOrders);
     }
 
@@ -82,14 +80,15 @@ export default function NationalRequestDetailPage() {
   const actionRequest = useMemo(() => actionRequests.find((request) => request.id === requestId), [actionRequests, requestId]);
   const stockOrder = useMemo(() => orders.find((order) => getOrderId(order) === requestId), [orders, requestId]);
 
-  function saveActionRequest(status: NationalActionRequest["status"]) {
-    if (actionRequest && status === "Approved by national") setActionOverride(actionRequest.actionId, "Closed");
-    if (actionRequest && status === "Returned to manager") setActionOverride(actionRequest.actionId, "Returned to manager");
-    const nextRequests = status === "Approved by national"
-      ? actionRequests.filter((request) => request.id !== requestId)
-      : actionRequests.map((request) => request.id === requestId ? { ...request, status } : request);
-    setActionRequests(nextRequests);
-    localStorage.setItem(nationalActionRequestsKey, JSON.stringify(nextRequests));
+  async function saveActionRequest(status: NationalActionRequest["status"]) {
+    const response = await fetch("/api/national-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", id: requestId, status })
+    });
+    const payload = await response.json();
+    if (response.ok) setActionRequests(payload.requests || []);
+    window.dispatchEvent(new Event("toc.actionState.updated"));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
     setMessage(status === "Approved by national" ? "Close-out approved and removed from the pending review count." : "Returned to manager for further action.");
     if (status === "Approved by national") window.setTimeout(() => router.push("/national-requests"), 550);
@@ -143,8 +142,8 @@ export default function NationalRequestDetailPage() {
               </div>
               <div className="stock-actions">
                 <Link className="node-action" href={`/actions/${actionRequest.actionId}`}>Open source action</Link>
-                <button className="review-decision-button approve" type="button" onClick={() => saveActionRequest("Approved by national")}>Approve Close-Out</button>
-                <button className="review-decision-button return" type="button" onClick={() => saveActionRequest("Returned to manager")}>Return To Manager</button>
+                <button className="review-decision-button approve" type="button" onClick={() => void saveActionRequest("Approved by national")}>Approve Close-Out</button>
+                <button className="review-decision-button return" type="button" onClick={() => void saveActionRequest("Returned to manager")}>Return To Manager</button>
               </div>
             </div>
           </Panel>

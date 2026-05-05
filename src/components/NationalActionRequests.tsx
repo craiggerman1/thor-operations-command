@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { actionItems } from "@/lib/toc-data";
-import { getOpenActionItems, setActionOverride } from "@/lib/action-state";
 import { Tag } from "@/components/TocCards";
 
 export type NationalActionRequest = {
@@ -24,13 +22,10 @@ export type NationalActionRequest = {
 export const nationalActionRequestsKey = "toc.nationalActionRequests.databaseReady";
 
 function readRequests() {
-  if (typeof window === "undefined") return [] as NationalActionRequest[];
-
-  try {
-    return JSON.parse(localStorage.getItem(nationalActionRequestsKey) || "[]") as NationalActionRequest[];
-  } catch {
-    return [];
-  }
+  return fetch("/api/national-requests", { cache: "no-store" })
+    .then((response) => response.json())
+    .then((payload) => (payload.requests || []) as NationalActionRequest[])
+    .catch(() => [] as NationalActionRequest[]);
 }
 
 export function NationalActionRequests() {
@@ -39,7 +34,7 @@ export function NationalActionRequests() {
 
   useEffect(() => {
     function syncRequests() {
-      setRequests(readRequests());
+      void readRequests().then(setRequests);
     }
 
     syncRequests();
@@ -51,15 +46,15 @@ export function NationalActionRequests() {
     };
   }, []);
 
-  function updateRequest(requestId: string, status: NationalActionRequest["status"]) {
-    const targetRequest = requests.find((request) => request.id === requestId);
-    if (targetRequest && status === "Approved by national") setActionOverride(targetRequest.actionId, "Closed");
-    if (targetRequest && status === "Returned to manager") setActionOverride(targetRequest.actionId, "Returned to manager");
-    const nextRequests = status === "Approved by national"
-      ? requests.filter((request) => request.id !== requestId)
-      : requests.map((request) => request.id === requestId ? { ...request, status } : request);
-    setRequests(nextRequests);
-    localStorage.setItem(nationalActionRequestsKey, JSON.stringify(nextRequests));
+  async function updateRequest(requestId: string, status: NationalActionRequest["status"]) {
+    const response = await fetch("/api/national-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", id: requestId, status })
+    });
+    const payload = await response.json();
+    if (response.ok) setRequests(payload.requests || []);
+    window.dispatchEvent(new Event("toc.actionState.updated"));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
   }
 
@@ -75,14 +70,13 @@ export function NationalActionRequests() {
 
   const pendingRequests = requests.filter((request) => request.status === "Awaiting national review");
   const visibleRequests = requests.filter((request) => request.status !== "Approved by national");
-  const openActionItems = getOpenActionItems(actionItems);
 
   return (
     <div className="national-request-stack">
       <div className="national-request-summary">
         <article><span>Manager close-outs</span><strong>{visibleRequests.length}</strong></article>
         <article><span>Awaiting review</span><strong>{pendingRequests.length}</strong></article>
-        <article><span>Open actions</span><strong>{openActionItems.length}</strong></article>
+        <article><span>Returned items</span><strong>{requests.filter((request) => request.status === "Returned to manager").length}</strong></article>
       </div>
       <div className="request-lifecycle-strip" aria-label="National request lifecycle">
         <span>Submitted</span>
@@ -115,8 +109,8 @@ export function NationalActionRequests() {
             <div className="stock-actions">
               <Link className="node-action" href={`/national-requests/${encodeURIComponent(request.id)}`} onClick={(event) => event.stopPropagation()}>Open request</Link>
               <Link className="node-action" href={`/actions/${request.actionId}`} onClick={(event) => event.stopPropagation()}>Open action</Link>
-              <button className="review-decision-button approve" type="button" onClick={(event) => { event.stopPropagation(); updateRequest(request.id, "Approved by national"); }}>Approve Close-Out</button>
-              <button className="review-decision-button return" type="button" onClick={(event) => { event.stopPropagation(); updateRequest(request.id, "Returned to manager"); }}>Return To Manager</button>
+              <button className="review-decision-button approve" type="button" onClick={(event) => { event.stopPropagation(); void updateRequest(request.id, "Approved by national"); }}>Approve Close-Out</button>
+              <button className="review-decision-button return" type="button" onClick={(event) => { event.stopPropagation(); void updateRequest(request.id, "Returned to manager"); }}>Return To Manager</button>
             </div>
           </article>
         )) : (
