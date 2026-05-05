@@ -175,6 +175,7 @@ export function AdminAccessManager() {
       if (response.ok && result.users) {
         setUsers(result.users);
         localStorage.setItem(accessUsersKey, JSON.stringify(result.users));
+        window.dispatchEvent(new Event("toc.adminUsers.updated"));
       } else if (result.error) {
         setStatus(result.error);
       }

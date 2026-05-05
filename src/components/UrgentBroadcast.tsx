@@ -9,12 +9,14 @@ type UrgentBroadcastMessage = {
   version: string;
   active: boolean;
   targetScope: string;
+  acknowledgedBy?: string[];
 };
 
 type DirectorBroadcastMessage = {
   message: string;
   version: string;
   active: boolean;
+  acknowledgedBy?: string[];
 };
 
 const broadcastKey = "toc.urgentBroadcast";
@@ -86,6 +88,20 @@ function readSessionScope() {
   }
 }
 
+function readSessionUserKey() {
+  if (typeof window === "undefined") return "admin:National";
+
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    const role = session?.role || "admin";
+    const scope = session?.scope || "National";
+    const label = session?.label || role;
+    return `${role}:${scope}:${label}`;
+  } catch {
+    return "admin:National:Admin";
+  }
+}
+
 function writeBroadcasts(nextBroadcasts: UrgentBroadcastMessage[]) {
   localStorage.setItem(broadcastKey, JSON.stringify(nextBroadcasts));
   syncRemoteBroadcasts("urgent", { broadcasts: nextBroadcasts });
@@ -138,6 +154,14 @@ function syncRemoteBroadcasts(kind: "urgent" | "director" | "clear-director", pa
   });
 }
 
+function syncBroadcastAcknowledgement(kind: "acknowledge" | "acknowledge-director", version: string) {
+  fetch(broadcastApi, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, version, userKey: readSessionUserKey() })
+  }).catch(() => undefined);
+}
+
 function mergeBroadcasts(localBroadcasts: UrgentBroadcastMessage[], remoteBroadcasts: UrgentBroadcastMessage[]) {
   const broadcastMap = new Map<string, UrgentBroadcastMessage>();
   [...remoteBroadcasts, ...localBroadcasts].forEach((broadcast) => {
@@ -163,7 +187,9 @@ export function UrgentBroadcastBanner() {
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
-        setBroadcasts(remoteState.connected ? remoteBroadcasts : mergeBroadcasts(localBroadcasts, remoteBroadcasts));
+        const acknowledgements = remoteState.acknowledgements || {};
+        const remoteWithAcknowledgements = remoteBroadcasts.map((broadcast) => ({ ...broadcast, acknowledgedBy: acknowledgements[broadcast.version] || [] }));
+        setBroadcasts(remoteState.connected ? remoteWithAcknowledgements : mergeBroadcasts(localBroadcasts, remoteWithAcknowledgements));
       } catch {
         setBroadcasts(localBroadcasts);
       }
@@ -185,7 +211,8 @@ export function UrgentBroadcastBanner() {
   const visibleBroadcasts = broadcasts.filter((broadcast) => {
     const targetScope = broadcast.targetScope || "All users";
     const isTargetedToUser = targetScope === "All users" || targetScope === sessionScope;
-    return broadcast.active && broadcast.message.trim() && isTargetedToUser && !acknowledgedVersions[broadcast.version];
+    const acknowledgedRemotely = (broadcast.acknowledgedBy || []).includes(readSessionUserKey());
+    return broadcast.active && broadcast.message.trim() && isTargetedToUser && !acknowledgedVersions[broadcast.version] && !acknowledgedRemotely;
   });
 
   if (!visibleBroadcasts.length) return null;
@@ -194,6 +221,7 @@ export function UrgentBroadcastBanner() {
     const nextAcknowledged = { ...acknowledgedVersions, [version]: true };
     localStorage.setItem(acknowledgedKey, JSON.stringify(nextAcknowledged));
     setAcknowledgedVersions(nextAcknowledged);
+    syncBroadcastAcknowledgement("acknowledge", version);
   }
 
   return (
@@ -232,7 +260,9 @@ export function UrgentBroadcastControls() {
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
-        setBroadcasts(remoteState.connected ? remoteBroadcasts : mergeBroadcasts(localBroadcasts, remoteBroadcasts));
+        const acknowledgements = remoteState.acknowledgements || {};
+        const remoteWithAcknowledgements = remoteBroadcasts.map((broadcast) => ({ ...broadcast, acknowledgedBy: acknowledgements[broadcast.version] || [] }));
+        setBroadcasts(remoteState.connected ? remoteWithAcknowledgements : mergeBroadcasts(localBroadcasts, remoteWithAcknowledgements));
       } catch {
         setBroadcasts(localBroadcasts);
       }
@@ -361,7 +391,7 @@ export function UrgentBroadcastControls() {
               <>
                 <div>
                   <strong>{broadcast.message}</strong>
-                  <small>{broadcast.targetScope || "All users"} - {broadcast.active ? "Active" : "Disabled"}</small>
+                  <small>{broadcast.targetScope || "All users"} - {broadcast.active ? "Active" : "Disabled"} - {(broadcast.acknowledgedBy || []).length} acknowledgements</small>
                 </div>
                 <div className="urgent-broadcast-actions">
                   <button type="button" onClick={() => beginEditBroadcast(broadcast.id)}>Edit</button>
@@ -393,7 +423,9 @@ export function DirectorBroadcastBanner() {
         const response = await fetch(broadcastApi, { cache: "no-store" });
         if (!response.ok) return;
         const remoteState = await response.json();
-        setBroadcast(remoteState.connected ? cleanRemoteDirectorBroadcast(remoteState.directorBroadcast) : cleanRemoteDirectorBroadcast(remoteState.directorBroadcast) || localBroadcast);
+        const remoteBroadcast = cleanRemoteDirectorBroadcast(remoteState.directorBroadcast);
+        const acknowledgedBy = remoteBroadcast ? (remoteState.directorAcknowledgements || {})[remoteBroadcast.version] || [] : [];
+        setBroadcast(remoteState.connected ? remoteBroadcast ? { ...remoteBroadcast, acknowledgedBy } : null : remoteBroadcast ? { ...remoteBroadcast, acknowledgedBy } : localBroadcast);
       } catch {
         setBroadcast(localBroadcast);
       }
@@ -410,12 +442,13 @@ export function DirectorBroadcastBanner() {
     };
   }, []);
 
-  if (!broadcast?.active || !broadcast.message.trim() || acknowledgedVersion === broadcast.version) return null;
+  if (!broadcast?.active || !broadcast.message.trim() || acknowledgedVersion === broadcast.version || (broadcast.acknowledgedBy || []).includes(readSessionUserKey())) return null;
 
   function acknowledgeDirectorMessage() {
     if (!broadcast) return;
     localStorage.setItem(directorAcknowledgedKey, broadcast.version);
     setAcknowledgedVersion(broadcast.version);
+    syncBroadcastAcknowledgement("acknowledge-director", broadcast.version);
   }
 
   return (
@@ -451,7 +484,8 @@ export function DirectorBroadcastControls() {
           return;
         }
         if (!remoteBroadcast) return;
-        setBroadcast(remoteBroadcast);
+        const acknowledgedBy = (remoteState.directorAcknowledgements || {})[remoteBroadcast.version] || [];
+        setBroadcast({ ...remoteBroadcast, acknowledgedBy });
         setMessage(remoteBroadcast.message);
       } catch {
         setBroadcast(current);

@@ -37,6 +37,13 @@ export default async function AdminPage() {
             </small>
           </div>
         </Panel>
+        <Panel wide eyebrow="Security readiness" title="Production access hardening" pill="Auth pending">
+          <div className="director-brief-item">
+            <span className="brief-dot amber-dot" />
+            <strong>Supabase Auth and Row Level Security are the next production security step.</strong>
+            <small>Current TOC database endpoints are server-side and suitable for controlled development, but production field users need authenticated sessions, role-aware policies and per-user acknowledgement records before wider rollout.</small>
+          </div>
+        </Panel>
         <Panel wide eyebrow="Page settings" title="TOC page control sections" pill={`${pageSettings.length} pages`}>
           <div className="admin-page-settings-grid">
             {pageSettings.map((setting) => (

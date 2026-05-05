@@ -42,7 +42,8 @@ function normaliseMode(value: string): ChatMode {
 function isVisibleForSession(row: ChatMessageRow, role: string, scope: string, all: boolean) {
   if (all || role === "admin" || role === "director" || scope === "National") return true;
   if (row.mode === "group") return true;
-  return (row.recipients || []).includes(getScopeId(scope));
+  const scopeId = getScopeId(scope);
+  return (row.recipients || []).some((recipient) => recipient === scopeId || recipient.endsWith(`-${scopeId}`));
 }
 
 async function readMessages(request: Request) {

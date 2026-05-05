@@ -18,7 +18,7 @@ type ChatMessage = {
   createdAt: string;
 };
 
-const managerRecipients = allRegions
+const defaultManagerRecipients = allRegions
   .filter((region) => region !== "National")
   .map((region) => ({
     id: region.toLowerCase().replace(/\s+/g, "-"),
@@ -45,9 +45,10 @@ async function mutateChat(body: Record<string, unknown>) {
 }
 
 export function AdminChatManager() {
+  const [managerRecipients, setManagerRecipients] = useState(defaultManagerRecipients);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [mode, setMode] = useState<ChatMode>("group");
-  const [selectedRecipients, setSelectedRecipients] = useState(managerRecipients.map((manager) => manager.id));
+  const [selectedRecipients, setSelectedRecipients] = useState(defaultManagerRecipients.map((manager) => manager.id));
   const [draft, setDraft] = useState("");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +64,32 @@ export function AdminChatManager() {
     fetchChatMessages()
       .then(setMessages)
       .catch((error: Error) => setMessage(error.message));
+  }, []);
+
+  useEffect(() => {
+    async function loadRecipients() {
+      try {
+        const response = await fetch("/api/admin/users", { cache: "no-store" });
+        const payload = await response.json();
+        const users = (payload.users || []) as { name: string; role: string; regions: string[]; status: string }[];
+        const recipients = users
+          .filter((user) => user.status === "Active" && user.role !== "director")
+          .flatMap((user) => user.regions.filter((region) => region !== "National").map((region) => ({
+            id: `${user.name}-${region}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+            label: user.name,
+            region
+          })));
+
+        setManagerRecipients(recipients.length ? recipients : defaultManagerRecipients);
+        if (recipients.length) setSelectedRecipients((current) => current.filter((id) => recipients.some((recipient) => recipient.id === id)).length ? current : recipients.map((recipient) => recipient.id));
+      } catch {
+        setManagerRecipients(defaultManagerRecipients);
+      }
+    }
+
+    void loadRecipients();
+    window.addEventListener("toc.adminUsers.updated", loadRecipients);
+    return () => window.removeEventListener("toc.adminUsers.updated", loadRecipients);
   }, []);
 
   function toggleRecipient(id: string) {

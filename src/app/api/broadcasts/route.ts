@@ -18,13 +18,19 @@ type DirectorBroadcastMessage = {
 type BroadcastState = {
   urgentBroadcasts: UrgentBroadcastMessage[];
   directorBroadcast: DirectorBroadcastMessage | null;
+  acknowledgements: Record<string, string[]>;
+  directorAcknowledgements: Record<string, string[]>;
   connected?: boolean;
 };
 
 const directorSettingsKey = "director_broadcast";
+const acknowledgementSettingsKey = "broadcast_acknowledgements";
+const directorAcknowledgementSettingsKey = "director_broadcast_acknowledgements";
 const defaultState: BroadcastState = {
   urgentBroadcasts: [],
-  directorBroadcast: null
+  directorBroadcast: null,
+  acknowledgements: {},
+  directorAcknowledgements: {}
 };
 
 const globalBroadcastState = globalThis as typeof globalThis & {
@@ -65,11 +71,47 @@ function cleanDirectorBroadcast(raw: unknown) {
   };
 }
 
+function cleanAcknowledgements(raw: unknown) {
+  if (!raw || typeof raw !== "object") return {} as Record<string, string[]>;
+
+  return Object.entries(raw as Record<string, unknown>).reduce((acknowledgements, [version, users]) => {
+    acknowledgements[version] = Array.isArray(users) ? Array.from(new Set(users.map(String).filter(Boolean))) : [];
+    return acknowledgements;
+  }, {} as Record<string, string[]>);
+}
+
+async function readSettingValue(key: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.value ?? null;
+}
+
+async function writeSettingValue(key: string, value: unknown) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return;
+
+  const { error } = await supabase.from("app_settings").upsert({
+    key,
+    value,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "key" });
+
+  if (error) throw error;
+}
+
 async function getDatabaseBroadcastState(): Promise<BroadcastState | null> {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return null;
 
-  const [{ data: urgentData, error: urgentError }, { data: directorData, error: directorError }] = await Promise.all([
+  const [{ data: urgentData, error: urgentError }, { data: directorData, error: directorError }, acknowledgements, directorAcknowledgements] = await Promise.all([
     supabase
       .from("urgent_broadcasts")
       .select("id,message,version,active,target_scope,created_at")
@@ -78,7 +120,9 @@ async function getDatabaseBroadcastState(): Promise<BroadcastState | null> {
       .from("app_settings")
       .select("value")
       .eq("key", directorSettingsKey)
-      .maybeSingle()
+      .maybeSingle(),
+    readSettingValue(acknowledgementSettingsKey),
+    readSettingValue(directorAcknowledgementSettingsKey)
   ]);
 
   if (urgentError || directorError) {
@@ -94,6 +138,8 @@ async function getDatabaseBroadcastState(): Promise<BroadcastState | null> {
       targetScope: broadcast.target_scope || "All users"
     })),
     directorBroadcast: cleanDirectorBroadcast(directorData?.value),
+    acknowledgements: cleanAcknowledgements(acknowledgements),
+    directorAcknowledgements: cleanAcknowledgements(directorAcknowledgements),
     connected: true
   };
 }
@@ -118,6 +164,12 @@ export async function POST(request: Request) {
     if (body.kind === "urgent") state.urgentBroadcasts = cleanUrgentBroadcasts(body.broadcasts);
     if (body.kind === "director") state.directorBroadcast = cleanDirectorBroadcast(body.broadcast);
     if (body.kind === "clear-director") state.directorBroadcast = null;
+    if (body.kind === "acknowledge" && body.version && body.userKey) {
+      state.acknowledgements = acknowledgeVersion(state.acknowledgements, body.version, body.userKey);
+    }
+    if (body.kind === "acknowledge-director" && body.version && body.userKey) {
+      state.directorAcknowledgements = acknowledgeVersion(state.directorAcknowledgements, body.version, body.userKey);
+    }
     return NextResponse.json({ ...state, connected: false });
   }
 
@@ -158,6 +210,31 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (body.kind === "acknowledge") {
+    const version = String(body.version || "");
+    const userKey = String(body.userKey || "");
+    if (!version || !userKey) return NextResponse.json({ error: "Broadcast version and user key are required." }, { status: 400 });
+    const currentAcknowledgements = cleanAcknowledgements(await readSettingValue(acknowledgementSettingsKey));
+    await writeSettingValue(acknowledgementSettingsKey, acknowledgeVersion(currentAcknowledgements, version, userKey));
+  }
+
+  if (body.kind === "acknowledge-director") {
+    const version = String(body.version || "");
+    const userKey = String(body.userKey || "");
+    if (!version || !userKey) return NextResponse.json({ error: "Director broadcast version and user key are required." }, { status: 400 });
+    const currentAcknowledgements = cleanAcknowledgements(await readSettingValue(directorAcknowledgementSettingsKey));
+    await writeSettingValue(directorAcknowledgementSettingsKey, acknowledgeVersion(currentAcknowledgements, version, userKey));
+  }
+
   const databaseState = await getDatabaseBroadcastState();
   return NextResponse.json(databaseState || { ...defaultState, connected: false });
+}
+
+function acknowledgeVersion(acknowledgements: Record<string, string[]>, version: string, userKey: string) {
+  const cleanVersion = String(version);
+  const cleanUserKey = String(userKey);
+  return {
+    ...acknowledgements,
+    [cleanVersion]: Array.from(new Set([...(acknowledgements[cleanVersion] || []), cleanUserKey]))
+  };
 }

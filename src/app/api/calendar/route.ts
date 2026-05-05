@@ -61,6 +61,31 @@ function mapRowToAdminJob(row: CalendarJobRow) {
   };
 }
 
+function getRecurrenceStepDays(recurrence: string, intervalWeeks?: number | null) {
+  if (recurrence === "Daily") return 1;
+  if (recurrence === "Weekly") return 7;
+  if (recurrence === "Fortnightly") return 14;
+  if (recurrence === "4 weekly") return 28;
+  if (recurrence === "Custom" && intervalWeeks && intervalWeeks > 0) return intervalWeeks * 7;
+  return null;
+}
+
+function addDaysToIsoDate(isoDate: string, days: number) {
+  const date = new Date(`${isoDate}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return dateKey(date);
+}
+
+function buildRecurringRows(baseRow: Record<string, unknown>, startDate: string, recurrence: string, intervalWeeks?: number | null) {
+  const stepDays = getRecurrenceStepDays(recurrence, intervalWeeks);
+  if (!stepDays) return [baseRow];
+
+  return Array.from({ length: 12 }, (_, index) => ({
+    ...baseRow,
+    job_date: index === 0 ? startDate : addDaysToIsoDate(startDate, stepDays * index)
+  }));
+}
+
 function emptyCalendarWeeks() {
   return generateCalendarWeeks().map((week) => week.map((day) => ({ ...day, jobs: [] as CalendarJob[] })));
 }
@@ -137,7 +162,9 @@ export async function POST(request: Request) {
     const jobTitle = String(payload.job || "").trim();
     if (!jobDate || !jobTitle) return NextResponse.json({ error: "Calendar date and job title are required." }, { status: 400 });
 
-    const { error } = await supabase.from("calendar_jobs").insert({
+    const recurrence = payload.recurrence || "None";
+    const recurrenceIntervalWeeks = recurrence === "Custom" ? Number(payload.recurrenceIntervalWeeks) || null : null;
+    const baseRow = {
       job_date: jobDate,
       job_time: payload.time || "07:00",
       location: payload.location || "National",
@@ -147,10 +174,11 @@ export async function POST(request: Request) {
       status: payload.status || "Scheduled",
       notes: payload.notes || "",
       severity: payload.severity || "green",
-      recurrence: payload.recurrence || "None",
+      recurrence,
       recurrence_detail: payload.recurrenceDetail || null,
-      recurrence_interval_weeks: Number(payload.recurrenceIntervalWeeks) || null
-    });
+      recurrence_interval_weeks: recurrenceIntervalWeeks
+    };
+    const { error } = await supabase.from("calendar_jobs").insert(buildRecurringRows(baseRow, jobDate, recurrence, recurrenceIntervalWeeks));
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return GET(responseRequest);
