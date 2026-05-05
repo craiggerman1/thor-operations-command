@@ -7,16 +7,15 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
 import { CalendarJobEditor } from "@/components/CalendarJobEditor";
 import type { CalendarEditTarget } from "@/components/CalendarJobEditor";
-import type { CalendarJob } from "@/lib/toc-data";
+import type { CalendarDay, CalendarJob } from "@/lib/toc-data";
 import {
   calendarWeekdays,
   getCalendarDaySlug,
-  getStoredCalendarWeeks,
   getVisibleCalendarDays,
   isCurrentCalendarDay,
-  saveStoredCalendarWeeks,
   updateCalendarJob
 } from "@/lib/calendar-utils";
+import { calendarWeeks } from "@/lib/toc-data";
 import { getCalendarForecast } from "@/lib/calendar-weather";
 import type { TocWeatherDay, TocWeatherPayload } from "@/lib/weather";
 
@@ -49,7 +48,7 @@ export default function CalendarPage() {
   const router = useRouter();
   const [scope, setScope] = useState("National");
   const [viewMode, setViewMode] = useState<CalendarViewMode>("calendar");
-  const [calendarData, setCalendarData] = useState(getStoredCalendarWeeks);
+  const [calendarData, setCalendarData] = useState<CalendarDay[][]>(calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] }))));
   const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
   const [weatherForecast, setWeatherForecast] = useState<TocWeatherDay[]>([]);
   const [saveMessage, setSaveMessage] = useState("");
@@ -68,7 +67,17 @@ export default function CalendarPage() {
       setScope(nextScope);
     }
 
-    setCalendarData(getStoredCalendarWeeks());
+    async function syncCalendar() {
+      try {
+        const response = await fetch("/api/calendar", { cache: "no-store" });
+        const payload = await response.json();
+        setCalendarData(payload.weeks || []);
+      } catch {
+        setCalendarData(calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] }))));
+      }
+    }
+
+    void syncCalendar();
     syncScope();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
@@ -128,9 +137,22 @@ export default function CalendarPage() {
     const jobToSave = cleanEditableJob(editTarget.job as CalendarJob & { originalIndex?: number });
     const nextData = updateCalendarJob(calendarData, editTarget.daySlug, editTarget.jobIndex, jobToSave);
     setCalendarData(nextData);
-    saveStoredCalendarWeeks(nextData);
     setEditTarget(null);
-    setSaveMessage("Calendar job updated for this browser.");
+    setSaveMessage("Calendar job updated.");
+
+    if (editTarget.job.id) {
+      fetch("/api/calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update", id: editTarget.job.id, job: jobToSave })
+      })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Calendar update failed")))
+        .then((payload) => {
+          setCalendarData(payload.weeks || nextData);
+          setSaveMessage("Calendar job saved to the database.");
+        })
+        .catch(() => setSaveMessage("Calendar job updated on screen, but database save failed."));
+    }
   }
 
   return (

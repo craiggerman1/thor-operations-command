@@ -1,6 +1,7 @@
 export type Status = "green" | "amber" | "red" | "blue";
 
 export type CalendarJob = {
+  id?: string;
   time: string;
   location: string;
   site: string;

@@ -12,10 +12,9 @@ import {
   getCalendarDayBySlug,
   getCalendarDayFromWeeks,
   getCalendarDaySlug,
-  getStoredCalendarWeeks,
-  saveStoredCalendarWeeks,
   updateCalendarJob
 } from "@/lib/calendar-utils";
+import { calendarWeeks } from "@/lib/toc-data";
 import type { CalendarDay, CalendarJob } from "@/lib/toc-data";
 
 function getStoredScope() {
@@ -45,7 +44,7 @@ export default function CalendarDayPage() {
   const fallbackDay = getCalendarDayBySlug(params.day);
   const [day, setDay] = useState<CalendarDay | undefined>(fallbackDay);
   const [scope, setScope] = useState("National");
-  const [calendarData, setCalendarData] = useState(getStoredCalendarWeeks);
+  const [calendarData, setCalendarData] = useState<CalendarDay[][]>(calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] }))));
   const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
 
@@ -55,9 +54,21 @@ export default function CalendarDayPage() {
       setScope(nextScope);
     }
 
-    const storedWeeks = getStoredCalendarWeeks();
-    setCalendarData(storedWeeks);
-    setDay(getCalendarDayFromWeeks(storedWeeks, params.day) || fallbackDay);
+    async function syncCalendar() {
+      try {
+        const response = await fetch("/api/calendar", { cache: "no-store" });
+        const payload = await response.json();
+        const weeks = payload.weeks || [];
+        setCalendarData(weeks);
+        setDay(getCalendarDayFromWeeks(weeks, params.day) || fallbackDay);
+      } catch {
+        const emptyWeeks = calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] })));
+        setCalendarData(emptyWeeks);
+        setDay(getCalendarDayFromWeeks(emptyWeeks, params.day) || fallbackDay);
+      }
+    }
+
+    void syncCalendar();
     syncScope();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
@@ -112,10 +123,25 @@ export default function CalendarDayPage() {
 
     const nextData = updateCalendarJob(calendarData, editTarget.daySlug, editTarget.jobIndex, cleanEditableJob(editTarget.job));
     setCalendarData(nextData);
-    saveStoredCalendarWeeks(nextData);
     setDay(getCalendarDayFromWeeks(nextData, params.day) || currentDay);
     setEditTarget(null);
-    setSaveMessage("Calendar job updated for this browser.");
+    setSaveMessage("Calendar job updated.");
+
+    if (editTarget.job.id) {
+      fetch("/api/calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update", id: editTarget.job.id, job: cleanEditableJob(editTarget.job) })
+      })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Calendar update failed")))
+        .then((payload) => {
+          const weeks = payload.weeks || nextData;
+          setCalendarData(weeks);
+          setDay(getCalendarDayFromWeeks(weeks, params.day) || currentDay);
+          setSaveMessage("Calendar job saved to the database.");
+        })
+        .catch(() => setSaveMessage("Calendar job updated on screen, but database save failed."));
+    }
   }
 
   return (
