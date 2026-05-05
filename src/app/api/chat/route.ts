@@ -58,6 +58,15 @@ export async function POST(request: Request) {
   }
 
   const payload = await request.json();
+  const action = payload.action || "create";
+
+  if (action === "delete") {
+    if (!payload.id) return NextResponse.json({ error: "Chat message id is required." }, { status: 400 });
+    const { error } = await supabase.from("chat_messages").delete().eq("id", payload.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET();
+  }
+
   const text = String(payload.text || "").trim();
 
   if (!text) return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });

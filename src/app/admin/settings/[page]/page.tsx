@@ -4,6 +4,7 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminActionManager } from "@/components/AdminActionManager";
 import { AdminCalendarManager } from "@/components/AdminCalendarManager";
+import { AdminChatManager } from "@/components/AdminChatManager";
 import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
@@ -63,6 +64,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "calendar" ? (
           <Panel wide eyebrow="Calendar" title="Schedule job source control">
             <AdminCalendarManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "chat" ? (
+          <Panel wide eyebrow="Chat" title="Manager communication control">
+            <AdminChatManager />
           </Panel>
         ) : null}
       </section>
