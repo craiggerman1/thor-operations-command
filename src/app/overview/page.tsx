@@ -3,12 +3,21 @@
 import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { actionItems, productivitySites, regions } from "@/lib/toc-data";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { getOpenActionItems, type ActionItem } from "@/lib/action-state";
 
 type HealthTone = "red" | "amber" | "yellow" | "green";
+
+type RegionHealth = {
+  id: string;
+  name: string;
+  healthScore: number;
+  tone: HealthTone;
+  healthText: string;
+  openActions: number;
+  urgentActions: number;
+  productivityScore: number;
+};
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -21,39 +30,9 @@ function getStoredScope() {
   }
 }
 
-function getHealthTone(readiness: number): HealthTone {
-  if (readiness < 25) return "red";
-  if (readiness < 50) return "amber";
-  if (readiness < 95) return "yellow";
-  return "green";
-}
-
-function getHealthText(readiness: number) {
-  if (readiness < 25) return "Critical action load";
-  if (readiness < 50) return "Action load hurting region health";
-  if (readiness < 95) return "Watch open actions";
-  return "Healthy and competitive";
-}
-
-function getActionHealthScore(openActionCount: number) {
-  if (openActionCount <= 0) return 100;
-  return Math.max(10, 100 - openActionCount * 16);
-}
-
-function getProductivityScore(regionName: string) {
-  const sites = productivitySites.filter((site) => site.region === regionName);
-  if (!sites.length) return 100;
-  return Math.round(sites.reduce((total, site) => total + site.productivityScore, 0) / sites.length);
-}
-
-function getRegionHealthScore(openActionCount: number, productivityScore: number) {
-  const actionHealthScore = getActionHealthScore(openActionCount);
-  return Math.round(actionHealthScore * 0.58 + productivityScore * 0.42);
-}
-
 export default function OverviewPage() {
   const [scope, setScope] = useState("National");
-  const [openActionItems, setOpenActionItems] = useState<ActionItem[]>(() => getOpenActionItems(actionItems));
+  const [regionHealth, setRegionHealth] = useState<RegionHealth[]>([]);
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -61,19 +40,25 @@ export default function OverviewPage() {
       setScope(nextScope);
     }
 
-    function syncActions() {
-      setOpenActionItems(getOpenActionItems(actionItems));
+    async function syncRegionHealth() {
+      try {
+        const response = await fetch("/api/region-health", { cache: "no-store" });
+        const payload = await response.json();
+        setRegionHealth(payload.regions || []);
+      } catch {
+        setRegionHealth([]);
+      }
     }
 
     syncScope();
-    syncActions();
+    void syncRegionHealth();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
-    window.addEventListener("toc.actionState.updated", syncActions);
+    window.addEventListener("toc.actionState.updated", syncRegionHealth);
     return () => {
       window.removeEventListener("storage", syncScope);
       window.removeEventListener("toc.scopechange", syncScope);
-      window.removeEventListener("toc.actionState.updated", syncActions);
+      window.removeEventListener("toc.actionState.updated", syncRegionHealth);
     };
   }, []);
 
@@ -88,26 +73,24 @@ export default function OverviewPage() {
             <small>Health is calculated from open Action Centre items and the region productivity score.</small>
           </div>
           <div className="ops-map">
-            {regions.map((region) => {
-              const openActions = openActionItems.filter((item) => item.region === region.name || item.region === "National");
-              const productivityScore = getProductivityScore(region.name);
-              const healthScore = getRegionHealthScore(openActions.length, productivityScore);
-              const tone = getHealthTone(healthScore);
-              const healthText = getHealthText(healthScore);
+            {regionHealth.map((region) => {
+              const healthScore = region.healthScore;
+              const tone = region.tone;
+              const healthText = region.healthText;
               const canOpen = scope === region.name;
               const content = (
                 <>
                 <div>
                   <strong>{region.name}</strong>
-                  <small>{healthText}. {region.note}</small>
+                  <small>{healthText}. Calculated from open actions and productivity.</small>
                 </div>
                 <div className={`node-health-bar ${tone}`}>
                   <span style={{ "--value": `${healthScore}%` } as CSSProperties} />
                 </div>
                 <div className="meta-row">
                   <Tag tone={tone === "yellow" ? "amber" : tone}>{healthScore}% health</Tag>
-                  <Tag tone={openActions.length ? "red" : "green"}>{openActions.length} open actions</Tag>
-                  <Tag tone={productivityScore >= 80 ? "green" : productivityScore >= 70 ? "amber" : "red"}>{productivityScore}% productivity</Tag>
+                  <Tag tone={region.openActions ? "red" : "green"}>{region.openActions} open actions</Tag>
+                  <Tag tone={region.productivityScore >= 80 ? "green" : region.productivityScore >= 70 ? "amber" : "red"}>{region.productivityScore}% productivity</Tag>
                   <Tag>{canOpen ? "Open your action centre" : "Visible only"}</Tag>
                 </div>
                 </>
@@ -123,7 +106,7 @@ export default function OverviewPage() {
                 </article>
               );
             })}
-            {regions.length ? null : <div className="empty-state">No region health records are loaded yet. Database-backed region health will appear here once connected.</div>}
+            {regionHealth.length ? null : <div className="empty-state">No region health records are currently loaded.</div>}
           </div>
         </Panel>
       </section>
