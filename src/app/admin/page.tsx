@@ -4,7 +4,7 @@ import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCard
 import { AdminAccessManager } from "@/components/AdminAccessManager";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { OperationsNewsControls } from "@/components/OperationsNewsControls";
-import { pageSettings } from "@/lib/admin-settings";
+import { adminSettingStateDescriptions, adminSettingStateLabels, pageSettings } from "@/lib/admin-settings";
 import { getSupabaseRegionsStatus } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +46,13 @@ export default async function AdminPage() {
                   <small>{setting.owner}</small>
                 </div>
                 <p>{setting.control}</p>
-                <div className="meta-row"><Tag tone={setting.state === "Active" ? "green" : setting.state === "Ready" ? "amber" : "blue"}>{setting.state}</Tag></div>
+                <div className="meta-row"><Tag tone={setting.state === "Active" ? "green" : setting.state === "Ready" ? "amber" : "blue"}>{adminSettingStateLabels[setting.state]}</Tag></div>
               </Link>
+            ))}
+          </div>
+          <div className="admin-state-legend">
+            {(["Active", "Mapped", "Ready", "Next"] as const).map((state) => (
+              <span key={state}><strong>{adminSettingStateLabels[state]}</strong>{adminSettingStateDescriptions[state]}</span>
             ))}
           </div>
         </Panel>

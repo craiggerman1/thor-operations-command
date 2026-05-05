@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
@@ -41,7 +41,10 @@ function cleanEditableJob(job: CalendarJob & { originalIndex?: number }): Calend
 
 export default function CalendarDayPage() {
   const params = useParams<{ day: string }>();
-  const fallbackDay = getCalendarDayBySlug(params.day);
+  const fallbackDay = useMemo(() => {
+    const templateDay = getCalendarDayBySlug(params.day);
+    return templateDay ? { ...templateDay, jobs: [] } : undefined;
+  }, [params.day]);
   const [day, setDay] = useState<CalendarDay | undefined>(fallbackDay);
   const [scope, setScope] = useState("National");
   const [calendarData, setCalendarData] = useState<CalendarDay[][]>(calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] }))));

@@ -3057,6 +3057,30 @@ body:not([data-access="admin"]) .admin-only-panel {
   line-height: 1.36;
 }
 
+.admin-state-legend {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-state-legend span {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-state-legend strong {
+  color: var(--blue);
+  font-size: 13px;
+}
+
 .admin-setting-detail {
   display: grid;
   gap: 12px;
