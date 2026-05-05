@@ -90,7 +90,7 @@ export async function getSupabaseRegionsStatus(): Promise<SupabaseRegionsStatus>
 }
 
 export async function getApprovedStockItems(fallbackItems: string[]) {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseAdminClient();
 
   if (!supabase) return fallbackItems;
 
