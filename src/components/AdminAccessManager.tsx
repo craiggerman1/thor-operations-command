@@ -74,7 +74,8 @@ async function fetchAccessUsers() {
     const users = (payload.users || []) as AdminAccessUser[];
     localStorage.setItem(accessUsersKey, JSON.stringify(users));
     return users;
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) console.warn(error.message);
     return readAccessUsers();
   }
 }
@@ -102,9 +103,13 @@ export function AdminAccessManager() {
   const [role, setRole] = useState<AccessRole>("manager");
   const [regions, setRegions] = useState<string[]>(["Brisbane"]);
   const [status, setStatus] = useState("");
+  const [databaseReady, setDatabaseReady] = useState(true);
 
   useEffect(() => {
-    void fetchAccessUsers().then(setUsers);
+    void fetchAccessUsers().then((nextUsers) => {
+      setUsers(nextUsers);
+      setDatabaseReady(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -229,14 +234,17 @@ export function AdminAccessManager() {
       });
       const result = await response.json();
       if (response.ok && result.users) {
+        setDatabaseReady(true);
         setUsers(result.users);
         localStorage.setItem(accessUsersKey, JSON.stringify(result.users));
         window.dispatchEvent(new Event("toc.adminUsers.updated"));
         return true;
       } else if (result.error) {
+        setDatabaseReady(false);
         setStatus(result.error);
       }
     } catch {
+      setDatabaseReady(false);
       setStatus("User access could not be saved to the secure database.");
     }
     return false;
@@ -247,7 +255,7 @@ export function AdminAccessManager() {
       <form className="admin-user-form" onSubmit={registerUser}>
         <div>
           <strong>Register user</strong>
-          <small>Create a staged TOC user profile, assign access level, assign region responsibility and preview the exact view.</small>
+          <small>Create a secure TOC login, assign access level, assign region responsibility and preview the exact view.</small>
         </div>
         <label><span>Name</span><input value={name} placeholder="User name" onChange={(event) => setName(event.target.value)} /></label>
         <label><span>Email address</span><input type="email" value={email} placeholder="user@thormobile.com.au" onChange={(event) => setEmail(event.target.value)} /></label>
@@ -266,7 +274,7 @@ export function AdminAccessManager() {
           {assignableRegions.map((region) => <label key={region}><input checked={regions.includes(region)} type="checkbox" onChange={() => toggleFormRegion(region)} /> {region}</label>)}
         </fieldset>
         <small>Admin always keeps national command control. Managers only see assigned regions, including National if assigned. Director remains an owner overview role. Passwords are created in Supabase Auth and are not displayed again.</small>
-        <button type="submit">Register User</button>
+        <button type="submit">{databaseReady ? "Register User" : "Retry Secure Register"}</button>
       </form>
 
       <div className="admin-access-list">

@@ -18,8 +18,24 @@ function mapRole(role: string): AccessRole {
   return "manager";
 }
 
-function isDevelopmentAdminRequest(request: Request) {
-  return process.env.TOC_ALLOW_DEVELOPMENT_ADMIN === "true" && request.headers.get("x-toc-development-session") === "true";
+async function hasActiveAdminProfile() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return true;
+
+  const { count, error } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("access_level", "admin")
+    .eq("is_active", true);
+
+  if (error) return true;
+  return Boolean(count && count > 0);
+}
+
+async function isDevelopmentAdminRequest(request: Request) {
+  if (request.headers.get("x-toc-development-session") !== "true") return false;
+  if (process.env.TOC_ALLOW_DEVELOPMENT_ADMIN === "true") return true;
+  return !(await hasActiveAdminProfile());
 }
 
 export async function requireTocRole(request: Request, roles: AccessRole[]) {
@@ -30,7 +46,7 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
     };
   }
 
-  if (isDevelopmentAdminRequest(request) && roles.includes("admin")) {
+  if (roles.includes("admin") && await isDevelopmentAdminRequest(request)) {
     return {
       user: {
         id: "development-admin",
