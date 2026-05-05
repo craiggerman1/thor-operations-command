@@ -15,6 +15,13 @@ type StockOrderRow = {
   item?: { item_name: string } | { item_name: string }[] | null;
 };
 
+type StockOrderItemRow = {
+  id: string;
+  item_name: string;
+  is_active: boolean;
+  created_at: string;
+};
+
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -95,29 +102,52 @@ async function findItemId(itemName: string) {
     .from("stock_order_items")
     .select("id")
     .eq("item_name", itemName)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (error) throw error;
   return data?.id || null;
 }
 
+function mapCatalogItem(row: StockOrderItemRow) {
+  return {
+    id: row.id,
+    item: row.item_name,
+    status: row.is_active ? "Active" : "Inactive",
+    createdAt: row.created_at
+  };
+}
+
 export async function GET() {
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
-    return NextResponse.json({ orders: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
+    return NextResponse.json({ orders: [], catalog: [], stockItems: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  const { data, error } = await supabase
-    .from("stock_orders")
-    .select("id,quantity,urgency,note,status,national_update,tracking_number,created_at,updated_at,region:regions(name),item:stock_order_items(item_name)")
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: catalogData, error: catalogError }] = await Promise.all([
+    supabase
+      .from("stock_orders")
+      .select("id,quantity,urgency,note,status,national_update,tracking_number,created_at,updated_at,region:regions(name),item:stock_order_items(item_name)")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("stock_order_items")
+      .select("id,item_name,is_active,created_at")
+      .order("item_name", { ascending: true })
+  ]);
 
-  if (error) {
-    return NextResponse.json({ orders: [], connected: false, error: error.message }, { status: 500 });
+  if (error || catalogError) {
+    return NextResponse.json({ orders: [], catalog: [], stockItems: [], connected: false, error: error?.message || catalogError?.message }, { status: 500 });
   }
 
-  return NextResponse.json({ orders: ((data as StockOrderRow[] | null) || []).map(mapStockOrder), connected: true });
+  const catalog = ((catalogData as StockOrderItemRow[] | null) || []).map(mapCatalogItem);
+
+  return NextResponse.json({
+    orders: ((data as StockOrderRow[] | null) || []).map(mapStockOrder),
+    catalog,
+    stockItems: catalog.filter((item) => item.status === "Active").map((item) => item.item),
+    connected: true
+  });
 }
 
 export async function POST(request: Request) {
@@ -129,6 +159,38 @@ export async function POST(request: Request) {
 
   const payload = await request.json();
   const action = payload.action || "create";
+
+  if (action === "createItem") {
+    const itemName = String(payload.item || "").trim();
+    if (!itemName) return NextResponse.json({ error: "Stock catalogue item name is required." }, { status: 400 });
+
+    const { error } = await supabase.from("stock_order_items").insert({
+      item_name: itemName,
+      is_active: payload.isActive !== false
+    });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET();
+  }
+
+  if (action === "updateItem") {
+    if (!payload.id) return NextResponse.json({ error: "Stock catalogue item id is required." }, { status: 400 });
+    const updates: Record<string, string | boolean> = {};
+
+    if (typeof payload.item === "string") updates.item_name = payload.item.trim();
+    if (typeof payload.isActive === "boolean") updates.is_active = payload.isActive;
+
+    const { error } = await supabase.from("stock_order_items").update(updates).eq("id", payload.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET();
+  }
+
+  if (action === "deleteItem") {
+    if (!payload.id) return NextResponse.json({ error: "Stock catalogue item id is required." }, { status: 400 });
+    const { error } = await supabase.from("stock_order_items").delete().eq("id", payload.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET();
+  }
 
   if (action === "create") {
     const regionId = await findRegionId(payload.region || "National");

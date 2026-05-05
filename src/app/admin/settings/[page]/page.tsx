@@ -5,7 +5,7 @@ import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminActionManager } from "@/components/AdminActionManager";
 import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
-import { approvedStockItems } from "@/lib/toc-data";
+import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
 import { pageSettings } from "@/lib/admin-settings";
 
 type PageProps = {
@@ -35,14 +35,7 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         </Panel>
         {setting.slug === "stock-orders" ? (
           <Panel wide eyebrow="Stock Orders" title="Stock catalogue and order review">
-            <div className="admin-config-list compact-config-list">
-              {approvedStockItems.map((item) => (
-                <article className="admin-config-card" key={item}>
-                  <strong>{item}</strong>
-                  <small>Available in manager stock order dropdown</small>
-                </article>
-              ))}
-            </div>
+            <AdminStockCatalogManager />
           </Panel>
         ) : null}
         {setting.slug === "action-centre" ? (
