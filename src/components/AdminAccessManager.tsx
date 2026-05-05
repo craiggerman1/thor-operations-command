@@ -31,6 +31,16 @@ function readAccessUsers() {
   }
 }
 
+async function fetchAccessUsers() {
+  try {
+    const response = await fetch("/api/admin/users", { cache: "no-store" });
+    const payload = await response.json();
+    return (payload.users || []) as AdminAccessUser[];
+  } catch {
+    return readAccessUsers();
+  }
+}
+
 function roleLabel(role: AccessRole) {
   if (role === "admin") return "Admin";
   if (role === "director") return "Director";
@@ -51,7 +61,7 @@ export function AdminAccessManager() {
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    setUsers(readAccessUsers());
+    void fetchAccessUsers().then((nextUsers) => setUsers(nextUsers.length ? nextUsers : readAccessUsers()));
   }, []);
 
   useEffect(() => {
@@ -87,6 +97,7 @@ export function AdminAccessManager() {
     };
 
     setUsers((current) => [nextUser, ...current]);
+    void saveUserMutation({ action: "create", name: cleanName, reference: nextUser.reference, role: nextUser.role, regions: nextUser.regions });
     setName("");
     setReference("");
     setRole("manager");
@@ -95,7 +106,10 @@ export function AdminAccessManager() {
   }
 
   function updateUser(userId: string, patch: Partial<AdminAccessUser>) {
+    const target = users.find((user) => user.id === userId);
+    const nextUser = target ? { ...target, ...patch } : null;
     setUsers((current) => current.map((user) => user.id === userId ? { ...user, ...patch } : user));
+    if (nextUser) void saveUserMutation({ action: "update", ...nextUser, id: userId });
   }
 
   function updateUserRole(user: AdminAccessUser, nextRole: AccessRole) {
@@ -121,6 +135,7 @@ export function AdminAccessManager() {
     if (!confirmed) return;
 
     setUsers((current) => current.filter((user) => user.id !== userId));
+    void saveUserMutation({ action: "delete", id: userId });
     setStatus(`${target.name} deregistered.`);
   }
 
@@ -138,6 +153,25 @@ export function AdminAccessManager() {
     window.dispatchEvent(new CustomEvent("toc.sessionchange", { detail: nextSession }));
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope } }));
     setStatus(`Previewing ${user.name} as ${roleLabel(user.role)} - ${scope}.`);
+  }
+
+  async function saveUserMutation(payload: Record<string, unknown>) {
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (response.ok && result.users) {
+        setUsers(result.users);
+        localStorage.setItem(accessUsersKey, JSON.stringify(result.users));
+      } else if (result.error) {
+        setStatus(result.error);
+      }
+    } catch {
+      setStatus("User access saved locally, but database update failed.");
+    }
   }
 
   return (
