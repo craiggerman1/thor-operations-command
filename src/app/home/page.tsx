@@ -95,7 +95,12 @@ export default function HomePage() {
     }
 
     function syncTodos() {
-      setOpenTodoCount(getOpenTodoCount());
+      const storedSession = getStoredSession();
+      const all = storedSession.role === "director" || storedSession.scope === "National";
+      fetch(`/api/todos?role=${encodeURIComponent(storedSession.role)}&scope=${encodeURIComponent(storedSession.scope)}${all ? "&all=true" : ""}`, { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("To Do unavailable")))
+        .then((payload) => setOpenTodoCount(((payload.todos || []) as { done?: boolean }[]).filter((item) => !item.done).length))
+        .catch(() => setOpenTodoCount(getOpenTodoCount()));
     }
 
     function syncActions() {

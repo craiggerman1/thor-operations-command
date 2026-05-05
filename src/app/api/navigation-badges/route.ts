@@ -13,6 +13,12 @@ type StockRow = {
   status: string;
   region?: { name: string } | { name: string }[] | null;
 };
+type TodoRow = {
+  is_done: boolean;
+  shared_with: string | null;
+  owner_role: string | null;
+  owner_scope: string | null;
+};
 
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -26,6 +32,29 @@ function sourceLabel(source: string) {
   return source.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function getSharedTargets(role: string, scope: string) {
+  const targets = new Set<string>([role]);
+
+  if (scope === "National") {
+    targets.add("National Ops");
+    targets.add("National Manager");
+  }
+
+  if (role === "director") targets.add("Director");
+  if (scope) {
+    targets.add(scope);
+    targets.add(`${scope} Manager`);
+  }
+
+  return targets;
+}
+
+function isTodoVisibleForScope(item: TodoRow, role: string, scope: string) {
+  const ownerMatches = item.owner_role === role && item.owner_scope === scope;
+  const sharedMatches = item.shared_with ? getSharedTargets(role, scope).has(item.shared_with) : false;
+  return !item.is_done && (ownerMatches || sharedMatches);
+}
+
 export async function GET(request: Request) {
   const supabase = getSupabaseAdminClient();
 
@@ -35,8 +64,9 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope") || "National";
+  const role = url.searchParams.get("role") || "admin";
 
-  const [{ data: actionData }, { data: requestData }, { data: stockData }] = await Promise.all([
+  const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }] = await Promise.all([
     supabase
       .from("action_items")
       .select("source_page,directive_type,priority,status,region:regions(name)")
@@ -48,7 +78,10 @@ export async function GET(request: Request) {
     supabase
       .from("stock_orders")
       .select("status,region:regions(name)")
-      .in("status", ["submitted", "awaiting_review", "cancel_requested"])
+      .in("status", ["submitted", "awaiting_review", "cancel_requested"]),
+    supabase
+      .from("todo_items")
+      .select("is_done,shared_with,owner_role,owner_scope")
   ]);
 
   const scopedActions = ((actionData as ActionRow[] | null) || []).filter((item) => {
@@ -63,6 +96,7 @@ export async function GET(request: Request) {
   const countBySource = (sources: string[]) => scopedActions.filter((item) => sources.includes(sourceLabel(item.source_page))).length;
   const countByDirective = (directives: string[]) => scopedActions.filter((item) => directives.includes(item.directive_type)).length;
   const nationalRequestCount = scope === "National" ? ((requestData as { status: string }[] | null) || []).length + scopedStock.length : 0;
+  const todoCount = ((todoData as TodoRow[] | null) || []).filter((item) => isTodoVisibleForScope(item, role, scope)).length;
 
   return NextResponse.json({
     connected: true,
@@ -74,7 +108,7 @@ export async function GET(request: Request) {
       "Staff Availability": makeBadge(countBySource(["Roster"]), "amber"),
       Jobsheets: makeBadge(countBySource(["Thor Portal", "Jobsheets"]), "amber"),
       "Stock Orders": makeBadge(scopedStock.length, scopedStock.length > 2 ? "red" : "amber"),
-      "To Do": makeBadge(countByDirective(["To Do"]), "blue"),
+      "To Do": makeBadge(todoCount || countByDirective(["To Do"]), todoCount ? "blue" : "blue"),
       "National Requests": makeBadge(nationalRequestCount, "red")
     }
   });

@@ -35,6 +35,23 @@ function getScopedQueryParams(request: Request) {
   };
 }
 
+function getSharedTargets(role: string, scope: string) {
+  const targets = new Set<string>([role]);
+
+  if (scope === "National") {
+    targets.add("National Ops");
+    targets.add("National Manager");
+  }
+
+  if (role === "director") targets.add("Director");
+  if (scope) {
+    targets.add(scope);
+    targets.add(`${scope} Manager`);
+  }
+
+  return Array.from(targets);
+}
+
 async function readTodos(request: Request) {
   const supabase = getSupabaseAdminClient();
 
@@ -49,14 +66,19 @@ async function readTodos(request: Request) {
     .select("id,title,is_done,is_important,shared_with,owner_role,owner_scope,created_at,updated_at")
     .order("created_at", { ascending: false });
 
-  if (url.searchParams.get("all") !== "true") {
-    query = query.eq("owner_role", role).eq("owner_scope", scope);
-  }
-
   const { data, error } = await query;
 
   if (error) return { todos: [], connected: false, error: error.message };
-  return { todos: ((data as TodoRow[] | null) || []).map(mapTodo), connected: true };
+  const rows = (data as TodoRow[] | null) || [];
+  const visibleRows = url.searchParams.get("all") === "true"
+    ? rows
+    : rows.filter((item) => {
+      const ownerMatches = item.owner_role === role && item.owner_scope === scope;
+      const sharedMatches = item.shared_with ? getSharedTargets(role, scope).includes(item.shared_with) : false;
+      return ownerMatches || sharedMatches;
+    });
+
+  return { todos: visibleRows.map(mapTodo), connected: true };
 }
 
 export async function GET(request: Request) {
