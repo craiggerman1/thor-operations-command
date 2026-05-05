@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocRole } from "@/lib/toc-auth";
 import type { AccessRole } from "@/lib/access";
 
 type ProfileRegionRow = {
@@ -107,12 +108,18 @@ async function readUsers() {
   return { users: ((data as ProfileRow[] | null) || []).map(mapUser), connected: true };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const permission = await requireTocRole(request, ["admin"]);
+  if (permission.error) return permission.error;
+
   const result = await readUsers();
   return NextResponse.json(result, { status: result.connected ? 200 : 503 });
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocRole(request, ["admin"]);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
@@ -164,7 +171,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     await saveProfileRegions(data.id, regions);
-    return GET();
+    return readUsers().then((result) => NextResponse.json(result, { status: result.connected ? 200 : 503 }));
   }
 
   if (action === "update") {
@@ -204,7 +211,7 @@ export async function POST(request: Request) {
       await saveProfileRegions(id, normaliseRegionsForRole(role, payload.regions));
     }
 
-    return GET();
+    return readUsers().then((result) => NextResponse.json(result, { status: result.connected ? 200 : 503 }));
   }
 
   if (action === "delete") {
@@ -215,7 +222,7 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("profiles").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await supabase.auth.admin.deleteUser(payload.id);
-    return GET();
+    return readUsers().then((result) => NextResponse.json(result, { status: result.connected ? 200 : 503 }));
   }
 
   return NextResponse.json({ error: "Unsupported admin user action." }, { status: 400 });
