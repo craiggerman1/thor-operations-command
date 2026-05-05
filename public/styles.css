@@ -1004,7 +1004,7 @@ body.todo-floating-disabled .topbar {
 
 .page-title-copy {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(210px, 270px);
+  grid-template-columns: minmax(210px, 1fr) minmax(210px, 0.8fr) minmax(210px, 270px);
   gap: 10px;
   align-items: center;
   min-width: 0;
@@ -1020,6 +1020,31 @@ body.todo-floating-disabled .topbar {
 
 .page-title-text {
   min-width: 0;
+}
+
+.page-title-news {
+  min-width: 0;
+  padding: 6px 12px;
+  border: 1px solid rgba(201, 215, 225, 0.78);
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.66), rgba(232, 243, 248, 0.48)),
+    rgba(255, 255, 255, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  overflow: hidden;
+}
+
+.page-title-news strong {
+  display: block;
+  margin-top: 1px;
+  color: #071726;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.18;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: titleNewsTickUp 0.46s cubic-bezier(0.2, 0.82, 0.22, 1);
 }
 
 .page-title-copy h2 {
@@ -1043,6 +1068,41 @@ body.todo-floating-disabled .topbar {
   min-width: 0;
   padding: 5px 0 5px 12px;
   border-left: 3px solid var(--teal);
+}
+
+.operations-news-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.operations-news-controls label {
+  display: grid;
+  gap: 5px;
+}
+
+.operations-news-controls label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.operations-news-controls input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(201, 215, 225, 0.94);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #071726;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.operations-news-controls small {
+  color: var(--muted);
+  font-weight: 850;
 }
 
 .page-title-copy.has-warning .page-title-weather {
@@ -1257,6 +1317,18 @@ body.todo-floating-disabled .topbar {
 
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes titleNewsTickUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -6422,6 +6494,20 @@ body:not([data-access="admin"]) .admin-only-panel {
     margin-top: 1px;
     font-size: 13px;
     line-height: 1.12;
+  }
+
+  .page-title-news {
+    padding: 6px 0 0;
+    border: 0;
+    border-top: 1px solid rgba(201, 215, 225, 0.72);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .page-title-news strong {
+    white-space: normal;
+    font-size: 13px;
   }
 
   .page-hint button {

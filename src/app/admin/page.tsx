@@ -3,6 +3,7 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminAccessManager } from "@/components/AdminAccessManager";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
+import { OperationsNewsControls } from "@/components/OperationsNewsControls";
 import { pageSettings } from "@/lib/admin-settings";
 import { getSupabaseRegionsStatus } from "@/lib/supabase";
 
@@ -55,6 +56,9 @@ export default async function AdminPage() {
         </Panel>
         <Panel wide eyebrow="Guidance controls" title="Page hints" pill="Admin only" className="admin-hint-panel">
           <AdminHintControls />
+        </Panel>
+        <Panel wide eyebrow="Operations news" title="Title bar news control" pill="Admin only" className="admin-broadcast-panel">
+          <OperationsNewsControls />
         </Panel>
         <Panel wide eyebrow="Urgent broadcast" title="Urgent notice control" pill="Admin only" className="admin-broadcast-panel">
           <UrgentBroadcastControls />
