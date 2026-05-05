@@ -10,6 +10,7 @@ type ActionRow = {
   assigned_region_id: string | null;
   priority: string;
   directive_type: string;
+  status: string;
 };
 
 type ProductivityRow = {
@@ -101,6 +102,17 @@ function getHealthText(score: number) {
   return "Healthy and competitive";
 }
 
+function isOpenHealthStatus(status: string | null | undefined) {
+  return status !== "closed";
+}
+
+function averageProductivity(rows: ProductivityRow[]) {
+  const validRows = rows.filter((item) => typeof item.productivity_score === "number");
+  if (!validRows.length) return 100;
+
+  return Math.round(validRows.reduce((total, item) => total + Number(item.productivity_score || 0), 0) / validRows.length);
+}
+
 export async function GET() {
   const supabase = getSupabaseAdminClient();
 
@@ -111,7 +123,7 @@ export async function GET() {
   const config = await readConfig();
   const [{ data: regionsData, error: regionsError }, { data: actionsData, error: actionsError }, { data: productivityData, error: productivityError }] = await Promise.all([
     supabase.from("regions").select("id,name").eq("is_active", true).order("name", { ascending: true }),
-    supabase.from("action_items").select("assigned_region_id,priority,directive_type").neq("status", "closed"),
+    supabase.from("action_items").select("assigned_region_id,priority,directive_type,status"),
     supabase.from("productivity_sites").select("region_id,productivity_score")
   ]);
 
@@ -119,15 +131,14 @@ export async function GET() {
     return NextResponse.json({ regions: [], connected: false, error: regionsError?.message || actionsError?.message || productivityError?.message }, { status: 500 });
   }
 
-  const actionRows = (actionsData as ActionRow[] | null) || [];
+  const actionRows = ((actionsData as ActionRow[] | null) || []).filter((item) => isOpenHealthStatus(item.status));
   const productivityRows = (productivityData as ProductivityRow[] | null) || [];
   const regions = ((regionsData as RegionRow[] | null) || []).map((region) => {
-    const regionActions = actionRows.filter((item) => item.assigned_region_id === region.id || item.assigned_region_id === null);
+    const isNational = region.name === "National";
+    const regionActions = isNational ? actionRows : actionRows.filter((item) => item.assigned_region_id === region.id);
     const urgentActionCount = regionActions.filter((item) => item.priority === "urgent" || item.priority === "high" || item.directive_type === "National Ops Directive").length;
-    const regionProductivityRows = productivityRows.filter((item) => item.region_id === region.id && typeof item.productivity_score === "number");
-    const productivityScore = regionProductivityRows.length
-      ? Math.round(regionProductivityRows.reduce((total, item) => total + Number(item.productivity_score || 0), 0) / regionProductivityRows.length)
-      : 100;
+    const regionProductivityRows = isNational ? productivityRows : productivityRows.filter((item) => item.region_id === region.id);
+    const productivityScore = averageProductivity(regionProductivityRows);
     const actionHealthScore = getActionHealthScore(regionActions.length, urgentActionCount, config);
     const healthScore = Math.round(actionHealthScore * (config.actionWeight / 100) + productivityScore * (config.productivityWeight / 100));
 
