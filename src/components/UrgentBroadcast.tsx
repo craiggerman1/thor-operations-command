@@ -163,7 +163,7 @@ export function UrgentBroadcastBanner() {
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
-        setBroadcasts(mergeBroadcasts(localBroadcasts, remoteBroadcasts));
+        setBroadcasts(remoteState.connected ? remoteBroadcasts : mergeBroadcasts(localBroadcasts, remoteBroadcasts));
       } catch {
         setBroadcasts(localBroadcasts);
       }
@@ -230,7 +230,7 @@ export function UrgentBroadcastControls() {
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
-        setBroadcasts(mergeBroadcasts(localBroadcasts, remoteBroadcasts));
+        setBroadcasts(remoteState.connected ? remoteBroadcasts : mergeBroadcasts(localBroadcasts, remoteBroadcasts));
       } catch {
         setBroadcasts(localBroadcasts);
       }
@@ -389,7 +389,7 @@ export function DirectorBroadcastBanner() {
         const response = await fetch(broadcastApi, { cache: "no-store" });
         if (!response.ok) return;
         const remoteState = await response.json();
-        setBroadcast(cleanRemoteDirectorBroadcast(remoteState.directorBroadcast) || localBroadcast);
+        setBroadcast(remoteState.connected ? cleanRemoteDirectorBroadcast(remoteState.directorBroadcast) : cleanRemoteDirectorBroadcast(remoteState.directorBroadcast) || localBroadcast);
       } catch {
         setBroadcast(localBroadcast);
       }
@@ -439,6 +439,11 @@ export function DirectorBroadcastControls() {
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcast = cleanRemoteDirectorBroadcast(remoteState.directorBroadcast);
+        if (remoteState.connected && !remoteBroadcast) {
+          setBroadcast(null);
+          setMessage("");
+          return;
+        }
         if (!remoteBroadcast) return;
         setBroadcast(remoteBroadcast);
         setMessage(remoteBroadcast.message);

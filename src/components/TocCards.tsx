@@ -27,6 +27,7 @@ const hintDismissedKey = "toc.dismissedPageHints";
 const hintVersionKey = "toc.pageHintVersion";
 const hintEnabledKey = "toc.pageHintsEnabled";
 const defaultHintVersion = "0.062";
+const pageHintsApi = "/api/page-hints";
 
 function getHintVersion() {
   if (typeof window === "undefined") return defaultHintVersion;
@@ -52,6 +53,27 @@ function pageHintsAreEnabled() {
   return localStorage.getItem(hintEnabledKey) !== "false";
 }
 
+function applyRemoteHintState(state: { enabled?: boolean; version?: string }) {
+  localStorage.setItem(hintEnabledKey, state.enabled === false ? "false" : "true");
+  if (state.version) localStorage.setItem(hintVersionKey, state.version);
+}
+
+async function fetchRemoteHintState() {
+  const response = await fetch(pageHintsApi, { cache: "no-store" });
+  if (!response.ok) throw new Error("Page hint database read failed.");
+  return await response.json() as { enabled?: boolean; version?: string };
+}
+
+async function saveRemoteHintState(enabled: boolean, version: string) {
+  const response = await fetch(pageHintsApi, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled, version })
+  });
+  if (!response.ok) throw new Error("Page hint database update failed.");
+  return await response.json() as { enabled?: boolean; version?: string };
+}
+
 export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: string; title: string; id?: string }) {
   const hintId = id || eyebrow.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const [isDismissed, setIsDismissed] = useState(false);
@@ -61,6 +83,13 @@ export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: st
     function syncHintState() {
       setHintsEnabled(pageHintsAreEnabled());
       setIsDismissed(Boolean(getDismissedHints()[getHintKey(hintId)]));
+      fetchRemoteHintState()
+        .then((state) => {
+          applyRemoteHintState(state);
+          setHintsEnabled(state.enabled !== false);
+          setIsDismissed(Boolean(getDismissedHints()[getHintKey(hintId)]));
+        })
+        .catch(() => undefined);
     }
 
     syncHintState();
@@ -99,6 +128,12 @@ export function AdminHintControls() {
   useEffect(() => {
     function syncHintSetting() {
       setHintsEnabled(pageHintsAreEnabled());
+      fetchRemoteHintState()
+        .then((state) => {
+          applyRemoteHintState(state);
+          setHintsEnabled(state.enabled !== false);
+        })
+        .catch(() => undefined);
     }
 
     syncHintSetting();
@@ -110,21 +145,33 @@ export function AdminHintControls() {
     };
   }, []);
 
-  function redeployHints() {
+  async function redeployHints() {
+    const nextVersion = Date.now().toString();
     localStorage.setItem(hintEnabledKey, "true");
-    localStorage.setItem(hintVersionKey, Date.now().toString());
+    localStorage.setItem(hintVersionKey, nextVersion);
     localStorage.removeItem(hintDismissedKey);
     window.dispatchEvent(new CustomEvent("toc.pageHintsRedeployed"));
     window.dispatchEvent(new CustomEvent("toc.pageHintsSettingChanged"));
     setHintsEnabled(true);
-    setMessage("Page hints redeployed for this browser. National user reset will activate through central user settings.");
+    try {
+      await saveRemoteHintState(true, nextVersion);
+      setMessage("Page hints redeployed for all users.");
+    } catch {
+      setMessage("Page hints redeployed for this browser. Database update needs Supabase server key.");
+    }
   }
 
-  function toggleHints(nextEnabled: boolean) {
+  async function toggleHints(nextEnabled: boolean) {
+    const nextVersion = getHintVersion();
     localStorage.setItem(hintEnabledKey, nextEnabled ? "true" : "false");
     window.dispatchEvent(new CustomEvent("toc.pageHintsSettingChanged"));
     setHintsEnabled(nextEnabled);
-    setMessage(nextEnabled ? "Page hints turned on." : "Page hints turned off for all users once central settings are active.");
+    try {
+      await saveRemoteHintState(nextEnabled, nextVersion);
+      setMessage(nextEnabled ? "Page hints turned on for all users." : "Page hints turned off for all users.");
+    } catch {
+      setMessage(nextEnabled ? "Page hints turned on for this browser. Database update needs Supabase server key." : "Page hints turned off for this browser. Database update needs Supabase server key.");
+    }
   }
 
   return (

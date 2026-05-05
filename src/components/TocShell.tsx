@@ -11,7 +11,7 @@ import { getOpenActionItems } from "@/lib/action-state";
 import { getScopedActionItems } from "@/lib/scope-utils";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
-import { getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
+import { fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
 import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 
 type StoredSession = {
@@ -270,7 +270,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.174</em>
+              <em>Build 0.175</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -343,6 +343,12 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
     function syncOperationsNews() {
       setOperationsNews(getStoredOperationsNewsItems());
       setOperationsNewsIndex(0);
+      fetchOperationsNewsItems()
+        .then((items) => {
+          setOperationsNews(items);
+          setOperationsNewsIndex(0);
+        })
+        .catch(() => undefined);
     }
 
     syncOperationsNews();

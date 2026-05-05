@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 export const operationsNewsKey = "toc.operationsNews";
 export const defaultOperationsNews = "Thor Operations Currently Normal";
 export const operationsNewsUpdatedEvent = "toc.operationsNews.updated";
+const operationsNewsApi = "/api/operations-news";
 
 function parseOperationsNews(storedNews: string | null) {
   if (!storedNews?.trim()) return [defaultOperationsNews];
@@ -44,23 +45,62 @@ export function clearOperationsNews() {
   window.dispatchEvent(new Event(operationsNewsUpdatedEvent));
 }
 
+export async function fetchOperationsNewsItems() {
+  const response = await fetch(operationsNewsApi, { cache: "no-store" });
+  if (!response.ok) throw new Error("Operations news database read failed.");
+  const payload = await response.json() as { items?: unknown[] };
+  return parseOperationsNews(JSON.stringify(payload.items || []));
+}
+
 export function OperationsNewsControls() {
   const [message, setMessage] = useState(defaultOperationsNews);
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
+    let isActive = true;
     setMessage(getStoredOperationsNewsItems().join("\n"));
+    fetchOperationsNewsItems()
+      .then((items) => {
+        if (!isActive) return;
+        setMessage(items.join("\n"));
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
-  function saveNews() {
+  async function saveNews() {
+    const items = parseOperationsNews(message);
     saveOperationsNews(message);
-    setSavedMessage("Operations news updated.");
+    try {
+      const response = await fetch(operationsNewsApi, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items })
+      });
+      if (!response.ok) throw new Error("Operations news database update failed.");
+      setSavedMessage("Operations news updated for all users.");
+    } catch {
+      setSavedMessage("Saved on this browser. Database update needs Supabase server key.");
+    }
   }
 
-  function resetNews() {
+  async function resetNews() {
     clearOperationsNews();
     setMessage(defaultOperationsNews);
-    setSavedMessage("Operations news reset to normal.");
+    try {
+      const response = await fetch(operationsNewsApi, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: [defaultOperationsNews] })
+      });
+      if (!response.ok) throw new Error("Operations news database reset failed.");
+      setSavedMessage("Operations news reset to normal for all users.");
+    } catch {
+      setSavedMessage("Reset on this browser. Database update needs Supabase server key.");
+    }
   }
 
   return (
