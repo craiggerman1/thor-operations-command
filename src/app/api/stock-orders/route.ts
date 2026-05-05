@@ -51,13 +51,18 @@ function toDisplayStatus(status: string) {
 
 function toStorageStatus(status: string) {
   const normalised = status.toLowerCase();
+  if (normalised.includes("request submitted")) return "submitted";
   if (normalised.includes("delivered")) return "delivered";
   if (normalised.includes("cancel")) return normalised.includes("request") ? "cancel_requested" : "cancelled";
   if (normalised.includes("approved")) return "approved";
   if (normalised.includes("ordered")) return "ordered";
   if (normalised.includes("dispatch")) return "dispatched";
-  if (normalised.includes("await")) return "awaiting_review";
+  if (normalised.includes("await") || normalised.includes("update")) return "awaiting_review";
   return "submitted";
+}
+
+function isOpenOrderStatus(status: string) {
+  return ["submitted", "awaiting_review", "approved", "ordered", "dispatched", "cancel_requested"].includes(status);
 }
 
 function mapStockOrder(row: StockOrderRow) {
@@ -109,6 +114,20 @@ async function findItemId(itemName: string) {
   return data?.id || null;
 }
 
+function scopedRequest(request: Request, payload: Record<string, unknown>) {
+  const url = new URL(request.url);
+  if (payload.all === true) {
+    url.searchParams.set("all", "true");
+  } else if (typeof payload.scope === "string" && payload.scope) {
+    url.searchParams.set("scope", payload.scope);
+  }
+  if (payload.active === true) {
+    url.searchParams.set("active", "true");
+  }
+
+  return new Request(url, { method: "GET", headers: request.headers });
+}
+
 function mapCatalogItem(row: StockOrderItemRow) {
   return {
     id: row.id,
@@ -118,12 +137,17 @@ function mapCatalogItem(row: StockOrderItemRow) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ orders: [], catalog: [], stockItems: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
+
+  const url = new URL(request.url);
+  const scope = url.searchParams.get("scope") || "National";
+  const showAll = url.searchParams.get("all") === "true" || scope === "National";
+  const activeOnly = url.searchParams.get("active") === "true";
 
   const [{ data, error }, { data: catalogData, error: catalogError }] = await Promise.all([
     supabase
@@ -141,9 +165,17 @@ export async function GET() {
   }
 
   const catalog = ((catalogData as StockOrderItemRow[] | null) || []).map(mapCatalogItem);
+  const orders = ((data as StockOrderRow[] | null) || [])
+    .filter((order) => {
+      const region = firstRelated(order.region);
+      const matchesScope = showAll || region?.name === scope;
+      const matchesActive = !activeOnly || isOpenOrderStatus(order.status);
+      return matchesScope && matchesActive;
+    })
+    .map(mapStockOrder);
 
   return NextResponse.json({
-    orders: ((data as StockOrderRow[] | null) || []).map(mapStockOrder),
+    orders,
     catalog,
     stockItems: catalog.filter((item) => item.status === "Active").map((item) => item.item),
     connected: true
@@ -170,7 +202,7 @@ export async function POST(request: Request) {
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "updateItem") {
@@ -182,14 +214,14 @@ export async function POST(request: Request) {
 
     const { error } = await supabase.from("stock_order_items").update(updates).eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "deleteItem") {
     if (!payload.id) return NextResponse.json({ error: "Stock catalogue item id is required." }, { status: 400 });
     const { error } = await supabase.from("stock_order_items").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "create") {
@@ -212,7 +244,7 @@ export async function POST(request: Request) {
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "update") {
@@ -232,14 +264,14 @@ export async function POST(request: Request) {
 
     const { error } = await supabase.from("stock_orders").update(dbUpdates).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "delete") {
     if (!payload.id) return NextResponse.json({ error: "Stock order id is required." }, { status: 400 });
     const { error } = await supabase.from("stock_orders").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   return NextResponse.json({ error: "Unsupported stock order action." }, { status: 400 });

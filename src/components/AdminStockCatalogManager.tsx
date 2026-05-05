@@ -11,7 +11,7 @@ type StockCatalogItem = {
 };
 
 async function fetchStockCatalog() {
-  const response = await fetch("/api/stock-orders", { cache: "no-store" });
+  const response = await fetch("/api/stock-orders?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Stock catalogue database read failed.");
   return (payload.catalog || []) as StockCatalogItem[];
@@ -49,7 +49,7 @@ export function AdminStockCatalogManager() {
     setIsSaving(true);
     setMessage("");
     try {
-      const nextCatalog = await mutateStockCatalog({ action: "createItem", item: itemName, isActive: true });
+      const nextCatalog = await mutateStockCatalog({ action: "createItem", all: true, item: itemName, isActive: true });
       setCatalog(nextCatalog);
       setItemName("");
       setMessage("Stock catalogue item added.");
@@ -64,7 +64,7 @@ export function AdminStockCatalogManager() {
   async function updateItem(id: string, updates: Record<string, unknown>, successMessage: string) {
     setMessage("");
     try {
-      const nextCatalog = await mutateStockCatalog({ action: "updateItem", id, ...updates });
+      const nextCatalog = await mutateStockCatalog({ action: "updateItem", all: true, id, ...updates });
       setCatalog(nextCatalog);
       setMessage(successMessage);
       window.dispatchEvent(new Event("toc.stockOrders.updated"));
@@ -77,7 +77,7 @@ export function AdminStockCatalogManager() {
     if (!window.confirm("Are you sure you want to delete this stock catalogue item?")) return;
     setMessage("");
     try {
-      const nextCatalog = await mutateStockCatalog({ action: "deleteItem", id });
+      const nextCatalog = await mutateStockCatalog({ action: "deleteItem", all: true, id });
       setCatalog(nextCatalog);
       setMessage("Stock catalogue item deleted.");
       window.dispatchEvent(new Event("toc.stockOrders.updated"));

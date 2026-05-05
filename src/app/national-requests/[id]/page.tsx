@@ -33,7 +33,7 @@ function readActionRequests() {
 
 async function readStockOrders() {
   try {
-    const response = await fetch("/api/stock-orders", { cache: "no-store" });
+    const response = await fetch("/api/stock-orders?all=true&active=true", { cache: "no-store" });
     const payload = await response.json();
     return (payload.orders || []) as StockOrderRequest[];
   } catch {
@@ -98,7 +98,7 @@ export default function NationalRequestDetailPage() {
     const response = await fetch("/api/stock-orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "update", id: requestId, updates })
+      body: JSON.stringify({ action: "update", all: true, active: true, id: requestId, updates })
     });
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);
@@ -111,7 +111,7 @@ export default function NationalRequestDetailPage() {
     const response = await fetch("/api/stock-orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "delete", id: requestId })
+      body: JSON.stringify({ action: "delete", all: true, active: true, id: requestId })
     });
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);

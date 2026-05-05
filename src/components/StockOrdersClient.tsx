@@ -47,29 +47,18 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
   const [quantity, setQuantity] = useState(1);
   const [urgency, setUrgency] = useState("Normal");
   const [note, setNote] = useState("");
-  const visibleOrders = useMemo(() => orders.filter((order) => scope === "National" || order.region === scope), [orders, scope]);
+  const visibleOrders = orders;
 
   useEffect(() => {
     setSelectedItem((currentItem) => approvedStockItems.includes(currentItem) ? currentItem : approvedStockItems[0]);
   }, [approvedStockItems]);
 
   useEffect(() => {
-    async function loadOrders() {
-      try {
-        const response = await fetch("/api/stock-orders", { cache: "no-store" });
-        const payload = await response.json();
-        setOrders(payload.orders || []);
-      } catch {
-        setOrders([]);
-      }
-    }
-
     function syncStockState(event?: Event) {
       const session = getStoredSession();
       const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : session.scope;
       setScope(nextScope);
       setRole(session.role);
-      void loadOrders();
     }
 
     syncStockState();
@@ -82,6 +71,22 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
       window.removeEventListener("toc.stockOrders.updated", syncStockState);
     };
   }, []);
+
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        const response = await fetch(`/api/stock-orders?scope=${encodeURIComponent(scope)}&active=true`, { cache: "no-store" });
+        const payload = await response.json();
+        setOrders(payload.orders || []);
+      } catch {
+        setOrders([]);
+      }
+    }
+
+    void loadOrders();
+    window.addEventListener("toc.stockOrders.updated", loadOrders);
+    return () => window.removeEventListener("toc.stockOrders.updated", loadOrders);
+  }, [scope]);
 
   async function mutateStockOrder(payload: Record<string, unknown>) {
     const response = await fetch("/api/stock-orders", {
@@ -106,6 +111,8 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
 
     void mutateStockOrder({
       action: "create",
+      scope,
+      active: true,
       item: selectedItem,
       region: scope,
       quantity,
@@ -119,15 +126,15 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
   }
 
   function cancelOrder(orderId: string) {
-    void mutateStockOrder({ action: "update", id: orderId, updates: { status: "Cancellation requested", update: "Cancellation request sent to national/admin as an action item for review." } });
+    void mutateStockOrder({ action: "update", scope, active: true, id: orderId, updates: { status: "Cancellation requested", update: "Cancellation request sent to national/admin for review." } });
   }
 
   function requestUpdate(orderId: string) {
-    void mutateStockOrder({ action: "update", id: orderId, updates: { status: "Awaiting national approval", update: "Manager requested an update. National admin to respond." } });
+    void mutateStockOrder({ action: "update", scope, active: true, id: orderId, updates: { status: "Awaiting national approval", update: "Manager requested an update. National admin to respond." } });
   }
 
   function markDelivered(orderId: string) {
-    void mutateStockOrder({ action: "update", id: orderId, updates: { status: "Delivered", update: "Manager marked this stock order as delivered." } });
+    void mutateStockOrder({ action: "update", scope, active: true, id: orderId, updates: { status: "Delivered", update: "Manager marked this stock order as delivered." } });
   }
 
   return (

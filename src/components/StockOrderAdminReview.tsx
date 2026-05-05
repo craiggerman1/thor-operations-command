@@ -23,7 +23,7 @@ function getOrderId(order: StockOrderRequest) {
 
 async function fetchOrders() {
   try {
-    const response = await fetch("/api/stock-orders", { cache: "no-store" });
+    const response = await fetch("/api/stock-orders?all=true&active=true", { cache: "no-store" });
     const payload = await response.json();
     return (payload.orders || []) as StockOrderRequest[];
   } catch {
@@ -53,7 +53,7 @@ export function StockOrderAdminReview() {
     const response = await fetch("/api/stock-orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "update", id: orderId, updates })
+      body: JSON.stringify({ action: "update", all: true, active: true, id: orderId, updates })
     });
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);
@@ -65,7 +65,7 @@ export function StockOrderAdminReview() {
     const response = await fetch("/api/stock-orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "delete", id: orderId })
+      body: JSON.stringify({ action: "delete", all: true, active: true, id: orderId })
     });
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);
