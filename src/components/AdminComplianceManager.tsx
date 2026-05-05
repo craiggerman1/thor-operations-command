@@ -39,7 +39,7 @@ function defaultDueDate() {
 }
 
 async function fetchCompliance() {
-  const response = await fetch("/api/compliance", { cache: "no-store" });
+  const response = await fetch("/api/compliance?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Compliance database read failed.");
   return {
@@ -95,7 +95,7 @@ export function AdminComplianceManager() {
     setIsSaving(true);
     setMessage("");
     try {
-      const payload = await mutateCompliance({ action: "create", title, detail, region, directiveType, priority, status, dueDate });
+      const payload = await mutateCompliance({ action: "create", all: true, title, detail, region, directiveType, priority, status, dueDate });
       applyPayload(payload);
       setTitle("");
       setDetail("");
@@ -111,7 +111,7 @@ export function AdminComplianceManager() {
   async function updateItem(id: string, updates: Record<string, unknown>, successMessage: string) {
     setMessage("");
     try {
-      const payload = await mutateCompliance({ action: "update", id, updates });
+      const payload = await mutateCompliance({ action: "update", all: true, id, updates });
       applyPayload(payload);
       setMessage(successMessage);
       window.dispatchEvent(new Event("toc.actionState.updated"));
@@ -124,7 +124,7 @@ export function AdminComplianceManager() {
     if (!window.confirm("Are you sure you want to delete this compliance item?")) return;
     setMessage("");
     try {
-      const payload = await mutateCompliance({ action: "delete", id });
+      const payload = await mutateCompliance({ action: "delete", all: true, id });
       applyPayload(payload);
       setMessage("Compliance item deleted.");
       window.dispatchEvent(new Event("toc.actionState.updated"));

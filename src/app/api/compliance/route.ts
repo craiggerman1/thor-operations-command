@@ -85,6 +85,17 @@ async function getRegionId(regionName: string) {
   return (data as RegionRow | null)?.id || null;
 }
 
+function scopedRequest(request: Request, payload: Record<string, unknown>) {
+  const url = new URL(request.url);
+  if (payload.all === true) {
+    url.searchParams.set("all", "true");
+  } else if (typeof payload.scope === "string" && payload.scope) {
+    url.searchParams.set("scope", payload.scope);
+  }
+
+  return new Request(url, { method: "GET", headers: request.headers });
+}
+
 function dueToIso(value: string | null | undefined) {
   return value ? new Date(`${value}T17:00:00+10:00`).toISOString() : null;
 }
@@ -121,12 +132,16 @@ function mapRegisterItem(item: ComplianceRow) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ actions: [], register: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
+
+  const url = new URL(request.url);
+  const scope = url.searchParams.get("scope") || "National";
+  const showAll = url.searchParams.get("all") === "true" || scope === "National";
 
   const [{ data: actionData, error: actionError }, { data: registerData, error: registerError }] = await Promise.all([
     supabase
@@ -145,9 +160,12 @@ export async function GET() {
     return NextResponse.json({ actions: [], register: [], connected: false, error: actionError?.message || registerError?.message }, { status: 500 });
   }
 
+  const actions = ((actionData as ActionRow[] | null) || []).map(mapAction).filter((item) => showAll || item.region === scope);
+  const register = ((registerData as ComplianceRow[] | null) || []).map(mapRegisterItem).filter((item) => showAll || item.region === scope);
+
   return NextResponse.json({
-    actions: ((actionData as ActionRow[] | null) || []).map(mapAction),
-    register: ((registerData as ComplianceRow[] | null) || []).map(mapRegisterItem),
+    actions,
+    register,
     connected: true
   });
 }
@@ -207,7 +225,7 @@ export async function POST(request: Request) {
       .eq("id", registerItem.id);
 
     if (linkError) return NextResponse.json({ error: linkError.message }, { status: 500 });
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "update") {
@@ -224,7 +242,12 @@ export async function POST(request: Request) {
       dbUpdates.detail = updates.detail;
       actionUpdates.detail = updates.detail;
     }
-    if (typeof updates.status === "string") dbUpdates.status = normaliseStatus(updates.status);
+    if (typeof updates.status === "string") {
+      const nextStatus = normaliseStatus(updates.status);
+      dbUpdates.status = nextStatus;
+      actionUpdates.status = nextStatus === "complete" ? "closed" : "open";
+      actionUpdates.closed_at = nextStatus === "complete" ? new Date().toISOString() : null;
+    }
     if (typeof updates.dueDate === "string") {
       dbUpdates.due_at = dueToIso(updates.dueDate);
       actionUpdates.due_at = dueToIso(updates.dueDate);
@@ -253,7 +276,7 @@ export async function POST(request: Request) {
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
     }
 
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "delete") {
@@ -275,7 +298,7 @@ export async function POST(request: Request) {
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
     }
 
-    return GET();
+    return GET(scopedRequest(request, payload));
   }
 
   return NextResponse.json({ error: "Unsupported compliance operation." }, { status: 400 });

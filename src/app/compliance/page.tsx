@@ -16,7 +16,19 @@ type ComplianceRegisterItem = {
   actionHref: string;
 };
 
+function getStoredScope() {
+  if (typeof window === "undefined") return "National";
+
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return session?.scope || "National";
+  } catch {
+    return "National";
+  }
+}
+
 export default function CompliancePage() {
+  const [scope, setScope] = useState("National");
   const [complianceActions, setComplianceActions] = useState<ActionItem[]>([]);
   const [registerItems, setRegisterItems] = useState<ComplianceRegisterItem[]>([]);
   const urgentActions = complianceActions.filter((item) => item.severity === "red").length;
@@ -24,9 +36,24 @@ export default function CompliancePage() {
   const readiness = Math.max(10, 100 - complianceActions.length * 12 - urgentActions * 8);
 
   useEffect(() => {
+    function syncScope(event?: Event) {
+      const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
+      setScope(nextScope);
+    }
+
+    syncScope();
+    window.addEventListener("storage", syncScope);
+    window.addEventListener("toc.scopechange", syncScope);
+    return () => {
+      window.removeEventListener("storage", syncScope);
+      window.removeEventListener("toc.scopechange", syncScope);
+    };
+  }, []);
+
+  useEffect(() => {
     async function syncCompliance() {
       try {
-        const response = await fetch("/api/compliance", { cache: "no-store" });
+        const response = await fetch(`/api/compliance?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setComplianceActions(payload.actions || []);
         setRegisterItems(payload.register || []);
@@ -37,13 +64,9 @@ export default function CompliancePage() {
     }
 
     void syncCompliance();
-    window.addEventListener("storage", syncCompliance);
     window.addEventListener("toc.actionState.updated", syncCompliance);
-    return () => {
-      window.removeEventListener("storage", syncCompliance);
-      window.removeEventListener("toc.actionState.updated", syncCompliance);
-    };
-  }, []);
+    return () => window.removeEventListener("toc.actionState.updated", syncCompliance);
+  }, [scope]);
 
   return (
     <TocShell>
