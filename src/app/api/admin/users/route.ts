@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocRole } from "@/lib/toc-auth";
+import { mapTocRole, requireTocRole } from "@/lib/toc-auth";
 import type { AccessRole } from "@/lib/access";
 
 type ProfileRegionRow = {
@@ -32,12 +32,6 @@ function isUuid(value: unknown) {
   return typeof value === "string" && uuidPattern.test(value);
 }
 
-function mapRole(role: string): AccessRole {
-  if (role === "director") return "director";
-  if (role === "admin") return "admin";
-  return "manager";
-}
-
 function normaliseRegionsForRole(role: AccessRole, regions: string[]) {
   const cleanRegions = Array.from(new Set(regions.filter(Boolean)));
   if (role === "director") return ["National"];
@@ -50,7 +44,7 @@ function mapUser(row: ProfileRow) {
   const regions = (row.profile_regions || [])
     .map((item) => firstRelated(item.region)?.name)
     .filter(Boolean) as string[];
-  const role = mapRole(row.access_level);
+  const role = mapTocRole(row.access_level);
   const normalisedRegions = normaliseRegionsForRole(role, regions);
 
   return {
@@ -138,14 +132,15 @@ export async function POST(request: Request) {
     if (!email) return NextResponse.json({ error: "Email address is required for secure TOC login." }, { status: 400 });
     if (password.length < 8) return NextResponse.json({ error: "Temporary password must be at least 8 characters." }, { status: 400 });
 
-    const role = mapRole(payload.role || "manager");
+    const role = mapTocRole(payload.role || "manager");
     const regions = normaliseRegionsForRole(role, (payload.regions || []) as string[]);
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       app_metadata: {
-        toc_role: role
+        toc_role: role,
+        must_change_password: true
       }
     });
 
@@ -183,7 +178,7 @@ export async function POST(request: Request) {
     if (typeof payload.name === "string") updates.display_name = payload.name;
     if (typeof payload.email === "string") updates.email = payload.email.trim();
     if (typeof payload.reference === "string") updates.user_reference = payload.reference;
-    if (typeof payload.role === "string") updates.access_level = mapRole(payload.role);
+    if (typeof payload.role === "string") updates.access_level = mapTocRole(payload.role);
     if (typeof payload.status === "string") updates.is_active = payload.status === "Active";
     if (typeof payload.password === "string" && payload.password.length > 0 && payload.password.length < 8) {
       return NextResponse.json({ error: "Temporary password must be at least 8 characters." }, { status: 400 });
@@ -195,19 +190,25 @@ export async function POST(request: Request) {
     if (typeof payload.role === "string") {
       const { error: roleError } = await supabase.auth.admin.updateUserById(id, {
         app_metadata: {
-          toc_role: mapRole(payload.role)
+          toc_role: mapTocRole(payload.role)
         }
       });
       if (roleError) return NextResponse.json({ error: roleError.message }, { status: 500 });
     }
 
     if (typeof payload.password === "string" && payload.password.length >= 8) {
-      const { error: passwordError } = await supabase.auth.admin.updateUserById(id, { password: payload.password });
+      const { error: passwordError } = await supabase.auth.admin.updateUserById(id, {
+        password: payload.password,
+        app_metadata: {
+          toc_role: typeof payload.role === "string" ? mapTocRole(payload.role) : "manager",
+          must_change_password: true
+        }
+      });
       if (passwordError) return NextResponse.json({ error: passwordError.message }, { status: 500 });
     }
 
     if (Array.isArray(payload.regions)) {
-      const role = mapRole(payload.role || "manager");
+      const role = mapTocRole(payload.role || "manager");
       await saveProfileRegions(id, normaliseRegionsForRole(role, payload.regions));
     }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { mapTocRole } from "@/lib/toc-auth";
 import type { AccessRole } from "@/lib/access";
 
 type ProfileRegionRow = {
@@ -20,12 +21,6 @@ function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function mapRole(role: string): AccessRole {
-  if (role === "director") return "director";
-  if (role === "admin") return "admin";
-  return "manager";
-}
-
 function normaliseRegionsForRole(role: AccessRole, regions: string[]) {
   const cleanRegions = Array.from(new Set(regions.filter(Boolean)));
   if (role === "director") return ["National"];
@@ -38,7 +33,7 @@ function mapProfile(row: ProfileRow) {
   const regions = (row.profile_regions || [])
     .map((item) => firstRelated(item.region)?.name)
     .filter(Boolean) as string[];
-  const role = mapRole(row.access_level);
+  const role = mapTocRole(row.access_level);
   const assignedRegions = normaliseRegionsForRole(role, regions);
 
   return {
@@ -76,7 +71,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error?.message || "TOC user profile was not found." }, { status: 403 });
   }
 
-  const profile = mapProfile(data as ProfileRow);
+  const profile = {
+    ...mapProfile(data as ProfileRow),
+    mustChangePassword: Boolean(authData.user.app_metadata?.must_change_password)
+  };
   if (!profile.isActive) return NextResponse.json({ error: "This TOC user account is disabled." }, { status: 403 });
 
   return NextResponse.json({ profile });

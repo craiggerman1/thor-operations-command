@@ -96,7 +96,7 @@ export function LoginPanel() {
     );
 
     routeTimer.current = window.setTimeout(() => {
-      router.push("/home");
+      router.push(profilePayload.profile.mustChangePassword ? "/account/password" : "/home");
     }, 1650);
   }
 
@@ -112,7 +112,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.223</span>
+            <span>Build 0.224</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>
@@ -127,11 +127,13 @@ export function LoginPanel() {
         {errorMessage ? <small className="login-error">{errorMessage}</small> : null}
         <div className="login-actions">
           <button type="submit" disabled={signingIn}>Sign in</button>
-          <button className="developer-button" type="button" onClick={quickSignIn} disabled={signingIn}>
-            Developer quick sign in
-          </button>
+          {process.env.NEXT_PUBLIC_TOC_DEVELOPMENT_TOOLS === "true" ? (
+            <button className="developer-button" type="button" onClick={quickSignIn} disabled={signingIn}>
+              Developer quick sign in
+            </button>
+          ) : null}
         </div>
-        <small className="login-note">Developer use only while TOC is being built. Full authentication and permissions will move to the controlled TOC user system.</small>
+        <small className="login-note">Secure TOC access for authorised Thor users only.</small>
       </form>
 
       {signingIn ? (

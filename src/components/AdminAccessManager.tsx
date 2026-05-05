@@ -99,6 +99,7 @@ export function AdminAccessManager() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [reference, setReference] = useState("");
   const [role, setRole] = useState<AccessRole>("manager");
   const [regions, setRegions] = useState<string[]>(["Brisbane"]);
@@ -141,6 +142,10 @@ export function AdminAccessManager() {
       setStatus("Temporary password must be at least 8 characters.");
       return;
     }
+    if (password !== confirmPassword) {
+      setStatus("Temporary passwords do not match.");
+      return;
+    }
 
     const nextRegions = normaliseRegionsForRole(role, regions);
     setStatus(`Creating secure TOC login for ${cleanName}...`);
@@ -157,6 +162,7 @@ export function AdminAccessManager() {
       setName("");
       setEmail("");
       setPassword("");
+      setConfirmPassword("");
       setReference("");
       setRole("manager");
       setRegions(["Brisbane"]);
@@ -260,6 +266,7 @@ export function AdminAccessManager() {
         <label><span>Name</span><input value={name} placeholder="User name" onChange={(event) => setName(event.target.value)} /></label>
         <label><span>Email address</span><input type="email" value={email} placeholder="user@thormobile.com.au" onChange={(event) => setEmail(event.target.value)} /></label>
         <label><span>Temporary password</span><input type="password" value={password} placeholder="Minimum 8 characters" onChange={(event) => setPassword(event.target.value)} /></label>
+        <label><span>Confirm password</span><input type="password" value={confirmPassword} placeholder="Retype temporary password" onChange={(event) => setConfirmPassword(event.target.value)} /></label>
         <label><span>User reference</span><input value={reference} placeholder="Employee ID or internal reference" onChange={(event) => setReference(event.target.value)} /></label>
         <label>
           <span>Access level</span>
@@ -303,6 +310,12 @@ export function AdminAccessManager() {
                 <input type="password" placeholder="New temporary password" onBlur={(event) => {
                   const nextPassword = event.target.value;
                   if (!nextPassword) return;
+                  const confirmedPassword = window.prompt("Confirm the new temporary password");
+                  if (nextPassword !== confirmedPassword) {
+                    setStatus("Reset passwords do not match.");
+                    event.target.value = "";
+                    return;
+                  }
                   updateUser(user.id, { password: nextPassword });
                   event.target.value = "";
                 }} />

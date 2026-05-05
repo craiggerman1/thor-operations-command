@@ -12,7 +12,7 @@ export type TocAuthenticatedUser = {
   role: AccessRole;
 };
 
-function mapRole(role: string): AccessRole {
+export function mapTocRole(role: string): AccessRole {
   if (role === "director") return "director";
   if (role === "admin") return "admin";
   return "manager";
@@ -83,7 +83,7 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
   }
 
   const profile = data as AuthProfileRow;
-  const role = mapRole(profile.access_level);
+  const role = mapTocRole(profile.access_level);
   if (!profile.is_active || !roles.includes(role)) {
     return {
       error: NextResponse.json({ error: "You do not have permission to perform this TOC action." }, { status: 403 })
@@ -96,4 +96,8 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
       role
     }
   };
+}
+
+export async function requireTocUser(request: Request) {
+  return requireTocRole(request, ["admin", "director", "manager"]);
 }

@@ -20,6 +20,7 @@ type StoredSession = {
   regions?: string[];
   email?: string;
   authMode?: "developer" | "supabase";
+  mustChangePassword?: boolean;
 };
 
 type WeatherState = {
@@ -196,10 +197,14 @@ export function TocShell({ children }: { children: ReactNode }) {
 
     const activeRole = activeProfile.role;
     const currentNavItem = navigationItems.find((item) => item.href === pathname);
+    if (session.mustChangePassword && pathname !== "/account/password") {
+      router.push("/account/password");
+      return;
+    }
     if (currentNavItem && (!currentNavItem.roles.includes(activeRole) || (currentNavItem.nationalOnly && currentScope !== "National"))) {
       router.push("/home");
     }
-  }, [activeProfile.role, currentScope, pathname, router, session.role, sessionReady]);
+  }, [activeProfile.role, currentScope, pathname, router, session.mustChangePassword, session.role, sessionReady]);
 
   function updateScope(scope: string) {
     const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope, regions: currentRegionOptions };
@@ -286,7 +291,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.223</em>
+              <em>Build 0.224</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -294,12 +299,14 @@ export function TocShell({ children }: { children: ReactNode }) {
               <span>Signed in</span>
               <strong>{session.label || activeProfile.label}</strong>
             </div>
-            <label className="select-wrap access-control">
-              <span>View as</span>
-              <select value={activeProfile.role} onChange={(event) => updateRole(event.target.value as AccessRole)}>
-                {accessRoleOptions.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
-              </select>
-            </label>
+            {process.env.NEXT_PUBLIC_TOC_DEVELOPMENT_TOOLS === "true" ? (
+              <label className="select-wrap access-control">
+                <span>View as</span>
+                <select value={activeProfile.role} onChange={(event) => updateRole(event.target.value as AccessRole)}>
+                  {accessRoleOptions.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
+                </select>
+              </label>
+            ) : null}
             <label className="select-wrap region-control">
               <span>Region</span>
               <select value={currentScope} onChange={(event) => updateScope(event.target.value)}>
