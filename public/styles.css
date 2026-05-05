@@ -1068,16 +1068,18 @@ body.todo-floating-disabled .topbar {
   text-transform: uppercase;
 }
 
-.operations-news-controls input {
+.operations-news-controls textarea {
   width: 100%;
-  min-height: 38px;
+  min-height: 94px;
+  resize: vertical;
   border: 1px solid rgba(201, 215, 225, 0.94);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.82);
   color: #071726;
   font: inherit;
   font-weight: 800;
-  padding: 0 10px;
+  line-height: 1.35;
+  padding: 10px;
 }
 
 .operations-news-controls small {

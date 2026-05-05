@@ -11,7 +11,7 @@ import { getOpenActionItems } from "@/lib/action-state";
 import { getScopedActionItems } from "@/lib/scope-utils";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
-import { getStoredOperationsNews, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
+import { getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
 import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 
 type StoredSession = {
@@ -270,7 +270,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.173</em>
+              <em>Build 0.174</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -321,7 +321,8 @@ export function TocShell({ children }: { children: ReactNode }) {
 export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title: string; detail?: string }) {
   const [scope, setScope] = useState("National");
   const [weather, setWeather] = useState<WeatherState>(weatherByScope.National);
-  const [operationsNews, setOperationsNews] = useState("Thor Operations Currently Normal");
+  const [operationsNews, setOperationsNews] = useState(["Thor Operations Currently Normal"]);
+  const [operationsNewsIndex, setOperationsNewsIndex] = useState(0);
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -340,7 +341,8 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
 
   useEffect(() => {
     function syncOperationsNews() {
-      setOperationsNews(getStoredOperationsNews());
+      setOperationsNews(getStoredOperationsNewsItems());
+      setOperationsNewsIndex(0);
     }
 
     syncOperationsNews();
@@ -351,6 +353,16 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
       window.removeEventListener(operationsNewsUpdatedEvent, syncOperationsNews);
     };
   }, []);
+
+  useEffect(() => {
+    if (operationsNews.length <= 1) return;
+
+    const intervalId = window.setInterval(() => {
+      setOperationsNewsIndex((currentIndex) => (currentIndex + 1) % operationsNews.length);
+    }, 10000);
+
+    return () => window.clearInterval(intervalId);
+  }, [operationsNews.length]);
 
   useEffect(() => {
     let isActive = true;
@@ -394,7 +406,7 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
         </div>
         <div className="page-title-news" aria-label="Operations news">
           <span className="eyebrow">Operational News</span>
-          <strong key={operationsNews}>{operationsNews}</strong>
+          <strong key={`${operationsNewsIndex}-${operationsNews[operationsNewsIndex]}`}>{operationsNews[operationsNewsIndex]}</strong>
         </div>
         <div className="page-title-weather" aria-label={`${weather.location} weather`}>
           <span className={`weather-logo ${weather.icon}`} aria-hidden="true" />

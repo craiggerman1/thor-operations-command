@@ -6,20 +6,36 @@ export const operationsNewsKey = "toc.operationsNews";
 export const defaultOperationsNews = "Thor Operations Currently Normal";
 export const operationsNewsUpdatedEvent = "toc.operationsNews.updated";
 
-export function getStoredOperationsNews() {
-  if (typeof window === "undefined") return defaultOperationsNews;
+function parseOperationsNews(storedNews: string | null) {
+  if (!storedNews?.trim()) return [defaultOperationsNews];
 
   try {
-    const storedNews = localStorage.getItem(operationsNewsKey);
-    return storedNews?.trim() || defaultOperationsNews;
+    const parsedNews = JSON.parse(storedNews) as unknown;
+    if (Array.isArray(parsedNews)) {
+      const cleanLines = parsedNews.map((item) => String(item).trim()).filter(Boolean);
+      return cleanLines.length ? cleanLines : [defaultOperationsNews];
+    }
   } catch {
-    return defaultOperationsNews;
+    // Older builds stored a single plain text message.
+  }
+
+  const cleanLines = storedNews.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return cleanLines.length ? cleanLines : [defaultOperationsNews];
+}
+
+export function getStoredOperationsNewsItems() {
+  if (typeof window === "undefined") return [defaultOperationsNews];
+
+  try {
+    return parseOperationsNews(localStorage.getItem(operationsNewsKey));
+  } catch {
+    return [defaultOperationsNews];
   }
 }
 
 export function saveOperationsNews(message: string) {
-  const cleanMessage = message.trim();
-  localStorage.setItem(operationsNewsKey, cleanMessage);
+  const cleanLines = parseOperationsNews(message).filter(Boolean);
+  localStorage.setItem(operationsNewsKey, JSON.stringify(cleanLines));
   window.dispatchEvent(new Event(operationsNewsUpdatedEvent));
 }
 
@@ -33,7 +49,7 @@ export function OperationsNewsControls() {
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
-    setMessage(getStoredOperationsNews());
+    setMessage(getStoredOperationsNewsItems().join("\n"));
   }, []);
 
   function saveNews() {
@@ -50,8 +66,8 @@ export function OperationsNewsControls() {
   return (
     <div className="operations-news-controls">
       <label>
-        <span>Title bar news</span>
-        <input value={message} onChange={(event) => setMessage(event.target.value)} placeholder={defaultOperationsNews} />
+        <span>Title bar news lines</span>
+        <textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder={`${defaultOperationsNews}\nAdd another line here`} rows={4} />
       </label>
       <div className="urgent-broadcast-actions">
         <button type="button" onClick={saveNews}>Update news</button>
