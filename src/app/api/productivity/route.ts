@@ -49,6 +49,20 @@ async function getRegionId(regionName: string) {
   return (data as RegionRow | null)?.id || null;
 }
 
+function scopedRequest(request: Request, payload: Record<string, unknown>) {
+  const url = new URL(request.url);
+  if (payload.all === true) {
+    url.searchParams.set("all", "true");
+  } else if (typeof payload.scope === "string" && payload.scope) {
+    url.searchParams.set("scope", payload.scope);
+  }
+  if (typeof payload.slug === "string" && payload.slug) {
+    url.searchParams.set("slug", payload.slug);
+  }
+
+  return new Request(url, { method: "GET", headers: request.headers });
+}
+
 function productivityActionPriority(score: number) {
   if (score < 40) return { directive: "National Ops Directive", priority: "urgent" };
   if (score < 50) return { directive: "National Ops Directive", priority: "high" };
@@ -122,6 +136,76 @@ async function syncLinkedAction(site: ProductivitySiteRow) {
   return null;
 }
 
+async function syncNationalProductivityResponse(site: ProductivitySiteRow, response: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return;
+
+  const title = `Productivity response: ${site.site_name}`;
+  const requestPayload = {
+    request_type: "manager_update",
+    title,
+    detail: response,
+    status: "awaiting_review",
+    source_action_id: site.linked_action_id || null,
+    assigned_region_id: site.region_id || null,
+    manager_response: response,
+    evidence: "Manager productivity response submitted from the Productivity page.",
+    source_page: "productivity",
+    directive_type: "Scheduled Directive",
+    national_response: null,
+    reviewed_at: null,
+    updated_at: new Date().toISOString()
+  };
+
+  let existingRequestId: string | null = null;
+
+  if (site.linked_action_id) {
+    const { data, error } = await supabase
+      .from("national_requests")
+      .select("id")
+      .eq("request_type", "manager_update")
+      .eq("source_action_id", site.linked_action_id)
+      .in("status", ["awaiting_review", "returned"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    existingRequestId = data?.id || null;
+  }
+
+  if (!existingRequestId) {
+    let requestLookup = supabase
+      .from("national_requests")
+      .select("id")
+      .eq("request_type", "manager_update")
+      .eq("title", title)
+      .in("status", ["awaiting_review", "returned"])
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    requestLookup = site.region_id ? requestLookup.eq("assigned_region_id", site.region_id) : requestLookup.is("assigned_region_id", null);
+
+    const { data, error } = await requestLookup.maybeSingle();
+
+    if (error) throw error;
+    existingRequestId = data?.id || null;
+  }
+
+  if (existingRequestId) {
+    const { error } = await supabase
+      .from("national_requests")
+      .update(requestPayload)
+      .eq("id", existingRequestId);
+
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase.from("national_requests").insert(requestPayload);
+  if (error) throw error;
+}
+
 function mapSite(row: ProductivitySiteRow, latestResponse?: ProductivityResponseRow | null) {
   const region = firstRelated(row.region);
   const site = row.site_name;
@@ -154,6 +238,8 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
+  const scope = url.searchParams.get("scope") || "National";
+  const showAll = url.searchParams.get("all") === "true" || scope === "National";
 
   const { data, error } = await supabase
     .from("productivity_sites")
@@ -165,7 +251,12 @@ export async function GET(request: Request) {
   }
 
   const rows = ((data as ProductivitySiteRow[] | null) || []);
-  const filteredRows = slug ? rows.filter((row) => getProductivitySiteSlug(row.site_name) === slug) : rows;
+  const filteredRows = rows.filter((row) => {
+    const region = firstRelated(row.region)?.name || "National";
+    const matchesSlug = !slug || getProductivitySiteSlug(row.site_name) === slug;
+    const matchesScope = showAll || region === scope;
+    return matchesSlug && matchesScope;
+  });
   const siteIds = filteredRows.map((row) => row.id);
   let responses: Record<string, ProductivityResponseRow | null> = {};
 
@@ -219,7 +310,7 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await syncLinkedAction(data as ProductivitySiteRow);
-    return GET(request);
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "updateSite") {
@@ -241,7 +332,7 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await syncLinkedAction(data as ProductivitySiteRow);
-    return GET(request);
+    return GET(scopedRequest(request, payload));
   }
 
   if (action === "deleteSite") {
@@ -266,7 +357,7 @@ export async function POST(request: Request) {
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
     }
 
-    return GET(request);
+    return GET(scopedRequest(request, payload));
   }
 
   const siteId = payload.siteId;
@@ -275,12 +366,22 @@ export async function POST(request: Request) {
   if (!siteId) return NextResponse.json({ error: "Productivity site id is required." }, { status: 400 });
   if (!response) return NextResponse.json({ error: "Manager response cannot be empty." }, { status: 400 });
 
+  const { data: site, error: siteError } = await supabase
+    .from("productivity_sites")
+    .select("id,site_name,region_id,productivity_score,latest_note,linked_action_id,created_at,updated_at,region:regions(name)")
+    .eq("id", siteId)
+    .maybeSingle();
+
+  if (siteError) return NextResponse.json({ error: siteError.message }, { status: 500 });
+  if (!site) return NextResponse.json({ error: "Productivity site was not found." }, { status: 404 });
+
   const { error } = await supabase.from("productivity_responses").insert({
     productivity_site_id: siteId,
     response
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await syncNationalProductivityResponse(site as ProductivitySiteRow, response);
 
-  return GET(new Request(`${request.url}?slug=${encodeURIComponent(payload.slug || "")}`));
+  return GET(scopedRequest(request, payload));
 }

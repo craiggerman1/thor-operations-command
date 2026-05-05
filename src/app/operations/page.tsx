@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
@@ -35,7 +35,7 @@ function getStoredScope() {
 export default function OperationsPage() {
   const [scope, setScope] = useState("National");
   const [sites, setSites] = useState<ProductivitySite[]>([]);
-  const visibleSites = useMemo(() => sites.filter((site) => scope === "National" || site.region === scope), [scope, sites]);
+  const visibleSites = sites;
   const regionScore = visibleSites.length ? Math.round(visibleSites.reduce((total, site) => total + getProductivityScore(site), 0) / visibleSites.length) : 0;
   const regionTone = getProductivityTone(regionScore);
 
@@ -45,18 +45,7 @@ export default function OperationsPage() {
       setScope(nextScope);
     }
 
-    async function syncSites() {
-      try {
-        const response = await fetch("/api/productivity", { cache: "no-store" });
-        const payload = await response.json();
-        setSites(payload.sites || []);
-      } catch {
-        setSites([]);
-      }
-    }
-
     syncScope();
-    void syncSites();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
     return () => {
@@ -64,6 +53,20 @@ export default function OperationsPage() {
       window.removeEventListener("toc.scopechange", syncScope);
     };
   }, []);
+
+  useEffect(() => {
+    async function syncSites() {
+      try {
+        const response = await fetch(`/api/productivity?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+        const payload = await response.json();
+        setSites(payload.sites || []);
+      } catch {
+        setSites([]);
+      }
+    }
+
+    void syncSites();
+  }, [scope]);
 
   return (
     <TocShell>

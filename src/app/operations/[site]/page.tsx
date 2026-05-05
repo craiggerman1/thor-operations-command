@@ -73,7 +73,7 @@ export default function ProductivitySitePage() {
   useEffect(() => {
     async function loadSite() {
       try {
-        const result = await fetch(`/api/productivity?slug=${encodeURIComponent(params.site)}`, { cache: "no-store" });
+        const result = await fetch(`/api/productivity?slug=${encodeURIComponent(params.site)}&scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await result.json();
         const nextSite = (payload.sites || [])[0] || null;
         setSite(nextSite);
@@ -94,7 +94,7 @@ export default function ProductivitySitePage() {
     }
 
     void loadSite();
-  }, [params.site]);
+  }, [params.site, scope]);
 
   if (loading) {
     return (
@@ -145,7 +145,7 @@ export default function ProductivitySitePage() {
     const result = await fetch("/api/productivity", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ siteId: currentSite.id, slug: currentSite.slug, response })
+      body: JSON.stringify({ siteId: currentSite.id, slug: currentSite.slug, scope, response })
     });
     const payload = await result.json();
 

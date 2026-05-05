@@ -31,7 +31,7 @@ function buildDrafts(sites: ProductivitySite[]) {
 }
 
 async function fetchProductivity() {
-  const response = await fetch("/api/productivity", { cache: "no-store" });
+  const response = await fetch("/api/productivity?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Productivity database read failed.");
   return (payload.sites || []) as ProductivitySite[];
@@ -78,7 +78,7 @@ export function AdminProductivityManager() {
     setIsSaving(true);
     setMessage("");
     try {
-      const nextSites = await mutateProductivity({ action: "createSite", siteName, region, productivityScore: Number(score), latestNote: note });
+      const nextSites = await mutateProductivity({ action: "createSite", all: true, siteName, region, productivityScore: Number(score), latestNote: note });
       applySites(nextSites);
       setSiteName("");
       setScore("80");
@@ -96,7 +96,7 @@ export function AdminProductivityManager() {
     const draft = drafts[site.id] || { score: String(site.productivityScore), note: site.latestNote || "" };
     setMessage("");
     try {
-      const nextSites = await mutateProductivity({ action: "updateSite", id: site.id, updates: { productivityScore: Number(draft.score), latestNote: draft.note } });
+      const nextSites = await mutateProductivity({ action: "updateSite", all: true, id: site.id, updates: { productivityScore: Number(draft.score), latestNote: draft.note } });
       applySites(nextSites);
       setMessage("Productivity site updated.");
       window.dispatchEvent(new Event("toc.actionState.updated"));
@@ -109,7 +109,7 @@ export function AdminProductivityManager() {
     if (!window.confirm("Are you sure you want to delete this productivity site?")) return;
     setMessage("");
     try {
-      const nextSites = await mutateProductivity({ action: "deleteSite", id });
+      const nextSites = await mutateProductivity({ action: "deleteSite", all: true, id });
       applySites(nextSites);
       setMessage("Productivity site deleted.");
       window.dispatchEvent(new Event("toc.actionState.updated"));
@@ -159,7 +159,7 @@ export function AdminProductivityManager() {
               </div>
               <div className="admin-action-controls">
                 <button type="button" onClick={() => void updateSite(site)}>Save</button>
-                <button type="button" onClick={() => void mutateProductivity({ action: "updateSite", id: site.id, updates: { productivityScore: 80, latestNote: draft.note } }).then(applySites)}>Mark Healthy</button>
+                <button type="button" onClick={() => void mutateProductivity({ action: "updateSite", all: true, id: site.id, updates: { productivityScore: 80, latestNote: draft.note } }).then(applySites)}>Mark Healthy</button>
                 <button type="button" className="danger-button" onClick={() => void deleteSite(site.id)}>Delete</button>
               </div>
             </article>
