@@ -5,6 +5,7 @@ import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminActionManager } from "@/components/AdminActionManager";
 import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
+import { AdminProductivityManager } from "@/components/AdminProductivityManager";
 import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
 import { pageSettings } from "@/lib/admin-settings";
 
@@ -51,6 +52,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "equipment-servicing" ? (
           <Panel wide eyebrow="Equipment Servicing" title="Equipment register and service action control">
             <AdminEquipmentManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "productivity" ? (
+          <Panel wide eyebrow="Productivity" title="Site productivity source control">
+            <AdminProductivityManager />
           </Panel>
         ) : null}
       </section>
