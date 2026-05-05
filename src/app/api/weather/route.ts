@@ -41,7 +41,7 @@ function buildForecast(data: OpenMeteoResponse): TocWeatherDay[] {
 }
 
 function isSevereWeatherSignal(signal: string | undefined) {
-  return signal === "Storm risk" || signal === "Wet and windy";
+  return signal === "Storm risk" || signal === "Wet and windy" || signal === "Wind watch";
 }
 
 export async function GET(request: Request) {

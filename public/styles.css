@@ -1050,11 +1050,11 @@ body.todo-floating-disabled .topbar {
 }
 
 .page-title-copy.active-warning {
-  border-color: rgba(191, 62, 57, 0.48);
+  border-color: rgba(191, 62, 57, 0.42);
   background:
-    linear-gradient(135deg, rgba(191, 62, 57, 0.16), rgba(255, 255, 255, 0.94)),
+    linear-gradient(135deg, rgba(191, 62, 57, 0.08), rgba(255, 255, 255, 0.94)),
     #ffffff;
-  box-shadow: 0 0 0 1px rgba(191, 62, 57, 0.12), 0 14px 30px rgba(191, 62, 57, 0.14);
+  box-shadow: 0 0 0 1px rgba(191, 62, 57, 0.1), 0 14px 30px rgba(7, 23, 38, 0.1);
 }
 
 .page-title-copy.active-warning .page-title-weather {
@@ -1098,9 +1098,22 @@ body.todo-floating-disabled .topbar {
   text-transform: uppercase;
 }
 
-.page-title-copy.active-warning .page-title-weather em,
 .page-title-copy.active-warning .page-title-weather strong {
   color: var(--red);
+}
+
+.weather-alert-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  margin-top: 2px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(191, 62, 57, 0.12);
+  color: var(--red);
+  font-size: 9px;
+  font-weight: 950;
+  text-transform: uppercase;
 }
 
 .weather-logo {
@@ -1129,8 +1142,11 @@ body.todo-floating-disabled .topbar {
 }
 
 .weather-logo.cloud::before,
+.weather-logo.fog::before,
+.weather-logo.drizzle::before,
 .weather-logo.rain::before,
-.weather-logo.storm::before {
+.weather-logo.storm::before,
+.weather-logo.pending::before {
   left: 7px;
   right: 6px;
   top: 17px;
@@ -1142,6 +1158,26 @@ body.todo-floating-disabled .topbar {
     8px -8px 0 2px #d5e3ea;
 }
 
+.weather-logo.fog::after {
+  left: 8px;
+  right: 8px;
+  top: 28px;
+  height: 2px;
+  border-radius: 999px;
+  background: #9fb3bf;
+  box-shadow: 0 4px 0 #c1ced6;
+}
+
+.weather-logo.drizzle::after {
+  left: 11px;
+  top: 27px;
+  width: 2px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--teal);
+  box-shadow: 8px 0 0 var(--teal), 15px 0 0 var(--teal);
+}
+
 .weather-logo.rain::after {
   left: 10px;
   top: 27px;
@@ -1150,6 +1186,15 @@ body.todo-floating-disabled .topbar {
   border-radius: 999px;
   background: var(--teal);
   box-shadow: 8px 0 0 var(--teal), 16px 0 0 var(--teal);
+}
+
+.weather-logo.pending::after {
+  content: "?";
+  left: 12px;
+  top: 16px;
+  color: #3e5264;
+  font-size: 14px;
+  font-weight: 950;
 }
 
 .weather-logo.storm::after {
@@ -3415,7 +3460,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .calendar-weather-chip {
-  min-width: 84px;
+  min-width: 98px;
   min-height: 30px;
   flex: 0 0 auto;
   display: inline-flex;
@@ -3438,9 +3483,33 @@ body:not([data-access="admin"]) .admin-only-panel {
   color: #8f5c10;
 }
 
+.calendar-weather-chip.cloud {
+  background: rgba(236, 244, 248, 0.96);
+  border-color: rgba(111, 143, 162, 0.28);
+  color: #36586d;
+}
+
+.calendar-weather-chip.fog {
+  background: rgba(240, 244, 247, 0.96);
+  border-color: rgba(136, 155, 168, 0.28);
+  color: #516675;
+}
+
+.calendar-weather-chip.drizzle {
+  background: rgba(235, 250, 252, 0.96);
+  border-color: rgba(37, 161, 189, 0.24);
+  color: #0c6b82;
+}
+
 .calendar-weather-chip.rain,
 .calendar-weather-chip.storm {
   background: rgba(234, 247, 251, 0.94);
+}
+
+.calendar-weather-chip.pending {
+  background: rgba(241, 245, 248, 0.96);
+  border-color: rgba(106, 122, 137, 0.22);
+  color: #6a7a89;
 }
 
 .calendar-weather-chip.storm {
@@ -3481,6 +3550,22 @@ body:not([data-access="admin"]) .admin-only-panel {
   box-shadow: -6px 2px 0 -2px #b6c8d2, 6px 2px 0 -2px #6f8fa2;
 }
 
+.calendar-weather-icon.fog::before {
+  width: 16px;
+  height: 10px;
+  border-radius: 999px;
+  background: #9fb3bf;
+  box-shadow: -6px 2px 0 -2px #c1ced6, 0 10px 0 -7px #879aa8, 7px 10px 0 -7px #879aa8;
+}
+
+.calendar-weather-icon.drizzle::before {
+  width: 16px;
+  height: 10px;
+  border-radius: 999px;
+  background: #88aabb;
+  box-shadow: -6px 2px 0 -2px #bdd3dc, 0 10px 0 -7px var(--teal), 7px 10px 0 -7px var(--teal);
+}
+
 .calendar-weather-icon.rain::before {
   width: 16px;
   height: 10px;
@@ -3495,6 +3580,21 @@ body:not([data-access="admin"]) .admin-only-panel {
   border-radius: 999px;
   background: #5f788b;
   box-shadow: -6px 2px 0 -2px #9eb4c0, 5px 10px 0 -5px #d29416;
+}
+
+.calendar-weather-icon.pending::before {
+  width: 18px;
+  height: 18px;
+  background: #e4ebef;
+  box-shadow: inset 0 0 0 1px rgba(106, 122, 137, 0.25);
+}
+
+.calendar-weather-icon.pending::after {
+  content: "?";
+  position: absolute;
+  color: #6a7a89;
+  font-size: 12px;
+  font-weight: 950;
 }
 
 .calendar-weather-chip.inline {

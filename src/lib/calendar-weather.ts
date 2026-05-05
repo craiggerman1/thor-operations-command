@@ -1,25 +1,16 @@
-import type { CalendarDay } from "@/lib/toc-data";
 import type { TocWeatherDay, WeatherIcon } from "@/lib/weather";
+import type { CalendarDay } from "@/lib/toc-data";
 
 type ForecastIcon = WeatherIcon;
-
-const goldCoastPattern: ForecastIcon[] = ["clear", "cloud", "rain", "clear", "storm", "cloud", "clear"];
-const regionalPattern: Record<string, ForecastIcon[]> = {
-  National: goldCoastPattern,
-  Brisbane: ["storm", "rain", "cloud", "clear", "storm", "clear", "cloud"],
-  Sydney: ["cloud", "rain", "clear", "clear", "cloud", "rain", "clear"],
-  Melbourne: ["rain", "cloud", "clear", "rain", "cloud", "clear", "cloud"],
-  Adelaide: ["clear", "clear", "cloud", "clear", "rain", "clear", "clear"],
-  Perth: ["clear", "cloud", "clear", "clear", "rain", "cloud", "clear"],
-  Canberra: ["cloud", "clear", "rain", "cloud", "clear", "clear", "rain"],
-  Workshop: goldCoastPattern
-};
 
 const forecastLabel: Record<ForecastIcon, string> = {
   clear: "Clear",
   cloud: "Cloud",
+  fog: "Fog",
+  drizzle: "Drizzle",
   rain: "Rain",
-  storm: "Storm risk"
+  storm: "Storm risk",
+  pending: "Pending"
 };
 
 const monthNumber: Record<string, string> = {
@@ -55,13 +46,11 @@ export function getCalendarForecast(day: CalendarDay, scope: string, liveForecas
     };
   }
 
-  const pattern = regionalPattern[scope] || goldCoastPattern;
-  const dateNumber = Number(day.date) || 1;
-  const icon = pattern[(dateNumber - 1) % pattern.length];
+  const icon = "pending";
   const condition = forecastLabel[icon];
   return {
     icon,
     condition,
-    label: `${location}: ${condition}`
+    label: `${location}: forecast not supplied yet`
   };
 }

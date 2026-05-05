@@ -1,4 +1,4 @@
-export type WeatherIcon = "clear" | "cloud" | "rain" | "storm";
+export type WeatherIcon = "clear" | "cloud" | "fog" | "drizzle" | "rain" | "storm" | "pending";
 
 export type TocWeatherDay = {
   date: string;
@@ -62,12 +62,12 @@ export function describeWeatherCode(code: number | null | undefined): WeatherCod
   if (code === 0) return { icon: "clear", condition: "Clear" };
   if (code === 1 || code === 2) return { icon: "clear", condition: "Mostly clear" };
   if (code === 3) return { icon: "cloud", condition: "Cloudy" };
-  if (code === 45 || code === 48) return { icon: "cloud", condition: "Fog" };
-  if ([51, 53, 55, 56, 57].includes(code || -1)) return { icon: "rain", condition: "Drizzle" };
+  if (code === 45 || code === 48) return { icon: "fog", condition: "Fog" };
+  if ([51, 53, 55, 56, 57].includes(code || -1)) return { icon: "drizzle", condition: "Drizzle" };
   if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code || -1)) return { icon: "rain", condition: "Rain" };
   if ([71, 73, 75, 77, 85, 86].includes(code || -1)) return { icon: "rain", condition: "Snow / ice" };
   if ([95, 96, 99].includes(code || -1)) return { icon: "storm", condition: "Storm risk" };
-  return { icon: "cloud", condition: "Weather" };
+  return { icon: "pending", condition: "Pending" };
 }
 
 export function getForecastSignal(day: TocWeatherDay) {

@@ -288,7 +288,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.167</em>
+              <em>Build 0.168</em>
               <span className="units-counter"><b>{unitsWashedToday}</b> units washed today</span>
             </div>
           </div>
@@ -373,7 +373,7 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
           summary: `${apparentTemp} - ${wind}`,
           temp: payload.current.temp !== null ? `${Math.round(payload.current.temp)} C` : "--",
           icon: payload.current.icon,
-          warning: payload.warning.message,
+          warning: payload.warning.active ? `Forecast alert: ${payload.warning.message}` : payload.warning.message,
           warningActive: payload.warning.active
         });
       })
@@ -402,7 +402,7 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
             <strong>{weather.temp}</strong>
             <small>{weather.condition}</small>
             <b>{weather.summary}</b>
-            <em>{weather.warning || "No active warnings shown"}</em>
+            {weather.warningActive ? <span className="weather-alert-pill">{weather.warning}</span> : <em>{weather.warning || "No active forecast alerts"}</em>}
           </div>
         </div>
       </div>
