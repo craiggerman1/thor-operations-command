@@ -9,6 +9,7 @@ type ProfileRegionRow = {
 type ProfileRow = {
   id: string;
   display_name: string;
+  email: string | null;
   user_reference: string | null;
   access_level: AccessRole | "national";
   is_active: boolean;
@@ -26,8 +27,16 @@ function firstRelated<T>(value: T | T[] | null | undefined) {
 
 function mapRole(role: string): AccessRole {
   if (role === "director") return "director";
-  if (role === "admin" || role === "national") return "admin";
+  if (role === "admin") return "admin";
   return "manager";
+}
+
+function normaliseRegionsForRole(role: AccessRole, regions: string[]) {
+  const cleanRegions = Array.from(new Set(regions.filter(Boolean)));
+  if (role === "director") return ["National"];
+  if (role === "admin") return Array.from(new Set(["National", ...cleanRegions.filter((region) => region !== "National")]));
+  if (cleanRegions.includes("National")) return ["National", ...cleanRegions.filter((region) => region !== "National")];
+  return cleanRegions.length ? cleanRegions : ["Brisbane"];
 }
 
 function mapUser(row: ProfileRow) {
@@ -35,18 +44,15 @@ function mapUser(row: ProfileRow) {
     .map((item) => firstRelated(item.region)?.name)
     .filter(Boolean) as string[];
   const role = mapRole(row.access_level);
-  const normalisedRegions = role === "director"
-    ? ["National"]
-    : role === "admin"
-      ? Array.from(new Set(["National", ...regions.filter((region) => region !== "National")]))
-      : regions.filter((region) => region !== "National");
+  const normalisedRegions = normaliseRegionsForRole(role, regions);
 
   return {
     id: row.id,
     name: row.display_name,
+    email: row.email || "",
     reference: row.user_reference || "No reference supplied",
     role,
-    regions: normalisedRegions.length ? normalisedRegions : role === "manager" ? ["Brisbane"] : ["National"],
+    regions: normalisedRegions,
     status: row.is_active ? "Active" : "Disabled"
   };
 }
@@ -88,7 +94,7 @@ async function readUsers() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,display_name,user_reference,access_level,is_active,profile_regions(region:regions(name))")
+    .select("id,display_name,email,user_reference,access_level,is_active,profile_regions(region:regions(name))")
     .order("created_at", { ascending: false });
 
   if (error) return { users: [], connected: false, error: error.message };
@@ -115,16 +121,13 @@ export async function POST(request: Request) {
     if (!displayName) return NextResponse.json({ error: "User name is required." }, { status: 400 });
 
     const role = mapRole(payload.role || "manager");
-    const regions = role === "director"
-      ? ["National"]
-      : role === "admin"
-        ? Array.from(new Set(["National", ...((payload.regions || []) as string[]).filter((region) => region !== "National")]))
-        : ((payload.regions || []) as string[]).filter((region) => region !== "National");
+    const regions = normaliseRegionsForRole(role, (payload.regions || []) as string[]);
 
     const { data, error } = await supabase
       .from("profiles")
       .insert({
         display_name: displayName,
+        email: typeof payload.email === "string" ? payload.email.trim() || null : null,
         user_reference: payload.reference || "No reference supplied",
         access_level: role,
         is_active: true
@@ -133,7 +136,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    await saveProfileRegions(data.id, regions.length ? regions : role === "manager" ? ["Brisbane"] : ["National"]);
+    await saveProfileRegions(data.id, regions);
     return GET();
   }
 
@@ -143,6 +146,7 @@ export async function POST(request: Request) {
 
     const updates: Record<string, string | boolean> = { updated_at: new Date().toISOString() };
     if (typeof payload.name === "string") updates.display_name = payload.name;
+    if (typeof payload.email === "string") updates.email = payload.email.trim();
     if (typeof payload.reference === "string") updates.user_reference = payload.reference;
     if (typeof payload.role === "string") updates.access_level = mapRole(payload.role);
     if (typeof payload.status === "string") updates.is_active = payload.status === "Active";
@@ -152,12 +156,7 @@ export async function POST(request: Request) {
 
     if (Array.isArray(payload.regions)) {
       const role = mapRole(payload.role || "manager");
-      const regions = role === "director"
-        ? ["National"]
-        : role === "admin"
-          ? Array.from(new Set(["National", ...payload.regions.filter((region: string) => region !== "National")]))
-          : payload.regions.filter((region: string) => region !== "National");
-      await saveProfileRegions(id, regions.length ? regions : role === "manager" ? ["Brisbane"] : ["National"]);
+      await saveProfileRegions(id, normaliseRegionsForRole(role, payload.regions));
     }
 
     return GET();

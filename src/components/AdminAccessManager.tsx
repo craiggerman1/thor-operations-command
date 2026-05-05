@@ -7,6 +7,7 @@ import { Tag } from "@/components/TocCards";
 type AdminAccessUser = {
   id: string;
   name: string;
+  email?: string;
   reference: string;
   role: AccessRole;
   regions: string[];
@@ -16,9 +17,9 @@ type AdminAccessUser = {
 const accessUsersKey = "toc.adminAccessUsers";
 
 const initialAccessUsers: AdminAccessUser[] = [
-  { id: "TOC-ADMIN", name: "Admin User", reference: "Admin profile", role: "admin", regions: ["National", "Brisbane"], status: "Active" },
-  { id: "TOC-DIRECTOR", name: "Director User", reference: "Owner profile", role: "director", regions: ["National"], status: "Active" },
-  { id: "TOC-MANAGER", name: "Manager User", reference: "Manager profile", role: "manager", regions: ["Sydney", "Workshop"], status: "Active" }
+  { id: "TOC-ADMIN", name: "Admin User", email: "", reference: "Admin profile", role: "admin", regions: ["National", "Brisbane"], status: "Active" },
+  { id: "TOC-DIRECTOR", name: "Director User", email: "", reference: "Owner profile", role: "director", regions: ["National"], status: "Active" },
+  { id: "TOC-MANAGER", name: "Manager User", email: "", reference: "Manager profile", role: "manager", regions: ["Sydney", "Workshop"], status: "Active" }
 ];
 
 function readAccessUsers() {
@@ -52,9 +53,18 @@ function createUserId(name: string) {
   return `TOC-${cleaned || Date.now()}`;
 }
 
+function normaliseRegionsForRole(role: AccessRole, regions: string[]) {
+  const cleanRegions = Array.from(new Set(regions.filter(Boolean)));
+  if (role === "director") return ["National"];
+  if (role === "admin") return Array.from(new Set(["National", ...cleanRegions.filter((region) => region !== "National")]));
+  if (cleanRegions.includes("National")) return ["National", ...cleanRegions.filter((region) => region !== "National")];
+  return cleanRegions.length ? cleanRegions : ["Brisbane"];
+}
+
 export function AdminAccessManager() {
   const [users, setUsers] = useState<AdminAccessUser[]>(initialAccessUsers);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [reference, setReference] = useState("");
   const [role, setRole] = useState<AccessRole>("manager");
   const [regions, setRegions] = useState<string[]>(["Brisbane"]);
@@ -86,10 +96,11 @@ export function AdminAccessManager() {
     const cleanName = name.trim();
     if (!cleanName) return;
 
-    const nextRegions = role === "director" ? ["National"] : role === "admin" ? ["National", ...regions.filter((region) => region !== "National")] : regions;
+    const nextRegions = normaliseRegionsForRole(role, regions);
     const nextUser: AdminAccessUser = {
       id: createUserId(cleanName),
       name: cleanName,
+      email: email.trim(),
       reference: reference.trim() || "No reference supplied",
       role,
       regions: nextRegions,
@@ -97,8 +108,9 @@ export function AdminAccessManager() {
     };
 
     setUsers((current) => [nextUser, ...current]);
-    void saveUserMutation({ action: "create", name: cleanName, reference: nextUser.reference, role: nextUser.role, regions: nextUser.regions });
+    void saveUserMutation({ action: "create", name: cleanName, email: nextUser.email, reference: nextUser.reference, role: nextUser.role, regions: nextUser.regions });
     setName("");
+    setEmail("");
     setReference("");
     setRole("manager");
     setRegions(["Brisbane"]);
@@ -113,18 +125,18 @@ export function AdminAccessManager() {
   }
 
   function updateUserRole(user: AdminAccessUser, nextRole: AccessRole) {
-    const nextRegions = nextRole === "director" ? ["National"] : nextRole === "admin" ? Array.from(new Set(["National", ...user.regions.filter((region) => region !== "National")])) : user.regions.filter((region) => region !== "National");
-    updateUser(user.id, { role: nextRole, regions: nextRegions.length ? nextRegions : ["Brisbane"] });
+    updateUser(user.id, { role: nextRole, regions: normaliseRegionsForRole(nextRole, user.regions) });
   }
 
   function toggleUserRegion(user: AdminAccessUser, region: string) {
-    const currentRegions = user.regions.filter((item) => item !== "National");
-    const nextRegions = currentRegions.includes(region)
-      ? currentRegions.filter((item) => item !== region)
-      : [...currentRegions, region];
-
     if (user.role === "director") return;
-    updateUser(user.id, { regions: user.role === "admin" ? ["National", ...(nextRegions.length ? nextRegions : [region])] : nextRegions.length ? nextRegions : [region] });
+    if (user.role === "admin" && region === "National") return;
+
+    const nextRegions = user.regions.includes(region)
+      ? user.regions.filter((item) => item !== region)
+      : [...user.regions, region];
+
+    updateUser(user.id, { regions: normaliseRegionsForRole(user.role, nextRegions) });
   }
 
   function deregisterUser(userId: string) {
@@ -145,8 +157,9 @@ export function AdminAccessManager() {
 
   function previewUser(user: AdminAccessUser) {
     const profile = sessionProfiles[user.role];
-    const scope = user.regions[0] || profile.regions[0] || "National";
-    const nextSession = { role: profile.role, label: profile.label, scope };
+    const assignedRegions = normaliseRegionsForRole(user.role, user.regions);
+    const scope = assignedRegions[0] || profile.regions[0] || "National";
+    const nextSession = { role: profile.role, label: profile.label, scope, regions: assignedRegions };
 
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     document.body.dataset.access = profile.role;
@@ -182,6 +195,7 @@ export function AdminAccessManager() {
           <small>Create a staged TOC user profile, assign access level, assign region responsibility and preview the exact view.</small>
         </div>
         <label><span>Name</span><input value={name} placeholder="User name" onChange={(event) => setName(event.target.value)} /></label>
+        <label><span>Email address</span><input type="email" value={email} placeholder="user@thormobile.com.au" onChange={(event) => setEmail(event.target.value)} /></label>
         <label><span>User reference</span><input value={reference} placeholder="Employee ID or internal reference" onChange={(event) => setReference(event.target.value)} /></label>
         <label>
           <span>Access level</span>
@@ -195,7 +209,7 @@ export function AdminAccessManager() {
           <legend>Assigned region responsibility</legend>
           {assignableRegions.map((region) => <label key={region}><input checked={regions.includes(region)} type="checkbox" onChange={() => toggleFormRegion(region)} /> {region}</label>)}
         </fieldset>
-        <small>Admin always keeps national command control. Managers only see assigned regions. Director remains an owner overview role.</small>
+        <small>Admin always keeps national command control. Managers only see assigned regions, including National if assigned. Director remains an owner overview role. Passwords will be handled by the secure authentication layer.</small>
         <button type="submit">Register User</button>
       </form>
 
@@ -208,10 +222,18 @@ export function AdminAccessManager() {
         {users.map((user) => (
           <article className={`admin-user-card ${user.status === "Disabled" ? "disabled" : ""}`} key={user.id}>
             <div className="admin-user-head">
-              <div><strong>{user.name}</strong><small>{user.reference} - {user.id}</small></div>
+              <div><strong>{user.name}</strong><small>{user.email ? `${user.email} - ` : ""}{user.reference} - {user.id}</small></div>
               <div className="meta-row"><Tag>{roleLabel(user.role)}</Tag><Tag tone={user.status === "Active" ? "green" : "amber"}>{user.status}</Tag></div>
             </div>
             <div className="admin-user-edit-grid">
+              <label>
+                <span>Email address</span>
+                <input defaultValue={user.email || ""} placeholder="user@thormobile.com.au" onBlur={(event) => updateUser(user.id, { email: event.target.value })} />
+              </label>
+              <label>
+                <span>User reference</span>
+                <input defaultValue={user.reference} onBlur={(event) => updateUser(user.id, { reference: event.target.value || "No reference supplied" })} />
+              </label>
               <label>
                 <span>Access level</span>
                 <select value={user.role} onChange={(event) => updateUserRole(user, event.target.value as AccessRole)}>
@@ -226,7 +248,7 @@ export function AdminAccessManager() {
                   {assignableRegions.map((region) => (
                     <button
                       className={user.regions.includes(region) ? "selected" : ""}
-                      disabled={user.role === "director"}
+                      disabled={user.role === "director" || (user.role === "admin" && region === "National")}
                       key={region}
                       type="button"
                       onClick={() => toggleUserRegion(user, region)}

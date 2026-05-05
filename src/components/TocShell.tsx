@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
+import { defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
@@ -15,6 +15,7 @@ type StoredSession = {
   role?: AccessRole;
   label?: string;
   scope?: string;
+  regions?: string[];
 };
 
 type WeatherState = {
@@ -69,7 +70,13 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession>({ role: defaultSession.role, label: defaultSession.label, scope: "National" });
   const [sessionReady, setSessionReady] = useState(false);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
-  const currentScope = session.scope || activeProfile.regions[0] || "National";
+  const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
+  const currentRegionOptions = activeProfile.role === "director"
+    ? ["National"]
+    : activeProfile.role === "admin"
+      ? Array.from(new Set(["National", ...assignedRegions.filter((region) => region !== "National")]))
+      : assignedRegions.length ? assignedRegions : ["Brisbane"];
+  const currentScope = currentRegionOptions.includes(session.scope || "") ? session.scope || currentRegionOptions[0] : currentRegionOptions[0];
   const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || currentScope === "National"));
 
   useEffect(() => {
@@ -133,7 +140,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, [activeProfile.role, currentScope, pathname, router, sessionReady]);
 
   function updateScope(scope: string) {
-    const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope };
+    const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope, regions: currentRegionOptions };
     setSession(nextSession);
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope } }));
@@ -141,9 +148,9 @@ export function TocShell({ children }: { children: ReactNode }) {
 
   function updateRole(role: AccessRole) {
     const nextProfile = sessionProfiles[role] || defaultSession;
-    const currentScope = session.scope || activeProfile.regions[0] || "National";
-    const nextScope = currentScope || nextProfile.regions[0] || "National";
-    const nextSession = { role: nextProfile.role, label: nextProfile.label, scope: nextScope };
+    const nextRegions = nextProfile.regions;
+    const nextScope = nextRegions.includes(session.scope || "") ? session.scope || nextRegions[0] : nextRegions[0] || "National";
+    const nextSession = { role: nextProfile.role, label: nextProfile.label, scope: nextScope, regions: nextRegions };
     setSession(nextSession);
     document.body.dataset.access = nextProfile.role;
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
@@ -210,7 +217,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.213</em>
+              <em>Build 0.214</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -227,7 +234,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             <label className="select-wrap region-control">
               <span>Region</span>
               <select value={currentScope} onChange={(event) => updateScope(event.target.value)}>
-                {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
+                {currentRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
               </select>
             </label>
             <button className="manual-refresh-button" type="button">Manual Refresh</button>

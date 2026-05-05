@@ -17,12 +17,12 @@ export type SessionProfile = {
 };
 
 export const allRegions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
-export const assignableRegions = allRegions.filter((region) => region !== "National");
+export const assignableRegions = allRegions;
 
 export const navigationItems: NavItem[] = [
   { label: "Home", href: "/home", roles: ["admin", "director", "manager"] },
   { label: "Admin Settings", href: "/admin", roles: ["admin"] },
-  { label: "National Requests", href: "/national-requests", roles: ["admin"], nationalOnly: true },
+  { label: "National Requests", href: "/national-requests", roles: ["admin", "manager"], nationalOnly: true },
   { label: "Action Centre", href: "/actions", roles: ["admin", "director", "manager"] },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },
@@ -59,9 +59,9 @@ export const sessionProfiles: Record<AccessRole, SessionProfile> = {
     role: "manager",
     label: "Manager",
     scopeLabel: "Assigned region",
-    regions: ["Brisbane", "Workshop"],
+    regions: ["Brisbane"],
     responsibilities: ["Assigned region actions", "Compliance", "Stock orders", "Productivity", "Calendar", "Equipment servicing", "Chat"],
-    summary: "Manager view is limited to the region or regions assigned by Admin. Multiple regions can be assigned, including Workshop responsibility."
+    summary: "Manager view is limited to the region or regions assigned by Admin. Multiple regions can be assigned, including National Manager and Workshop responsibility."
   }
 };
 
