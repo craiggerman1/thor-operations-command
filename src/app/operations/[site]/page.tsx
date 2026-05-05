@@ -8,7 +8,6 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import {
   getProductivityScore,
-  getProductivitySiteBySlug,
   getProductivityTagTone,
   getProductivityText,
   getProductivityTone,
@@ -22,7 +21,19 @@ type ProductivityResponse = {
   site: string;
 };
 
-const productivityResponseStorageKey = "toc.productivityResponses";
+type ProductivitySite = {
+  id: string;
+  site: string;
+  slug: string;
+  region: string;
+  productivityScore: number;
+  queue: string;
+  action: string;
+  units: number;
+  labourHours: number;
+  latestResponse: string;
+  latestResponseAt: string;
+};
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -35,31 +46,19 @@ function getStoredScope() {
   }
 }
 
-function getSiteKey(region: string, site: string) {
-  return `${region}:${site}`;
-}
-
-function getProductivityResponses() {
-  if (typeof window === "undefined") return {} as Record<string, ProductivityResponse>;
-
-  try {
-    return JSON.parse(localStorage.getItem(productivityResponseStorageKey) || "{}") as Record<string, ProductivityResponse>;
-  } catch {
-    return {};
-  }
-}
-
 export default function ProductivitySitePage() {
   const params = useParams<{ site: string }>();
-  const site = getProductivitySiteBySlug(params.site);
+  const [site, setSite] = useState<ProductivitySite | null>(null);
+  const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState("National");
-  const [responses, setResponses] = useState<Record<string, ProductivityResponse>>({});
+  const [responseText, setResponseText] = useState("");
+  const [savedResponse, setSavedResponse] = useState<ProductivityResponse | null>(null);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     function syncScope(event?: Event) {
       const nextScope = event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : getStoredScope();
       setScope(nextScope);
-      setResponses(getProductivityResponses());
     }
 
     syncScope();
@@ -70,6 +69,45 @@ export default function ProductivitySitePage() {
       window.removeEventListener("toc.scopechange", syncScope);
     };
   }, []);
+
+  useEffect(() => {
+    async function loadSite() {
+      try {
+        const result = await fetch(`/api/productivity?slug=${encodeURIComponent(params.site)}`, { cache: "no-store" });
+        const payload = await result.json();
+        const nextSite = (payload.sites || [])[0] || null;
+        setSite(nextSite);
+        if (nextSite?.latestResponse) {
+          setResponseText(nextSite.latestResponse);
+          setSavedResponse({
+            response: nextSite.latestResponse,
+            updatedAt: nextSite.latestResponseAt,
+            region: nextSite.region,
+            site: nextSite.site
+          });
+        }
+      } catch {
+        setSite(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadSite();
+  }, [params.site]);
+
+  if (loading) {
+    return (
+      <TocShell>
+        <PageIntro title="Productivity" detail="Loading site productivity detail." />
+        <section className="command-grid route-grid">
+          <Panel wide eyebrow="Productivity detail" title="Loading site">
+            <div className="empty-state">Loading productivity site from the database.</div>
+          </Panel>
+        </section>
+      </TocShell>
+    );
+  }
 
   if (!site) {
     return (
@@ -96,21 +134,35 @@ export default function ProductivitySitePage() {
   });
   const linePoints = chartPoints.map((point) => `${point.x},${point.y}`).join(" ");
   const yAxisTicks = [100, 80, 60, 40, 20, 0];
-  const siteKey = getSiteKey(currentSite.region, currentSite.site);
-  const savedResponse = responses[siteKey];
 
-  function updateResponse(response: string) {
-    const nextResponses = {
-      ...responses,
-      [siteKey]: {
-        response,
-        updatedAt: new Date().toISOString(),
-        region: currentSite.region,
-        site: currentSite.site
-      }
-    };
-    setResponses(nextResponses);
-    localStorage.setItem(productivityResponseStorageKey, JSON.stringify(nextResponses));
+  async function saveResponse() {
+    const response = responseText.trim();
+    if (!response) {
+      setMessage("Enter the manager response before saving.");
+      return;
+    }
+
+    const result = await fetch("/api/productivity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ siteId: currentSite.id, slug: currentSite.slug, response })
+    });
+    const payload = await result.json();
+
+    if (!result.ok) {
+      setMessage(payload.error || "Could not save the productivity response.");
+      return;
+    }
+
+    const updatedSite = (payload.sites || [])[0] || currentSite;
+    setSite(updatedSite);
+    setSavedResponse({
+      response,
+      updatedAt: updatedSite.latestResponseAt || new Date().toISOString(),
+      region: currentSite.region,
+      site: currentSite.site
+    });
+    setMessage("Manager productivity response saved to the database.");
   }
 
   if (!isVisible) {
@@ -193,11 +245,13 @@ export default function ProductivitySitePage() {
           <label className="productivity-response productivity-detail-response">
             <span>Manager response on actions that will be taken to increase productivity</span>
             <textarea
-              value={savedResponse?.response || ""}
-              onChange={(event) => updateResponse(event.target.value)}
+              value={responseText}
+              onChange={(event) => setResponseText(event.target.value)}
               placeholder="Enter the action plan for this site"
             />
             {savedResponse?.response ? <small>Response visible to admin and national review. Last updated {new Date(savedResponse.updatedAt).toLocaleString()}.</small> : null}
+            <button type="button" onClick={() => void saveResponse()}>Save Productivity Response</button>
+            {message ? <small className="admin-hint-message">{message}</small> : null}
           </label>
 
           <div className="productivity-detail-actions">

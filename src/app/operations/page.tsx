@@ -5,13 +5,21 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
-import { productivitySites } from "@/lib/toc-data";
 import {
   getProductivityScore,
-  getProductivitySiteSlug,
   getProductivityText,
   getProductivityTone
 } from "@/lib/productivity-utils";
+
+type ProductivitySite = {
+  id: string;
+  site: string;
+  slug: string;
+  region: string;
+  productivityScore: number;
+  queue: string;
+  action: string;
+};
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -26,7 +34,8 @@ function getStoredScope() {
 
 export default function OperationsPage() {
   const [scope, setScope] = useState("National");
-  const visibleSites = useMemo(() => productivitySites.filter((site) => scope === "National" || site.region === scope), [scope]);
+  const [sites, setSites] = useState<ProductivitySite[]>([]);
+  const visibleSites = useMemo(() => sites.filter((site) => scope === "National" || site.region === scope), [scope, sites]);
   const regionScore = visibleSites.length ? Math.round(visibleSites.reduce((total, site) => total + getProductivityScore(site), 0) / visibleSites.length) : 0;
   const regionTone = getProductivityTone(regionScore);
 
@@ -36,7 +45,18 @@ export default function OperationsPage() {
       setScope(nextScope);
     }
 
+    async function syncSites() {
+      try {
+        const response = await fetch("/api/productivity", { cache: "no-store" });
+        const payload = await response.json();
+        setSites(payload.sites || []);
+      } catch {
+        setSites([]);
+      }
+    }
+
     syncScope();
+    void syncSites();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
     return () => {
@@ -64,7 +84,7 @@ export default function OperationsPage() {
               const score = getProductivityScore(site);
               const tone = getProductivityTone(score);
               return (
-                <Link className={`productivity-site-card ${tone}`} href={`/operations/${getProductivitySiteSlug(site.site)}`} key={`${site.region}-${site.site}`}>
+                <Link className={`productivity-site-card ${tone}`} href={`/operations/${site.slug}`} key={site.id}>
                   <div>
                     <span className="eyebrow">{site.region}</span>
                     <strong>{site.site}</strong>
@@ -76,7 +96,7 @@ export default function OperationsPage() {
                 </Link>
               );
             })}
-            {visibleSites.length ? null : <div className="empty-state">No productivity site records are loaded yet. Database-backed site scores will appear here once connected.</div>}
+            {visibleSites.length ? null : <div className="empty-state">No productivity site records are currently loaded.</div>}
           </div>
         </Panel>
       </section>
