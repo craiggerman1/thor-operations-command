@@ -1004,21 +1004,21 @@ body.todo-floating-disabled .topbar {
 
 .page-title-news {
   min-width: 0;
-  padding: 6px 12px;
-  border: 1px solid rgba(201, 215, 225, 0.78);
-  border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.66), rgba(232, 243, 248, 0.48)),
-    rgba(255, 255, 255, 0.48);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  align-self: stretch;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  padding: 5px 14px 5px 16px;
+  border-left: 3px solid rgba(37, 161, 189, 0.34);
+  background: linear-gradient(90deg, rgba(37, 161, 189, 0.06), rgba(255, 255, 255, 0));
   overflow: hidden;
 }
 
 .page-title-news strong {
   display: block;
-  margin-top: 1px;
+  margin-top: 2px;
   color: #071726;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 950;
   line-height: 1.18;
   white-space: nowrap;
@@ -6467,17 +6467,16 @@ body:not([data-access="admin"]) .admin-only-panel {
   }
 
   .page-title-news {
+    align-self: auto;
     padding: 6px 0 0;
     border: 0;
     border-top: 1px solid rgba(201, 215, 225, 0.72);
-    border-radius: 0;
     background: transparent;
-    box-shadow: none;
   }
 
   .page-title-news strong {
     white-space: normal;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .page-hint button {

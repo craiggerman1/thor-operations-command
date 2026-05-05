@@ -270,7 +270,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.172</em>
+              <em>Build 0.173</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -393,7 +393,7 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
           {detail ? <p>{detail}</p> : null}
         </div>
         <div className="page-title-news" aria-label="Operations news">
-          <span className="eyebrow">Operations News</span>
+          <span className="eyebrow">Operational News</span>
           <strong key={operationsNews}>{operationsNews}</strong>
         </div>
         <div className="page-title-weather" aria-label={`${weather.location} weather`}>
