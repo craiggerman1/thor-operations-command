@@ -14,7 +14,7 @@ type ManagerRecipient = {
 };
 
 type ChatMessage = {
-  id: number;
+  id: string;
   mode: ChatMode;
   author: string;
   audience: string;
@@ -42,36 +42,7 @@ const managerRecipients: ManagerRecipient[] = allRegions
     region
   }));
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: 1,
-    mode: "group",
-    author: "Admin User",
-    audience: "System-wide group chat",
-    recipients: managerRecipients.map((manager) => manager.id),
-    text: "Keep Portal approvals tight today and flag anything that will hold invoicing.",
-    time: "08:05"
-  },
-  {
-    id: 2,
-    mode: "multi",
-    author: "National Ops",
-    audience: "Sydney Manager, Brisbane Manager",
-    recipients: ["sydney", "brisbane"],
-    text: "Please keep Fleetio entries clean. Registration, wash type and site all matter.",
-    time: "08:18",
-    own: true
-  },
-  {
-    id: 3,
-    mode: "direct",
-    author: "Workshop Manager",
-    audience: "Workshop Manager",
-    recipients: ["workshop"],
-    text: "Workshop servicing notes are ready for review when National Ops has a moment.",
-    time: "08:31"
-  }
-];
+const initialMessages: ChatMessage[] = [];
 
 const managerMeetings: ManagerMeeting[] = [
   {
@@ -127,9 +98,20 @@ export default function ChatPage() {
   const [draft, setDraft] = useState("");
   const [meetingNote, setMeetingNote] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
-    setMessages(getStoredMessages());
+    async function loadMessages() {
+      try {
+        const response = await fetch("/api/chat", { cache: "no-store" });
+        const payload = await response.json();
+        setMessages(payload.messages || []);
+      } catch {
+        setMessages(getStoredMessages());
+      }
+    }
+
+    void loadMessages();
   }, []);
 
   useEffect(() => {
@@ -193,7 +175,7 @@ export default function ChatPage() {
     });
   }
 
-  function sendMessage(event: FormEvent<HTMLFormElement>) {
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = draft.trim();
     if (!text) return;
@@ -202,45 +184,69 @@ export default function ChatPage() {
       ? managerRecipients.map((manager) => manager.id)
       : selectedRecipients;
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: Date.now(),
-        mode,
-        author: "Admin User",
-        audience: mode === "group" ? "System-wide group chat" : audienceLabel,
-        recipients,
-        text,
-        time: getNowTime(),
-        own: true
-      }
-    ]);
+    const optimisticMessage = {
+      id: crypto.randomUUID(),
+      mode,
+      author: "Admin User",
+      audience: mode === "group" ? "System-wide group chat" : audienceLabel,
+      recipients,
+      text,
+      time: getNowTime(),
+      own: true
+    };
+
+    setMessages((current) => [...current, optimisticMessage]);
     setDraft("");
+    setSaveMessage("");
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(optimisticMessage)
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Message failed");
+      setMessages(payload.messages || []);
+    } catch {
+      setSaveMessage("Message shown locally, but database save failed.");
+    }
   }
 
   function openMeeting(meeting: ManagerMeeting) {
     window.open(meeting.link, "_blank", "noopener,noreferrer");
   }
 
-  function addMeetingNote(event: FormEvent<HTMLFormElement>) {
+  async function addMeetingNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = meetingNote.trim();
     if (!text) return;
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: Date.now(),
-        mode: "group",
-        author: "Admin User",
-        audience: "System-wide group chat",
-        recipients: managerRecipients.map((manager) => manager.id),
-        text: `Meeting note: ${text}`,
-        time: getNowTime(),
-        own: true
-      }
-    ]);
+    const noteMessage = {
+      id: crypto.randomUUID(),
+      mode: "group" as ChatMode,
+      author: "Admin User",
+      audience: "System-wide group chat",
+      recipients: managerRecipients.map((manager) => manager.id),
+      text: `Meeting note: ${text}`,
+      time: getNowTime(),
+      own: true
+    };
+
+    setMessages((current) => [...current, noteMessage]);
     setMeetingNote("");
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(noteMessage)
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Message failed");
+      setMessages(payload.messages || []);
+    } catch {
+      setSaveMessage("Meeting note shown locally, but database save failed.");
+    }
   }
 
   return (
@@ -286,7 +292,7 @@ export default function ChatPage() {
               </div>
               <div className="chat-channel-note">
                 <strong>Comms status</strong>
-                <small>Messages are available in this TOC session. Team-wide persistence will move into the central TOC data layer.</small>
+                <small>Messages are saved to the central TOC data layer for shared manager visibility.</small>
               </div>
             </aside>
             <div className="chat-room">
@@ -308,8 +314,12 @@ export default function ChatPage() {
                     </div>
                   </article>
                 ))}
+                {visibleMessages.length ? null : (
+                  <div className="empty-state">No messages are currently loaded for this chat route.</div>
+                )}
               </div>
-              <form className="chat-form" onSubmit={sendMessage}>
+              {saveMessage ? <small className="admin-hint-message">{saveMessage}</small> : null}
+              <form className="chat-form" onSubmit={(event) => void sendMessage(event)}>
                 <input value={draft} placeholder={`Message ${audienceLabel}`} onChange={(event) => setDraft(event.target.value)} />
                 <button type="submit">Send</button>
               </form>
@@ -354,7 +364,7 @@ export default function ChatPage() {
                 </article>
               ))}
             </div>
-            <form className="meeting-note-form" onSubmit={addMeetingNote}>
+            <form className="meeting-note-form" onSubmit={(event) => void addMeetingNote(event)}>
               <div>
                 <span className="eyebrow">Meeting actions</span>
                 <strong>Capture meeting note or action</strong>
