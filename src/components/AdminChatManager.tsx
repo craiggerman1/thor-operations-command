@@ -27,7 +27,7 @@ const managerRecipients = allRegions
   }));
 
 async function fetchChatMessages() {
-  const response = await fetch("/api/chat", { cache: "no-store" });
+  const response = await fetch("/api/chat?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Chat database read failed.");
   return (payload.messages || []) as ChatMessage[];
@@ -96,10 +96,11 @@ export function AdminChatManager() {
     setMessage("");
     try {
       const recipients = mode === "group" ? managerRecipients.map((manager) => manager.id) : selectedRecipients;
-      const nextMessages = await mutateChat({ mode, author: "Admin User", audience, recipients, text, own: true });
+      const nextMessages = await mutateChat({ mode, author: "Admin User", audience, recipients, text, own: true, all: true });
       setMessages(nextMessages);
       setDraft("");
       setMessage("Admin chat message sent.");
+      window.dispatchEvent(new Event("toc.chat.updated"));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not send chat message.");
     } finally {
@@ -111,9 +112,10 @@ export function AdminChatManager() {
     if (!window.confirm("Are you sure you want to delete this chat message?")) return;
     setMessage("");
     try {
-      const nextMessages = await mutateChat({ action: "delete", id });
+      const nextMessages = await mutateChat({ action: "delete", id, all: true });
       setMessages(nextMessages);
       setMessage("Chat message deleted.");
+      window.dispatchEvent(new Event("toc.chat.updated"));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not delete chat message.");
     }

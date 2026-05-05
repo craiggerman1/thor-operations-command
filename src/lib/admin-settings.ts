@@ -22,5 +22,5 @@ export const pageSettings: AdminPageSetting[] = [
   { page: "Asset Tracking", slug: "asset-tracking", owner: "Unity GPS source control", control: "Map GPS assets, regions and status visibility.", state: "Active" },
   { page: "Jobsheets", slug: "jobsheets", owner: "Thor Portal source control", control: "Map jobsheet source, approval queue visibility and manager action routing.", state: "Active" },
   { page: "To Do", slug: "to-do", owner: "Personal and shared tasks", control: "Configure shared task routing, importance handling and future user-specific persistence.", state: "Mapped" },
-  { page: "Chat", slug: "chat", owner: "Manager communications", control: "Set manager chat audiences, meeting links and communication rules.", state: "Mapped" }
+  { page: "Chat", slug: "chat", owner: "Manager communications", control: "Set manager chat audiences, meeting links and communication rules.", state: "Active" }
 ];

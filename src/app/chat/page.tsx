@@ -92,6 +92,19 @@ function getNowTime() {
   }).format(new Date());
 }
 
+function getStoredSession() {
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return {
+      role: session?.role || "admin",
+      scope: session?.scope || "National",
+      label: session?.label || "Admin"
+    };
+  } catch {
+    return { role: "admin", scope: "National", label: "Admin" };
+  }
+}
+
 export default function ChatPage() {
   const [mode, setMode] = useState<ChatMode>("group");
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>(managerRecipients.map((manager) => manager.id));
@@ -103,7 +116,8 @@ export default function ChatPage() {
   useEffect(() => {
     async function loadMessages() {
       try {
-        const response = await fetch("/api/chat", { cache: "no-store" });
+        const session = getStoredSession();
+        const response = await fetch(`/api/chat?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setMessages(payload.messages || []);
       } catch {
@@ -112,6 +126,14 @@ export default function ChatPage() {
     }
 
     void loadMessages();
+    window.addEventListener("storage", loadMessages);
+    window.addEventListener("toc.scopechange", loadMessages);
+    window.addEventListener("toc.chat.updated", loadMessages);
+    return () => {
+      window.removeEventListener("storage", loadMessages);
+      window.removeEventListener("toc.scopechange", loadMessages);
+      window.removeEventListener("toc.chat.updated", loadMessages);
+    };
   }, []);
 
   useEffect(() => {
@@ -187,7 +209,7 @@ export default function ChatPage() {
     const optimisticMessage = {
       id: crypto.randomUUID(),
       mode,
-      author: "Admin User",
+      author: getStoredSession().label,
       audience: mode === "group" ? "System-wide group chat" : audienceLabel,
       recipients,
       text,
@@ -200,14 +222,16 @@ export default function ChatPage() {
     setSaveMessage("");
 
     try {
+      const session = getStoredSession();
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(optimisticMessage)
+        body: JSON.stringify({ ...optimisticMessage, role: session.role, scope: session.scope })
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Message failed");
       setMessages(payload.messages || []);
+      window.dispatchEvent(new Event("toc.chat.updated"));
     } catch {
       setSaveMessage("Message shown locally, but database save failed.");
     }
@@ -225,7 +249,7 @@ export default function ChatPage() {
     const noteMessage = {
       id: crypto.randomUUID(),
       mode: "group" as ChatMode,
-      author: "Admin User",
+      author: getStoredSession().label,
       audience: "System-wide group chat",
       recipients: managerRecipients.map((manager) => manager.id),
       text: `Meeting note: ${text}`,
@@ -236,14 +260,16 @@ export default function ChatPage() {
     setMessages((current) => [...current, noteMessage]);
     setMeetingNote("");
     try {
+      const session = getStoredSession();
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(noteMessage)
+        body: JSON.stringify({ ...noteMessage, role: session.role, scope: session.scope })
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Message failed");
       setMessages(payload.messages || []);
+      window.dispatchEvent(new Event("toc.chat.updated"));
     } catch {
       setSaveMessage("Meeting note shown locally, but database save failed.");
     }
