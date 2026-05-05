@@ -14,6 +14,7 @@ type NationalRequestRow = {
   source_page: string | null;
   directive_type: string | null;
   created_at: string;
+  updated_at?: string | null;
   region?: { name: string } | { name: string }[] | null;
 };
 
@@ -70,8 +71,9 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("national_requests")
-    .select("id,request_type,title,detail,status,source_action_id,assigned_region_id,manager_response,evidence,source_page,directive_type,created_at,region:regions(name)")
+    .select("id,request_type,title,detail,status,source_action_id,assigned_region_id,manager_response,evidence,source_page,directive_type,created_at,updated_at,region:regions(name)")
     .in("request_type", ["action_closeout", "manager_update", "other"])
+    .eq("status", "awaiting_review")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -104,7 +106,18 @@ export async function POST(request: Request) {
     if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
     if (!actionRow) return NextResponse.json({ error: "Action item was not found." }, { status: 404 });
 
-    const { error: insertError } = await supabase.from("national_requests").insert({
+    const { data: existingRequest, error: existingError } = await supabase
+      .from("national_requests")
+      .select("id,status")
+      .eq("source_action_id", actionId)
+      .in("status", ["awaiting_review", "returned"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 });
+
+    const requestPayload = {
       request_type: "action_closeout",
       title: actionRow.title,
       detail: payload.managerResponse || actionRow.detail || "Manager submitted action close-out.",
@@ -114,14 +127,27 @@ export async function POST(request: Request) {
       manager_response: payload.managerResponse || "Manager submitted close-out with no additional response.",
       evidence: payload.evidence || "No evidence or reference supplied.",
       source_page: actionRow.source_page,
-      directive_type: actionRow.directive_type
-    });
+      directive_type: actionRow.directive_type,
+      national_response: null,
+      reviewed_at: null,
+      updated_at: new Date().toISOString()
+    };
 
-    if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+    if (existingRequest?.id) {
+      const { error: updateRequestError } = await supabase
+        .from("national_requests")
+        .update(requestPayload)
+        .eq("id", existingRequest.id);
+
+      if (updateRequestError) return NextResponse.json({ error: updateRequestError.message }, { status: 500 });
+    } else {
+      const { error: insertError } = await supabase.from("national_requests").insert(requestPayload);
+      if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
 
     const { error: updateError } = await supabase
       .from("action_items")
-      .update({ status: "submitted_for_review", updated_at: new Date().toISOString() })
+      .update({ status: "submitted_for_review", updated_at: new Date().toISOString(), closed_at: null })
       .eq("id", actionId);
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -143,6 +169,7 @@ export async function POST(request: Request) {
     if (readError) return NextResponse.json({ error: readError.message }, { status: 500 });
 
     const dbStatus = storageStatus(status);
+    const isApproved = status === "Approved by national";
     const { error: requestError } = await supabase
       .from("national_requests")
       .update({
@@ -158,7 +185,7 @@ export async function POST(request: Request) {
     if (existingRequest?.source_action_id) {
       const { error: actionError } = await supabase
         .from("action_items")
-        .update({ status: actionStatusForRequest(status), updated_at: new Date().toISOString(), closed_at: status === "Approved by national" ? new Date().toISOString() : null })
+        .update({ status: actionStatusForRequest(status), updated_at: new Date().toISOString(), closed_at: isApproved ? new Date().toISOString() : null })
         .eq("id", existingRequest.source_action_id);
 
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });

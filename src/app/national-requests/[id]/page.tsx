@@ -90,8 +90,8 @@ export default function NationalRequestDetailPage() {
     if (response.ok) setActionRequests(payload.requests || []);
     window.dispatchEvent(new Event("toc.actionState.updated"));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
-    setMessage(status === "Approved by national" ? "Close-out approved and removed from the pending review count." : "Returned to manager for further action.");
-    if (status === "Approved by national") window.setTimeout(() => router.push("/national-requests"), 550);
+    setMessage(status === "Approved by national" ? "Close-out approved and cleared from the live queue." : "Returned to manager and cleared from the national queue.");
+    window.setTimeout(() => router.push("/national-requests"), 650);
   }
 
   async function saveStockOrder(updates: Partial<StockOrderRequest>) {

@@ -69,14 +69,13 @@ export function NationalActionRequests() {
   }
 
   const pendingRequests = requests.filter((request) => request.status === "Awaiting national review");
-  const visibleRequests = requests.filter((request) => request.status !== "Approved by national");
 
   return (
     <div className="national-request-stack">
       <div className="national-request-summary">
-        <article><span>Manager close-outs</span><strong>{visibleRequests.length}</strong></article>
+        <article><span>Manager close-outs</span><strong>{requests.length}</strong></article>
         <article><span>Awaiting review</span><strong>{pendingRequests.length}</strong></article>
-        <article><span>Returned items</span><strong>{requests.filter((request) => request.status === "Returned to manager").length}</strong></article>
+        <article><span>Queue state</span><strong>{requests.length ? "Live" : "Clear"}</strong></article>
       </div>
       <div className="request-lifecycle-strip" aria-label="National request lifecycle">
         <span>Submitted</span>
@@ -85,7 +84,7 @@ export function NationalActionRequests() {
         <span>Closed</span>
       </div>
       <div className="national-request-list">
-        {visibleRequests.length ? visibleRequests.map((request) => (
+        {requests.length ? requests.map((request) => (
           <article
             className="national-request-card clickable-request-card"
             key={request.id}

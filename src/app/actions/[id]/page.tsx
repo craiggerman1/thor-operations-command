@@ -59,6 +59,7 @@ export default function ActionDetailPage() {
 
   const currentAction = action;
   const sourceHref = currentAction.sourceHref || "/actions";
+  const isAwaitingNational = currentAction.status === "Awaiting national review";
 
   function saveDraft() {
     localStorage.setItem(`toc.actionDraft.${currentAction.id}`, JSON.stringify({ managerResponse, evidence, updatedAt: new Date().toISOString() }));
@@ -130,7 +131,7 @@ export default function ActionDetailPage() {
                 </label>
                 <div className="action-closeout-buttons">
                   <button type="button" onClick={saveDraft}>Save Draft</button>
-                  <button type="submit">Submit For National Approval</button>
+                  <button type="submit" disabled={isAwaitingNational}>{isAwaitingNational ? "Awaiting National Review" : "Submit For National Approval"}</button>
                 </div>
                 {message ? <small className="admin-hint-message">{message}</small> : null}
               </form>
