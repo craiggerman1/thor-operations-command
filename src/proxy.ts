@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const REALM = "Thor Operations Command";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const sitePassword = process.env.TOC_SITE_PASSWORD;
 
   if (!sitePassword) {
