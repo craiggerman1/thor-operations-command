@@ -44,6 +44,24 @@ function mapRowToJob(row: CalendarJobRow): CalendarJob {
   };
 }
 
+function mapRowToAdminJob(row: CalendarJobRow) {
+  return {
+    id: row.id,
+    date: row.job_date,
+    time: row.job_time,
+    location: row.location,
+    site: row.site,
+    crew: row.crew,
+    job: row.job_title,
+    status: row.status,
+    notes: row.notes || "",
+    severity: row.severity,
+    recurrence: row.recurrence || "None",
+    recurrenceDetail: row.recurrence_detail || "",
+    recurrenceIntervalWeeks: row.recurrence_interval_weeks || 0
+  };
+}
+
 function emptyCalendarWeeks() {
   return calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] as CalendarJob[] })));
 }
@@ -77,8 +95,9 @@ async function readCalendar() {
     .order("job_date", { ascending: true })
     .order("job_time", { ascending: true });
 
-  if (error) return { weeks: emptyCalendarWeeks(), connected: false, error: error.message };
-  return { weeks: mergeJobsIntoWeeks((data as CalendarJobRow[] | null) || []), connected: true };
+  const rows = (data as CalendarJobRow[] | null) || [];
+  if (error) return { weeks: emptyCalendarWeeks(), jobs: [], connected: false, error: error.message };
+  return { weeks: mergeJobsIntoWeeks(rows), jobs: rows.map(mapRowToAdminJob), connected: true };
 }
 
 export async function GET() {
@@ -96,6 +115,37 @@ export async function POST(request: Request) {
   const payload = await request.json();
   const action = payload.action || "update";
   const job = payload.job as CalendarJob | undefined;
+
+  if (action === "create") {
+    const jobDate = String(payload.date || "").trim();
+    const jobTitle = String(payload.job || "").trim();
+    if (!jobDate || !jobTitle) return NextResponse.json({ error: "Calendar date and job title are required." }, { status: 400 });
+
+    const { error } = await supabase.from("calendar_jobs").insert({
+      job_date: jobDate,
+      job_time: payload.time || "07:00",
+      location: payload.location || "National",
+      site: payload.site || "Unassigned site",
+      crew: payload.crew || "Unassigned crew",
+      job_title: jobTitle,
+      status: payload.status || "Scheduled",
+      notes: payload.notes || "",
+      severity: payload.severity || "green",
+      recurrence: payload.recurrence || "None",
+      recurrence_detail: payload.recurrenceDetail || null,
+      recurrence_interval_weeks: Number(payload.recurrenceIntervalWeeks) || null
+    });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET();
+  }
+
+  if (action === "delete") {
+    if (!payload.id) return NextResponse.json({ error: "Calendar job id is required." }, { status: 400 });
+    const { error } = await supabase.from("calendar_jobs").delete().eq("id", payload.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET();
+  }
 
   if (action !== "update" || !payload.id || !job) {
     return NextResponse.json({ error: "Calendar job id and job payload are required." }, { status: 400 });

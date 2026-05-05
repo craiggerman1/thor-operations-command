@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminActionManager } from "@/components/AdminActionManager";
+import { AdminCalendarManager } from "@/components/AdminCalendarManager";
 import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
@@ -57,6 +58,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "productivity" ? (
           <Panel wide eyebrow="Productivity" title="Site productivity source control">
             <AdminProductivityManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "calendar" ? (
+          <Panel wide eyebrow="Calendar" title="Schedule job source control">
+            <AdminCalendarManager />
           </Panel>
         ) : null}
       </section>
