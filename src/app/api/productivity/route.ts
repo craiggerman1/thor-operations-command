@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
 import { getProductivitySiteSlug } from "@/lib/productivity-utils";
 
 type ProductivitySiteRow = {
@@ -284,14 +285,19 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const payload = await request.json();
+  const action = payload.action || "response";
+  const nationalOnlyActions = new Set(["createSite", "updateSite", "deleteSite"]);
+  const permission = nationalOnlyActions.has(action)
+    ? await requireTocNationalAccess(request)
+    : await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 });
   }
-
-  const payload = await request.json();
-  const action = payload.action || "response";
 
   if (action === "createSite") {
     const siteName = String(payload.siteName || "").trim();

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { allRegions } from "@/lib/access";
+import { getTocRequestHeaders, tocFetch } from "@/lib/toc-client-auth";
 
 type ChatMode = "group" | "direct" | "multi";
 
@@ -117,7 +118,7 @@ export default function ChatPage() {
   useEffect(() => {
     async function loadRecipients() {
       try {
-        const response = await fetch("/api/admin/users", { cache: "no-store" });
+        const response = await fetch("/api/admin/users", { headers: await getTocRequestHeaders(), cache: "no-store" });
         const payload = await response.json();
         const users = (payload.users || []) as { name: string; role: string; regions: string[]; status: string }[];
         const recipients = users
@@ -252,11 +253,10 @@ export default function ChatPage() {
 
     try {
       const session = getStoredSession();
-      const response = await fetch("/api/chat", {
+      const response = await tocFetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...optimisticMessage, role: session.role, scope: session.scope })
-      });
+      }, true);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Message failed");
       setMessages(payload.messages || []);
@@ -290,11 +290,10 @@ export default function ChatPage() {
     setMeetingNote("");
     try {
       const session = getStoredSession();
-      const response = await fetch("/api/chat", {
+      const response = await tocFetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...noteMessage, role: session.role, scope: session.scope })
-      });
+      }, true);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Message failed");
       setMessages(payload.messages || []);

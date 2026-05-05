@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
 
 type StockOrderRow = {
   id: string;
@@ -190,14 +191,19 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const payload = await request.json();
+  const action = payload.action || "create";
+  const nationalOnlyActions = new Set(["createItem", "updateItem", "deleteItem", "delete"]);
+  const permission = nationalOnlyActions.has(action)
+    ? await requireTocNationalAccess(request)
+    : await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 });
   }
-
-  const payload = await request.json();
-  const action = payload.action || "create";
 
   if (action === "createItem") {
     const itemName = String(payload.item || "").trim();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Tag } from "@/components/TocCards";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type StockCatalogItem = {
   id: string;
@@ -18,11 +19,10 @@ async function fetchStockCatalog() {
 }
 
 async function mutateStockCatalog(body: Record<string, unknown>) {
-  const response = await fetch("/api/stock-orders", {
+  const response = await tocFetch("/api/stock-orders", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Stock catalogue update failed.");
   return (payload.catalog || []) as StockCatalogItem[];

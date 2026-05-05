@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent } from "react";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type StockOrderRequest = {
   id?: string;
@@ -52,11 +53,10 @@ export function StockOrderAdminReview() {
   }, []);
 
   async function updateOrder(orderId: string, updates: Partial<StockOrderRequest>) {
-    const response = await fetch("/api/stock-orders", {
+    const response = await tocFetch("/api/stock-orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "update", all: true, active: true, id: orderId, updates })
-    });
+    }, true);
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
@@ -64,11 +64,10 @@ export function StockOrderAdminReview() {
 
   async function deleteOrder(orderId: string) {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
-    const response = await fetch("/api/stock-orders", {
+    const response = await tocFetch("/api/stock-orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete", all: true, active: true, id: orderId })
-    });
+    }, true);
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));

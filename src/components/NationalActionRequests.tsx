@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Tag } from "@/components/TocCards";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 export type NationalActionRequest = {
   id: string;
@@ -49,11 +50,10 @@ export function NationalActionRequests() {
   }, []);
 
   async function updateRequest(requestId: string, status: NationalActionRequest["status"]) {
-    const response = await fetch("/api/national-requests", {
+    const response = await tocFetch("/api/national-requests", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "update", id: requestId, status })
-    });
+    }, true);
     const payload = await response.json();
     if (response.ok) setRequests(payload.requests || []);
     window.dispatchEvent(new Event("toc.actionState.updated"));

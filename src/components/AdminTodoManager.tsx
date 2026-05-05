@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
 import type { AccessRole } from "@/lib/access";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type TodoItem = {
   id: string;
@@ -27,11 +28,10 @@ async function fetchTodos() {
 }
 
 async function mutateTodo(body: Record<string, unknown>) {
-  const response = await fetch("/api/todos", {
+  const response = await tocFetch("/api/todos", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, all: true })
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "To Do update failed.");
   return (payload.todos || []) as TodoItem[];

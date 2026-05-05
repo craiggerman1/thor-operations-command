@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocNationalAccess } from "@/lib/toc-auth";
 import type { Status } from "@/lib/toc-data";
 
 type ComplianceRow = {
@@ -171,6 +172,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocNationalAccess(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {

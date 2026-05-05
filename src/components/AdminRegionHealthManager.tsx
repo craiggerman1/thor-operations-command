@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Tag } from "@/components/TocCards";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type RegionHealthConfig = {
   actionWeight: number;
@@ -44,11 +45,10 @@ async function fetchRegionHealth() {
 }
 
 async function mutateRegionHealth(body: Record<string, unknown>) {
-  const response = await fetch("/api/region-health", {
+  const response = await tocFetch("/api/region-health", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Region Health settings update failed.");
   return {

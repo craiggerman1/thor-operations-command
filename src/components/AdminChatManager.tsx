@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
 import { allRegions } from "@/lib/access";
+import { getTocRequestHeaders, tocFetch } from "@/lib/toc-client-auth";
 
 type ChatMode = "group" | "direct" | "multi";
 
@@ -34,11 +35,10 @@ async function fetchChatMessages() {
 }
 
 async function mutateChat(body: Record<string, unknown>) {
-  const response = await fetch("/api/chat", {
+  const response = await tocFetch("/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Chat update failed.");
   return (payload.messages || []) as ChatMessage[];
@@ -69,7 +69,7 @@ export function AdminChatManager() {
   useEffect(() => {
     async function loadRecipients() {
       try {
-        const response = await fetch("/api/admin/users", { cache: "no-store" });
+        const response = await fetch("/api/admin/users", { headers: await getTocRequestHeaders(), cache: "no-store" });
         const payload = await response.json();
         const users = (payload.users || []) as { name: string; role: string; regions: string[]; status: string }[];
         const recipients = users

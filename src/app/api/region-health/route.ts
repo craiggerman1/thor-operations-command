@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocNationalAccess } from "@/lib/toc-auth";
 
 type RegionRow = {
   id: string;
@@ -159,6 +160,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocNationalAccess(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {

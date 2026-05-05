@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type AdminActionItem = {
   id: string;
@@ -34,11 +35,10 @@ async function fetchActions() {
 }
 
 async function mutateAction(body: Record<string, unknown>) {
-  const response = await fetch("/api/actions", {
+  const response = await tocFetch("/api/actions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Action item update failed.");
   return (payload.actions || []) as AdminActionItem[];

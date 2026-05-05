@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import type { ActionItem } from "@/lib/action-state";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 export default function ActionDetailPage() {
   const params = useParams<{ id: string }>();
@@ -68,16 +69,15 @@ export default function ActionDetailPage() {
 
   async function submitForNationalApproval(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const response = await fetch("/api/national-requests", {
+    const response = await tocFetch("/api/national-requests", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "create",
         actionId: currentAction.id,
         managerResponse: managerResponse.trim() || "Manager submitted close-out with no additional response.",
         evidence: evidence.trim() || "No evidence or reference supplied."
       })
-    });
+    }, true);
     const payload = await response.json();
     if (!response.ok) {
       setMessage(payload.error || "Could not submit this action for national approval.");

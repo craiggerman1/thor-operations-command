@@ -18,6 +18,7 @@ import {
 } from "@/lib/calendar-utils";
 import { getCalendarForecast } from "@/lib/calendar-weather";
 import type { TocWeatherDay, TocWeatherPayload } from "@/lib/weather";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type CalendarViewMode = "calendar" | "list";
 type VisibleJob = CalendarJob & { originalIndex: number };
@@ -146,11 +147,10 @@ export default function CalendarPage() {
     setSaveMessage("Calendar job updated.");
 
     if (editTarget.job.id) {
-      fetch("/api/calendar", {
+      tocFetch("/api/calendar", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "update", id: editTarget.job.id, job: jobToSave, scope })
-      })
+      }, true)
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Calendar update failed")))
         .then((payload) => {
           setCalendarData(payload.weeks || nextData);

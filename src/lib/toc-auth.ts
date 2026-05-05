@@ -5,17 +5,35 @@ import type { AccessRole } from "@/lib/access";
 type AuthProfileRow = {
   access_level: AccessRole | "national";
   is_active: boolean;
+  profile_regions?: ProfileRegionRow[] | null;
+};
+
+type ProfileRegionRow = {
+  region?: { name: string } | { name: string }[] | null;
 };
 
 export type TocAuthenticatedUser = {
   id: string;
   role: AccessRole;
+  regions: string[];
 };
 
 export function mapTocRole(role: string): AccessRole {
   if (role === "director") return "director";
   if (role === "admin") return "admin";
   return "manager";
+}
+
+function firstRelated<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function normaliseRegionsForRole(role: AccessRole, regions: string[]) {
+  const cleanRegions = Array.from(new Set(regions.filter(Boolean)));
+  if (role === "director") return ["National"];
+  if (role === "admin") return Array.from(new Set(["National", ...cleanRegions.filter((region) => region !== "National")]));
+  if (cleanRegions.includes("National")) return ["National", ...cleanRegions.filter((region) => region !== "National")];
+  return cleanRegions;
 }
 
 async function hasActiveAdminProfile() {
@@ -50,7 +68,8 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
     return {
       user: {
         id: "development-admin",
-        role: "admin" as AccessRole
+        role: "admin" as AccessRole,
+        regions: ["National"]
       }
     };
   }
@@ -72,7 +91,7 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("access_level,is_active")
+    .select("access_level,is_active,profile_regions(region:regions(name))")
     .eq("id", authData.user.id)
     .single();
 
@@ -84,6 +103,10 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
 
   const profile = data as AuthProfileRow;
   const role = mapTocRole(profile.access_level);
+  const profileRegions = (profile.profile_regions || [])
+    .map((item) => firstRelated(item.region)?.name)
+    .filter(Boolean) as string[];
+  const regions = normaliseRegionsForRole(role, profileRegions);
   if (!profile.is_active || !roles.includes(role)) {
     return {
       error: NextResponse.json({ error: "You do not have permission to perform this TOC action." }, { status: 403 })
@@ -93,11 +116,30 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
   return {
     user: {
       id: authData.user.id,
-      role
+      role,
+      regions
     }
   };
 }
 
 export async function requireTocUser(request: Request) {
   return requireTocRole(request, ["admin", "director", "manager"]);
+}
+
+export function hasNationalAccess(user: TocAuthenticatedUser) {
+  return user.role === "admin" || user.regions.includes("National");
+}
+
+export async function requireTocNationalAccess(request: Request, options: { allowDirector?: boolean } = {}) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission;
+
+  const user = permission.user;
+  if (hasNationalAccess(user) || (options.allowDirector && user.role === "director")) {
+    return permission;
+  }
+
+  return {
+    error: NextResponse.json({ error: "National responsibility is required for this TOC action." }, { status: 403 })
+  };
 }

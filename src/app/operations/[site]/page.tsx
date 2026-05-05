@@ -13,6 +13,7 @@ import {
   getProductivityTone,
   getProductivityTrend
 } from "@/lib/productivity-utils";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type ProductivityResponse = {
   response: string;
@@ -142,11 +143,10 @@ export default function ProductivitySitePage() {
       return;
     }
 
-    const result = await fetch("/api/productivity", {
+    const result = await tocFetch("/api/productivity", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ siteId: currentSite.id, slug: currentSite.slug, scope, response })
-    });
+    }, true);
     const payload = await result.json();
 
     if (!result.ok) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
 
 type ChatMode = "group" | "direct" | "multi";
 
@@ -77,13 +78,20 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const body = await request.json();
+  const requestedAction = body.action || "create";
+  const permission = requestedAction === "delete"
+    ? await requireTocNationalAccess(request)
+    : await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  const payload = await request.json();
+  const payload = body;
   const action = payload.action || "create";
   const role = payload.role || "admin";
   const scope = payload.scope || "National";

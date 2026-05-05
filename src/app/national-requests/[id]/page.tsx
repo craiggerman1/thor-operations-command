@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type StockOrderRequest = {
   id?: string;
@@ -81,11 +82,10 @@ export default function NationalRequestDetailPage() {
   const stockOrder = useMemo(() => orders.find((order) => getOrderId(order) === requestId), [orders, requestId]);
 
   async function saveActionRequest(status: NationalActionRequest["status"]) {
-    const response = await fetch("/api/national-requests", {
+    const response = await tocFetch("/api/national-requests", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "update", id: requestId, status })
-    });
+    }, true);
     const payload = await response.json();
     if (response.ok) setActionRequests(payload.requests || []);
     window.dispatchEvent(new Event("toc.actionState.updated"));
@@ -95,11 +95,10 @@ export default function NationalRequestDetailPage() {
   }
 
   async function saveStockOrder(updates: Partial<StockOrderRequest>) {
-    const response = await fetch("/api/stock-orders", {
+    const response = await tocFetch("/api/stock-orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "update", all: true, active: true, id: requestId, updates })
-    });
+    }, true);
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));
@@ -108,11 +107,10 @@ export default function NationalRequestDetailPage() {
 
   async function deleteStockOrder() {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
-    const response = await fetch("/api/stock-orders", {
+    const response = await tocFetch("/api/stock-orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete", all: true, active: true, id: requestId })
-    });
+    }, true);
     const payload = await response.json();
     if (response.ok) setOrders(payload.orders || []);
     window.dispatchEvent(new Event("toc.stockOrders.updated"));

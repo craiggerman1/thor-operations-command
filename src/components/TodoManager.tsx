@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type TodoItem = {
   id: string;
@@ -117,11 +118,10 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
 
     const session = getStoredSession();
     try {
-      const response = await fetch("/api/todos", {
+      const response = await tocFetch("/api/todos", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, role: session.role, scope: session.scope })
-      });
+      }, true);
       const result = await response.json();
       if (response.ok) {
         setTodos(result.todos || []);

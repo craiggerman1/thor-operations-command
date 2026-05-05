@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Tag } from "@/components/TocCards";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type ProductivitySite = {
   id: string;
@@ -38,11 +39,10 @@ async function fetchProductivity() {
 }
 
 async function mutateProductivity(body: Record<string, unknown>) {
-  const response = await fetch("/api/productivity", {
+  const response = await tocFetch("/api/productivity", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Productivity update failed.");
   return (payload.sites || []) as ProductivitySite[];

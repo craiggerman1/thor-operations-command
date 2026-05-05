@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { requireTocUser } from "@/lib/toc-auth";
 
 type TodoRow = {
   id: string;
@@ -87,6 +88,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {

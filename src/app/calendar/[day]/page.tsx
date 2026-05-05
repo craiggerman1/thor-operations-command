@@ -16,6 +16,7 @@ import {
   updateCalendarJob
 } from "@/lib/calendar-utils";
 import type { CalendarDay, CalendarJob } from "@/lib/toc-data";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -153,11 +154,10 @@ export default function CalendarDayPage() {
     setSaveMessage("Calendar job updated.");
 
     if (editTarget.job.id) {
-      fetch("/api/calendar", {
+      tocFetch("/api/calendar", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "update", id: editTarget.job.id, job: cleanEditableJob(editTarget.job), scope })
-      })
+      }, true)
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Calendar update failed")))
         .then((payload) => {
           const weeks = payload.weeks || nextData;

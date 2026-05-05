@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type AdminCalendarJob = {
   id: string;
@@ -34,11 +35,10 @@ async function fetchCalendarJobs() {
 }
 
 async function mutateCalendar(body: Record<string, unknown>) {
-  const response = await fetch("/api/calendar", {
+  const response = await tocFetch("/api/calendar", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  });
+  }, true);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Calendar update failed.");
   return (payload.jobs || []) as AdminCalendarJob[];

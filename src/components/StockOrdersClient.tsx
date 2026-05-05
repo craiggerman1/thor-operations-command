@@ -5,6 +5,7 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type StockOrderRequest = {
   id?: string;
@@ -89,11 +90,10 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
   }, [scope]);
 
   async function mutateStockOrder(payload: Record<string, unknown>) {
-    const response = await fetch("/api/stock-orders", {
+    const response = await tocFetch("/api/stock-orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
-    });
+    }, true);
     const result = await response.json();
 
     if (!response.ok) {
