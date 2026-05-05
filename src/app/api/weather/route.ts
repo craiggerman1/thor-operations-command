@@ -39,6 +39,17 @@ const bomWarningFeeds: Record<string, string> = {
   Perth: "https://www.bom.gov.au/fwo/IDZ00067.warnings_land_wa.xml"
 };
 
+const bomWarningRegionTerms: Record<string, string[]> = {
+  National: ["gold coast", "south east queensland", "southeast coast", "brisbane", "logan", "moreton bay"],
+  Workshop: ["gold coast", "south east queensland", "southeast coast", "brisbane", "logan", "moreton bay"],
+  Brisbane: ["brisbane", "gold coast", "south east queensland", "southeast coast", "logan", "moreton bay", "ipswich"],
+  Sydney: ["sydney", "metropolitan", "illawarra", "hunter", "central coast"],
+  Canberra: ["canberra", "act", "australian capital territory"],
+  Melbourne: ["melbourne", "central", "port phillip", "geelong"],
+  Adelaide: ["adelaide", "mount lofty", "yorke peninsula"],
+  Perth: ["perth", "lower west", "swan coastal", "mandurah"]
+};
+
 function buildForecast(data: OpenMeteoResponse): TocWeatherDay[] {
   const times = data.daily?.time || [];
 
@@ -74,14 +85,26 @@ function extractXmlTag(block: string, tag: string) {
   return match ? decodeXmlText(match[1]) : null;
 }
 
-function parseBomWarnings(xml: string): BomWarningItem[] {
+function normaliseBomTitle(title: string) {
+  return title.replace(/^\d{2}\/\d{2}:\d{2}\s+\w+\s+/, "").trim();
+}
+
+function isRelevantBomWarning(title: string, scope: string) {
+  const warningTitle = normaliseBomTitle(title).toLowerCase();
+  const terms = bomWarningRegionTerms[scope] || bomWarningRegionTerms.National;
+
+  if (/^(cancellation of|final flood warning)\b/i.test(warningTitle)) return false;
+  return terms.some((term) => warningTitle.includes(term));
+}
+
+function parseBomWarnings(xml: string, scope: string): BomWarningItem[] {
   return [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)]
     .map((match) => ({
       title: extractXmlTag(match[1], "title") || "",
       link: extractXmlTag(match[1], "link"),
       issuedAt: extractXmlTag(match[1], "pubDate")
     }))
-    .filter((item) => item.title && !/no warnings current/i.test(item.title) && !/^cancellation of\b/i.test(item.title.replace(/^\d{2}\/\d{2}:\d{2}\s+\w+\s+/, "")));
+    .filter((item) => item.title && !/no warnings current/i.test(item.title) && isRelevantBomWarning(item.title, scope));
 }
 
 async function getBomWarning(scope: string) {
@@ -104,7 +127,7 @@ async function getBomWarning(scope: string) {
       };
     }
 
-    const warnings = parseBomWarnings(await response.text());
+    const warnings = parseBomWarnings(await response.text(), scope);
     const firstWarning = warnings[0];
 
     if (!firstWarning) {
