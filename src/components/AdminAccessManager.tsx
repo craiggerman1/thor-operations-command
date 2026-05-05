@@ -14,6 +14,10 @@ type AdminAccessUser = {
   status: "Active" | "Disabled";
 };
 
+type AdminUserPatch = Partial<AdminAccessUser> & {
+  password?: string;
+};
+
 const accessUsersKey = "toc.adminAccessUsers";
 
 const initialAccessUsers: AdminAccessUser[] = [];
@@ -59,11 +63,6 @@ function roleLabel(role: AccessRole) {
   return "Manager";
 }
 
-function createUserId(name: string) {
-  const cleaned = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `TOC-${cleaned || Date.now()}`;
-}
-
 function normaliseRegionsForRole(role: AccessRole, regions: string[]) {
   const cleanRegions = Array.from(new Set(regions.filter(Boolean)));
   if (role === "director") return ["National"];
@@ -76,6 +75,7 @@ export function AdminAccessManager() {
   const [users, setUsers] = useState<AdminAccessUser[]>(initialAccessUsers);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [reference, setReference] = useState("");
   const [role, setRole] = useState<AccessRole>("manager");
   const [regions, setRegions] = useState<string[]>(["Brisbane"]);
@@ -106,39 +106,49 @@ export function AdminAccessManager() {
     event.preventDefault();
     const cleanName = name.trim();
     if (!cleanName) return;
+    if (!email.trim()) {
+      setStatus("Email address is required for secure TOC login.");
+      return;
+    }
+    if (password.length < 8) {
+      setStatus("Temporary password must be at least 8 characters.");
+      return;
+    }
 
     const nextRegions = normaliseRegionsForRole(role, regions);
-    const nextUser: AdminAccessUser = {
-      id: createUserId(cleanName),
+    setStatus(`Creating secure TOC login for ${cleanName}...`);
+    void saveUserMutation({
+      action: "create",
       name: cleanName,
       email: email.trim(),
+      password,
       reference: reference.trim() || "No reference supplied",
       role,
-      regions: nextRegions,
-      status: "Active"
-    };
-
-    setUsers((current) => [nextUser, ...current]);
-    void saveUserMutation({ action: "create", name: cleanName, email: nextUser.email, reference: nextUser.reference, role: nextUser.role, regions: nextUser.regions });
-    setName("");
-    setEmail("");
-    setReference("");
-    setRole("manager");
-    setRegions(["Brisbane"]);
-    setStatus(`${cleanName} registered for ${roleLabel(nextUser.role)} access.`);
+      regions: nextRegions
+    }).then((saved) => {
+      if (!saved) return;
+      setName("");
+      setEmail("");
+      setPassword("");
+      setReference("");
+      setRole("manager");
+      setRegions(["Brisbane"]);
+      setStatus(`${cleanName} registered for ${roleLabel(role)} access.`);
+    });
   }
 
-  function updateUser(userId: string, patch: Partial<AdminAccessUser>) {
+  function updateUser(userId: string, patch: AdminUserPatch) {
     const target = users.find((user) => user.id === userId);
-    const nextUser = target ? { ...target, ...patch } : null;
-    setUsers((current) => current.map((user) => user.id === userId ? { ...user, ...patch } : user));
+    const { password: nextPassword, ...userPatch } = patch;
+    const nextUser = target ? { ...target, ...userPatch } : null;
+    setUsers((current) => current.map((user) => user.id === userId ? { ...user, ...userPatch } : user));
     if (nextUser) {
       if (!isDatabaseUserId(userId)) {
         setStatus("This legacy development user has been removed. Register the user again to create a live database profile.");
         setUsers((current) => current.filter((user) => user.id !== userId));
         return;
       }
-      void saveUserMutation({ action: "update", ...nextUser, id: userId });
+      void saveUserMutation({ action: "update", ...nextUser, id: userId, ...(nextPassword ? { password: nextPassword } : {}) });
     }
   }
 
@@ -200,12 +210,14 @@ export function AdminAccessManager() {
         setUsers(result.users);
         localStorage.setItem(accessUsersKey, JSON.stringify(result.users));
         window.dispatchEvent(new Event("toc.adminUsers.updated"));
+        return true;
       } else if (result.error) {
         setStatus(result.error);
       }
     } catch {
-      setStatus("User access saved locally, but database update failed.");
+      setStatus("User access could not be saved to the secure database.");
     }
+    return false;
   }
 
   return (
@@ -217,6 +229,7 @@ export function AdminAccessManager() {
         </div>
         <label><span>Name</span><input value={name} placeholder="User name" onChange={(event) => setName(event.target.value)} /></label>
         <label><span>Email address</span><input type="email" value={email} placeholder="user@thormobile.com.au" onChange={(event) => setEmail(event.target.value)} /></label>
+        <label><span>Temporary password</span><input type="password" value={password} placeholder="Minimum 8 characters" onChange={(event) => setPassword(event.target.value)} /></label>
         <label><span>User reference</span><input value={reference} placeholder="Employee ID or internal reference" onChange={(event) => setReference(event.target.value)} /></label>
         <label>
           <span>Access level</span>
@@ -230,7 +243,7 @@ export function AdminAccessManager() {
           <legend>Assigned region responsibility</legend>
           {assignableRegions.map((region) => <label key={region}><input checked={regions.includes(region)} type="checkbox" onChange={() => toggleFormRegion(region)} /> {region}</label>)}
         </fieldset>
-        <small>Admin always keeps national command control. Managers only see assigned regions, including National if assigned. Director remains an owner overview role. Passwords will be handled by the secure authentication layer.</small>
+        <small>Admin always keeps national command control. Managers only see assigned regions, including National if assigned. Director remains an owner overview role. Passwords are created in Supabase Auth and are not displayed again.</small>
         <button type="submit">Register User</button>
       </form>
 
@@ -254,6 +267,15 @@ export function AdminAccessManager() {
               <label>
                 <span>User reference</span>
                 <input defaultValue={user.reference} onBlur={(event) => updateUser(user.id, { reference: event.target.value || "No reference supplied" })} />
+              </label>
+              <label>
+                <span>Reset password</span>
+                <input type="password" placeholder="New temporary password" onBlur={(event) => {
+                  const nextPassword = event.target.value;
+                  if (!nextPassword) return;
+                  updateUser(user.id, { password: nextPassword });
+                  event.target.value = "";
+                }} />
               </label>
               <label>
                 <span>Access level</span>

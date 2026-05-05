@@ -126,14 +126,32 @@ export async function POST(request: Request) {
     const displayName = String(payload.name || "").trim();
     if (!displayName) return NextResponse.json({ error: "User name is required." }, { status: 400 });
 
+    const email = typeof payload.email === "string" ? payload.email.trim() : "";
+    const password = typeof payload.password === "string" ? payload.password : "";
+    if (!email) return NextResponse.json({ error: "Email address is required for secure TOC login." }, { status: 400 });
+    if (password.length < 8) return NextResponse.json({ error: "Temporary password must be at least 8 characters." }, { status: 400 });
+
     const role = mapRole(payload.role || "manager");
     const regions = normaliseRegionsForRole(role, (payload.regions || []) as string[]);
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      app_metadata: {
+        toc_role: role
+      }
+    });
+
+    if (authError || !authData.user) {
+      return NextResponse.json({ error: authError?.message || "Secure auth user could not be created." }, { status: 500 });
+    }
 
     const { data, error } = await supabase
       .from("profiles")
       .insert({
+        id: authData.user.id,
         display_name: displayName,
-        email: typeof payload.email === "string" ? payload.email.trim() || null : null,
+        email,
         user_reference: payload.reference || "No reference supplied",
         access_level: role,
         is_active: true
@@ -141,7 +159,10 @@ export async function POST(request: Request) {
       .select("id")
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     await saveProfileRegions(data.id, regions);
     return GET();
   }
@@ -157,9 +178,26 @@ export async function POST(request: Request) {
     if (typeof payload.reference === "string") updates.user_reference = payload.reference;
     if (typeof payload.role === "string") updates.access_level = mapRole(payload.role);
     if (typeof payload.status === "string") updates.is_active = payload.status === "Active";
+    if (typeof payload.password === "string" && payload.password.length > 0 && payload.password.length < 8) {
+      return NextResponse.json({ error: "Temporary password must be at least 8 characters." }, { status: 400 });
+    }
 
     const { error } = await supabase.from("profiles").update(updates).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    if (typeof payload.role === "string") {
+      const { error: roleError } = await supabase.auth.admin.updateUserById(id, {
+        app_metadata: {
+          toc_role: mapRole(payload.role)
+        }
+      });
+      if (roleError) return NextResponse.json({ error: roleError.message }, { status: 500 });
+    }
+
+    if (typeof payload.password === "string" && payload.password.length >= 8) {
+      const { error: passwordError } = await supabase.auth.admin.updateUserById(id, { password: payload.password });
+      if (passwordError) return NextResponse.json({ error: passwordError.message }, { status: 500 });
+    }
 
     if (Array.isArray(payload.regions)) {
       const role = mapRole(payload.role || "manager");
@@ -176,6 +214,7 @@ export async function POST(request: Request) {
     if (regionDeleteError) return NextResponse.json({ error: regionDeleteError.message }, { status: 500 });
     const { error } = await supabase.from("profiles").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await supabase.auth.admin.deleteUser(payload.id);
     return GET();
   }
 

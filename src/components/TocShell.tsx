@@ -10,6 +10,7 @@ import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
 import { fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
 import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type StoredSession = {
   role?: AccessRole;
@@ -163,6 +164,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     if (signingOut) return;
 
     setSigningOut(true);
+    void getSupabaseBrowserClient()?.auth.signOut();
     signOutTimer.current = window.setTimeout(() => {
       localStorage.removeItem("toc.session");
       document.body.classList.remove("is-authenticated");
@@ -219,13 +221,13 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.218</em>
+              <em>Build 0.219</em>
             </div>
           </div>
           <div className="topbar-actions">
             <div className="session-chip">
-              <span>Development view</span>
-              <strong>{activeProfile.label}</strong>
+              <span>Signed in</span>
+              <strong>{session.label || activeProfile.label}</strong>
             </div>
             <label className="select-wrap access-control">
               <span>View as</span>
