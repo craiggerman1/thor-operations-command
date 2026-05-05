@@ -19,8 +19,8 @@ export const pageSettings: AdminPageSetting[] = [
   { page: "Inductions", slug: "inductions", owner: "Induction source and site mapping", control: "Manage controlled sheet source, site-region mapping and induction status display rules.", state: "Mapped" },
   { page: "Staff Availability", slug: "staff-availability", owner: "Availability source", control: "Manage controlled sheet source, availability windows, display status rules and region relevance.", state: "Mapped" },
   { page: "Stock Orders", slug: "stock-orders", owner: "Stock catalogue and order review", control: "Approve orderable items, review requests, update tracking and manage national responses.", state: "Active" },
-  { page: "Asset Tracking", slug: "asset-tracking", owner: "Unity GPS source control", control: "Map GPS assets, regions and status visibility.", state: "Ready" },
-  { page: "Jobsheets", slug: "jobsheets", owner: "Thor Portal source control", control: "Map jobsheet source, approval queue visibility and manager action routing.", state: "Ready" },
+  { page: "Asset Tracking", slug: "asset-tracking", owner: "Unity GPS source control", control: "Map GPS assets, regions and status visibility.", state: "Active" },
+  { page: "Jobsheets", slug: "jobsheets", owner: "Thor Portal source control", control: "Map jobsheet source, approval queue visibility and manager action routing.", state: "Active" },
   { page: "To Do", slug: "to-do", owner: "Personal and shared tasks", control: "Configure shared task routing, importance handling and future user-specific persistence.", state: "Mapped" },
   { page: "Chat", slug: "chat", owner: "Manager communications", control: "Set manager chat audiences, meeting links and communication rules.", state: "Mapped" }
 ];

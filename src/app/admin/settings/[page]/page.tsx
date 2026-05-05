@@ -8,6 +8,7 @@ import { AdminChatManager } from "@/components/AdminChatManager";
 import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
 import { AdminHomeManager } from "@/components/AdminHomeManager";
+import { AdminIntegrationSourceManager } from "@/components/AdminIntegrationSourceManager";
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
 import { AdminRegionHealthManager } from "@/components/AdminRegionHealthManager";
 import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
@@ -87,6 +88,16 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "region-health" ? (
           <Panel wide eyebrow="Region Health" title="Scoreboard scoring control">
             <AdminRegionHealthManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "asset-tracking" ? (
+          <Panel wide eyebrow="Asset Tracking" title="Unity GPS source control">
+            <AdminIntegrationSourceManager slug="asset-tracking" label="Asset Tracking" />
+          </Panel>
+        ) : null}
+        {setting.slug === "jobsheets" ? (
+          <Panel wide eyebrow="Jobsheets" title="Thor Portal source control">
+            <AdminIntegrationSourceManager slug="jobsheets" label="Jobsheets" />
           </Panel>
         ) : null}
       </section>
