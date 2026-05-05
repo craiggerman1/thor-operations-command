@@ -17,9 +17,74 @@ type ProductivityRow = {
   productivity_score: number | null;
 };
 
-function getActionHealthScore(openActionCount: number, urgentActionCount: number) {
+type RegionHealthConfig = {
+  actionWeight: number;
+  productivityWeight: number;
+  openActionPenalty: number;
+  urgentActionPenalty: number;
+  minimumActionScore: number;
+  healthyTarget: number;
+};
+
+const settingsKey = "region_health_config";
+const defaultConfig: RegionHealthConfig = {
+  actionWeight: 58,
+  productivityWeight: 42,
+  openActionPenalty: 14,
+  urgentActionPenalty: 8,
+  minimumActionScore: 10,
+  healthyTarget: 95
+};
+
+function clampNumber(value: unknown, fallback: number, min = 0, max = 100) {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+}
+
+function normaliseConfig(value: Partial<RegionHealthConfig> | null | undefined): RegionHealthConfig {
+  const actionWeight = clampNumber(value?.actionWeight, defaultConfig.actionWeight);
+  const productivityWeight = clampNumber(value?.productivityWeight, defaultConfig.productivityWeight);
+  const totalWeight = actionWeight + productivityWeight || 100;
+
+  return {
+    actionWeight: Math.round((actionWeight / totalWeight) * 100),
+    productivityWeight: Math.round((productivityWeight / totalWeight) * 100),
+    openActionPenalty: clampNumber(value?.openActionPenalty, defaultConfig.openActionPenalty, 1, 50),
+    urgentActionPenalty: clampNumber(value?.urgentActionPenalty, defaultConfig.urgentActionPenalty, 0, 50),
+    minimumActionScore: clampNumber(value?.minimumActionScore, defaultConfig.minimumActionScore, 0, 100),
+    healthyTarget: clampNumber(value?.healthyTarget, defaultConfig.healthyTarget, 50, 100)
+  };
+}
+
+async function readConfig() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return defaultConfig;
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", settingsKey)
+    .maybeSingle();
+
+  if (error || !data?.value) return defaultConfig;
+  return normaliseConfig(data.value as Partial<RegionHealthConfig>);
+}
+
+async function saveConfig(config: RegionHealthConfig) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({ key: settingsKey, value: config, updated_at: new Date().toISOString() }, { onConflict: "key" });
+
+  if (error) throw error;
+}
+
+function getActionHealthScore(openActionCount: number, urgentActionCount: number, config: RegionHealthConfig) {
   if (openActionCount <= 0) return 100;
-  return Math.max(10, 100 - openActionCount * 14 - urgentActionCount * 8);
+  return Math.max(config.minimumActionScore, 100 - openActionCount * config.openActionPenalty - urgentActionCount * config.urgentActionPenalty);
 }
 
 function getHealthTone(score: number) {
@@ -43,6 +108,7 @@ export async function GET() {
     return NextResponse.json({ regions: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
+  const config = await readConfig();
   const [{ data: regionsData, error: regionsError }, { data: actionsData, error: actionsError }, { data: productivityData, error: productivityError }] = await Promise.all([
     supabase.from("regions").select("id,name").eq("is_active", true).order("name", { ascending: true }),
     supabase.from("action_items").select("assigned_region_id,priority,directive_type").neq("status", "closed"),
@@ -62,8 +128,8 @@ export async function GET() {
     const productivityScore = regionProductivityRows.length
       ? Math.round(regionProductivityRows.reduce((total, item) => total + Number(item.productivity_score || 0), 0) / regionProductivityRows.length)
       : 100;
-    const actionHealthScore = getActionHealthScore(regionActions.length, urgentActionCount);
-    const healthScore = Math.round(actionHealthScore * 0.58 + productivityScore * 0.42);
+    const actionHealthScore = getActionHealthScore(regionActions.length, urgentActionCount, config);
+    const healthScore = Math.round(actionHealthScore * (config.actionWeight / 100) + productivityScore * (config.productivityWeight / 100));
 
     return {
       id: region.id,
@@ -73,9 +139,30 @@ export async function GET() {
       healthText: getHealthText(healthScore),
       openActions: regionActions.length,
       urgentActions: urgentActionCount,
-      productivityScore
+      productivityScore,
+      actionHealthScore
     };
   });
 
-  return NextResponse.json({ regions, connected: true });
+  return NextResponse.json({ regions, config, connected: true });
+}
+
+export async function POST(request: Request) {
+  const supabase = getSupabaseAdminClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 });
+  }
+
+  const payload = await request.json();
+  const action = payload.action || "saveConfig";
+  const config = action === "resetConfig" ? defaultConfig : normaliseConfig(payload.config || {});
+
+  try {
+    await saveConfig(config);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Region Health settings update failed." }, { status: 500 });
+  }
+
+  return GET();
 }

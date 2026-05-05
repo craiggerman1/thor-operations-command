@@ -8,6 +8,7 @@ import { AdminChatManager } from "@/components/AdminChatManager";
 import { AdminComplianceManager } from "@/components/AdminComplianceManager";
 import { AdminEquipmentManager } from "@/components/AdminEquipmentManager";
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
+import { AdminRegionHealthManager } from "@/components/AdminRegionHealthManager";
 import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
 import { AdminTodoManager } from "@/components/AdminTodoManager";
 import { pageSettings } from "@/lib/admin-settings";
@@ -75,6 +76,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "to-do" ? (
           <Panel wide eyebrow="To Do" title="Manager task routing control">
             <AdminTodoManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "region-health" ? (
+          <Panel wide eyebrow="Region Health" title="Scoreboard scoring control">
+            <AdminRegionHealthManager />
           </Panel>
         ) : null}
       </section>
