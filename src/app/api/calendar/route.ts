@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { calendarWeeks } from "@/lib/toc-data";
 import type { CalendarDay, CalendarJob, Status } from "@/lib/toc-data";
-import { getCalendarDate, updateCalendarJob } from "@/lib/calendar-utils";
+import { generateCalendarWeeks, getCalendarDate } from "@/lib/calendar-utils";
 
 type CalendarJobRow = {
   id: string;
@@ -63,7 +62,7 @@ function mapRowToAdminJob(row: CalendarJobRow) {
 }
 
 function emptyCalendarWeeks() {
-  return calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] as CalendarJob[] })));
+  return generateCalendarWeeks().map((week) => week.map((day) => ({ ...day, jobs: [] as CalendarJob[] })));
 }
 
 function mergeJobsIntoWeeks(rows: CalendarJobRow[]) {

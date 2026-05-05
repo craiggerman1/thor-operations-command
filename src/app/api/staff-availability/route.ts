@@ -26,9 +26,9 @@ async function readSourceConfig() {
 function scopedEmptyFeed(region: string): StaffAvailabilityFeed {
   return {
     ...staffAvailabilitySheet,
-    sourceName: `${region} availability source not configured`,
+    sourceName: `${region} availability source required`,
     spreadsheetUrl: "",
-    lastRead: "Not connected",
+    lastRead: "Source required",
     staff: []
   };
 }

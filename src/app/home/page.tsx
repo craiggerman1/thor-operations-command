@@ -127,7 +127,13 @@ export default function HomePage() {
     window.addEventListener("toc.todos.updated", syncTodos);
     window.addEventListener("toc.actionState.updated", syncActions);
     window.addEventListener("toc.homeSettings.updated", syncHomeSettings);
+    const refreshInterval = window.setInterval(() => {
+      syncTodos();
+      syncActions();
+      syncHomeSettings();
+    }, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncSession);
       window.removeEventListener("toc.scopechange", syncSession);
       window.removeEventListener("storage", syncTodos);

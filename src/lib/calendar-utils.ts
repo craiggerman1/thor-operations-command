@@ -1,16 +1,16 @@
-import { calendarWeeks } from "@/lib/toc-data";
 import type { CalendarDay, CalendarJob } from "@/lib/toc-data";
+import { getThorOperatingWeek } from "@/lib/operating-week";
 
 export const calendarWeekdays = ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed"];
 export const calendarStorageKey = "toc.calendarWeeks";
-const calendarYear = 2026;
+const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function getCalendarDaySlug(day: CalendarDay) {
   return `${day.day}-${day.date}-${day.month}-${day.week}`.toLowerCase().replace(/\s+/g, "-");
 }
 
 export function getCalendarDays() {
-  return calendarWeeks.flatMap((week) => week);
+  return generateCalendarWeeks().flatMap((week) => week);
 }
 
 export function getVisibleCalendarDays(weeks: CalendarDay[][], today = new Date()) {
@@ -42,13 +42,13 @@ export function filterCalendarJobs(day: CalendarDay, scope: string) {
 }
 
 export function getStoredCalendarWeeks() {
-  if (typeof window === "undefined") return calendarWeeks;
+  if (typeof window === "undefined") return generateCalendarWeeks();
 
   try {
     const stored = localStorage.getItem(calendarStorageKey);
-    return stored ? JSON.parse(stored) as CalendarDay[][] : calendarWeeks;
+    return stored ? JSON.parse(stored) as CalendarDay[][] : generateCalendarWeeks();
   } catch {
-    return calendarWeeks;
+    return generateCalendarWeeks();
   }
 }
 
@@ -95,9 +95,14 @@ export function updateCalendarJob(weeks: CalendarDay[][], daySlug: string, jobIn
 }
 
 export function getCalendarDate(day: CalendarDay) {
-  const monthIndex = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(day.month);
+  if ("isoDate" in day && typeof day.isoDate === "string") {
+    return new Date(`${day.isoDate}T00:00:00`);
+  }
+
+  const monthIndex = monthLabels.indexOf(day.month);
   if (monthIndex < 0) return null;
-  return new Date(calendarYear, monthIndex, Number(day.date));
+  const todayYear = new Date().getFullYear();
+  return new Date(todayYear, monthIndex, Number(day.date));
 }
 
 function getThorCalendarWeekStart(today: Date) {
@@ -106,6 +111,37 @@ function getThorCalendarWeekStart(today: Date) {
   start.setDate(start.getDate() - daysSinceThursday);
   start.setHours(0, 0, 0, 0);
   return start;
+}
+
+function formatIsoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function generateCalendarWeeks(today = new Date(), weekCount = 8): CalendarDay[][] {
+  const currentWeek = getThorOperatingWeek(today);
+
+  return Array.from({ length: weekCount }, (_, weekIndex) => {
+    const weekStart = new Date(currentWeek.start);
+    weekStart.setDate(currentWeek.start.getDate() + weekIndex * 7);
+    const weekName = getThorOperatingWeek(weekStart).name;
+
+    return calendarWeekdays.map((weekday, dayIndex) => {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + dayIndex);
+
+      return {
+        day: weekday,
+        date: String(date.getDate()),
+        month: monthLabels[date.getMonth()],
+        week: weekName,
+        isoDate: formatIsoDate(date),
+        jobs: []
+      } as CalendarDay;
+    });
+  });
 }
 
 function getRecurrenceDays(job: CalendarJob) {

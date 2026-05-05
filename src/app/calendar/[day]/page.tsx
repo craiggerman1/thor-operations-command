@@ -12,9 +12,9 @@ import {
   getCalendarDayBySlug,
   getCalendarDayFromWeeks,
   getCalendarDaySlug,
+  generateCalendarWeeks,
   updateCalendarJob
 } from "@/lib/calendar-utils";
-import { calendarWeeks } from "@/lib/toc-data";
 import type { CalendarDay, CalendarJob } from "@/lib/toc-data";
 
 function getStoredScope() {
@@ -41,13 +41,14 @@ function cleanEditableJob(job: CalendarJob & { originalIndex?: number }): Calend
 
 export default function CalendarDayPage() {
   const params = useParams<{ day: string }>();
-  const fallbackDay = useMemo(() => {
+  const templateDay = useMemo(() => {
     const templateDay = getCalendarDayBySlug(params.day);
     return templateDay ? { ...templateDay, jobs: [] } : undefined;
   }, [params.day]);
-  const [day, setDay] = useState<CalendarDay | undefined>(fallbackDay);
+  const [day, setDay] = useState<CalendarDay | undefined>();
+  const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState("National");
-  const [calendarData, setCalendarData] = useState<CalendarDay[][]>(calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] }))));
+  const [calendarData, setCalendarData] = useState<CalendarDay[][]>(generateCalendarWeeks());
   const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
 
@@ -68,23 +69,39 @@ export default function CalendarDayPage() {
 
   useEffect(() => {
     async function syncCalendar() {
+      setLoading(true);
       try {
         const response = await fetch(`/api/calendar?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         const weeks = payload.weeks || [];
         setCalendarData(weeks);
-        setDay(getCalendarDayFromWeeks(weeks, params.day) || fallbackDay);
+        setDay(getCalendarDayFromWeeks(weeks, params.day) || templateDay);
       } catch {
-        const emptyWeeks = calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] })));
+        const emptyWeeks = generateCalendarWeeks();
         setCalendarData(emptyWeeks);
-        setDay(getCalendarDayFromWeeks(emptyWeeks, params.day) || fallbackDay);
+        setDay(getCalendarDayFromWeeks(emptyWeeks, params.day) || templateDay);
+      } finally {
+        setLoading(false);
       }
     }
 
     void syncCalendar();
     window.addEventListener("toc.calendar.updated", syncCalendar);
     return () => window.removeEventListener("toc.calendar.updated", syncCalendar);
-  }, [fallbackDay, params.day, scope]);
+  }, [templateDay, params.day, scope]);
+
+  if (loading) {
+    return (
+      <TocShell>
+        <PageIntro title="Calendar" detail="Loading selected schedule day." />
+        <section className="command-grid route-grid">
+          <Panel wide eyebrow="Day schedule" title="Loading schedule">
+            <div className="empty-state">Loading the selected day from the database.</div>
+          </Panel>
+        </section>
+      </TocShell>
+    );
+  }
 
   if (!day) {
     return (
@@ -185,7 +202,7 @@ export default function CalendarDayPage() {
                     <div><dt>Crew</dt><dd>{job.crew}</dd></div>
                     <div><dt>Location</dt><dd>{job.location}</dd></div>
                     <div><dt>Site</dt><dd>{job.site}</dd></div>
-                    <div><dt>Source</dt><dd>Portal schedule feed</dd></div>
+                    <div><dt>Source</dt><dd>TOC schedule</dd></div>
                     <div><dt>Recurring</dt><dd>{job.recurrence === "Custom" ? `Every ${job.recurrenceIntervalWeeks || 3} weeks` : job.recurrence && job.recurrence !== "None" ? job.recurrence : "None"}</dd></div>
                   </dl>
                   <div className="calendar-detail-notes">

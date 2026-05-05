@@ -50,7 +50,9 @@ export default function ActionsPage() {
     window.addEventListener("toc.scopechange", syncSession);
     window.addEventListener("storage", syncActions);
     window.addEventListener("toc.actionState.updated", syncActions);
+    const refreshInterval = window.setInterval(syncActions, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncSession);
       window.removeEventListener("toc.scopechange", syncSession);
       window.removeEventListener("storage", syncActions);

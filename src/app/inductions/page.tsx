@@ -124,8 +124,8 @@ export default function InductionsPage() {
       <FlowHeading eyebrow="Inductions" title="Confirm the right staff are inducted for the right customer sites before work is assigned." />
       <section className="command-grid route-grid">
         {!isMappedScope ? (
-          <Panel wide eyebrow="Region source" title={`${scope} induction source not connected`} pill={`${sheetRegion} only`}>
-            <div className="empty-state">The current Google Sheet induction register is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or connect a separate induction source for {scope}.</div>
+          <Panel wide eyebrow="Region source" title={`${scope} induction source required`} pill={`${sheetRegion} only`}>
+            <div className="empty-state">The current Google Sheet induction register is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or assign a separate induction source for {scope} in Admin Settings.</div>
           </Panel>
         ) : null}
         {isMappedScope ? (

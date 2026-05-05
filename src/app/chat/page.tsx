@@ -129,7 +129,9 @@ export default function ChatPage() {
     window.addEventListener("storage", loadMessages);
     window.addEventListener("toc.scopechange", loadMessages);
     window.addEventListener("toc.chat.updated", loadMessages);
+    const refreshInterval = window.setInterval(loadMessages, 10000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", loadMessages);
       window.removeEventListener("toc.scopechange", loadMessages);
       window.removeEventListener("toc.chat.updated", loadMessages);

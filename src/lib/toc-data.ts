@@ -20,6 +20,7 @@ export type CalendarDay = {
   date: string;
   month: string;
   week: string;
+  isoDate?: string;
   today?: boolean;
   jobs: CalendarJob[];
 };

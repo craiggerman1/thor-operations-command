@@ -16,11 +16,7 @@ type AdminAccessUser = {
 
 const accessUsersKey = "toc.adminAccessUsers";
 
-const initialAccessUsers: AdminAccessUser[] = [
-  { id: "TOC-ADMIN", name: "Admin User", email: "", reference: "Admin profile", role: "admin", regions: ["National", "Brisbane"], status: "Active" },
-  { id: "TOC-DIRECTOR", name: "Director User", email: "", reference: "Owner profile", role: "director", regions: ["National"], status: "Active" },
-  { id: "TOC-MANAGER", name: "Manager User", email: "", reference: "Manager profile", role: "manager", regions: ["Sydney", "Workshop"], status: "Active" }
-];
+const initialAccessUsers: AdminAccessUser[] = [];
 
 function readAccessUsers() {
   if (typeof window === "undefined") return initialAccessUsers;
@@ -71,7 +67,7 @@ export function AdminAccessManager() {
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    void fetchAccessUsers().then((nextUsers) => setUsers(nextUsers.length ? nextUsers : readAccessUsers()));
+    void fetchAccessUsers().then(setUsers);
   }, []);
 
   useEffect(() => {

@@ -40,7 +40,9 @@ export function NationalActionRequests() {
     syncRequests();
     window.addEventListener("storage", syncRequests);
     window.addEventListener("toc.nationalActionRequests.updated", syncRequests);
+    const refreshInterval = window.setInterval(syncRequests, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncRequests);
       window.removeEventListener("toc.nationalActionRequests.updated", syncRequests);
     };

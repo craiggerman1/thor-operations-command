@@ -43,7 +43,9 @@ export function StockOrderAdminReview() {
     syncOrders();
     window.addEventListener("storage", syncOrders);
     window.addEventListener("toc.stockOrders.updated", syncOrders);
+    const refreshInterval = window.setInterval(syncOrders, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncOrders);
       window.removeEventListener("toc.stockOrders.updated", syncOrders);
     };

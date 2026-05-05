@@ -26,9 +26,9 @@ async function readSourceConfig() {
 function scopedEmptyFeed(region: string): InductionFeed {
   return {
     ...staffInductionsSheet,
-    sourceName: `${region} induction source not configured`,
+    sourceName: `${region} induction source required`,
     spreadsheetUrl: "",
-    lastRead: "Not connected",
+    lastRead: "Source required",
     sites: [],
     staff: []
   };

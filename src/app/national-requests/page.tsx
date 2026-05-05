@@ -30,7 +30,9 @@ export default function NationalRequestsPage() {
     syncScope();
     window.addEventListener("storage", syncScope);
     window.addEventListener("toc.scopechange", syncScope);
+    const refreshInterval = window.setInterval(syncScope, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncScope);
       window.removeEventListener("toc.scopechange", syncScope);
     };

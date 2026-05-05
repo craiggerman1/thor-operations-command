@@ -12,10 +12,10 @@ import {
   calendarWeekdays,
   getCalendarDaySlug,
   getVisibleCalendarDays,
+  generateCalendarWeeks,
   isCurrentCalendarDay,
   updateCalendarJob
 } from "@/lib/calendar-utils";
-import { calendarWeeks } from "@/lib/toc-data";
 import { getCalendarForecast } from "@/lib/calendar-weather";
 import type { TocWeatherDay, TocWeatherPayload } from "@/lib/weather";
 
@@ -48,7 +48,7 @@ export default function CalendarPage() {
   const router = useRouter();
   const [scope, setScope] = useState("National");
   const [viewMode, setViewMode] = useState<CalendarViewMode>("calendar");
-  const [calendarData, setCalendarData] = useState<CalendarDay[][]>(calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] }))));
+  const [calendarData, setCalendarData] = useState<CalendarDay[][]>(generateCalendarWeeks());
   const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
   const [weatherForecast, setWeatherForecast] = useState<TocWeatherDay[]>([]);
   const [saveMessage, setSaveMessage] = useState("");
@@ -83,7 +83,7 @@ export default function CalendarPage() {
         const payload = await response.json();
         setCalendarData(payload.weeks || []);
       } catch {
-        setCalendarData(calendarWeeks.map((week) => week.map((day) => ({ ...day, jobs: [] }))));
+        setCalendarData(generateCalendarWeeks());
       }
     }
 

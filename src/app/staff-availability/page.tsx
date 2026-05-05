@@ -117,8 +117,8 @@ export default function StaffAvailabilityPage() {
       <FlowHeading eyebrow="Staff Availability" title="Read the coverage by staff name, day and shift window before roster gaps become urgent." />
       <section className="command-grid route-grid">
         {!isMappedScope ? (
-          <Panel wide eyebrow="Region source" title={`${scope} availability source not connected`} pill={`${sheetRegion} only`}>
-            <div className="empty-state">The current Google Sheet availability source is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or connect a separate source for {scope}.</div>
+          <Panel wide eyebrow="Region source" title={`${scope} availability source required`} pill={`${sheetRegion} only`}>
+            <div className="empty-state">The current Google Sheet availability source is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or assign a separate source for {scope} in Admin Settings.</div>
           </Panel>
         ) : null}
         {isMappedScope ? (

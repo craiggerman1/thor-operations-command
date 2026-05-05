@@ -173,7 +173,9 @@ export function UrgentBroadcastBanner() {
     window.addEventListener("storage", syncBroadcast);
     window.addEventListener("toc.scopechange", syncBroadcast);
     window.addEventListener("toc.urgentBroadcast.updated", syncBroadcast);
+    const refreshInterval = window.setInterval(syncBroadcast, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncBroadcast);
       window.removeEventListener("toc.scopechange", syncBroadcast);
       window.removeEventListener("toc.urgentBroadcast.updated", syncBroadcast);
@@ -239,7 +241,9 @@ export function UrgentBroadcastControls() {
     syncBroadcasts();
     window.addEventListener("storage", syncBroadcasts);
     window.addEventListener("toc.urgentBroadcast.updated", syncBroadcasts);
+    const refreshInterval = window.setInterval(syncBroadcasts, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncBroadcasts);
       window.removeEventListener("toc.urgentBroadcast.updated", syncBroadcasts);
     };
@@ -398,7 +402,9 @@ export function DirectorBroadcastBanner() {
     syncBroadcast();
     window.addEventListener("storage", syncBroadcast);
     window.addEventListener("toc.directorBroadcast.updated", syncBroadcast);
+    const refreshInterval = window.setInterval(syncBroadcast, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncBroadcast);
       window.removeEventListener("toc.directorBroadcast.updated", syncBroadcast);
     };
@@ -455,7 +461,9 @@ export function DirectorBroadcastControls() {
     syncBroadcast();
     window.addEventListener("storage", syncBroadcast);
     window.addEventListener("toc.directorBroadcast.updated", syncBroadcast);
+    const refreshInterval = window.setInterval(syncBroadcast, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncBroadcast);
       window.removeEventListener("toc.directorBroadcast.updated", syncBroadcast);
     };
