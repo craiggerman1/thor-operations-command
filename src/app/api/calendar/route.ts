@@ -82,26 +82,40 @@ function mergeJobsIntoWeeks(rows: CalendarJobRow[]) {
   }));
 }
 
-async function readCalendar() {
+function getCalendarScope(request: Request) {
+  const url = new URL(request.url);
+  return {
+    scope: url.searchParams.get("scope") || "National",
+    all: url.searchParams.get("all") === "true"
+  };
+}
+
+async function readCalendar(request: Request) {
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return { weeks: emptyCalendarWeeks(), connected: false, error: "Supabase server key is not configured." };
   }
 
-  const { data, error } = await supabase
+  const { scope, all } = getCalendarScope(request);
+  let query = supabase
     .from("calendar_jobs")
     .select("id,job_date,job_time,location,site,crew,job_title,status,notes,severity,recurrence,recurrence_detail,recurrence_interval_weeks")
     .order("job_date", { ascending: true })
     .order("job_time", { ascending: true });
 
+  if (!all && scope !== "National") {
+    query = query.in("location", [scope, "National"]);
+  }
+
+  const { data, error } = await query;
   const rows = (data as CalendarJobRow[] | null) || [];
   if (error) return { weeks: emptyCalendarWeeks(), jobs: [], connected: false, error: error.message };
-  return { weeks: mergeJobsIntoWeeks(rows), jobs: rows.map(mapRowToAdminJob), connected: true };
+  return { weeks: mergeJobsIntoWeeks(rows), jobs: rows.map(mapRowToAdminJob), connected: true, scope };
 }
 
-export async function GET() {
-  const result = await readCalendar();
+export async function GET(request: Request) {
+  const result = await readCalendar(request);
   return NextResponse.json(result, { status: result.connected ? 200 : 503 });
 }
 
@@ -115,6 +129,9 @@ export async function POST(request: Request) {
   const payload = await request.json();
   const action = payload.action || "update";
   const job = payload.job as CalendarJob | undefined;
+  const scope = payload.scope || "National";
+  const all = Boolean(payload.all);
+  const responseRequest = new Request(`${request.url}?scope=${encodeURIComponent(scope)}${all ? "&all=true" : ""}`);
 
   if (action === "create") {
     const jobDate = String(payload.date || "").trim();
@@ -137,14 +154,14 @@ export async function POST(request: Request) {
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(responseRequest);
   }
 
   if (action === "delete") {
     if (!payload.id) return NextResponse.json({ error: "Calendar job id is required." }, { status: 400 });
     const { error } = await supabase.from("calendar_jobs").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return GET();
+    return GET(responseRequest);
   }
 
   if (action !== "update" || !payload.id || !job) {
@@ -178,5 +195,5 @@ export async function POST(request: Request) {
   const { error } = await supabase.from("calendar_jobs").update(updates).eq("id", payload.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return GET();
+  return GET(responseRequest);
 }

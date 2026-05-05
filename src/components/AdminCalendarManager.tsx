@@ -27,7 +27,7 @@ function todayInput() {
 }
 
 async function fetchCalendarJobs() {
-  const response = await fetch("/api/calendar", { cache: "no-store" });
+  const response = await fetch("/api/calendar?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Calendar database read failed.");
   return (payload.jobs || []) as AdminCalendarJob[];
@@ -77,7 +77,7 @@ export function AdminCalendarManager() {
     setIsSaving(true);
     setMessage("");
     try {
-      const nextJobs = await mutateCalendar({ action: "create", date, time, location, site, crew, job, status, notes, severity, recurrence, recurrenceIntervalWeeks: recurrence === "Custom" ? Number(recurrenceIntervalWeeks) : undefined });
+      const nextJobs = await mutateCalendar({ action: "create", date, time, location, site, crew, job, status, notes, severity, recurrence, recurrenceIntervalWeeks: recurrence === "Custom" ? Number(recurrenceIntervalWeeks) : undefined, all: true });
       setJobs(nextJobs);
       setSite("");
       setCrew("");
@@ -95,7 +95,7 @@ export function AdminCalendarManager() {
     if (!window.confirm("Are you sure you want to delete this calendar job?")) return;
     setMessage("");
     try {
-      const nextJobs = await mutateCalendar({ action: "delete", id });
+      const nextJobs = await mutateCalendar({ action: "delete", id, all: true });
       setJobs(nextJobs);
       setMessage("Calendar job deleted.");
     } catch (error) {

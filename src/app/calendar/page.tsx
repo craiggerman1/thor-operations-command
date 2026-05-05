@@ -69,7 +69,8 @@ export default function CalendarPage() {
 
     async function syncCalendar() {
       try {
-        const response = await fetch("/api/calendar", { cache: "no-store" });
+        const nextScope = getStoredScope();
+        const response = await fetch(`/api/calendar?scope=${encodeURIComponent(nextScope)}`, { cache: "no-store" });
         const payload = await response.json();
         setCalendarData(payload.weeks || []);
       } catch {
@@ -80,10 +81,14 @@ export default function CalendarPage() {
     void syncCalendar();
     syncScope();
     window.addEventListener("storage", syncScope);
+    window.addEventListener("storage", syncCalendar);
     window.addEventListener("toc.scopechange", syncScope);
+    window.addEventListener("toc.scopechange", syncCalendar);
     return () => {
       window.removeEventListener("storage", syncScope);
+      window.removeEventListener("storage", syncCalendar);
       window.removeEventListener("toc.scopechange", syncScope);
+      window.removeEventListener("toc.scopechange", syncCalendar);
     };
   }, []);
 
@@ -144,7 +149,7 @@ export default function CalendarPage() {
       fetch("/api/calendar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update", id: editTarget.job.id, job: jobToSave })
+        body: JSON.stringify({ action: "update", id: editTarget.job.id, job: jobToSave, scope })
       })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Calendar update failed")))
         .then((payload) => {

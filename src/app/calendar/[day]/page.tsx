@@ -56,7 +56,8 @@ export default function CalendarDayPage() {
 
     async function syncCalendar() {
       try {
-        const response = await fetch("/api/calendar", { cache: "no-store" });
+        const nextScope = getStoredScope();
+        const response = await fetch(`/api/calendar?scope=${encodeURIComponent(nextScope)}`, { cache: "no-store" });
         const payload = await response.json();
         const weeks = payload.weeks || [];
         setCalendarData(weeks);
@@ -71,10 +72,14 @@ export default function CalendarDayPage() {
     void syncCalendar();
     syncScope();
     window.addEventListener("storage", syncScope);
+    window.addEventListener("storage", syncCalendar);
     window.addEventListener("toc.scopechange", syncScope);
+    window.addEventListener("toc.scopechange", syncCalendar);
     return () => {
       window.removeEventListener("storage", syncScope);
+      window.removeEventListener("storage", syncCalendar);
       window.removeEventListener("toc.scopechange", syncScope);
+      window.removeEventListener("toc.scopechange", syncCalendar);
     };
   }, [fallbackDay, params.day]);
 
@@ -131,7 +136,7 @@ export default function CalendarDayPage() {
       fetch("/api/calendar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update", id: editTarget.job.id, job: cleanEditableJob(editTarget.job) })
+        body: JSON.stringify({ action: "update", id: editTarget.job.id, job: cleanEditableJob(editTarget.job), scope })
       })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Calendar update failed")))
         .then((payload) => {
