@@ -29,14 +29,14 @@ type BomWarningItem = {
 };
 
 const bomWarningFeeds: Record<string, string> = {
-  National: "https://www.bom.gov.au/fwo/IDZ00056.warnings_qld.xml",
-  Workshop: "https://www.bom.gov.au/fwo/IDZ00056.warnings_qld.xml",
-  Brisbane: "https://www.bom.gov.au/fwo/IDZ00056.warnings_qld.xml",
-  Sydney: "https://www.bom.gov.au/fwo/IDZ00054.warnings_nsw.xml",
-  Canberra: "https://www.bom.gov.au/fwo/IDZ00054.warnings_nsw.xml",
-  Melbourne: "https://www.bom.gov.au/fwo/IDZ00059.warnings_vic.xml",
-  Adelaide: "https://www.bom.gov.au/fwo/IDZ00057.warnings_sa.xml",
-  Perth: "https://www.bom.gov.au/fwo/IDZ00060.warnings_wa.xml"
+  National: "https://www.bom.gov.au/fwo/IDZ00063.warnings_land_qld.xml",
+  Workshop: "https://www.bom.gov.au/fwo/IDZ00063.warnings_land_qld.xml",
+  Brisbane: "https://www.bom.gov.au/fwo/IDZ00063.warnings_land_qld.xml",
+  Sydney: "https://www.bom.gov.au/fwo/IDZ00061.warnings_land_nsw.xml",
+  Canberra: "https://www.bom.gov.au/fwo/IDZ00085.warnings_act.xml",
+  Melbourne: "https://www.bom.gov.au/fwo/IDZ00066.warnings_land_vic.xml",
+  Adelaide: "https://www.bom.gov.au/fwo/IDZ00064.warnings_land_sa.xml",
+  Perth: "https://www.bom.gov.au/fwo/IDZ00067.warnings_land_wa.xml"
 };
 
 function buildForecast(data: OpenMeteoResponse): TocWeatherDay[] {
@@ -65,6 +65,7 @@ function decodeXmlText(value: string) {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -80,7 +81,7 @@ function parseBomWarnings(xml: string): BomWarningItem[] {
       link: extractXmlTag(match[1], "link"),
       issuedAt: extractXmlTag(match[1], "pubDate")
     }))
-    .filter((item) => item.title && !/no warnings current/i.test(item.title));
+    .filter((item) => item.title && !/no warnings current/i.test(item.title) && !/^cancellation of\b/i.test(item.title.replace(/^\d{2}\/\d{2}:\d{2}\s+\w+\s+/, "")));
 }
 
 async function getBomWarning(scope: string) {
