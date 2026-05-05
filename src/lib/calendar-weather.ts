@@ -1,17 +1,5 @@
-import type { TocWeatherDay, WeatherIcon } from "@/lib/weather";
+import type { TocWeatherDay } from "@/lib/weather";
 import type { CalendarDay } from "@/lib/toc-data";
-
-type ForecastIcon = WeatherIcon;
-
-const forecastLabel: Record<ForecastIcon, string> = {
-  clear: "Clear",
-  cloud: "Cloud",
-  fog: "Fog",
-  drizzle: "Drizzle",
-  rain: "Rain",
-  storm: "Storm risk",
-  pending: "Pending"
-};
 
 const monthNumber: Record<string, string> = {
   Jan: "01",
@@ -46,11 +34,5 @@ export function getCalendarForecast(day: CalendarDay, scope: string, liveForecas
     };
   }
 
-  const icon = "pending";
-  const condition = forecastLabel[icon];
-  return {
-    icon,
-    condition,
-    label: `${location}: forecast not supplied yet`
-  };
+  return null;
 }
