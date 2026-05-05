@@ -43,7 +43,8 @@ function toDisplayStatus(status: string) {
     dispatched: "Dispatched",
     delivered: "Delivered",
     cancel_requested: "Cancellation requested",
-    cancelled: "Cancelled"
+    cancelled: "Cancelled",
+    returned: "Returned to manager"
   };
 
   return labels[status] || status;
@@ -53,6 +54,7 @@ function toStorageStatus(status: string) {
   const normalised = status.toLowerCase();
   if (normalised.includes("request submitted")) return "submitted";
   if (normalised.includes("delivered")) return "delivered";
+  if (normalised.includes("return")) return "returned";
   if (normalised.includes("cancel")) return normalised.includes("request") ? "cancel_requested" : "cancelled";
   if (normalised.includes("approved")) return "approved";
   if (normalised.includes("ordered")) return "ordered";
@@ -62,7 +64,11 @@ function toStorageStatus(status: string) {
 }
 
 function isOpenOrderStatus(status: string) {
-  return ["submitted", "awaiting_review", "approved", "ordered", "dispatched", "cancel_requested"].includes(status);
+  return ["submitted", "awaiting_review", "approved", "ordered", "dispatched", "cancel_requested", "returned"].includes(status);
+}
+
+function isNationalReviewStatus(status: string) {
+  return ["submitted", "awaiting_review", "cancel_requested"].includes(status);
 }
 
 function mapStockOrder(row: StockOrderRow) {
@@ -148,6 +154,7 @@ export async function GET(request: Request) {
   const scope = url.searchParams.get("scope") || "National";
   const showAll = url.searchParams.get("all") === "true" || scope === "National";
   const activeOnly = url.searchParams.get("active") === "true";
+  const reviewOnly = url.searchParams.get("review") === "true";
 
   const [{ data, error }, { data: catalogData, error: catalogError }] = await Promise.all([
     supabase
@@ -169,7 +176,7 @@ export async function GET(request: Request) {
     .filter((order) => {
       const region = firstRelated(order.region);
       const matchesScope = showAll || region?.name === scope;
-      const matchesActive = !activeOnly || isOpenOrderStatus(order.status);
+      const matchesActive = !activeOnly || (reviewOnly ? isNationalReviewStatus(order.status) : isOpenOrderStatus(order.status));
       return matchesScope && matchesActive;
     })
     .map(mapStockOrder);
