@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { mapTocRole, requireTocRole } from "@/lib/toc-auth";
 import type { AccessRole } from "@/lib/access";
@@ -166,6 +167,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     await saveProfileRegions(data.id, regions);
+    await logTocAudit({
+      actor: permission.user,
+      action: "admin.user.create",
+      entityTable: "profiles",
+      entityId: data.id,
+      scope: regions.includes("National") ? "National" : regions[0],
+      details: {
+        targetRole: role,
+        targetRegions: regions,
+        hasEmail: Boolean(email)
+      }
+    });
     return readUsers().then((result) => NextResponse.json(result, { status: result.connected ? 200 : 503 }));
   }
 
@@ -212,6 +225,18 @@ export async function POST(request: Request) {
       await saveProfileRegions(id, normaliseRegionsForRole(role, payload.regions));
     }
 
+    await logTocAudit({
+      actor: permission.user,
+      action: "admin.user.update",
+      entityTable: "profiles",
+      entityId: id,
+      scope: Array.isArray(payload.regions) && payload.regions.includes("National") ? "National" : undefined,
+      details: {
+        changedFields: Object.keys(updates).filter((field) => field !== "updated_at"),
+        regionsUpdated: Array.isArray(payload.regions),
+        passwordResetIssued: typeof payload.password === "string" && payload.password.length >= 8
+      }
+    });
     return readUsers().then((result) => NextResponse.json(result, { status: result.connected ? 200 : 503 }));
   }
 
@@ -223,6 +248,15 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("profiles").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await supabase.auth.admin.deleteUser(payload.id);
+    await logTocAudit({
+      actor: permission.user,
+      action: "admin.user.delete",
+      entityTable: "profiles",
+      entityId: payload.id,
+      details: {
+        targetUserId: payload.id
+      }
+    });
     return readUsers().then((result) => NextResponse.json(result, { status: result.connected ? 200 : 503 }));
   }
 

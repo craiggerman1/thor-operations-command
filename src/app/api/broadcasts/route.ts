@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocRole, requireTocUser } from "@/lib/toc-auth";
 
@@ -196,6 +197,17 @@ export async function POST(request: Request) {
       })));
       if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
+    await logTocAudit({
+      actor: permission.user,
+      action: "broadcast.urgent.replace",
+      entityTable: "urgent_broadcasts",
+      scope: broadcasts.some((broadcast) => broadcast.targetScope === "All users") ? "All users" : undefined,
+      details: {
+        broadcastCount: broadcasts.length,
+        activeCount: broadcasts.filter((broadcast) => broadcast.active).length,
+        targetScopes: Array.from(new Set(broadcasts.map((broadcast) => broadcast.targetScope)))
+      }
+    });
   }
 
   if (body.kind === "director") {
@@ -206,6 +218,17 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString()
     }, { onConflict: "key" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await logTocAudit({
+      actor: permission.user,
+      action: "broadcast.director.upsert",
+      entityTable: "app_settings",
+      entityId: directorSettingsKey,
+      scope: "National",
+      details: {
+        active: broadcast.active,
+        version: broadcast.version
+      }
+    });
   }
 
   if (body.kind === "clear-director") {
@@ -215,6 +238,13 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString()
     }, { onConflict: "key" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await logTocAudit({
+      actor: permission.user,
+      action: "broadcast.director.clear",
+      entityTable: "app_settings",
+      entityId: directorSettingsKey,
+      scope: "National"
+    });
   }
 
   if (body.kind === "acknowledge") {
