@@ -53,7 +53,7 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     const session = getStoredSession();
 
     try {
-      const response = await fetch(`/api/todos?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
+      const response = await tocFetch(`/api/todos?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
       const payload = await response.json();
       setTodos(payload.todos || []);
     } catch {

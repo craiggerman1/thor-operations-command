@@ -26,7 +26,7 @@ function getOrderId(order: StockOrderRequest) {
 }
 
 function readActionRequests() {
-  return fetch("/api/national-requests", { cache: "no-store" })
+  return tocFetch("/api/national-requests", { cache: "no-store" })
     .then((response) => response.json())
     .then((payload) => (payload.requests || []) as NationalActionRequest[])
     .catch(() => [] as NationalActionRequest[]);
@@ -34,7 +34,7 @@ function readActionRequests() {
 
 async function readStockOrders() {
   try {
-    const response = await fetch("/api/stock-orders?all=true&active=true&review=true", { cache: "no-store" });
+    const response = await tocFetch("/api/stock-orders?all=true&active=true&review=true", { cache: "no-store" });
     const payload = await response.json();
     return (payload.orders || []) as StockOrderRequest[];
   } catch {

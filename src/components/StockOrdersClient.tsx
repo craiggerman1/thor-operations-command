@@ -76,7 +76,7 @@ export function StockOrdersClient({ stockItems }: { stockItems: string[] }) {
   useEffect(() => {
     async function loadOrders() {
       try {
-        const response = await fetch(`/api/stock-orders?scope=${encodeURIComponent(scope)}&active=true`, { cache: "no-store" });
+        const response = await tocFetch(`/api/stock-orders?scope=${encodeURIComponent(scope)}&active=true`, { cache: "no-store" });
         const payload = await response.json();
         setOrders(payload.orders || []);
       } catch {

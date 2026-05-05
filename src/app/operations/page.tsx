@@ -10,6 +10,7 @@ import {
   getProductivityText,
   getProductivityTone
 } from "@/lib/productivity-utils";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type ProductivitySite = {
   id: string;
@@ -57,7 +58,7 @@ export default function OperationsPage() {
   useEffect(() => {
     async function syncSites() {
       try {
-        const response = await fetch(`/api/productivity?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+        const response = await tocFetch(`/api/productivity?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setSites(payload.sites || []);
       } catch {

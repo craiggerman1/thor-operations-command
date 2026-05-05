@@ -60,7 +60,8 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) {
     return {
-      error: NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 })
+      error: NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 }),
+      user: undefined
     };
   }
 
@@ -70,7 +71,8 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
         id: "development-admin",
         role: "admin" as AccessRole,
         regions: ["National"]
-      }
+      },
+      error: undefined
     };
   }
 
@@ -78,14 +80,16 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
   const token = authorization.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : "";
   if (!token) {
     return {
-      error: NextResponse.json({ error: "Secure admin sign-in is required for this action." }, { status: 401 })
+      error: NextResponse.json({ error: "Secure admin sign-in is required for this action." }, { status: 401 }),
+      user: undefined
     };
   }
 
   const { data: authData, error: authError } = await supabase.auth.getUser(token);
   if (authError || !authData.user) {
     return {
-      error: NextResponse.json({ error: authError?.message || "Authenticated user could not be confirmed." }, { status: 401 })
+      error: NextResponse.json({ error: authError?.message || "Authenticated user could not be confirmed." }, { status: 401 }),
+      user: undefined
     };
   }
 
@@ -97,7 +101,8 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
 
   if (error || !data) {
     return {
-      error: NextResponse.json({ error: error?.message || "TOC user profile was not found." }, { status: 403 })
+      error: NextResponse.json({ error: error?.message || "TOC user profile was not found." }, { status: 403 }),
+      user: undefined
     };
   }
 
@@ -109,7 +114,8 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
   const regions = normaliseRegionsForRole(role, profileRegions);
   if (!profile.is_active || !roles.includes(role)) {
     return {
-      error: NextResponse.json({ error: "You do not have permission to perform this TOC action." }, { status: 403 })
+      error: NextResponse.json({ error: "You do not have permission to perform this TOC action." }, { status: 403 }),
+      user: undefined
     };
   }
 
@@ -118,7 +124,8 @@ export async function requireTocRole(request: Request, roles: AccessRole[]) {
       id: authData.user.id,
       role,
       regions
-    }
+    },
+    error: undefined
   };
 }
 
@@ -128,6 +135,22 @@ export async function requireTocUser(request: Request) {
 
 export function hasNationalAccess(user: TocAuthenticatedUser) {
   return user.role === "admin" || user.regions.includes("National");
+}
+
+export function canAccessScope(user: TocAuthenticatedUser, scope: string) {
+  if (user.role === "admin") return true;
+  if (user.role === "director") return scope === "National";
+  return user.regions.includes(scope);
+}
+
+export function getDefaultScopeForUser(user: TocAuthenticatedUser) {
+  if (user.role === "admin" || user.role === "director") return "National";
+  return user.regions[0] || "Brisbane";
+}
+
+export function resolvePermittedScope(user: TocAuthenticatedUser, requestedScope: string | null | undefined) {
+  const scope = requestedScope || getDefaultScopeForUser(user);
+  return canAccessScope(user, scope) ? scope : getDefaultScopeForUser(user);
 }
 
 export async function requireTocNationalAccess(request: Request, options: { allowDirector?: boolean } = {}) {
@@ -140,6 +163,28 @@ export async function requireTocNationalAccess(request: Request, options: { allo
   }
 
   return {
-    error: NextResponse.json({ error: "National responsibility is required for this TOC action." }, { status: 403 })
+    error: NextResponse.json({ error: "National responsibility is required for this TOC action." }, { status: 403 }),
+    user: undefined
+  };
+}
+
+export async function requireTocScope(request: Request, requestedScope: string | null | undefined) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission;
+
+  const user = permission.user;
+  const scope = requestedScope || getDefaultScopeForUser(user);
+  if (canAccessScope(user, scope)) {
+    return {
+      user,
+      scope,
+      error: undefined
+    };
+  }
+
+  return {
+    error: NextResponse.json({ error: "You do not have permission to view this TOC scope." }, { status: 403 }),
+    user: undefined,
+    scope: undefined
   };
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
+import { requireTocNationalAccess, requireTocScope, requireTocUser } from "@/lib/toc-auth";
 
 type ChatMode = "group" | "direct" | "multi";
 
@@ -48,15 +48,18 @@ function isVisibleForSession(row: ChatMessageRow, role: string, scope: string, a
 }
 
 async function readMessages(request: Request) {
+  const url = new URL(request.url);
+  const scopePermission = await requireTocScope(request, url.searchParams.get("scope") || (url.searchParams.get("all") === "true" ? "National" : null));
+  if (scopePermission.error) return { messages: [], connected: false, error: "Authenticated TOC session is required.", status: 401 };
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return { messages: [], connected: false, error: "Supabase server key is not configured." };
   }
 
-  const url = new URL(request.url);
-  const role = url.searchParams.get("role") || "admin";
-  const scope = url.searchParams.get("scope") || "National";
+  const role = scopePermission.user.role;
+  const scope = scopePermission.scope;
   const all = url.searchParams.get("all") === "true";
   const { data, error } = await supabase
     .from("chat_messages")
@@ -74,7 +77,7 @@ async function readMessages(request: Request) {
 
 export async function GET(request: Request) {
   const result = await readMessages(request);
-  return NextResponse.json(result, { status: result.connected ? 200 : 503 });
+  return NextResponse.json(result, { status: result.connected ? 200 : "status" in result ? Number(result.status) : 503 });
 }
 
 export async function POST(request: Request) {

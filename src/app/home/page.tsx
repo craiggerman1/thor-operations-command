@@ -13,6 +13,7 @@ import type { ActionItem } from "@/lib/action-state";
 import { getScopedActionItems, isNationalScope } from "@/lib/scope-utils";
 import { defaultHomeSettings } from "@/lib/home-settings";
 import type { HomeSettingsConfig, HomeSignalKey } from "@/lib/home-settings";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 function getStoredSession() {
   const fallback = { role: "admin" as AccessRole, scope: "National" };
@@ -97,14 +98,14 @@ export default function HomePage() {
     function syncTodos() {
       const storedSession = getStoredSession();
       const all = storedSession.role === "director" || storedSession.scope === "National";
-      fetch(`/api/todos?role=${encodeURIComponent(storedSession.role)}&scope=${encodeURIComponent(storedSession.scope)}${all ? "&all=true" : ""}`, { cache: "no-store" })
+      tocFetch(`/api/todos?role=${encodeURIComponent(storedSession.role)}&scope=${encodeURIComponent(storedSession.scope)}${all ? "&all=true" : ""}`, { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("To Do unavailable")))
         .then((payload) => setOpenTodoCount(((payload.todos || []) as { done?: boolean }[]).filter((item) => !item.done).length))
         .catch(() => setOpenTodoCount(getOpenTodoCount()));
     }
 
     function syncActions() {
-      fetch("/api/actions", { cache: "no-store" })
+      tocFetch(`/api/actions?scope=${encodeURIComponent(getStoredSession().scope)}`, { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Action Centre unavailable")))
         .then((payload) => setOpenActionItems(((payload.actions || []) as ActionItem[]).filter((item) => item.status !== "Closed")))
         .catch(() => setOpenActionItems([]));

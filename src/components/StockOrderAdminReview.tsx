@@ -24,7 +24,7 @@ function getOrderId(order: StockOrderRequest) {
 
 async function fetchOrders() {
   try {
-    const response = await fetch("/api/stock-orders?all=true&active=true&review=true", { cache: "no-store" });
+    const response = await tocFetch("/api/stock-orders?all=true&active=true&review=true", { cache: "no-store" });
     const payload = await response.json();
     return (payload.orders || []) as StockOrderRequest[];
   } catch {

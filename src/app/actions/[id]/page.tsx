@@ -19,7 +19,9 @@ export default function ActionDetailPage() {
   useEffect(() => {
     async function loadAction() {
       try {
-        const response = await fetch(`/api/actions?id=${encodeURIComponent(params.id)}`, { cache: "no-store" });
+        const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+        const scope = session?.scope || "National";
+        const response = await tocFetch(`/api/actions?id=${encodeURIComponent(params.id)}&scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setAction((payload.actions || [])[0] || null);
       } catch {

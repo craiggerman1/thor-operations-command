@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { resolvePermittedScope, requireTocUser } from "@/lib/toc-auth";
 
 type BadgeTone = "red" | "amber" | "blue";
 type ActionRow = {
@@ -56,6 +57,9 @@ function isTodoVisibleForScope(item: TodoRow, role: string, scope: string) {
 }
 
 export async function GET(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
@@ -63,8 +67,8 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const scope = url.searchParams.get("scope") || "National";
-  const role = url.searchParams.get("role") || "admin";
+  const scope = resolvePermittedScope(permission.user, url.searchParams.get("scope"));
+  const role = permission.user.role;
 
   const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }] = await Promise.all([
     supabase

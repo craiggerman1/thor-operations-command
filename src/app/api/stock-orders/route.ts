@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
+import { requireTocNationalAccess, requireTocScope, requireTocUser } from "@/lib/toc-auth";
 
 type StockOrderRow = {
   id: string;
@@ -145,14 +145,17 @@ function mapCatalogItem(row: StockOrderItemRow) {
 }
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const scopePermission = await requireTocScope(request, url.searchParams.get("scope") || (url.searchParams.get("all") === "true" ? "National" : null));
+  if (scopePermission.error) return scopePermission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ orders: [], catalog: [], stockItems: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  const url = new URL(request.url);
-  const scope = url.searchParams.get("scope") || "National";
+  const scope = scopePermission.scope;
   const showAll = url.searchParams.get("all") === "true" || scope === "National";
   const activeOnly = url.searchParams.get("active") === "true";
   const reviewOnly = url.searchParams.get("review") === "true";

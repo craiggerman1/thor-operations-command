@@ -7,6 +7,7 @@ import { staffAvailabilitySheet } from "@/lib/toc-data";
 import type { StaffAvailabilityFeed, StaffSheetStatus } from "@/lib/toc-data";
 import { sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import type { SheetSourceConfig } from "@/lib/sheet-source-settings";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -62,7 +63,7 @@ export default function StaffAvailabilityPage() {
   useEffect(() => {
     let isActive = true;
     function syncSourceSettings() {
-      fetch("/api/sheet-source-settings?slug=staff-availability", { cache: "no-store" })
+      tocFetch("/api/sheet-source-settings?slug=staff-availability", { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Source settings unavailable")))
         .then((payload) => {
           if (!isActive) return;
@@ -93,7 +94,7 @@ export default function StaffAvailabilityPage() {
       };
     }
 
-    fetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
+    tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
       .then((nextFeed: StaffAvailabilityFeed) => {
         if (!isActive) return;

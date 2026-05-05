@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocNationalAccess } from "@/lib/toc-auth";
+import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
 
 type RegionRow = {
   id: string;
@@ -114,7 +114,10 @@ function averageProductivity(rows: ProductivityRow[]) {
   return Math.round(validRows.reduce((total, item) => total + Number(item.productivity_score || 0), 0) / validRows.length);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
@@ -179,5 +182,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Region Health settings update failed." }, { status: 500 });
   }
 
-  return GET();
+  return GET(request);
 }

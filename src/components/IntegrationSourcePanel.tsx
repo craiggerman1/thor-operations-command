@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Panel, Tag } from "@/components/TocCards";
 import { integrationDefaults } from "@/lib/integration-settings";
 import type { IntegrationPageSlug, IntegrationSourceConfig } from "@/lib/integration-settings";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type IntegrationSourceState = {
   scope: string;
@@ -35,7 +36,7 @@ function defaultSourceState(config: IntegrationSourceConfig, scope: string): Int
 }
 
 async function fetchIntegrationConfig(slug: IntegrationPageSlug, scope: string) {
-  const response = await fetch(`/api/integration-settings?slug=${encodeURIComponent(slug)}&scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+  const response = await tocFetch(`/api/integration-settings?slug=${encodeURIComponent(slug)}&scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Integration source settings unavailable.");
   const config = (payload.config || integrationDefaults[slug]) as IntegrationSourceConfig;

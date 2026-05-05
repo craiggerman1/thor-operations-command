@@ -5,6 +5,7 @@ import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type HealthTone = "red" | "amber" | "yellow" | "green";
 
@@ -42,7 +43,7 @@ export default function OverviewPage() {
 
     async function syncRegionHealth() {
       try {
-        const response = await fetch("/api/region-health", { cache: "no-store" });
+        const response = await tocFetch("/api/region-health", { cache: "no-store" });
         const payload = await response.json();
         setRegionHealth(payload.regions || []);
       } catch {

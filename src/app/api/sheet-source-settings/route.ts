@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocRole } from "@/lib/toc-auth";
+import { requireTocRole, requireTocUser } from "@/lib/toc-auth";
 import { isSheetSourceSlug, normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import type { SheetSourceConfig, SheetSourceSlug } from "@/lib/sheet-source-settings";
 
@@ -40,6 +40,9 @@ async function saveConfig(config: SheetSourceConfig) {
 }
 
 export async function GET(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const slug = getSlugFromRequest(request);
   const supabase = getSupabaseAdminClient();
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocUser } from "@/lib/toc-auth";
+import { hasNationalAccess, requireTocUser, resolvePermittedScope } from "@/lib/toc-auth";
 
 type TodoRow = {
   id: string;
@@ -28,14 +28,6 @@ function mapTodo(row: TodoRow) {
   };
 }
 
-function getScopedQueryParams(request: Request) {
-  const url = new URL(request.url);
-  return {
-    role: url.searchParams.get("role") || "admin",
-    scope: url.searchParams.get("scope") || "National"
-  };
-}
-
 function getSharedTargets(role: string, scope: string) {
   const targets = new Set<string>([role]);
 
@@ -54,14 +46,18 @@ function getSharedTargets(role: string, scope: string) {
 }
 
 async function readTodos(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return { todos: [], connected: false, error: "Authenticated TOC session is required.", status: 401 };
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return { todos: [], connected: false, error: "Supabase server key is not configured." };
   }
 
-  const { role, scope } = getScopedQueryParams(request);
   const url = new URL(request.url);
+  const role = permission.user.role;
+  const scope = resolvePermittedScope(permission.user, url.searchParams.get("scope"));
   let query = supabase
     .from("todo_items")
     .select("id,title,is_done,is_important,shared_with,owner_role,owner_scope,created_at,updated_at")
@@ -71,7 +67,8 @@ async function readTodos(request: Request) {
 
   if (error) return { todos: [], connected: false, error: error.message };
   const rows = (data as TodoRow[] | null) || [];
-  const visibleRows = url.searchParams.get("all") === "true"
+  const canSeeAll = hasNationalAccess(permission.user) || permission.user.role === "director";
+  const visibleRows = url.searchParams.get("all") === "true" && canSeeAll
     ? rows
     : rows.filter((item) => {
       const ownerMatches = item.owner_role === role && item.owner_scope === scope;
@@ -84,7 +81,7 @@ async function readTodos(request: Request) {
 
 export async function GET(request: Request) {
   const result = await readTodos(request);
-  return NextResponse.json(result, { status: result.connected ? 200 : 503 });
+  return NextResponse.json(result, { status: result.connected ? 200 : "status" in result ? Number(result.status) : 503 });
 }
 
 export async function POST(request: Request) {

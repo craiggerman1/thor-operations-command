@@ -28,7 +28,7 @@ const defaultManagerRecipients = allRegions
   }));
 
 async function fetchChatMessages() {
-  const response = await fetch("/api/chat?all=true", { cache: "no-store" });
+  const response = await tocFetch("/api/chat?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Chat database read failed.");
   return (payload.messages || []) as ChatMessage[];

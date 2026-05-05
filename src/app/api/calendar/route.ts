@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocUser } from "@/lib/toc-auth";
+import { requireTocScope, requireTocUser } from "@/lib/toc-auth";
 import type { CalendarDay, CalendarJob, Status } from "@/lib/toc-data";
 import { generateCalendarWeeks, getCalendarDate } from "@/lib/calendar-utils";
 
@@ -116,13 +116,20 @@ function getCalendarScope(request: Request) {
 }
 
 async function readCalendar(request: Request) {
+  const url = new URL(request.url);
+  const scopePermission = await requireTocScope(request, url.searchParams.get("scope") || (url.searchParams.get("all") === "true" ? "National" : null));
+  if (scopePermission.error) {
+    return { weeks: emptyCalendarWeeks(), jobs: [], connected: false, error: "You do not have permission to view this TOC scope.", status: 403 };
+  }
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return { weeks: emptyCalendarWeeks(), connected: false, error: "Supabase server key is not configured." };
   }
 
-  const { scope, all } = getCalendarScope(request);
+  const { all } = getCalendarScope(request);
+  const scope = scopePermission.scope;
   let query = supabase
     .from("calendar_jobs")
     .select("id,job_date,job_time,location,site,crew,job_title,status,notes,severity,recurrence,recurrence_detail,recurrence_interval_weeks")
@@ -141,7 +148,7 @@ async function readCalendar(request: Request) {
 
 export async function GET(request: Request) {
   const result = await readCalendar(request);
-  return NextResponse.json(result, { status: result.connected ? 200 : 503 });
+  return NextResponse.json(result, { status: result.connected ? 200 : "status" in result ? Number(result.status) : 503 });
 }
 
 export async function POST(request: Request) {

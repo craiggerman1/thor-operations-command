@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocNationalAccess } from "@/lib/toc-auth";
+import { requireTocNationalAccess, requireTocScope } from "@/lib/toc-auth";
 import type { Status } from "@/lib/toc-data";
 
 type ComplianceRow = {
@@ -134,14 +134,17 @@ function mapRegisterItem(item: ComplianceRow) {
 }
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const scopePermission = await requireTocScope(request, url.searchParams.get("scope") || (url.searchParams.get("all") === "true" ? "National" : null));
+  if (scopePermission.error) return scopePermission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ actions: [], register: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  const url = new URL(request.url);
-  const scope = url.searchParams.get("scope") || "National";
+  const scope = scopePermission.scope;
   const showAll = url.searchParams.get("all") === "true" || scope === "National";
 
   const [{ data: actionData, error: actionError }, { data: registerData, error: registerError }] = await Promise.all([

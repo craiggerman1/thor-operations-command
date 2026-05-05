@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import type { ActionItem } from "@/lib/action-state";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type ComplianceRegisterItem = {
   id: string;
@@ -53,7 +54,7 @@ export default function CompliancePage() {
   useEffect(() => {
     async function syncCompliance() {
       try {
-        const response = await fetch(`/api/compliance?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+        const response = await tocFetch(`/api/compliance?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setComplianceActions(payload.actions || []);
         setRegisterItems(payload.register || []);

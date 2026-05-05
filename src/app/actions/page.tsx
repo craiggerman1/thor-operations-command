@@ -7,6 +7,7 @@ import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import type { ActionItem } from "@/lib/action-state";
 import type { AccessRole } from "@/lib/access";
 import { getScopedActionItems } from "@/lib/scope-utils";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 const directivePriority = {
   "National Ops Directive": 1,
@@ -35,7 +36,9 @@ export default function ActionsPage() {
 
     async function syncActions() {
       try {
-        const response = await fetch("/api/actions", { cache: "no-store" });
+        const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
+        const nextScope = storedSession?.scope || "National";
+        const response = await tocFetch(`/api/actions?scope=${encodeURIComponent(nextScope)}`, { cache: "no-store" });
         const payload = await response.json();
         const actions = (payload.actions || []) as ActionItem[];
         setOpenActions(actions.filter((item) => item.status !== "Closed"));

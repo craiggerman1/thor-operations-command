@@ -145,7 +145,7 @@ export default function ChatPage() {
     async function loadMessages() {
       try {
         const session = getStoredSession();
-        const response = await fetch(`/api/chat?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
+        const response = await tocFetch(`/api/chat?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setMessages(payload.messages || []);
       } catch {

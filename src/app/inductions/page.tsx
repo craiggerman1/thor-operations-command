@@ -7,6 +7,7 @@ import { staffInductionsSheet } from "@/lib/toc-data";
 import type { InductionFeed, InductionStatus } from "@/lib/toc-data";
 import { sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import type { SheetSourceConfig } from "@/lib/sheet-source-settings";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -69,7 +70,7 @@ export default function InductionsPage() {
   useEffect(() => {
     let isActive = true;
     function syncSourceSettings() {
-      fetch("/api/sheet-source-settings?slug=inductions", { cache: "no-store" })
+      tocFetch("/api/sheet-source-settings?slug=inductions", { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Source settings unavailable")))
         .then((payload) => {
           if (!isActive) return;
@@ -100,7 +101,7 @@ export default function InductionsPage() {
       };
     }
 
-    fetch(`/api/inductions?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
+    tocFetch(`/api/inductions?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
       .then((nextFeed: InductionFeed) => {
         if (!isActive) return;

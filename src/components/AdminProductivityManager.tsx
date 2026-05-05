@@ -32,7 +32,7 @@ function buildDrafts(sites: ProductivitySite[]) {
 }
 
 async function fetchProductivity() {
-  const response = await fetch("/api/productivity?all=true", { cache: "no-store" });
+  const response = await tocFetch("/api/productivity?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Productivity database read failed.");
   return (payload.sites || []) as ProductivitySite[];

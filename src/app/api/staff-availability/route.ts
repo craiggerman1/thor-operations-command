@@ -3,6 +3,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 import { normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import { staffAvailabilitySheet } from "@/lib/toc-data";
 import type { StaffAvailabilityFeed, StaffSheetStatus } from "@/lib/toc-data";
+import { requireTocScope } from "@/lib/toc-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -75,11 +76,14 @@ function normalizeStatus(value: string): StaffSheetStatus {
 }
 
 export async function GET(request: Request) {
-  const config = await readSourceConfig();
   const requestedScope = new URL(request.url).searchParams.get("scope") || "National";
+  const scopePermission = await requireTocScope(request, requestedScope);
+  if (scopePermission.error) return scopePermission.error;
 
-  if (!config.connected || requestedScope !== config.region) {
-    return NextResponse.json(scopedEmptyFeed(requestedScope));
+  const config = await readSourceConfig();
+
+  if (!config.connected || scopePermission.scope !== config.region) {
+    return NextResponse.json(scopedEmptyFeed(scopePermission.scope));
   }
 
   try {

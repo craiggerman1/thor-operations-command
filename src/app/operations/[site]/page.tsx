@@ -74,7 +74,7 @@ export default function ProductivitySitePage() {
   useEffect(() => {
     async function loadSite() {
       try {
-        const result = await fetch(`/api/productivity?slug=${encodeURIComponent(params.site)}&scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+        const result = await tocFetch(`/api/productivity?slug=${encodeURIComponent(params.site)}&scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await result.json();
         const nextSite = (payload.sites || [])[0] || null;
         setSite(nextSite);

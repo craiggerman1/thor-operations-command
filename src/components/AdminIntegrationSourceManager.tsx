@@ -7,7 +7,7 @@ import { tocFetch } from "@/lib/toc-client-auth";
 import type { IntegrationPageSlug, IntegrationSourceConfig } from "@/lib/integration-settings";
 
 async function fetchIntegrationConfig(slug: IntegrationPageSlug) {
-  const response = await fetch(`/api/integration-settings?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
+  const response = await tocFetch(`/api/integration-settings?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Integration settings database read failed.");
   return (payload.config || integrationDefaults[slug]) as IntegrationSourceConfig;

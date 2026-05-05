@@ -12,7 +12,7 @@ type StockCatalogItem = {
 };
 
 async function fetchStockCatalog() {
-  const response = await fetch("/api/stock-orders?all=true", { cache: "no-store" });
+  const response = await tocFetch("/api/stock-orders?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Stock catalogue database read failed.");
   return (payload.catalog || []) as StockCatalogItem[];

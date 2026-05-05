@@ -40,7 +40,7 @@ function defaultDueDate() {
 }
 
 async function fetchCompliance() {
-  const response = await fetch("/api/compliance?all=true", { cache: "no-store" });
+  const response = await tocFetch("/api/compliance?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Compliance database read failed.");
   return {

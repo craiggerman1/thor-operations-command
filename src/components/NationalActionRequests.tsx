@@ -23,7 +23,7 @@ export type NationalActionRequest = {
 export const nationalActionRequestsKey = "toc.nationalActionRequests.databaseReady";
 
 function readRequests() {
-  return fetch("/api/national-requests", { cache: "no-store" })
+  return tocFetch("/api/national-requests", { cache: "no-store" })
     .then((response) => response.json())
     .then((payload) => (payload.requests || []) as NationalActionRequest[])
     .catch(() => [] as NationalActionRequest[]);

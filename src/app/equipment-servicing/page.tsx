@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import type { Status } from "@/lib/toc-data";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type EquipmentAsset = {
   id: string;
@@ -60,7 +61,7 @@ export default function EquipmentServicingPage() {
   useEffect(() => {
     async function loadEquipment() {
       try {
-        const response = await fetch(`/api/equipment?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+        const response = await tocFetch(`/api/equipment?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setAssets(payload.assets || []);
         setSummary(payload.summary || []);

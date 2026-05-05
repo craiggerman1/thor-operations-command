@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocNationalAccess } from "@/lib/toc-auth";
+import { requireTocNationalAccess, requireTocScope } from "@/lib/toc-auth";
 import type { Status } from "@/lib/toc-data";
 
 type ActionStatus = "open" | "submitted_for_review" | "returned_to_manager" | "closed";
@@ -146,14 +146,18 @@ function mapAction(row: ActionRow) {
 }
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
+  const scopePermission = await requireTocScope(request, url.searchParams.get("scope") || (id ? null : "National"));
+  if (scopePermission.error) return scopePermission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
     return NextResponse.json({ actions: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  const url = new URL(request.url);
-  const id = url.searchParams.get("id");
+  const permittedScope = scopePermission.scope;
   let query = supabase
     .from("action_items")
     .select("id,title,detail,source_page,directive_type,priority,status,due_at,region:regions(name)")
@@ -167,7 +171,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ actions: [], connected: false, error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ actions: ((data as ActionRow[] | null) || []).map(mapAction), connected: true });
+  const actions = ((data as ActionRow[] | null) || [])
+    .map(mapAction)
+    .filter((action) => permittedScope === "National" || action.region === permittedScope);
+
+  return NextResponse.json({ actions, connected: true });
 }
 
 export async function POST(request: Request) {

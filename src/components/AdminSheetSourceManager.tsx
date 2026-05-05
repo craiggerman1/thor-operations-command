@@ -8,7 +8,7 @@ import { tocFetch } from "@/lib/toc-client-auth";
 import type { SheetSourceConfig, SheetSourceSlug } from "@/lib/sheet-source-settings";
 
 async function fetchSheetSourceConfig(slug: SheetSourceSlug) {
-  const response = await fetch(`/api/sheet-source-settings?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
+  const response = await tocFetch(`/api/sheet-source-settings?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Sheet source settings database read failed.");
   return (payload.config || sheetSourceDefaults[slug]) as SheetSourceConfig;

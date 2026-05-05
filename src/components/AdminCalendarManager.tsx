@@ -28,7 +28,7 @@ function todayInput() {
 }
 
 async function fetchCalendarJobs() {
-  const response = await fetch("/api/calendar?all=true", { cache: "no-store" });
+  const response = await tocFetch("/api/calendar?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Calendar database read failed.");
   return (payload.jobs || []) as AdminCalendarJob[];

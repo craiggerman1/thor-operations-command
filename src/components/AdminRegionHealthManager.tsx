@@ -35,7 +35,7 @@ const defaultConfig: RegionHealthConfig = {
 };
 
 async function fetchRegionHealth() {
-  const response = await fetch("/api/region-health", { cache: "no-store" });
+  const response = await tocFetch("/api/region-health", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Region Health database read failed.");
   return {

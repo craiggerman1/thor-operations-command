@@ -63,7 +63,10 @@ function mapRequest(row: NationalRequestRow) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const permission = await requireTocNationalAccess(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
@@ -156,7 +159,7 @@ export async function POST(request: Request) {
       .eq("id", actionId);
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-    return GET();
+    return GET(request);
   }
 
   if (action === "update") {
@@ -196,7 +199,7 @@ export async function POST(request: Request) {
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
     }
 
-    return GET();
+    return GET(request);
   }
 
   return NextResponse.json({ error: "Unsupported national request action." }, { status: 400 });

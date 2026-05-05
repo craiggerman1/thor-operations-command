@@ -21,7 +21,7 @@ const regions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Per
 const roles: AccessRole[] = ["admin", "manager", "director"];
 
 async function fetchTodos() {
-  const response = await fetch("/api/todos?all=true", { cache: "no-store" });
+  const response = await tocFetch("/api/todos?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "To Do database read failed.");
   return (payload.todos || []) as TodoItem[];

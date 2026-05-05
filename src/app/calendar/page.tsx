@@ -80,7 +80,7 @@ export default function CalendarPage() {
   useEffect(() => {
     async function syncCalendar() {
       try {
-        const response = await fetch(`/api/calendar?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+        const response = await tocFetch(`/api/calendar?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         setCalendarData(payload.weeks || []);
       } catch {

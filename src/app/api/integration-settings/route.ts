@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocRole } from "@/lib/toc-auth";
+import { requireTocRole, requireTocScope } from "@/lib/toc-auth";
 import { integrationDefaults, isIntegrationSlug, normaliseIntegrationConfig } from "@/lib/integration-settings";
 import type { IntegrationPageSlug, IntegrationSourceConfig } from "@/lib/integration-settings";
 
@@ -57,7 +57,9 @@ async function saveConfig(config: IntegrationSourceConfig) {
 
 export async function GET(request: Request) {
   const slug = getSlugFromRequest(request);
-  const scope = getScopeFromRequest(request);
+  const scopePermission = await requireTocScope(request, getScopeFromRequest(request));
+  if (scopePermission.error) return scopePermission.error;
+  const scope = scopePermission.scope;
   const supabase = getSupabaseAdminClient();
 
   if (!slug) return NextResponse.json({ error: "Supported integration slug is required." }, { status: 400 });

@@ -23,7 +23,7 @@ const assetTypes = ["Wash truck", "Wash ute", "Honda", "Generator", "Pony", "Was
 const statuses = ["Serviceable", "Active", "Service due", "Book service", "Under repair", "Overdue", "Stop use"];
 
 async function fetchEquipment() {
-  const response = await fetch("/api/equipment?all=true", { cache: "no-store" });
+  const response = await tocFetch("/api/equipment?all=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Equipment database read failed.");
   return (payload.assets || []) as EquipmentAsset[];

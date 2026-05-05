@@ -72,7 +72,7 @@ export default function CalendarDayPage() {
     async function syncCalendar() {
       setLoading(true);
       try {
-        const response = await fetch(`/api/calendar?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
+        const response = await tocFetch(`/api/calendar?scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
         const weeks = payload.weeks || [];
         setCalendarData(weeks);

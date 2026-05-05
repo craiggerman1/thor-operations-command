@@ -11,6 +11,7 @@ import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/Urg
 import { fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
 import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { tocFetch } from "@/lib/toc-client-auth";
 
 type StoredSession = {
   id?: string;
@@ -167,7 +168,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       if (!sessionReady || !session.role) return;
       try {
         const scope = getStoredScope();
-        const response = await fetch(`/api/navigation-badges?scope=${encodeURIComponent(scope)}&role=${encodeURIComponent(session.role || defaultSession.role)}`, { cache: "no-store" });
+        const response = await tocFetch(`/api/navigation-badges?scope=${encodeURIComponent(scope)}&role=${encodeURIComponent(session.role || defaultSession.role)}`, { cache: "no-store" });
         const payload = await response.json();
         setNavBadgeCounts(payload.badges || {});
       } catch {
@@ -291,7 +292,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.226</em>
+              <em>Build 0.227</em>
             </div>
           </div>
           <div className="topbar-actions">

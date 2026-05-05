@@ -28,7 +28,7 @@ function toInputDate(value: string) {
 }
 
 async function fetchActions() {
-  const response = await fetch("/api/actions", { cache: "no-store" });
+  const response = await tocFetch("/api/actions", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Action item database read failed.");
   return (payload.actions || []) as AdminActionItem[];
