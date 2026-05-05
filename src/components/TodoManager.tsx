@@ -74,7 +74,9 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     window.addEventListener("storage", loadTodos);
     window.addEventListener("toc.todos.updated", loadTodos);
     window.addEventListener("toc.scopechange", loadTodos);
+    const refreshInterval = window.setInterval(loadTodos, 15000);
     return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("storage", loadTodos);
       window.removeEventListener("toc.todos.updated", loadTodos);
       window.removeEventListener("toc.scopechange", loadTodos);

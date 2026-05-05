@@ -50,9 +50,19 @@ export function AdminTodoManager() {
   const recentTodos = useMemo(() => [...todos].slice(0, 16), [todos]);
 
   useEffect(() => {
-    fetchTodos()
-      .then(setTodos)
-      .catch((error: Error) => setMessage(error.message));
+    function syncTodos() {
+      fetchTodos()
+        .then(setTodos)
+        .catch((error: Error) => setMessage(error.message));
+    }
+
+    syncTodos();
+    window.addEventListener("toc.todos.updated", syncTodos);
+    const refreshInterval = window.setInterval(syncTodos, 20000);
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("toc.todos.updated", syncTodos);
+    };
   }, []);
 
   async function createTodo() {
