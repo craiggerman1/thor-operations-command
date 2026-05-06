@@ -4,6 +4,7 @@ import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCard
 import { AdminAccessManager } from "@/components/AdminAccessManager";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { OperationsNewsControls } from "@/components/OperationsNewsControls";
+import { AdminAuditTrail } from "@/components/AdminAuditTrail";
 import { adminSettingStateLabels, pageSettings } from "@/lib/admin-settings";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,9 @@ export default function AdminPage() {
         </Panel>
         <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility" pill="Admin only">
           <AdminAccessManager />
+        </Panel>
+        <Panel wide eyebrow="Audit trail" title="Security and admin activity" pill="Live database">
+          <AdminAuditTrail />
         </Panel>
         <Panel wide eyebrow="Guidance controls" title="Page hints" pill="Admin only" className="admin-hint-panel">
           <AdminHintControls />

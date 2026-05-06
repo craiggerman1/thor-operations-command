@@ -15,8 +15,10 @@ export async function logTocAudit(input: TocAuditInput) {
   if (!supabase) return { ok: false, error: "Supabase server key is not configured." };
 
   try {
+    const actorId = input.actor?.id === "development-admin" ? null : input.actor?.id;
     await supabase.from("audit_log").insert({
-      actor_id: input.actor?.id === "development-admin" ? null : input.actor?.id,
+      actor_id: actorId,
+      actor_profile_id: actorId,
       actor_role: input.actor?.role,
       action: input.action,
       entity_type: input.entityTable || input.action,
