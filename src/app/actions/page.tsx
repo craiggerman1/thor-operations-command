@@ -17,10 +17,13 @@ const directivePriority = {
 
 export default function ActionsPage() {
   const [openActions, setOpenActions] = useState<ActionItem[]>([]);
+  const [message, setMessage] = useState("");
+  const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const [scope, setScope] = useState("National");
   const [role, setRole] = useState<AccessRole>("admin");
   const scopedActions = getScopedActionItems(openActions, scope, role);
   const sortedActions = [...scopedActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
+  const canQuickManage = role === "admin" || scope === "National";
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -63,15 +66,46 @@ export default function ActionsPage() {
     };
   }, []);
 
+  async function mutateActionItem(id: string, action: "clear" | "delete") {
+    const target = openActions.find((item) => item.id === id);
+    if (!target) return;
+
+    if (action === "delete" && !window.confirm("Are you sure you want to delete this action item?")) return;
+    if (action === "clear" && !window.confirm("Clear this action item from the active queue?")) return;
+
+    setBusyActionId(id);
+    setMessage("");
+    try {
+      const body = action === "delete"
+        ? { action: "delete", id }
+        : { action: "update", id, updates: { status: "closed" } };
+      const response = await tocFetch("/api/actions", {
+        method: "POST",
+        body: JSON.stringify(body)
+      }, true);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Action item could not be updated.");
+
+      setOpenActions((items) => items.filter((item) => item.id !== id));
+      setMessage(action === "delete" ? "Action item deleted." : "Action item cleared.");
+      window.dispatchEvent(new Event("toc.actionState.updated"));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Action item could not be updated.");
+    } finally {
+      setBusyActionId(null);
+    }
+  }
+
   return (
     <TocShell>
       <PageIntro title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <FlowHeading eyebrow="Action Centre" title="Ensure all items are actioned, owned, escalated where needed, and then cleared from the queue." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} open actions`}>
+          {message ? <div className="admin-hint-message">{message}</div> : null}
           <div className="signal-action-list">
             {sortedActions.map((signal) => (
-              <Link id={signal.id} className={`signal-action-card ${signal.severity}`} href={signal.href} key={signal.id}>
+              <article id={signal.id} className={`signal-action-card ${signal.severity}`} key={signal.id}>
                 <div>
                   <span className="eyebrow">{signal.source} - {signal.region}</span>
                   <strong>{signal.title}</strong>
@@ -80,9 +114,15 @@ export default function ActionsPage() {
                 </div>
                 <div className="signal-action-controls">
                   <Tag tone={signal.severity}>{signal.directive}</Tag>
-                  <span className="node-action">Open action</span>
+                  <Link className="node-action" href={signal.href}>Open</Link>
+                  {canQuickManage ? (
+                    <div className="quick-action-controls">
+                      <button type="button" onClick={() => void mutateActionItem(signal.id, "clear")} disabled={busyActionId === signal.id}>Clear</button>
+                      <button className="danger-button" type="button" onClick={() => void mutateActionItem(signal.id, "delete")} disabled={busyActionId === signal.id}>Delete</button>
+                    </div>
+                  ) : null}
                 </div>
-              </Link>
+              </article>
             ))}
             {sortedActions.length ? null : <div className="empty-state">No open action items currently require manager close-out.</div>}
           </div>

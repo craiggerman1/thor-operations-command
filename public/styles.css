@@ -2464,6 +2464,46 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 8px;
 }
 
+.quick-action-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.quick-action-controls button {
+  min-height: 30px;
+  border: 1px solid rgba(10, 49, 82, 0.14);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: rgba(230, 243, 247, 0.94);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.quick-action-controls button:hover:not(:disabled) {
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.quick-action-controls button.danger-button {
+  border-color: rgba(202, 55, 48, 0.24);
+  background: rgba(255, 234, 232, 0.96);
+  color: var(--red);
+}
+
+.quick-action-controls button.danger-button:hover:not(:disabled) {
+  background: var(--red);
+  color: #ffffff;
+}
+
+.quick-action-controls button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .action-due-date {
   display: inline-flex;
   width: fit-content;
