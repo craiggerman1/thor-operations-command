@@ -284,7 +284,7 @@ export function AdminAccessManager() {
     const profile = sessionProfiles[user.role];
     const assignedRegions = normaliseRegionsForRole(user.role, user.regions);
     const scope = assignedRegions[0] || profile.regions[0] || "National";
-    const nextSession = { role: profile.role, label: profile.label, scope, regions: assignedRegions, authMode: "developer" };
+    const nextSession = { role: profile.role, label: profile.label, scope, regions: assignedRegions, authMode: "preview" };
 
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     document.body.dataset.access = profile.role;

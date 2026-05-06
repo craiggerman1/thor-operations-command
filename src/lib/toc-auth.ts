@@ -36,43 +36,12 @@ function normaliseRegionsForRole(role: AccessRole, regions: string[]) {
   return cleanRegions;
 }
 
-async function hasActiveAdminProfile() {
-  const supabase = getSupabaseAdminClient();
-  if (!supabase) return true;
-
-  const { count, error } = await supabase
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("access_level", "admin")
-    .eq("is_active", true);
-
-  if (error) return true;
-  return Boolean(count && count > 0);
-}
-
-async function isDevelopmentAdminRequest(request: Request) {
-  if (request.headers.get("x-toc-development-session") !== "true") return false;
-  if (process.env.TOC_ALLOW_DEVELOPMENT_ADMIN !== "false") return true;
-  return !(await hasActiveAdminProfile());
-}
-
 export async function requireTocRole(request: Request, roles: AccessRole[]) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) {
     return {
       error: NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 }),
       user: undefined
-    };
-  }
-
-  if (roles.includes("admin") && await isDevelopmentAdminRequest(request)) {
-    return {
-      user: {
-        id: "development-admin",
-        role: "admin" as AccessRole,
-        regions: ["National"]
-      },
-      error: undefined
     };
   }
 

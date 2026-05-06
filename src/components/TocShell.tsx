@@ -20,7 +20,7 @@ type StoredSession = {
   scope?: string;
   regions?: string[];
   email?: string;
-  authMode?: "developer" | "supabase";
+  authMode?: "developer" | "preview" | "supabase";
   mustChangePassword?: boolean;
 };
 
@@ -98,6 +98,14 @@ export function TocShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function applySession(nextSession: StoredSession | null) {
+      if (nextSession?.authMode === "developer") {
+        localStorage.removeItem("toc.session");
+        setSession({});
+        document.body.classList.remove("is-authenticated");
+        delete document.body.dataset.access;
+        return false;
+      }
+
       if (nextSession?.role && nextSession.role in sessionProfiles) {
         setSession(nextSession);
         document.body.dataset.access = nextSession.role;
@@ -295,7 +303,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.243</em>
+              <em>Build 0.244</em>
             </div>
           </div>
           <div className="topbar-actions">

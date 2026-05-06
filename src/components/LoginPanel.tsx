@@ -2,27 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { defaultSession } from "@/lib/access";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-
-function startDevelopmentSession() {
-  localStorage.setItem(
-    "toc.session",
-    JSON.stringify({
-      role: defaultSession.role,
-      label: defaultSession.label,
-      scope: "National",
-      regions: defaultSession.regions,
-      authMode: "developer",
-      createdAt: new Date().toISOString()
-    })
-  );
-}
 
 export function LoginPanel() {
   const router = useRouter();
   const [signingIn, setSigningIn] = useState(false);
-  const [signInMode, setSignInMode] = useState<"secure" | "developer">("secure");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -36,16 +20,6 @@ export function LoginPanel() {
     };
   }, []);
 
-  function openCommandSession(mode: "secure" | "developer") {
-    if (signingIn) return;
-
-    setSignInMode(mode);
-    setSigningIn(true);
-    routeTimer.current = window.setTimeout(() => {
-      router.push("/home");
-    }, 1650);
-  }
-
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (signingIn) return;
@@ -58,11 +32,10 @@ export function LoginPanel() {
 
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setErrorMessage("Secure login is not configured yet. Use developer access while setup continues.");
+      setErrorMessage("Secure login is not configured. Contact Admin.");
       return;
     }
 
-    setSignInMode("secure");
     setSigningIn(true);
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -105,11 +78,6 @@ export function LoginPanel() {
     }, 1650);
   }
 
-  function quickSignIn() {
-    startDevelopmentSession();
-    openCommandSession("developer");
-  }
-
   return (
     <div className={`login-card-shell ${signingIn ? "signing-in" : ""}`}>
       <form className="login-card" onSubmit={signIn}>
@@ -117,7 +85,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.243</span>
+            <span>Build 0.244</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>
@@ -132,11 +100,8 @@ export function LoginPanel() {
         {errorMessage ? <small className="login-error">{errorMessage}</small> : null}
         <div className="login-actions">
           <button type="submit" disabled={signingIn}>Sign in</button>
-          <button className="developer-button" type="button" onClick={quickSignIn} disabled={signingIn}>
-            Development quick sign in
-          </button>
         </div>
-        <small className="login-note">Secure TOC access for authorised Thor users only. Development access remains enabled during build hardening.</small>
+        <small className="login-note">Secure TOC access for authorised Thor users only.</small>
       </form>
 
       {signingIn ? (
@@ -146,7 +111,7 @@ export function LoginPanel() {
             <img src="/assets/thor-logo-stacked-sidebar.png" alt="" />
           </div>
           <div className="sequence-copy">
-            <span>{signInMode === "developer" ? "Developer access" : "Secure access"}</span>
+            <span>Secure access</span>
             <strong>Opening command session</strong>
             <small>Identity confirmed. Database loading. TOC is coming online.</small>
           </div>

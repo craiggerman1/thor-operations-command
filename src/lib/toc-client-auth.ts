@@ -1,14 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
-function isDevelopmentSession() {
-  try {
-    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
-    return session?.authMode === "developer";
-  } catch {
-    return false;
-  }
-}
-
 export async function getTocRequestHeaders(includeJson = false) {
   const headers: Record<string, string> = includeJson ? { "Content-Type": "application/json" } : {};
   const supabase = getSupabaseBrowserClient();
@@ -16,7 +7,6 @@ export async function getTocRequestHeaders(includeJson = false) {
   const token = data.session?.access_token;
 
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (!token && isDevelopmentSession()) headers["x-toc-development-session"] = "true";
 
   return headers;
 }
