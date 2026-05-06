@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocNationalAccess, requireTocScope } from "@/lib/toc-auth";
+import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import type { Status } from "@/lib/toc-data";
 
 type ActionStatus = "open" | "submitted_for_review" | "returned_to_manager" | "closed";
@@ -20,6 +21,31 @@ type ActionRow = {
 type RegionRow = {
   id: string;
   name: string;
+};
+
+type ComplianceBacklogRow = {
+  id: string;
+  title: string;
+  detail: string | null;
+  status: string;
+  due_at: string | null;
+  linked_action_id: string | null;
+  region_id: string | null;
+};
+
+type OdinBacklogRow = {
+  id: string;
+  item_type: string;
+  title: string;
+  summary: string | null;
+  region: string;
+  severity: string;
+  confidence: number;
+  noticed: string | null;
+  why_it_matters: string | null;
+  recommended_action: string | null;
+  due_at: string | null;
+  payload?: Record<string, unknown> | null;
 };
 
 function firstRelated<T>(value: T | T[] | null | undefined) {
@@ -118,6 +144,100 @@ async function getRegionId(regionName: string) {
   return (data as RegionRow | null)?.id || null;
 }
 
+async function ensureComplianceActions() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return;
+
+  const { data } = await supabase
+    .from("compliance_items")
+    .select("id,title,detail,status,due_at,linked_action_id,region_id")
+    .is("linked_action_id", null)
+    .neq("status", "complete")
+    .limit(25);
+
+  const backlog = (data as ComplianceBacklogRow[] | null) || [];
+  for (const item of backlog) {
+    const { data: actionItem, error: actionError } = await supabase
+      .from("action_items")
+      .insert({
+        title: item.title,
+        detail: item.detail || "Compliance action requires manager close-out.",
+        source_page: "compliance",
+        directive_type: "National Ops Directive",
+        priority: item.status === "blocked" ? "urgent" : "high",
+        status: "open",
+        assigned_region_id: item.region_id,
+        due_at: item.due_at
+      })
+      .select("id")
+      .single();
+
+    if (!actionError && actionItem?.id) {
+      await supabase
+        .from("compliance_items")
+        .update({ linked_action_id: actionItem.id, updated_at: new Date().toISOString() })
+        .eq("id", item.id);
+    }
+  }
+}
+
+async function promoteActionableOdinItems() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return;
+
+  const { data } = await supabase
+    .from("odin_items")
+    .select("id,item_type,title,summary,region,severity,confidence,noticed,why_it_matters,recommended_action,due_at,payload")
+    .eq("status", "pending")
+    .in("item_type", ["alert", "recommendation", "follow_up", "action_request"])
+    .in("severity", ["red", "amber"])
+    .limit(25);
+
+  const backlog = (data as OdinBacklogRow[] | null) || [];
+  for (const item of backlog) {
+    const existingPayload = item.payload || {};
+    if (Array.isArray(existingPayload.createdActionIds) && existingPayload.createdActionIds.length) continue;
+
+    try {
+      const result = await createOdinDirectActionItems({
+        actorKind: "odin",
+        payload: {
+          title: item.title,
+          detail: item.recommended_action || item.summary || "Odin raised this operational item for manager close-out.",
+          summary: item.summary || item.title,
+          region: existingPayload.targetRegions || item.region,
+          targetRegions: existingPayload.targetRegions || item.region,
+          directiveType: existingPayload.directiveType || "National Ops Directive",
+          priority: existingPayload.priority || (item.severity === "red" ? "urgent" : "high"),
+          severity: item.severity,
+          confidence: item.confidence,
+          noticed: item.noticed || "Odin identified this item from the TOC operational snapshot.",
+          whyItMatters: item.why_it_matters || "The item needs manager visibility and close-out in Action Centre.",
+          sourcePage: existingPayload.sourcePage || "Action Centre",
+          dueAt: item.due_at
+        }
+      });
+
+      await supabase
+        .from("odin_items")
+        .update({
+          approval_required: false,
+          status: "approved",
+          updated_at: new Date().toISOString(),
+          payload: {
+            ...existingPayload,
+            createdActionIds: result.createdActionIds,
+            promotedToActionCentre: true,
+            replacementOdinItemId: result.odinItemId
+          }
+        })
+        .eq("id", item.id);
+    } catch {
+      // Leave the Odin item pending if it cannot be safely mapped to a real region/action.
+    }
+  }
+}
+
 function mapAction(row: ActionRow) {
   const source = titleCase(row.source_page || "Action Centre");
   const region = firstRelated(row.region);
@@ -158,6 +278,10 @@ export async function GET(request: Request) {
   }
 
   const permittedScope = scopePermission.scope;
+  if (!id) {
+    await Promise.all([ensureComplianceActions(), promoteActionableOdinItems()]);
+  }
+
   let query = supabase
     .from("action_items")
     .select("id,title,detail,source_page,directive_type,priority,status,due_at,region:regions(name)")

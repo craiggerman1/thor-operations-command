@@ -35,7 +35,7 @@ x-odin-api-key: <ODIN_API_KEY>
 content-type: application/json
 ```
 
-Use this endpoint for non-action recommendations, briefs and Odin memory only.
+Use this endpoint for non-action recommendations, briefs and Odin memory only. If Odin sends a red or amber `alert`, `recommendation`, `follow_up`, or `action_request`, TOC will promote it into a real Action Centre item so managers can see and close it out.
 
 Body:
 

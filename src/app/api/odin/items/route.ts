@@ -276,13 +276,19 @@ export async function POST(request: Request) {
     if (!canSeeRegion(permission, region)) return NextResponse.json({ error: "You do not have permission to create Odin items for this region." }, { status: 403 });
 
     const itemType = normaliseOdinItemType(payload.itemType);
-    if (permission.kind === "odin" && itemType === "action_request") {
+    const shouldDirectCreateAction = permission.kind === "odin"
+      && ["action_request", "alert", "recommendation", "follow_up"].includes(itemType)
+      && ["red", "amber"].includes(normaliseOdinSeverity(payload.severity));
+
+    if (shouldDirectCreateAction) {
       try {
         const directResult = await createOdinDirectActionItems({
           payload: {
             ...payload,
             targetRegions: payload.targetRegions || payload.regions || payload.region || region,
-            detail: payload.detail || payload.actionDetail || payload.recommendedAction || payload.summary
+            detail: payload.detail || payload.actionDetail || payload.recommendedAction || payload.summary,
+            directiveType: payload.directiveType || "National Ops Directive",
+            priority: payload.priority || (normaliseOdinSeverity(payload.severity) === "red" ? "urgent" : "high")
           },
           actorKind: "odin"
         });
