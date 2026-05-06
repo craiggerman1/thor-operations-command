@@ -2,7 +2,165 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 
-const snapshotLimit = 60;
+const snapshotLimit = 80;
+const dueSoonDays = 3;
+const activeActionStatuses = ["open", "submitted_for_review", "returned_to_manager"];
+const activeNationalRequestStatuses = ["awaiting_review", "returned_to_manager", "pending"];
+const activeStockStatuses = ["submitted", "awaiting_review", "cancel_requested", "update_requested"];
+const activeEquipmentStatuses = ["watch", "service_due", "overdue"];
+const activeOdinStatuses = ["pending"];
+
+type SnapshotRow = Record<string, unknown>;
+
+type SnapshotSection = {
+  rows: SnapshotRow[];
+  error: string | null;
+};
+
+function firstRelated(value: unknown): SnapshotRow | null {
+  if (Array.isArray(value)) return (value[0] as SnapshotRow | undefined) || null;
+  return value && typeof value === "object" ? value as SnapshotRow : null;
+}
+
+function regionName(row: SnapshotRow) {
+  const region = firstRelated(row.region);
+  return typeof region?.name === "string" ? region.name : String(row.region || row.owner_scope || "National");
+}
+
+function itemName(row: SnapshotRow) {
+  const item = firstRelated(row.item);
+  return typeof item?.item_name === "string" ? item.item_name : "";
+}
+
+function dateOnly(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date: Date, days: number) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function isPastDue(value: unknown, generatedAt: Date) {
+  if (!value) return false;
+  const dueDate = new Date(String(value));
+  return !Number.isNaN(dueDate.getTime()) && dueDate < generatedAt;
+}
+
+function isDueSoon(value: unknown, generatedAt: Date) {
+  if (!value) return false;
+  const dueDate = new Date(String(value));
+  if (Number.isNaN(dueDate.getTime()) || dueDate < generatedAt) return false;
+  const dueSoonCutoff = addDays(generatedAt, dueSoonDays);
+  return dueDate <= dueSoonCutoff;
+}
+
+function severityForAction(row: SnapshotRow) {
+  const priority = String(row.priority || "").toLowerCase();
+  if (row.directive_type === "National Ops Directive" || priority === "urgent" || priority === "high") return "red";
+  if (row.directive_type === "Scheduled Directive" || priority === "normal") return "amber";
+  return "blue";
+}
+
+function severityForCompliance(row: SnapshotRow) {
+  const status = String(row.status || "").toLowerCase();
+  if (status === "blocked") return "red";
+  if (status === "in_progress" || status === "open" || status === "not_started") return "amber";
+  return "blue";
+}
+
+function severityForEquipment(row: SnapshotRow) {
+  const status = String(row.current_status || "").toLowerCase();
+  if (status.includes("overdue") || status.includes("repair") || status.includes("stop")) return "red";
+  if (status.includes("due") || status.includes("watch") || status.includes("book")) return "amber";
+  return "blue";
+}
+
+function severityForStock(row: SnapshotRow) {
+  const status = String(row.status || "").toLowerCase();
+  if (status.includes("cancel")) return "red";
+  if (row.urgency === "urgent" || status.includes("update")) return "amber";
+  return "blue";
+}
+
+function dedupeKey(parts: Array<unknown>) {
+  return parts
+    .map((part) => String(part || "none").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))
+    .join(":");
+}
+
+function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
+  const region = regionName(row);
+  const id = String(row.id || "");
+  const due = row.due_at || row.next_service_due || row.job_date || "";
+  const title = row.title || row.asset_name || row.site_name || row.job_title || itemName(row);
+  const source = row.source_page || entityType;
+  const severity = entityType === "action_item"
+    ? severityForAction(row)
+    : entityType === "compliance_item"
+    ? severityForCompliance(row)
+    : entityType === "equipment_asset"
+    ? severityForEquipment(row)
+    : entityType === "stock_order"
+    ? severityForStock(row)
+    : String(row.severity || "blue");
+
+  return {
+    id,
+    entityType,
+    title: String(title || "Untitled TOC item"),
+    region,
+    status: row.status || row.current_status || (row.is_done === false ? "open" : "unknown"),
+    severity,
+    dueAt: due || null,
+    source,
+    href: entityType === "action_item" ? `/actions/${id}` : `/api/odin/context/${entityType}/${id}`,
+    contextEndpoint: `/api/odin/context/${entityType}/${id}`,
+    dedupeKey: dedupeKey([region, entityType, source, title, due]),
+    isOverdue: isPastDue(due, generatedAt),
+    isDueSoon: isDueSoon(due, generatedAt)
+  };
+}
+
+function buildEntityLinks(sections: Record<string, SnapshotSection>, generatedAt: Date) {
+  return [
+    ...sections.actionItems.rows.map((row) => entityLink("action_item", row, generatedAt)),
+    ...sections.complianceItems.rows.map((row) => entityLink("compliance_item", row, generatedAt)),
+    ...sections.equipmentAssets.rows.map((row) => entityLink("equipment_asset", row, generatedAt)),
+    ...sections.stockOrders.rows.map((row) => entityLink("stock_order", row, generatedAt)),
+    ...sections.todoItems.rows.map((row) => entityLink("todo_item", row, generatedAt)),
+    ...sections.calendarJobs.rows.map((row) => entityLink("calendar_job", row, generatedAt))
+  ];
+}
+
+function duplicateGroups(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  const groups = entityLinks.reduce<Record<string, typeof entityLinks>>((lookup, link) => {
+    lookup[link.dedupeKey] = [...(lookup[link.dedupeKey] || []), link];
+    return lookup;
+  }, {});
+
+  return Object.entries(groups)
+    .filter(([, links]) => links.length > 1)
+    .map(([key, links]) => ({ key, count: links.length, links }));
+}
+
+function countByRegion(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  return entityLinks.reduce<Record<string, number>>((lookup, link) => {
+    lookup[link.region] = (lookup[link.region] || 0) + 1;
+    return lookup;
+  }, {});
+}
+
+function countBySeverity(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  return entityLinks.reduce<Record<string, number>>((lookup, link) => {
+    lookup[link.severity] = (lookup[link.severity] || 0) + 1;
+    return lookup;
+  }, { red: 0, amber: 0, blue: 0 });
+}
 
 async function readRows(input: {
   table: string;
@@ -11,7 +169,8 @@ async function readRows(input: {
   openStatusColumn?: string;
   openStatuses?: string[];
   equals?: Record<string, string | number | boolean>;
-  excludeClosedColumn?: string;
+  excludeStatuses?: { column: string; statuses: string[] };
+  limit?: number;
 }) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { rows: [], error: "Supabase server key is not configured." };
@@ -20,18 +179,87 @@ async function readRows(input: {
     .from(input.table)
     .select(input.select)
     .order(input.orderBy || "created_at", { ascending: false })
-    .limit(snapshotLimit);
+    .limit(input.limit || snapshotLimit);
 
   if (input.openStatusColumn && input.openStatuses?.length) query = query.in(input.openStatusColumn, input.openStatuses);
   Object.entries(input.equals || {}).forEach(([column, value]) => {
     query = query.eq(column, value);
   });
-  if (input.excludeClosedColumn) query = query.neq(input.excludeClosedColumn, "closed");
+  if (input.excludeStatuses) query = query.not(input.excludeStatuses.column, "in", `(${input.excludeStatuses.statuses.join(",")})`);
 
   const { data, error } = await query;
   return {
-    rows: data || [],
+    rows: (data || []) as unknown as SnapshotRow[],
     error: error?.message || null
+  };
+}
+
+async function readCalendarJobs(generatedAt: Date) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return { rows: [], error: "Supabase server key is not configured." };
+
+  const startDate = dateOnly(generatedAt);
+  const endDate = dateOnly(addDays(generatedAt, 7));
+  const { data, error } = await supabase
+    .from("calendar_jobs")
+    .select("id,job_date,job_time,location,site,crew,job_title,status,notes,severity,updated_at")
+    .gte("job_date", startDate)
+    .lte("job_date", endDate)
+    .order("job_date", { ascending: true })
+    .order("job_time", { ascending: true })
+    .limit(snapshotLimit);
+
+  return {
+    rows: (data || []) as unknown as SnapshotRow[],
+    error: error?.message || null
+  };
+}
+
+async function readRecentCompleted() {
+  const [closedActions, completedCompliance, completedTodos, deliveredStock] = await Promise.all([
+    readRows({
+      table: "action_items",
+      select: "id,title,status,closed_at,updated_at,region:regions(name)",
+      openStatusColumn: "status",
+      openStatuses: ["closed"],
+      orderBy: "updated_at",
+      limit: 20
+    }),
+    readRows({
+      table: "compliance_items",
+      select: "id,title,status,updated_at,region:regions(name)",
+      openStatusColumn: "status",
+      openStatuses: ["complete"],
+      orderBy: "updated_at",
+      limit: 20
+    }),
+    readRows({
+      table: "todo_items",
+      select: "id,title,is_done,owner_scope,updated_at",
+      equals: { is_done: true },
+      orderBy: "updated_at",
+      limit: 20
+    }),
+    readRows({
+      table: "stock_orders",
+      select: "id,status,updated_at,region:regions(name),item:stock_order_items(item_name)",
+      openStatusColumn: "status",
+      openStatuses: ["delivered", "cancelled"],
+      orderBy: "updated_at",
+      limit: 20
+    })
+  ]);
+
+  const rows: SnapshotRow[] = [
+    ...closedActions.rows.map((row) => ({ ...row, entityType: "action_item" })),
+    ...completedCompliance.rows.map((row) => ({ ...row, entityType: "compliance_item" })),
+    ...completedTodos.rows.map((row) => ({ ...row, entityType: "todo_item" })),
+    ...deliveredStock.rows.map((row) => ({ ...row, entityType: "stock_order" }))
+  ];
+
+  return {
+    rows: rows.sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || ""))).slice(0, 30),
+    error: [closedActions.error, completedCompliance.error, completedTodos.error, deliveredStock.error].filter(Boolean).join("; ") || null
   };
 }
 
@@ -42,6 +270,7 @@ export async function GET(request: Request) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ connected: false, error: "Supabase server key is not configured." }, { status: 503 });
 
+  const generatedAt = new Date();
   const [
     actionItems,
     nationalRequests,
@@ -50,36 +279,38 @@ export async function GET(request: Request) {
     equipmentAssets,
     productivitySites,
     todoItems,
-    odinItems
+    odinItems,
+    calendarJobs,
+    recentCompleted
   ] = await Promise.all([
     readRows({
       table: "action_items",
       select: "id,title,detail,source_page,directive_type,priority,status,due_at,created_at,updated_at,region:regions(name)",
-      excludeClosedColumn: "status"
+      excludeStatuses: { column: "status", statuses: ["closed"] }
     }),
     readRows({
       table: "national_requests",
       select: "id,request_type,title,detail,status,source_action_id,manager_response,evidence,source_page,directive_type,created_at,updated_at,region:regions(name)",
       openStatusColumn: "status",
-      openStatuses: ["awaiting_review", "returned_to_manager", "pending"]
+      openStatuses: activeNationalRequestStatuses
     }),
     readRows({
       table: "stock_orders",
       select: "id,quantity,urgency,note,status,national_update,tracking_number,created_at,updated_at,region:regions(name),item:stock_order_items(item_name)",
       openStatusColumn: "status",
-      openStatuses: ["submitted", "awaiting_review", "cancel_requested", "update_requested"]
+      openStatuses: activeStockStatuses
     }),
     readRows({
       table: "compliance_items",
       select: "id,title,detail,status,due_at,linked_action_id,created_at,updated_at,region:regions(name)",
-      excludeClosedColumn: "status"
+      excludeStatuses: { column: "status", statuses: ["complete", "closed"] }
     }),
     readRows({
       table: "equipment_assets",
       select: "id,asset_name,asset_type,current_status,latest_odometer,latest_hours,next_service_due,service_note,latest_reading_at,linked_action_id,updated_at,region:regions(name)",
       orderBy: "updated_at",
       openStatusColumn: "current_status",
-      openStatuses: ["watch", "service_due", "overdue"]
+      openStatuses: activeEquipmentStatuses
     }),
     readRows({
       table: "productivity_sites",
@@ -92,10 +323,12 @@ export async function GET(request: Request) {
     }),
     readRows({
       table: "odin_items",
-      select: "id,item_type,title,summary,region,severity,confidence,status,approval_required,created_at,updated_at",
+      select: "id,item_type,title,summary,region,severity,confidence,status,approval_required,due_at,created_at,updated_at",
       openStatusColumn: "status",
-      openStatuses: ["pending"]
-    })
+      openStatuses: activeOdinStatuses
+    }),
+    readCalendarJobs(generatedAt),
+    readRecentCompleted()
   ]);
 
   const sections = {
@@ -106,28 +339,84 @@ export async function GET(request: Request) {
     equipmentAssets,
     productivitySites,
     todoItems,
-    odinItems
+    odinItems,
+    calendarJobs,
+    recentCompleted
   };
+  const entityLinks = buildEntityLinks(sections, generatedAt);
+  const overdueItems = entityLinks.filter((item) => item.isOverdue);
+  const dueSoonItems = entityLinks.filter((item) => item.isDueSoon);
+  const redItems = entityLinks.filter((item) => item.severity === "red");
+  const duplicateIssueGroups = duplicateGroups(entityLinks);
 
   return NextResponse.json({
     connected: true,
-    generatedAt: new Date().toISOString(),
+    generatedAt: generatedAt.toISOString(),
     actor: permission.kind,
-    mode: "read_only_snapshot",
+    mode: "operator_snapshot",
+    operatingModel: {
+      purpose: "Give Odin a single business snapshot so it can detect risk, route work to the correct TOC destination, and reduce manager drift.",
+      alertRules: {
+        red: "Telegram immediately. Call Craig only if urgent, safety, compliance or client-critical. Create manager action automatically.",
+        amber: "Manager Action Centre or relevant page. Include in daily summary. Telegram only if overdue or repeated.",
+        blue: "Dashboard/memory only. No interruption."
+      },
+      duplicatePrevention: "Prefer dedupeKey over title matching: region + entity type + source/category + title/entity + due date.",
+      managerAccountability: "Use owner region, due date, status, last update and returned/submitted workflow to chase manager follow-through."
+    },
     instructions: {
       actionWriteEndpoint: "/api/odin/actions",
       todoReminderEndpoint: "/api/odin/todos",
       complianceWriteEndpoint: "/api/odin/compliance",
       equipmentWriteEndpoint: "/api/odin/equipment",
       stockOrderWriteEndpoint: "/api/odin/stock-orders",
+      jobsEndpoint: "/api/odin/jobs",
+      rosterEndpoint: "/api/odin/roster",
       notesWriteEndpoint: "/api/odin/notes",
       entityContextEndpoint: "/api/odin/context/:entityType/:id",
       recommendationWriteEndpoint: "/api/odin/items",
-      allowedWriteActions: ["direct_action_create", "direct_action_update", "direct_action_close", "direct_action_delete", "direct_action_duplicate_cleanup", "direct_todo_create", "direct_todo_update", "direct_todo_complete", "direct_todo_delete", "direct_compliance_lifecycle", "direct_equipment_lifecycle", "direct_stock_order_lifecycle", "direct_note_memory", "create_recommendation"],
+      allowedWriteActions: ["create", "update", "complete", "close", "delete", "delete_duplicates", "add_note", "escalate", "de_escalate"],
+      routeByDestination: {
+        actions: "/api/odin/actions",
+        todos: "/api/odin/todos",
+        compliance: "/api/odin/compliance",
+        equipment: "/api/odin/equipment",
+        stock_orders: "/api/odin/stock-orders",
+        jobs: "/api/odin/jobs",
+        roster: "/api/odin/roster",
+        notes: "/api/odin/notes"
+      },
       actionCreationApprovalRequired: false,
-      note: "Use the specific Odin endpoint for the destination: actions, todos, compliance, equipment, stock-orders, notes or context. If itemType=todo is supplied to /api/odin/actions, TOC routes it into the To Do system instead of Action Centre. Non-create lifecycle operations require id/ids. /api/odin/items is for non-action recommendations and audit memory only.",
-      prohibitedActions: ["send_message", "change_user", "change_password", "change_role", "admin_settings"]
+      note: "Use the specific Odin endpoint for the destination. Non-create lifecycle operations require id/ids. Keep all admin user/password/role changes prohibited.",
+      prohibitedActions: ["send_external_message_without_rule", "change_user", "change_password", "change_role", "admin_settings"]
     },
+    summary: {
+      totalOpenWork: entityLinks.length,
+      openBySeverity: countBySeverity(entityLinks),
+      openByRegion: countByRegion(entityLinks),
+      overdueCount: overdueItems.length,
+      dueSoonCount: dueSoonItems.length,
+      redCount: redItems.length,
+      duplicateGroupCount: duplicateIssueGroups.length,
+      calendarJobsNext7Days: calendarJobs.rows.length,
+      recentCompletedCount: recentCompleted.rows.length,
+      dataGaps: {
+        staffPhoneNumbers: "not_loaded",
+        liveRoster: "not_loaded",
+        jobsheetEvidence: "not_loaded",
+        clientComplaintFeed: "not_loaded",
+        photoChecklistFeed: "not_loaded"
+      }
+    },
+    focusQueues: {
+      redItems,
+      overdueItems,
+      dueSoonItems,
+      duplicateIssueGroups,
+      tomorrowJobs: calendarJobs.rows.filter((row) => row.job_date === dateOnly(addDays(generatedAt, 1))),
+      recentlyCompleted: recentCompleted.rows
+    },
+    entityLinks,
     sections
   });
 }

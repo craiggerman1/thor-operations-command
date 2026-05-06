@@ -13,7 +13,7 @@ const contextTables: Record<string, { table: string; select: string }> = {
   todo: { table: "todo_items", select: "*" },
   todo_item: { table: "todo_items", select: "*" },
   national_request: { table: "national_requests", select: "*,region:regions(name)" },
-  calendar_job: { table: "calendar_jobs", select: "*,region:regions(name)" },
+  calendar_job: { table: "calendar_jobs", select: "*" },
   productivity_site: { table: "productivity_sites", select: "*,region:regions(name)" }
 };
 
