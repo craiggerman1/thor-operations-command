@@ -103,9 +103,9 @@ function readSessionUserKey() {
   }
 }
 
-function writeBroadcasts(nextBroadcasts: UrgentBroadcastMessage[]) {
+async function writeBroadcasts(nextBroadcasts: UrgentBroadcastMessage[]) {
   localStorage.setItem(broadcastKey, JSON.stringify(nextBroadcasts));
-  syncRemoteBroadcasts("urgent", { broadcasts: nextBroadcasts });
+  await syncRemoteBroadcasts("urgent", { broadcasts: nextBroadcasts });
   window.dispatchEvent(new Event("toc.urgentBroadcast.updated"));
 }
 
@@ -130,28 +130,28 @@ function cleanRemoteDirectorBroadcast(raw: unknown) {
   };
 }
 
-function writeDirectorBroadcast(nextBroadcast: DirectorBroadcastMessage) {
+async function writeDirectorBroadcast(nextBroadcast: DirectorBroadcastMessage) {
   localStorage.setItem(directorBroadcastKey, JSON.stringify(nextBroadcast));
-  syncRemoteBroadcasts("director", { broadcast: nextBroadcast });
+  await syncRemoteBroadcasts("director", { broadcast: nextBroadcast });
   window.dispatchEvent(new Event("toc.directorBroadcast.updated"));
 }
 
-function deleteDirectorBroadcast() {
+async function deleteDirectorBroadcast() {
   localStorage.removeItem(directorBroadcastKey);
   localStorage.removeItem(directorAcknowledgedKey);
-  syncRemoteBroadcasts("clear-director", {});
+  await syncRemoteBroadcasts("clear-director", {});
   window.dispatchEvent(new Event("toc.directorBroadcast.updated"));
 }
 
-function syncRemoteBroadcasts(kind: "urgent" | "director" | "clear-director", payload: Record<string, unknown>) {
+async function syncRemoteBroadcasts(kind: "urgent" | "director" | "clear-director", payload: Record<string, unknown>) {
   if (typeof window === "undefined") return;
 
-  tocFetch(broadcastApi, {
+  const response = await tocFetch(broadcastApi, {
     method: "POST",
     body: JSON.stringify({ kind, ...payload })
-  }, true).catch(() => {
-    // Local browser storage remains the fallback until central broadcast storage is active.
-  });
+  }, true);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Broadcast database sync failed.");
 }
 
 function syncBroadcastAcknowledgement(kind: "acknowledge" | "acknowledge-director", version: string) {
@@ -290,19 +290,25 @@ export function UrgentBroadcastControls() {
       active: true,
       targetScope
     }, ...broadcasts];
-    writeBroadcasts(nextBroadcasts);
-    setBroadcasts(nextBroadcasts);
-    setMessage("");
-    setStatus(`Urgent banner deployed to ${targetScope}.`);
+    void writeBroadcasts(nextBroadcasts)
+      .then(() => {
+        setBroadcasts(nextBroadcasts);
+        setMessage("");
+        setStatus(`Urgent banner deployed to ${targetScope}. Audit logged.`);
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Urgent banner did not save to the secure database."));
   }
 
   function redeployBroadcast(id: string) {
     const nextBroadcasts = broadcasts.map((broadcast) => broadcast.id === id
       ? { ...broadcast, version: Date.now().toString(), active: true }
       : broadcast);
-    writeBroadcasts(nextBroadcasts);
-    setBroadcasts(nextBroadcasts);
-    setStatus("Urgent banner redeployed.");
+    void writeBroadcasts(nextBroadcasts)
+      .then(() => {
+        setBroadcasts(nextBroadcasts);
+        setStatus("Urgent banner redeployed. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Urgent banner did not save to the secure database."));
   }
 
   function beginEditBroadcast(id: string) {
@@ -326,18 +332,24 @@ export function UrgentBroadcastControls() {
     const nextBroadcasts = broadcasts.map((broadcast) => broadcast.id === id
       ? { ...broadcast, message: cleanMessage, version: Date.now().toString(), active: true }
       : broadcast);
-    writeBroadcasts(nextBroadcasts);
-    setBroadcasts(nextBroadcasts);
-    setEditingId("");
-    setEditingMessage("");
-    setStatus("Urgent banner message updated.");
+    void writeBroadcasts(nextBroadcasts)
+      .then(() => {
+        setBroadcasts(nextBroadcasts);
+        setEditingId("");
+        setEditingMessage("");
+        setStatus("Urgent banner message updated. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Urgent banner did not save to the secure database."));
   }
 
   function disableBroadcast(id: string) {
     const nextBroadcasts = broadcasts.map((broadcast) => broadcast.id === id ? { ...broadcast, active: false } : broadcast);
-    writeBroadcasts(nextBroadcasts);
-    setBroadcasts(nextBroadcasts);
-    setStatus("Urgent banner disabled.");
+    void writeBroadcasts(nextBroadcasts)
+      .then(() => {
+        setBroadcasts(nextBroadcasts);
+        setStatus("Urgent banner disabled. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Urgent banner did not save to the secure database."));
   }
 
   function deleteBroadcast(id: string) {
@@ -348,9 +360,12 @@ export function UrgentBroadcastControls() {
     if (!confirmed) return;
 
     const nextBroadcasts = broadcasts.filter((broadcast) => broadcast.id !== id);
-    writeBroadcasts(nextBroadcasts);
-    setBroadcasts(nextBroadcasts);
-    setStatus("Urgent banner deleted.");
+    void writeBroadcasts(nextBroadcasts)
+      .then(() => {
+        setBroadcasts(nextBroadcasts);
+        setStatus("Urgent banner deleted. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Urgent banner did not save to the secure database."));
   }
 
   return (
@@ -512,17 +527,23 @@ export function DirectorBroadcastControls() {
       version: Date.now().toString(),
       active: true
     };
-    writeDirectorBroadcast(nextBroadcast);
-    setBroadcast(nextBroadcast);
-    setStatus("Director message deployed to all users.");
+    void writeDirectorBroadcast(nextBroadcast)
+      .then(() => {
+        setBroadcast(nextBroadcast);
+        setStatus("Director message deployed to all users. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Director message did not save to the secure database."));
   }
 
   function disableDirectorMessage() {
     if (!broadcast) return;
     const nextBroadcast = { ...broadcast, active: false };
-    writeDirectorBroadcast(nextBroadcast);
-    setBroadcast(nextBroadcast);
-    setStatus("Director message disabled.");
+    void writeDirectorBroadcast(nextBroadcast)
+      .then(() => {
+        setBroadcast(nextBroadcast);
+        setStatus("Director message disabled. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Director message did not save to the secure database."));
   }
 
   function removeDirectorMessage() {
@@ -530,18 +551,24 @@ export function DirectorBroadcastControls() {
     const confirmed = window.confirm("Are you sure you want to delete this Director message?");
     if (!confirmed) return;
 
-    deleteDirectorBroadcast();
-    setBroadcast(null);
-    setMessage("");
-    setStatus("Director message deleted.");
+    void deleteDirectorBroadcast()
+      .then(() => {
+        setBroadcast(null);
+        setMessage("");
+        setStatus("Director message deleted. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Director message did not save to the secure database."));
   }
 
   function redeployDirectorMessage() {
     if (!broadcast?.message.trim()) return;
     const nextBroadcast = { ...broadcast, version: Date.now().toString(), active: true };
-    writeDirectorBroadcast(nextBroadcast);
-    setBroadcast(nextBroadcast);
-    setStatus("Director message redeployed to all users.");
+    void writeDirectorBroadcast(nextBroadcast)
+      .then(() => {
+        setBroadcast(nextBroadcast);
+        setStatus("Director message redeployed to all users. Audit logged.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Director message did not save to the secure database."));
   }
 
   return (

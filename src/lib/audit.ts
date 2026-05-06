@@ -12,7 +12,7 @@ type TocAuditInput = {
 
 export async function logTocAudit(input: TocAuditInput) {
   const supabase = getSupabaseAdminClient();
-  if (!supabase) return;
+  if (!supabase) return { ok: false, error: "Supabase server key is not configured." };
 
   try {
     await supabase.from("audit_log").insert({
@@ -24,7 +24,11 @@ export async function logTocAudit(input: TocAuditInput) {
       scope: input.scope,
       details: input.details || {}
     }).throwOnError();
-  } catch {
-    // Audit logging must not block operational actions while the audit table is being rolled out.
+    return { ok: true, error: undefined };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Audit log write failed."
+    };
   }
 }

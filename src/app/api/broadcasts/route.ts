@@ -197,7 +197,7 @@ export async function POST(request: Request) {
       })));
       if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
-    await logTocAudit({
+    const auditResult = await logTocAudit({
       actor: permission.user,
       action: "broadcast.urgent.replace",
       entityTable: "urgent_broadcasts",
@@ -208,6 +208,7 @@ export async function POST(request: Request) {
         targetScopes: Array.from(new Set(broadcasts.map((broadcast) => broadcast.targetScope)))
       }
     });
+    if (!auditResult.ok) return NextResponse.json({ error: auditResult.error }, { status: 500 });
   }
 
   if (body.kind === "director") {
@@ -218,7 +219,7 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString()
     }, { onConflict: "key" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    await logTocAudit({
+    const auditResult = await logTocAudit({
       actor: permission.user,
       action: "broadcast.director.upsert",
       entityTable: "app_settings",
@@ -229,6 +230,7 @@ export async function POST(request: Request) {
         version: broadcast.version
       }
     });
+    if (!auditResult.ok) return NextResponse.json({ error: auditResult.error }, { status: 500 });
   }
 
   if (body.kind === "clear-director") {
@@ -238,13 +240,14 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString()
     }, { onConflict: "key" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    await logTocAudit({
+    const auditResult = await logTocAudit({
       actor: permission.user,
       action: "broadcast.director.clear",
       entityTable: "app_settings",
       entityId: directorSettingsKey,
       scope: "National"
     });
+    if (!auditResult.ok) return NextResponse.json({ error: auditResult.error }, { status: 500 });
   }
 
   if (body.kind === "acknowledge") {
