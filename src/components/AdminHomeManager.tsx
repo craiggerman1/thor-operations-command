@@ -7,7 +7,7 @@ import { tocFetch } from "@/lib/toc-client-auth";
 import type { HomeRoadmapItem, HomeSettingsConfig, HomeSignalConfig } from "@/lib/home-settings";
 
 async function fetchHomeSettings() {
-  const response = await fetch("/api/home-settings", { cache: "no-store" });
+  const response = await tocFetch("/api/home-settings", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Home settings database read failed.");
   return (payload.config || defaultHomeSettings) as HomeSettingsConfig;

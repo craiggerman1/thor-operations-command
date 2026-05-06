@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocRole } from "@/lib/toc-auth";
+import { requireTocRole, requireTocUser } from "@/lib/toc-auth";
 import { defaultHomeSettings, normaliseHomeSettings } from "@/lib/home-settings";
 import type { HomeSettingsConfig } from "@/lib/home-settings";
 
@@ -31,7 +31,10 @@ async function saveHomeSettings(config: HomeSettingsConfig) {
   if (error) throw error;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
 
   if (!supabase) {
@@ -61,5 +64,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Home settings update failed." }, { status: 500 });
   }
 
-  return GET();
+  return NextResponse.json({ config: await readHomeSettings(), connected: true });
 }

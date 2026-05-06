@@ -166,7 +166,7 @@ async function callOdinGateway(input: { sessionKey: string; prompt: string; tocC
       structured: normaliseStructuredResponse({
         summary: "Odin gateway is ready in TOC, but the OpenClaw gateway environment variables are not configured yet.",
         risk: "Odin cannot provide live AI analysis until the gateway URL and token are added to Vercel.",
-        recommendation: "Set ODIN_GATEWAY_URL and ODIN_GATEWAY_TOKEN in Vercel, then redeploy. This request has still been logged with persistent memory.",
+        recommendation: "Set OPENCLAW_GATEWAY_URL and OPENCLAW_GATEWAY_TOKEN in Vercel, then redeploy. This request has still been logged with persistent memory.",
         draftMessage: "",
         requiresApproval: true,
         confidence: 40

@@ -182,7 +182,7 @@ export function UrgentBroadcastBanner() {
       setSessionScope(readSessionScope());
 
       try {
-        const response = await fetch(broadcastApi, { cache: "no-store" });
+        const response = await tocFetch(broadcastApi, { cache: "no-store" });
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
@@ -255,7 +255,7 @@ export function UrgentBroadcastControls() {
       setBroadcasts(localBroadcasts);
 
       try {
-        const response = await fetch(broadcastApi, { cache: "no-store" });
+        const response = await tocFetch(broadcastApi, { cache: "no-store" });
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
@@ -434,7 +434,7 @@ export function DirectorBroadcastBanner() {
       setAcknowledgedVersion(localStorage.getItem(directorAcknowledgedKey) || "");
 
       try {
-        const response = await fetch(broadcastApi, { cache: "no-store" });
+        const response = await tocFetch(broadcastApi, { cache: "no-store" });
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcast = cleanRemoteDirectorBroadcast(remoteState.directorBroadcast);
@@ -488,7 +488,7 @@ export function DirectorBroadcastControls() {
       setMessage(current?.message || "");
 
       try {
-        const response = await fetch(broadcastApi, { cache: "no-store" });
+        const response = await tocFetch(broadcastApi, { cache: "no-store" });
         if (!response.ok) return;
         const remoteState = await response.json();
         const remoteBroadcast = cleanRemoteDirectorBroadcast(remoteState.directorBroadcast);

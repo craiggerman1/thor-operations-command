@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { requireTocUser, type TocAuthenticatedUser } from "@/lib/toc-auth";
 
 type OdinPermission =
@@ -7,7 +8,8 @@ type OdinPermission =
   | { kind: "none"; user: undefined; error: NextResponse };
 
 function safeCompare(left: string, right: string) {
-  return left.length === right.length && left === right;
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(Buffer.from(left), Buffer.from(right));
 }
 
 export async function requireOdinOrTocUser(request: Request): Promise<OdinPermission> {

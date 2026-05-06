@@ -146,7 +146,10 @@ async function getDatabaseBroadcastState(): Promise<BroadcastState | null> {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   try {
     const databaseState = await getDatabaseBroadcastState();
     if (databaseState) return NextResponse.json(databaseState);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocRole } from "@/lib/toc-auth";
+import { requireTocRole, requireTocUser } from "@/lib/toc-auth";
 
 const settingsKey = "page_hints";
 
@@ -25,7 +25,10 @@ function cleanState(raw: unknown): PageHintState {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ ...defaultState, connected: false });
 

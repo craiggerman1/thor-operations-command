@@ -47,7 +47,7 @@ export function clearOperationsNews() {
 }
 
 export async function fetchOperationsNewsItems() {
-  const response = await fetch(operationsNewsApi, { cache: "no-store" });
+  const response = await tocFetch(operationsNewsApi, { cache: "no-store" });
   if (!response.ok) throw new Error("Operations news database read failed.");
   const payload = await response.json() as { items?: unknown[] };
   return parseOperationsNews(JSON.stringify(payload.items || []));

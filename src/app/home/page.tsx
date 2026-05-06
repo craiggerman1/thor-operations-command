@@ -112,7 +112,7 @@ export default function HomePage() {
     }
 
     function syncHomeSettings() {
-      fetch("/api/home-settings", { cache: "no-store" })
+      tocFetch("/api/home-settings", { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Home settings unavailable")))
         .then((payload) => setHomeSettings((payload.config || defaultHomeSettings) as HomeSettingsConfig))
         .catch(() => setHomeSettings(defaultHomeSettings));

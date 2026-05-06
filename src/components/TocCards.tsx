@@ -60,7 +60,7 @@ function applyRemoteHintState(state: { enabled?: boolean; version?: string }) {
 }
 
 async function fetchRemoteHintState() {
-  const response = await fetch(pageHintsApi, { cache: "no-store" });
+  const response = await tocFetch(pageHintsApi, { cache: "no-store" });
   if (!response.ok) throw new Error("Page hint database read failed.");
   return await response.json() as { enabled?: boolean; version?: string };
 }

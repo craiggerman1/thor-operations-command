@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocRole } from "@/lib/toc-auth";
+import { requireTocRole, requireTocUser } from "@/lib/toc-auth";
 
 const defaultItems = ["Thor Operations Currently Normal"];
 const settingsKey = "operations_news";
@@ -12,7 +12,10 @@ function cleanItems(raw: unknown) {
   return cleanLines.length ? cleanLines : defaultItems;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const permission = await requireTocUser(request);
+  if (permission.error) return permission.error;
+
   const supabase = getSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ items: defaultItems, connected: false });
 
