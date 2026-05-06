@@ -295,3 +295,17 @@ Only change to `ODIN_DRY_RUN=false` once the output looks correct.
 The watcher sends `x-openclaw-session-key: toc:watcher` by default so OpenClaw can keep watcher memory in one stable thread.
 
 Odin can return confidence as `0.84` or `84`; the watcher normalises both to `84`.
+
+The watcher now asks Odin for a `destination` field and writes to the matching TOC endpoint:
+
+```text
+action -> /api/odin/actions
+todo -> /api/odin/todos
+compliance -> /api/odin/compliance
+equipment -> /api/odin/equipment
+stock_order -> /api/odin/stock-orders
+note -> /api/odin/notes
+recommendation -> /api/odin/items
+```
+
+If Odin omits `destination`, the watcher infers the route from the returned title, summary and recommended action.

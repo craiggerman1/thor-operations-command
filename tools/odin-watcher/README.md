@@ -2,10 +2,10 @@
 
 The Odin Watcher is the safe first step for autonomous Odin monitoring.
 
-It runs on the Odin AI PC, calls TOC outbound, analyses the operational snapshot with local Odin/OpenClaw, and writes only pending recommendations back into TOC.
+It runs on the Odin AI PC, calls TOC outbound, analyses the operational snapshot with local Odin/OpenClaw, and writes operational items back into the correct TOC destination.
 
 ```text
-Odin AI PC -> TOC snapshot API -> local Odin/OpenClaw -> TOC pending Odin item
+Odin AI PC -> TOC snapshot API -> local Odin/OpenClaw -> TOC destination API
 ```
 
 This keeps the AI PC private. TOC does not call into the Odin PC.
@@ -44,13 +44,33 @@ ODIN_DRY_RUN=false
 ## Safety Rules
 
 - Odin can read TOC snapshot data.
-- Odin can create pending recommendations only.
+- Odin can route watcher output to the correct TOC destination endpoint.
 - Odin uses the configured `OPENCLAW_SESSION_KEY` so watcher analysis has a stable memory thread.
 - Odin confidence values can be returned as either `0.84` or `84`; the watcher normalises both to `84`.
-- Duplicate recommendations are skipped when the same pending title already exists inside the configured duplicate window.
-- Odin cannot approve, reject, dismiss, delete, close, reset passwords, change users, or send external messages from TOC.
+- Duplicate recommendations are skipped when the same open title already exists inside the configured duplicate window.
+- Odin cannot approve, reject, dismiss, reset passwords, change users, change admin settings, or send external messages from TOC.
 - Telegram and Twilio alerts should be handled on the AI PC side after Odin decides an issue is important.
-- Every recommendation written to TOC is logged and still needs human review.
+- Every watcher write uses `ODIN_API_KEY` and is audited server-side by TOC.
+
+## Destination Routing
+
+The watcher asks Odin to return a `destination` field:
+
+```text
+action, todo, compliance, equipment, stock_order, note, recommendation
+```
+
+Routing rules:
+
+- `compliance` -> `/api/odin/compliance`
+- `equipment` -> `/api/odin/equipment`
+- `stock_order` -> `/api/odin/stock-orders`
+- `todo` -> `/api/odin/todos`
+- `action` -> `/api/odin/actions`
+- `note` -> `/api/odin/notes`
+- `recommendation` -> `/api/odin/items`
+
+If Odin omits `destination`, the watcher infers it from the title, summary and recommended action.
 
 ## OpenClaw Gateway Requirement
 

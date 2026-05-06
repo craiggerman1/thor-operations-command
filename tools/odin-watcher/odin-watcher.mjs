@@ -75,16 +75,15 @@ async function main() {
     return;
   }
 
-  console.log("[odin-watcher] Writing pending recommendation to TOC...");
-  const result = await postJson(`${tocBaseUrl}/api/odin/items`, {
-    "x-odin-api-key": odinApiKey
-  }, {
-    action: "create",
-    ...recommendation,
-    sourceType: "odin_watcher"
-  });
+  const target = writeTarget(recommendation);
+  const body = buildWriteBody(recommendation, target.destination);
 
-  console.log(`[odin-watcher] TOC write complete. Connected: ${Boolean(result.connected)}. Items returned: ${result.items?.length || 0}.`);
+  console.log(`[odin-watcher] Writing ${target.destination} item to TOC via ${target.path}...`);
+  const result = await postJson(`${tocBaseUrl}${target.path}`, {
+    "x-odin-api-key": odinApiKey
+  }, body);
+
+  console.log(`[odin-watcher] TOC write complete. Connected: ${Boolean(result.connected)}. Action: ${result.action || body.action}. Count: ${result.count || result.createdCount || result.createdTodoIds?.length || result.createdActionIds?.length || result.createdComplianceIds?.length || 0}.`);
 }
 
 function buildPrompt(snapshot) {
@@ -92,11 +91,18 @@ function buildPrompt(snapshot) {
     "You are Odin inside Thor Operations Command.",
     "Analyse this TOC operational snapshot as Thor's AI operations manager.",
     "Return one concise JSON object only. No markdown.",
-    "Allowed JSON fields: title, summary, region, severity, confidence, noticed, whyItMatters, recommendedAction.",
+    "Allowed JSON fields: destination, title, summary, region, severity, confidence, noticed, whyItMatters, recommendedAction, dueDate, targetRegions, entityType, entityId, assetName, assetType, stockItem, quantity, urgency.",
+    "destination must be one of: action, todo, compliance, equipment, stock_order, note, recommendation.",
+    "Route compliance, safety, induction and site readiness risks to destination=compliance.",
+    "Route wash vehicle, truck, ute, wash plant, generator, Honda, Pony or service issues to destination=equipment.",
+    "Route chemical, PPE, parts, consumable or supply ordering needs to destination=stock_order.",
+    "Route quick reminders to destination=todo.",
+    "Route manager close-out work to destination=action.",
+    "Route history-only observations to destination=note.",
     "Severity must be blue, amber, or red.",
-    "Only recommend actions that require human review. Do not execute actions.",
+    "Only recommend actions that require operational attention. Do not send external messages.",
     "Focus on the most important operational risk only.",
-    "Avoid repeating any pending Odin item already listed in pendingOdinItems.",
+    "Avoid repeating existing open TOC items already listed in the snapshot.",
     "",
     JSON.stringify(compactSnapshot(snapshot), null, 2)
   ].join("\n");
@@ -169,17 +175,124 @@ function parseRecommendation(content) {
     const parsed = JSON.parse(jsonText);
     return {
       title: safeText(parsed.title, fallback.title).slice(0, 140),
+      destination: normaliseDestination(parsed.destination || parsed.itemType || parsed.sourceType || parsed.category),
       summary: safeText(parsed.summary, fallback.summary).slice(0, 700),
       region: safeText(parsed.region, "National"),
       severity: normaliseSeverity(parsed.severity),
       confidence: normaliseConfidence(parsed.confidence),
       noticed: safeText(parsed.noticed, "").slice(0, 700),
       whyItMatters: safeText(parsed.whyItMatters, "").slice(0, 700),
-      recommendedAction: safeText(parsed.recommendedAction, "").slice(0, 700)
+      recommendedAction: safeText(parsed.recommendedAction, "").slice(0, 700),
+      dueDate: safeText(parsed.dueDate, ""),
+      targetRegions: Array.isArray(parsed.targetRegions) ? parsed.targetRegions.map((region) => String(region)).filter(Boolean) : undefined,
+      entityType: safeText(parsed.entityType, ""),
+      entityId: safeText(parsed.entityId, ""),
+      assetName: safeText(parsed.assetName, ""),
+      assetType: safeText(parsed.assetType, ""),
+      stockItem: safeText(parsed.stockItem || parsed.item || parsed.itemName, ""),
+      quantity: Number.isFinite(Number(parsed.quantity)) ? Math.max(Number(parsed.quantity), 1) : undefined,
+      urgency: safeText(parsed.urgency, "")
     };
   } catch {
     return fallback;
   }
+}
+
+function normaliseDestination(value) {
+  const destination = String(value || "").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  if (["todo", "to_do", "reminder"].includes(destination)) return "todo";
+  if (["compliance", "safety", "induction", "inductions"].includes(destination)) return "compliance";
+  if (["equipment", "equipment_servicing", "asset", "vehicle", "service"].includes(destination)) return "equipment";
+  if (["stock", "stock_order", "stock_orders", "supply", "supplies", "consumable"].includes(destination)) return "stock_order";
+  if (["note", "notes", "memory", "history"].includes(destination)) return "note";
+  if (["recommendation", "odin_item"].includes(destination)) return "recommendation";
+  return "action";
+}
+
+function writeTarget(recommendation) {
+  const destination = normaliseDestination(inferDestination(recommendation));
+  const paths = {
+    action: "/api/odin/actions",
+    todo: "/api/odin/todos",
+    compliance: "/api/odin/compliance",
+    equipment: "/api/odin/equipment",
+    stock_order: "/api/odin/stock-orders",
+    note: "/api/odin/notes",
+    recommendation: "/api/odin/items"
+  };
+
+  return { destination, path: paths[destination] || paths.action };
+}
+
+function inferDestination(recommendation) {
+  if (recommendation.destination) return recommendation.destination;
+  const haystack = `${recommendation.title} ${recommendation.summary} ${recommendation.noticed} ${recommendation.recommendedAction}`.toLowerCase();
+  if (/\b(induction|compliance|first aid|safety|ppe register|site readiness)\b/.test(haystack)) return "compliance";
+  if (/\b(vehicle|truck|ute|unit|u\d+|pony|generator|honda|wash plant|service|repair|odometer|hours)\b/.test(haystack)) return "equipment";
+  if (/\b(stock|chemical|chemicals|consumable|consumables|ppe|gloves|bottle|batteries|hose|parts|order)\b/.test(haystack)) return "stock_order";
+  if (/\b(remind|reminder|to do|todo|follow up)\b/.test(haystack)) return "todo";
+  if (/\b(note|record|history|observed)\b/.test(haystack)) return "note";
+  return "action";
+}
+
+function buildWriteBody(recommendation, destination) {
+  const targetRegions = recommendation.targetRegions?.length ? recommendation.targetRegions : [recommendation.region || "National"];
+  const detail = recommendation.recommendedAction || recommendation.summary || recommendation.noticed || "Odin raised this item from TOC watcher analysis.";
+  const base = {
+    action: "create",
+    title: recommendation.title,
+    detail,
+    summary: recommendation.summary,
+    region: recommendation.region || "National",
+    targetRegions,
+    priority: recommendation.severity === "red" ? "urgent" : recommendation.severity === "amber" ? "high" : "normal",
+    severity: recommendation.severity,
+    confidence: recommendation.confidence,
+    noticed: recommendation.noticed,
+    whyItMatters: recommendation.whyItMatters,
+    recommendedAction: detail,
+    sourceType: "odin_watcher",
+    dueDate: recommendation.dueDate || undefined
+  };
+
+  if (destination === "todo") return { ...base, itemType: "todo", text: recommendation.title, important: recommendation.severity !== "blue" };
+  if (destination === "compliance") return { ...base, status: "open", directiveType: recommendation.severity === "red" ? "National Ops Directive" : "Scheduled Directive" };
+  if (destination === "equipment") return {
+    ...base,
+    assetName: recommendation.assetName || recommendation.entityId || recommendation.title,
+    assetType: recommendation.assetType || "Wash asset",
+    status: recommendation.severity === "red" ? "Repair / stop use" : "Watch",
+    serviceNote: detail
+  };
+  if (destination === "stock_order") return {
+    ...base,
+    item: recommendation.stockItem || recommendation.title,
+    quantity: recommendation.quantity || 1,
+    urgency: recommendation.urgency || (recommendation.severity === "red" ? "urgent" : "normal"),
+    note: detail
+  };
+  if (destination === "note") return {
+    ...base,
+    entityType: recommendation.entityType || "toc",
+    entityId: recommendation.entityId || recommendation.region || "National",
+    note: detail,
+    facts: {
+      noticed: recommendation.noticed,
+      whyItMatters: recommendation.whyItMatters,
+      watcherSeverity: recommendation.severity
+    }
+  };
+  if (destination === "recommendation") return {
+    ...base,
+    itemType: "recommendation"
+  };
+
+  return {
+    ...base,
+    itemType: "action",
+    sourcePage: "Action Centre",
+    directiveType: recommendation.severity === "red" ? "National Ops Directive" : "Scheduled Directive"
+  };
 }
 
 function extractJson(content) {
@@ -214,12 +327,19 @@ function passesSeverity(severity, minimum) {
 }
 
 function isDuplicateRecommendation(snapshot, recommendation) {
-  const pendingItems = rows(snapshot?.sections?.odinItems);
+  const existingItems = [
+    ...rows(snapshot?.sections?.odinItems),
+    ...rows(snapshot?.sections?.actionItems),
+    ...rows(snapshot?.sections?.complianceItems),
+    ...rows(snapshot?.sections?.equipmentAssets),
+    ...rows(snapshot?.sections?.stockOrders),
+    ...rows(snapshot?.sections?.todoItems)
+  ];
   const title = normaliseTitle(recommendation.title);
   const cutoff = Date.now() - duplicateWindowHours * 60 * 60 * 1000;
 
-  return pendingItems.some((item) => {
-    const itemTitle = normaliseTitle(item.title);
+  return existingItems.some((item) => {
+    const itemTitle = normaliseTitle(item.title || item.asset_name || item.assetName || item.item?.item_name || item.item || "");
     const itemTime = Date.parse(item.created_at || item.createdAt || "");
     const insideWindow = Number.isFinite(itemTime) ? itemTime >= cutoff : true;
     return insideWindow && itemTitle === title;
