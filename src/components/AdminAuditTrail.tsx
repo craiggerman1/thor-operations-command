@@ -63,6 +63,7 @@ export function AdminAuditTrail() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [status, setStatus] = useState("Loading audit trail...");
   const [isLoading, setIsLoading] = useState(false);
+  const [retentionDays, setRetentionDays] = useState(90);
 
   const actorMappedCount = useMemo(() => entries.filter((entry) => entry.actorProfileId).length, [entries]);
 
@@ -77,6 +78,37 @@ export function AdminAuditTrail() {
       setStatus(`${payload.entries?.length || 0} audit events loaded.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Audit trail could not be loaded.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function runMaintenance(action: "prune" | "clear") {
+    const confirmMessage = action === "clear"
+      ? "This will permanently clear the visible audit trail and keep a new clear event. Continue?"
+      : `This will prune audit rows older than ${retentionDays} days. Continue?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsLoading(true);
+    setStatus(action === "clear" ? "Clearing audit trail..." : "Pruning old audit rows...");
+    try {
+      const response = await tocFetch("/api/admin/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          retentionDays,
+          confirm: action === "clear" ? "CLEAR AUDIT TRAIL" : undefined
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok || payload.connected === false) throw new Error(payload.error || "Audit maintenance failed.");
+      setEntries((payload.entries || []) as AuditEntry[]);
+      setStatus(action === "clear"
+        ? "Audit trail cleared. A new clear event has been recorded."
+        : `Audit trail pruned to the latest ${payload.retentionDays || retentionDays} days.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Audit maintenance could not be completed.");
     } finally {
       setIsLoading(false);
     }
@@ -108,6 +140,23 @@ export function AdminAuditTrail() {
           <small>Shows recent Odin-issued actions, account controls and database-backed TOC activity.</small>
         </div>
         <button type="button" onClick={loadAuditTrail} disabled={isLoading}>{isLoading ? "Refreshing..." : "Refresh Audit Trail"}</button>
+      </div>
+      <div className="admin-audit-maintenance">
+        <div>
+          <strong>Audit retention</strong>
+          <small>Keep recent security history fast, then prune older rows once they are no longer operationally useful.</small>
+        </div>
+        <label>
+          <span>Keep</span>
+          <select value={retentionDays} onChange={(event) => setRetentionDays(Number(event.target.value))} disabled={isLoading}>
+            <option value={30}>30 days</option>
+            <option value={90}>90 days</option>
+            <option value={180}>180 days</option>
+            <option value={365}>365 days</option>
+          </select>
+        </label>
+        <button type="button" onClick={() => runMaintenance("prune")} disabled={isLoading}>Prune Old Rows</button>
+        <button className="danger-button" type="button" onClick={() => runMaintenance("clear")} disabled={isLoading}>Clear Audit Trail</button>
       </div>
       <div className="admin-audit-list">
         {entries.map((entry) => (

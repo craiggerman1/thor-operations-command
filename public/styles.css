@@ -3520,12 +3520,40 @@ body:not([data-access="admin"]) .admin-only-panel {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.admin-audit-maintenance {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(130px, 0.18fr) auto auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid rgba(211, 142, 15, 0.72);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(211, 142, 15, 0.09), transparent 52%),
+    rgba(255, 255, 255, 0.74);
+}
+
+.admin-audit-maintenance label {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-audit-maintenance label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
 .admin-audit-toolbar strong,
+.admin-audit-maintenance strong,
 .admin-audit-row strong {
   color: var(--blue);
 }
 
 .admin-audit-toolbar small,
+.admin-audit-maintenance small,
 .admin-audit-row small {
   display: block;
   color: var(--muted);
@@ -3543,9 +3571,39 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-weight: 900;
 }
 
-.admin-audit-toolbar button:disabled {
+.admin-audit-maintenance button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 1000;
+  white-space: nowrap;
+}
+
+.admin-audit-maintenance .danger-button {
+  border: 1px solid rgba(191, 62, 57, 0.28);
+  background: rgba(191, 62, 57, 0.13);
+  color: var(--red);
+}
+
+.admin-audit-toolbar button:disabled,
+.admin-audit-maintenance button:disabled {
   cursor: wait;
   opacity: 0.68;
+}
+
+.settings-loading {
+  min-height: 82px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(201, 215, 225, 0.8);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--muted);
+  font-weight: 1000;
 }
 
 .admin-audit-list {

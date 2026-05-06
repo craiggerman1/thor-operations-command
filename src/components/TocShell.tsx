@@ -80,6 +80,20 @@ function readStoredSession(): StoredSession | null {
   }
 }
 
+function hasUsableStoredSession(storedSession: StoredSession | null) {
+  const isPermittedPreview = developmentToolsEnabled && storedSession?.authMode === "preview";
+  return Boolean(
+    storedSession?.role &&
+    storedSession.role in sessionProfiles &&
+    (storedSession.authMode === "supabase" || isPermittedPreview)
+  );
+}
+
+function getInitialStoredSession() {
+  const storedSession = readStoredSession();
+  return hasUsableStoredSession(storedSession) ? storedSession || {} : {};
+}
+
 export function TocShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -87,8 +101,8 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [signingOut, setSigningOut] = useState(false);
   const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, NavBadge>>({});
   const signOutTimer = useRef<number | null>(null);
-  const [session, setSession] = useState<StoredSession>({});
-  const [sessionReady, setSessionReady] = useState(false);
+  const [session, setSession] = useState<StoredSession>(() => getInitialStoredSession());
+  const [sessionReady, setSessionReady] = useState(() => hasUsableStoredSession(readStoredSession()));
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
   const currentRegionOptions = developmentToolsEnabled && activeProfile.role !== "director"
@@ -103,8 +117,7 @@ export function TocShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function applySession(nextSession: StoredSession | null) {
-      const isPermittedPreview = developmentToolsEnabled && nextSession?.authMode === "preview";
-      if (nextSession?.authMode !== "supabase" && !isPermittedPreview) {
+      if (!hasUsableStoredSession(nextSession)) {
         localStorage.removeItem("toc.session");
         setSession({});
         document.body.classList.remove("is-authenticated");
@@ -112,17 +125,10 @@ export function TocShell({ children }: { children: ReactNode }) {
         return false;
       }
 
-      if (nextSession?.role && nextSession.role in sessionProfiles) {
-        setSession(nextSession);
-        document.body.dataset.access = nextSession.role;
-        document.body.classList.add("is-authenticated");
-        return true;
-      }
-
-      setSession({});
-      document.body.classList.remove("is-authenticated");
-      delete document.body.dataset.access;
-      return false;
+      setSession(nextSession || {});
+      document.body.dataset.access = nextSession?.role || "";
+      document.body.classList.add("is-authenticated");
+      return true;
     }
 
     function syncSession(event?: Event) {
@@ -324,7 +330,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.278</em>
+              <em>Build 0.279</em>
             </div>
           </div>
           <div className="topbar-actions">
