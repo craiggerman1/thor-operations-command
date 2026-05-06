@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { buildOdinOperationalContext, odinDedupeKey } from "@/lib/odin-operational-context";
+import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
+import { readOdinStaffEntities } from "@/lib/odin-staff";
 
 const snapshotLimit = 80;
 const dueSoonDays = 3;
@@ -309,7 +311,9 @@ export async function GET(request: Request) {
     todoItems,
     odinItems,
     calendarJobs,
-    recentCompleted
+    recentCompleted,
+    staffResult,
+    rosterGaps
   ] = await Promise.all([
     readRows({
       table: "action_items",
@@ -356,7 +360,9 @@ export async function GET(request: Request) {
       openStatuses: activeOdinStatuses
     }),
     readCalendarJobs(generatedAt),
-    readRecentCompleted()
+    readRecentCompleted(),
+    readOdinStaffEntities({ includeProtected: false }),
+    buildOdinRosterGaps()
   ]);
 
   const sections = {
@@ -400,6 +406,8 @@ export async function GET(request: Request) {
       stockOrderWriteEndpoint: "/api/odin/stock-orders",
       jobsEndpoint: "/api/odin/jobs",
       rosterEndpoint: "/api/odin/roster",
+      staffEndpoint: "/api/odin/staff",
+      rosterGapEndpoint: "/api/odin/roster-gaps",
       notesWriteEndpoint: "/api/odin/notes",
       entityContextEndpoint: "/api/odin/context/:entityType/:id",
       recommendationWriteEndpoint: "/api/odin/items",
@@ -412,6 +420,7 @@ export async function GET(request: Request) {
         stock_orders: "/api/odin/stock-orders",
         jobs: "/api/odin/jobs",
         roster: "/api/odin/roster",
+        roster_gaps: "/api/odin/roster-gaps",
         notes: "/api/odin/notes"
       },
       actionCreationApprovalRequired: false,
@@ -429,10 +438,13 @@ export async function GET(request: Request) {
       redCount: redItems.length,
       duplicateGroupCount: duplicateIssueGroups.length,
       calendarJobsNext7Days: calendarJobs.rows.length,
+      staffEntities: staffResult.staff.length,
+      rosterGapCount: rosterGaps.gapCount,
       recentCompletedCount: recentCompleted.rows.length,
       dataGaps: {
-        staffPhoneNumbers: "not_loaded",
-        liveRoster: "not_loaded",
+        staffPhoneNumbers: staffResult.source === "database" ? "protected_staff_profiles" : "staff_profiles_table_pending",
+        liveRoster: "calendar_jobs_only",
+        rosterGapDetection: rosterGaps.connected ? "active" : rosterGaps.errors.join("; ") || "not_loaded",
         jobsheetEvidence: "not_loaded",
         clientComplaintFeed: "not_loaded",
         photoChecklistFeed: "not_loaded"
@@ -444,8 +456,27 @@ export async function GET(request: Request) {
       dueSoonItems,
       duplicateIssueGroups,
       tomorrowJobs: calendarJobs.rows.filter((row) => row.job_date === dateOnly(addDays(generatedAt, 1))),
+      rosterGaps: rosterGaps.gaps,
       ownerQueue: entityLinks.filter((item) => item.escalationLevel !== "none"),
       recentlyCompleted: recentCompleted.rows
+    },
+    staffRoster: {
+      staffSource: staffResult.source,
+      staffConnected: staffResult.connected,
+      staffError: staffResult.error,
+      staffCount: staffResult.staff.length,
+      protectedFieldsInSnapshot: false,
+      sampleStaff: staffResult.staff.slice(0, 20).map((staff) => ({
+        id: staff.id,
+        name: staff.name,
+        regions: staff.regions,
+        role: staff.role,
+        status: staff.status,
+        skills: staff.skills,
+        availableWindows: staff.availability.availableWindows,
+        inductionEligibleSites: staff.inductions.eligibleSites
+      })),
+      rosterGaps
     },
     entityLinks,
     sections
