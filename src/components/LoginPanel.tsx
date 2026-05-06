@@ -51,6 +51,11 @@ export function LoginPanel() {
     if (signingIn) return;
 
     setErrorMessage("");
+    if (!email.trim() || !password) {
+      setErrorMessage("Please enter your email address and password.");
+      return;
+    }
+
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       setErrorMessage("Secure login is not configured yet. Use developer access while setup continues.");
@@ -112,7 +117,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.230</span>
+            <span>Build 0.231</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>

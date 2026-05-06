@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useState } from "react";
 import { tocFetch } from "@/lib/toc-client-auth";
 
 type TodoItem = {
@@ -43,10 +43,16 @@ function dispatchTodoUpdate() {
 export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" }) {
   const [todoText, setTodoText] = useState("");
   const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [floatingEnabled, setFloatingEnabled] = useState(true);
+  const [floatingEnabled, setFloatingEnabled] = useState(() => mode !== "floating" || getFloatingSetting());
   const [floatingTop, setFloatingTop] = useState(floatingStartTop);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
+
+  useLayoutEffect(() => {
+    if (mode === "floating") {
+      document.body.classList.toggle("todo-floating-disabled", !floatingEnabled);
+    }
+  }, [floatingEnabled, mode]);
 
   async function loadTodos() {
     const floatingSetting = getFloatingSetting();
@@ -81,9 +87,6 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
       window.removeEventListener("storage", loadTodos);
       window.removeEventListener("toc.todos.updated", loadTodos);
       window.removeEventListener("toc.scopechange", loadTodos);
-      if (mode === "floating") {
-        document.body.classList.remove("todo-floating-disabled");
-      }
     };
   }, []);
 
