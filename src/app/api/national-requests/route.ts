@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { markComplianceForClosedActions, reopenComplianceForReturnedActions } from "@/lib/linked-record-sync";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
 
@@ -197,6 +198,11 @@ export async function POST(request: Request) {
         .eq("id", existingRequest.source_action_id);
 
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
+      if (isApproved) {
+        await markComplianceForClosedActions([existingRequest.source_action_id]);
+      } else if (status === "Returned to manager") {
+        await reopenComplianceForReturnedActions([existingRequest.source_action_id]);
+      }
     }
 
     return GET(request);

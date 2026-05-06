@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clearComplianceForDeletedActions, markComplianceForClosedActions, reopenComplianceForReturnedActions } from "@/lib/linked-record-sync";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocNationalAccess, requireTocScope } from "@/lib/toc-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
@@ -357,11 +358,17 @@ export async function POST(request: Request) {
 
     const { error } = await supabase.from("action_items").update(dbUpdates).eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (dbUpdates.status === "closed") {
+      await markComplianceForClosedActions([payload.id]);
+    } else if (dbUpdates.status === "returned_to_manager" || dbUpdates.status === "open") {
+      await reopenComplianceForReturnedActions([payload.id]);
+    }
     return GET(request);
   }
 
   if (action === "delete") {
     if (!payload.id) return NextResponse.json({ error: "Action id is required." }, { status: 400 });
+    await clearComplianceForDeletedActions([payload.id]);
     const { error } = await supabase.from("action_items").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return GET(request);

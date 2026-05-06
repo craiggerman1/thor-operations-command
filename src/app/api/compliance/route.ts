@@ -157,6 +157,7 @@ export async function GET(request: Request) {
     supabase
       .from("compliance_items")
       .select("id,title,detail,status,due_at,linked_action_id,region:regions(name)")
+      .neq("status", "complete")
       .order("created_at", { ascending: false })
   ]);
 

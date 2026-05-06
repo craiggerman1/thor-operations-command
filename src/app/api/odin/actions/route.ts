@@ -3,6 +3,7 @@ import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { logTocAudit } from "@/lib/audit";
 import { handleOdinTodoItems } from "@/lib/odin-todos";
+import { clearComplianceForDeletedActions, markComplianceForClosedActions, reopenComplianceForReturnedActions } from "@/lib/linked-record-sync";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type OdinActionOperation = "create" | "update" | "delete" | "delete_duplicates" | "close" | "complete" | "clear" | "done";
@@ -147,6 +148,7 @@ async function mutateActions(input: {
     if (error) throw error;
 
     const affectedIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
+    await clearComplianceForDeletedActions(affectedIds);
     await logTocAudit({
       actor: input.actor,
       action: "odin.action.delete",
@@ -177,6 +179,12 @@ async function mutateActions(input: {
   if (error) throw error;
 
   const affectedIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
+  if (input.operation === "update") {
+    if (updates.status === "closed") await markComplianceForClosedActions(affectedIds);
+    if (updates.status === "open" || updates.status === "returned_to_manager") await reopenComplianceForReturnedActions(affectedIds);
+  } else {
+    await markComplianceForClosedActions(affectedIds);
+  }
   await logTocAudit({
     actor: input.actor,
     action: input.operation === "update" ? "odin.action.update" : "odin.action.close",
