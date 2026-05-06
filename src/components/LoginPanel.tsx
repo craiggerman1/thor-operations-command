@@ -117,7 +117,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.231</span>
+            <span>Build 0.232</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>
@@ -148,7 +148,7 @@ export function LoginPanel() {
           <div className="sequence-copy">
             <span>{signInMode === "developer" ? "Developer access" : "Secure access"}</span>
             <strong>Opening command session</strong>
-            <small>Identity confirmed. Data loaded. TOC coming online.</small>
+            <small>Identity confirmed. Database loading. TOC is coming online.</small>
           </div>
           <div className="sequence-progress"><span /></div>
         </div>
