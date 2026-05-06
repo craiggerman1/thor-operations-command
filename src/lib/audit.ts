@@ -19,6 +19,7 @@ export async function logTocAudit(input: TocAuditInput) {
       actor_id: input.actor?.id === "development-admin" ? null : input.actor?.id,
       actor_role: input.actor?.role,
       action: input.action,
+      entity_type: input.entityTable || input.action,
       entity_table: input.entityTable,
       entity_id: input.entityId,
       scope: input.scope,
