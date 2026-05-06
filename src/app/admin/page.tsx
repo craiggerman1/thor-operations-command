@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { AdminHintControls, FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AdminAccessManager } from "@/components/AdminAccessManager";
+import { AdminStaffManager } from "@/components/AdminStaffManager";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { OperationsNewsControls } from "@/components/OperationsNewsControls";
 import { AdminAuditTrail } from "@/components/AdminAuditTrail";
@@ -31,6 +32,9 @@ export default function AdminPage() {
         </Panel>
         <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility" pill="Admin only">
           <AdminAccessManager />
+        </Panel>
+        <Panel wide eyebrow="Staff control" title="Staff entities, regions, skills and protected contacts" pill="Database active">
+          <AdminStaffManager />
         </Panel>
         <Panel wide eyebrow="Audit trail" title="Odin, security and admin activity" pill="Live database">
           <AdminAuditTrail />

@@ -13,6 +13,7 @@ import { AdminIntegrationSourceManager } from "@/components/AdminIntegrationSour
 import { AdminProductivityManager } from "@/components/AdminProductivityManager";
 import { AdminRegionHealthManager } from "@/components/AdminRegionHealthManager";
 import { AdminSheetSourceManager } from "@/components/AdminSheetSourceManager";
+import { AdminStaffManager } from "@/components/AdminStaffManager";
 import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager";
 import { AdminTodoManager } from "@/components/AdminTodoManager";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
@@ -137,9 +138,14 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
           </Panel>
         ) : null}
         {setting.slug === "staff-availability" ? (
-          <Panel wide eyebrow="Staff Availability" title="Availability sheet source control">
-            <AdminSheetSourceManager slug="staff-availability" label="Staff Availability" />
-          </Panel>
+          <>
+            <Panel wide eyebrow="Staff Availability" title="Availability sheet source control">
+              <AdminSheetSourceManager slug="staff-availability" label="Staff Availability" />
+            </Panel>
+            <Panel wide eyebrow="Staff entities" title="Staff register, regions, skills and protected contacts">
+              <AdminStaffManager />
+            </Panel>
+          </>
         ) : null}
         {setting.slug === "inductions" ? (
           <Panel wide eyebrow="Inductions" title="Induction sheet source control">
