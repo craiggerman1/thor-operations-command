@@ -57,7 +57,7 @@ Body:
 
 ## Odin Direct Action Items
 
-Odin can directly create manager Action Centre items when Craig/Admin gives express instruction. This is intended for Telegram/Hermes/OpenClaw commands from trusted users.
+Odin can directly create, update, close and delete manager Action Centre items when Craig/Admin gives express instruction. This is intended for Telegram/Hermes/OpenClaw commands from trusted users.
 
 ```http
 POST https://thor-operations-command-app.vercel.app/api/odin/actions
@@ -67,6 +67,7 @@ content-type: application/json
 
 ```json
 {
+  "action": "create",
   "title": "Confirm site PPE stock levels",
   "detail": "Confirm all site PPE is stocked and report any gaps.",
   "targetRegions": ["all"],
@@ -81,13 +82,44 @@ content-type: application/json
 }
 ```
 
+Cleanup and close-out operations must use Action Centre item IDs from the TOC snapshot. If Odin does not supply an `id` or `ids`, TOC rejects the request rather than creating a new item.
+
+```json
+{
+  "action": "delete",
+  "ids": ["action-id-1", "action-id-2"]
+}
+```
+
+```json
+{
+  "action": "close",
+  "id": "action-id-1"
+}
+```
+
+```json
+{
+  "action": "update",
+  "id": "action-id-1",
+  "updates": {
+    "title": "Updated manager action title",
+    "detail": "Updated manager close-out instructions.",
+    "priority": "high",
+    "dueDate": "2026-05-08"
+  }
+}
+```
+
 Direct issue behavior:
 
 - TOC creates real Action Centre items for the target regions immediately.
 - Region names map to the assigned manager region. `Brisbane`, `Brisbane Manager`, or `Brisbane region` all target the Brisbane manager Action Centre.
 - `targetRegions: ["National"]` creates a National action item. `targetRegions: ["all"]` creates one item for every active manager region except National.
+- `action: "close"`, `complete`, `clear` and `done` close the supplied Action Centre item IDs.
+- `action: "delete"` deletes the supplied Action Centre item IDs.
 - TOC records the action in Admin Settings audit trail and stores Odin memory against the issued work.
-- Odin still cannot change users, reset passwords, change roles or delete records.
+- Odin still cannot change users, reset passwords, change roles or modify Admin Settings.
 
 Do not use `/api/odin/items` for manager tasks. If Odin accidentally sends `itemType: "action_request"` to `/api/odin/items`, TOC will now create the Action Centre item directly instead of sending it to an approval page.
 
@@ -120,8 +152,9 @@ To Do behavior:
 ## Security Rules
 
 - Odin can create recommendations and direct Action Centre items when explicitly instructed.
+- Odin can update, close and delete Action Centre items when explicitly instructed and when item IDs are supplied.
 - Odin can create direct shared To Do reminders when explicitly instructed.
-- Odin cannot delete records, change users, reset passwords, change roles or modify Admin Settings.
+- Odin cannot change users, reset passwords, change roles or modify Admin Settings.
 - Human approval remains required for destructive, admin, account, pricing, payroll, external-message or client-sensitive actions.
 - Rotate `ODIN_API_KEY` if it is ever pasted somewhere unsafe.
 

@@ -1,6 +1,132 @@
 import { NextResponse } from "next/server";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
+import { logTocAudit } from "@/lib/audit";
+import { getSupabaseAdminClient } from "@/lib/supabase";
+
+type OdinActionOperation = "create" | "update" | "delete" | "close" | "complete" | "clear" | "done";
+
+const allowedStatuses = new Set(["open", "submitted_for_review", "returned_to_manager", "closed"]);
+const allowedPriorities = new Set(["urgent", "high", "normal", "low"]);
+const allowedDirectives = new Set(["National Ops Directive", "Scheduled Directive", "To Do"]);
+
+function normaliseOperation(value: unknown): OdinActionOperation {
+  const operation = String(value || "create").trim().toLowerCase();
+  if (["create", "update", "delete", "close", "complete", "clear", "done"].includes(operation)) {
+    return operation as OdinActionOperation;
+  }
+  throw new Error(`Unsupported Odin action operation: ${operation || "empty"}.`);
+}
+
+function actionIdsFromPayload(payload: Record<string, unknown>) {
+  const rawIds = payload.ids || payload.actionIds || payload.createdActionIds || payload.id;
+  const ids = (Array.isArray(rawIds) ? rawIds : [rawIds])
+    .map((id) => String(id || "").trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(ids));
+}
+
+function normaliseDueAt(value: unknown) {
+  if (value === null) return null;
+  if (!value) return undefined;
+
+  const date = String(value).trim();
+  if (!date) return null;
+
+  const parsed = date.includes("T") ? new Date(date) : new Date(`${date}T17:00:00+10:00`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+}
+
+function updatePayload(payload: Record<string, unknown>) {
+  const source = (payload.updates && typeof payload.updates === "object" ? payload.updates : payload) as Record<string, unknown>;
+  const updates: Record<string, string | null> = { updated_at: new Date().toISOString() };
+
+  if (typeof source.title === "string") updates.title = source.title.trim();
+  if (typeof source.detail === "string") updates.detail = source.detail;
+  if (typeof source.actionDetail === "string") updates.detail = source.actionDetail;
+  if (typeof source.recommendedAction === "string") updates.detail = source.recommendedAction;
+  if (typeof source.sourcePage === "string") {
+    updates.source_page = source.sourcePage.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "action-centre";
+  }
+  if (typeof source.directiveType === "string" && allowedDirectives.has(source.directiveType)) updates.directive_type = source.directiveType;
+  if (typeof source.priority === "string" && allowedPriorities.has(source.priority)) updates.priority = source.priority;
+  if (typeof source.status === "string") {
+    const status = source.status === "complete" || source.status === "completed" || source.status === "done" ? "closed" : source.status;
+    if (allowedStatuses.has(status)) {
+      updates.status = status;
+      updates.closed_at = status === "closed" ? new Date().toISOString() : null;
+    }
+  }
+
+  const dueAt = normaliseDueAt(source.dueDate || source.dueAt);
+  if (dueAt !== undefined) updates.due_at = dueAt;
+
+  return updates;
+}
+
+async function mutateActions(input: {
+  operation: Exclude<OdinActionOperation, "create">;
+  payload: Record<string, unknown>;
+  actorKind: "odin" | "toc";
+  actor?: Parameters<typeof logTocAudit>[0]["actor"];
+}) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+
+  const ids = actionIdsFromPayload(input.payload);
+  if (!ids.length) throw new Error("Action id or ids are required for Odin update/delete/close operations.");
+
+  if (input.operation === "delete") {
+    const { data, error } = await supabase
+      .from("action_items")
+      .delete()
+      .in("id", ids)
+      .select("id,title,status");
+
+    if (error) throw error;
+
+    const affectedIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
+    await logTocAudit({
+      actor: input.actor,
+      action: "odin.action.delete",
+      entityTable: "action_items",
+      entityId: affectedIds[0],
+      details: { requestedIds: ids, affectedIds, actorType: input.actorKind }
+    });
+
+    return { action: "delete", affectedIds, affectedCount: affectedIds.length };
+  }
+
+  const updates = input.operation === "update" ? updatePayload(input.payload) : {
+    status: "closed",
+    closed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  if (input.operation === "update" && Object.keys(updates).length <= 1) {
+    throw new Error("No supported action updates were supplied.");
+  }
+
+  const { data, error } = await supabase
+    .from("action_items")
+    .update(updates)
+    .in("id", ids)
+    .select("id,title,status");
+
+  if (error) throw error;
+
+  const affectedIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
+  await logTocAudit({
+    actor: input.actor,
+    action: input.operation === "update" ? "odin.action.update" : "odin.action.close",
+    entityTable: "action_items",
+    entityId: affectedIds[0],
+    details: { requestedIds: ids, affectedIds, updates, actorType: input.actorKind }
+  });
+
+  return { action: input.operation, affectedIds, affectedCount: affectedIds.length };
+}
 
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
@@ -9,14 +135,14 @@ export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({}));
 
   try {
-    const result = await createOdinDirectActionItems({
-      payload,
-      actorKind: permission.kind,
-      actor: permission.kind === "toc" ? permission.user : undefined
-    });
+    const operation = normaliseOperation(payload.action);
+    const actor = permission.kind === "toc" ? permission.user : undefined;
+    const result = operation === "create"
+      ? await createOdinDirectActionItems({ payload, actorKind: permission.kind, actor })
+      : await mutateActions({ operation, payload, actorKind: permission.kind, actor });
 
     return NextResponse.json({ connected: true, ...result });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Odin action could not be created." }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Odin action could not be completed." }, { status: 400 });
   }
 }
