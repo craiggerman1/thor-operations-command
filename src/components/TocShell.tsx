@@ -221,7 +221,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     const nextProfile = sessionProfiles[role] || defaultSession;
     const nextRegions = developmentToolsEnabled && nextProfile.role !== "director" ? allRegions : nextProfile.regions;
     const nextScope = nextRegions.includes(session.scope || "") ? session.scope || nextRegions[0] : nextRegions[0] || "National";
-    const nextSession = { role: nextProfile.role, label: nextProfile.label, scope: nextScope, regions: nextRegions };
+    const nextSession = { ...session, role: nextProfile.role, label: nextProfile.label, scope: nextScope, regions: nextRegions };
     setSession(nextSession);
     document.body.dataset.access = nextProfile.role;
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
@@ -295,7 +295,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.232</em>
+              <em>Build 0.233</em>
             </div>
           </div>
           <div className="topbar-actions">

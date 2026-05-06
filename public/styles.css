@@ -3020,6 +3020,27 @@ body:not([data-access="admin"]) .admin-only-panel {
   color: var(--muted);
 }
 
+.admin-user-control-note {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid rgba(37, 161, 189, 0.2);
+  border-left: 4px solid var(--cyan);
+  border-radius: 6px;
+  background: rgba(234, 249, 253, 0.7);
+}
+
+.admin-user-control-note strong {
+  color: var(--blue);
+  font-size: 14px;
+}
+
+.admin-user-control-note span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .admin-access-console {
   display: grid;
   grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
@@ -3298,7 +3319,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .admin-user-edit-grid {
   display: grid;
-  grid-template-columns: minmax(160px, 0.26fr) minmax(0, 1fr);
+  grid-template-columns: minmax(210px, 0.34fr) minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -3339,6 +3360,41 @@ body:not([data-access="admin"]) .admin-only-panel {
 .admin-region-picker button:disabled {
   cursor: default;
   opacity: 0.52;
+}
+
+.admin-user-security-box,
+.admin-user-save-strip {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.admin-user-security-box {
+  grid-row: span 2;
+}
+
+.admin-user-security-box strong {
+  color: var(--blue);
+}
+
+.admin-user-security-box small,
+.admin-user-save-strip small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-user-security-box input {
+  width: 100%;
+}
+
+.admin-user-save-strip {
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
 }
 
 .admin-user-actions {

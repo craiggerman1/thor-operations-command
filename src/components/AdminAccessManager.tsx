@@ -19,6 +19,13 @@ type AdminUserPatch = Partial<AdminAccessUser> & {
   password?: string;
 };
 
+type AdminUserDraft = {
+  email: string;
+  reference: string;
+  password: string;
+  confirmPassword: string;
+};
+
 const accessUsersKey = "toc.adminAccessUsers";
 
 const initialAccessUsers: AdminAccessUser[] = [];
@@ -84,6 +91,7 @@ export function AdminAccessManager() {
   const [regions, setRegions] = useState<string[]>(["Brisbane"]);
   const [status, setStatus] = useState("");
   const [databaseReady, setDatabaseReady] = useState(true);
+  const [userDrafts, setUserDrafts] = useState<Record<string, AdminUserDraft>>({});
 
   useEffect(() => {
     void fetchAccessUsers().then((nextUsers) => {
@@ -94,6 +102,23 @@ export function AdminAccessManager() {
 
   useEffect(() => {
     localStorage.setItem(accessUsersKey, JSON.stringify(users));
+    setUserDrafts((currentDrafts) => {
+      const nextDrafts = { ...currentDrafts };
+      users.forEach((user) => {
+        if (!nextDrafts[user.id]) {
+          nextDrafts[user.id] = {
+            email: user.email || "",
+            reference: user.reference,
+            password: "",
+            confirmPassword: ""
+          };
+        }
+      });
+      Object.keys(nextDrafts).forEach((userId) => {
+        if (!users.some((user) => user.id === userId)) delete nextDrafts[userId];
+      });
+      return nextDrafts;
+    });
   }, [users]);
 
   const activeUsers = useMemo(() => users.filter((user) => user.status === "Active").length, [users]);
@@ -160,8 +185,66 @@ export function AdminAccessManager() {
         setUsers((current) => current.filter((user) => user.id !== userId));
         return;
       }
-      void saveUserMutation({ action: "update", ...nextUser, id: userId, ...(nextPassword ? { password: nextPassword } : {}) });
+      void saveUserMutation({ action: "update", ...nextUser, id: userId, ...(nextPassword ? { password: nextPassword } : {}) }).then((saved) => {
+        if (saved) setStatus(`${nextUser.name} access updated.`);
+      });
     }
+  }
+
+  function updateDraft(userId: string, patch: Partial<AdminUserDraft>) {
+    const blankDraft = {
+      email: "",
+      reference: "",
+      password: "",
+      confirmPassword: ""
+    };
+
+    setUserDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [userId]: {
+        ...blankDraft,
+        ...(currentDrafts[userId] || {}),
+        ...patch
+      }
+    }));
+  }
+
+  function getUserDraft(user: AdminAccessUser) {
+    return userDrafts[user.id] || {
+      email: user.email || "",
+      reference: user.reference,
+      password: "",
+      confirmPassword: ""
+    };
+  }
+
+  function saveUserDetails(user: AdminAccessUser) {
+    const draft = getUserDraft(user);
+    if (!draft.email.trim()) {
+      setStatus("Email address is required for secure TOC login.");
+      return;
+    }
+
+    updateUser(user.id, {
+      email: draft.email.trim(),
+      reference: draft.reference.trim() || "No reference supplied"
+    });
+  }
+
+  function resetUserPassword(user: AdminAccessUser) {
+    const draft = getUserDraft(user);
+    if (draft.password.length < 8) {
+      setStatus("New temporary password must be at least 8 characters.");
+      return;
+    }
+    if (draft.password !== draft.confirmPassword) {
+      setStatus("Reset passwords do not match.");
+      return;
+    }
+
+    updateUser(user.id, { password: draft.password });
+    updateDraft(user.id, { password: "", confirmPassword: "" });
+    setStatus(`Password reset issued for ${user.name}. They will be required to set a new password on next sign in.`);
   }
 
   function updateUserRole(user: AdminAccessUser, nextRole: AccessRole) {
@@ -183,7 +266,7 @@ export function AdminAccessManager() {
     const target = users.find((user) => user.id === userId);
     if (!target) return;
 
-    const confirmed = window.confirm(`Are you sure you want to deregister ${target.name}?`);
+    const confirmed = window.confirm(`Are you sure you want to deregister ${target.name}? This deletes the TOC profile and Supabase Auth login.`);
     if (!confirmed) return;
 
     setUsers((current) => current.filter((user) => user.id !== userId));
@@ -201,7 +284,7 @@ export function AdminAccessManager() {
     const profile = sessionProfiles[user.role];
     const assignedRegions = normaliseRegionsForRole(user.role, user.regions);
     const scope = assignedRegions[0] || profile.regions[0] || "National";
-    const nextSession = { role: profile.role, label: profile.label, scope, regions: assignedRegions };
+    const nextSession = { role: profile.role, label: profile.label, scope, regions: assignedRegions, authMode: "developer" };
 
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     document.body.dataset.access = profile.role;
@@ -275,30 +358,30 @@ export function AdminAccessManager() {
               <div className="admin-user-title"><strong>{user.name}</strong><small>{user.email ? `${user.email} - ` : ""}{user.reference} - {isDatabaseUserId(user.id) ? user.id : "Legacy local profile"}</small></div>
               <div className="meta-row"><Tag>{roleLabel(user.role)}</Tag><Tag tone={user.status === "Active" ? "green" : "amber"}>{user.status}</Tag></div>
             </div>
+            <div className="admin-user-control-note">
+              <strong>Preview User View</strong>
+              <span>Development tool only. It changes your current session to this user role and region view so you can test what they see.</span>
+            </div>
             <div className="admin-user-edit-grid">
+              {(() => {
+                const draft = getUserDraft(user);
+                return (
+                  <>
               <label>
                 <span>Email address</span>
-                <input defaultValue={user.email || ""} placeholder="user@thormobile.com.au" onBlur={(event) => updateUser(user.id, { email: event.target.value })} />
+                <input value={draft.email} placeholder="user@thormobile.com.au" onChange={(event) => updateDraft(user.id, { email: event.target.value })} />
               </label>
               <label>
                 <span>User reference</span>
-                <input defaultValue={user.reference} onBlur={(event) => updateUser(user.id, { reference: event.target.value || "No reference supplied" })} />
+                <input value={draft.reference} onChange={(event) => updateDraft(user.id, { reference: event.target.value })} />
               </label>
-              <label>
-                <span>Reset password</span>
-                <input type="password" placeholder="New temporary password" onBlur={(event) => {
-                  const nextPassword = event.target.value;
-                  if (!nextPassword) return;
-                  const confirmedPassword = window.prompt("Confirm the new temporary password");
-                  if (nextPassword !== confirmedPassword) {
-                    setStatus("Reset passwords do not match.");
-                    event.target.value = "";
-                    return;
-                  }
-                  updateUser(user.id, { password: nextPassword });
-                  event.target.value = "";
-                }} />
-              </label>
+              <div className="admin-user-security-box">
+                <strong>Password reset</strong>
+                <small>Issue a temporary password. User must change it on next sign in.</small>
+                <input type="password" value={draft.password} placeholder="New temporary password" onChange={(event) => updateDraft(user.id, { password: event.target.value })} />
+                <input type="password" value={draft.confirmPassword} placeholder="Confirm temporary password" onChange={(event) => updateDraft(user.id, { confirmPassword: event.target.value })} />
+                <button type="button" onClick={() => resetUserPassword(user)}>Issue Password Reset</button>
+              </div>
               <label>
                 <span>Access level</span>
                 <select value={user.role} onChange={(event) => updateUserRole(user, event.target.value as AccessRole)}>
@@ -323,6 +406,13 @@ export function AdminAccessManager() {
                   ))}
                 </div>
               </div>
+              <div className="admin-user-save-strip">
+                <button type="button" onClick={() => saveUserDetails(user)}>Save Profile Details</button>
+                <small>Role and region changes save immediately. Profile details and password reset use the buttons above.</small>
+              </div>
+                  </>
+                );
+              })()}
             </div>
             <div className="admin-user-actions">
               <button type="button" onClick={() => previewUser(user)}>Preview User View</button>

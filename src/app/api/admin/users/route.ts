@@ -200,6 +200,14 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("profiles").update(updates).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+    if (typeof payload.email === "string" && payload.email.trim()) {
+      const { error: emailError } = await supabase.auth.admin.updateUserById(id, {
+        email: payload.email.trim(),
+        email_confirm: true
+      });
+      if (emailError) return NextResponse.json({ error: emailError.message }, { status: 500 });
+    }
+
     if (typeof payload.role === "string") {
       const { error: roleError } = await supabase.auth.admin.updateUserById(id, {
         app_metadata: {
