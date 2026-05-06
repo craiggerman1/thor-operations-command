@@ -13,6 +13,12 @@ export default function PasswordResetPage() {
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
 
+  function cancelPasswordChange() {
+    void getSupabaseBrowserClient()?.auth.signOut();
+    localStorage.removeItem("toc.session");
+    router.push("/");
+  }
+
   async function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
@@ -68,6 +74,10 @@ export default function PasswordResetPage() {
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Secure login" title="Create new password" pill="Required">
           <form className="secure-password-form" onSubmit={submitPassword}>
+            <div className="secure-password-brief">
+              <strong>Password change required</strong>
+              <small>Enter and confirm your new password, then press the button below to continue into TOC.</small>
+            </div>
             <label>
               <span>New password</span>
               <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Minimum 8 characters" />
@@ -77,7 +87,10 @@ export default function PasswordResetPage() {
               <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Retype password" />
             </label>
             {status ? <small className="admin-hint-message">{status}</small> : null}
-            <button type="submit" disabled={saving}>{saving ? "Updating password..." : "Update Password"}</button>
+            <div className="secure-password-actions">
+              <button type="submit" disabled={saving}>{saving ? "Updating password..." : "Update Password And Continue"}</button>
+              <button className="secondary-button" type="button" onClick={cancelPasswordChange} disabled={saving}>Cancel And Sign Out</button>
+            </div>
           </form>
         </Panel>
       </section>

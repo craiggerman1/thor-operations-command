@@ -402,6 +402,26 @@ textarea:focus-visible {
   max-width: 620px;
 }
 
+.secure-password-brief {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid rgba(37, 161, 189, 0.24);
+  border-left: 5px solid var(--cyan);
+  border-radius: 6px;
+  background: rgba(234, 249, 253, 0.72);
+}
+
+.secure-password-brief strong {
+  color: var(--blue);
+  font-size: 18px;
+}
+
+.secure-password-brief small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .secure-password-form label {
   display: grid;
   gap: 7px;
@@ -414,7 +434,22 @@ textarea:focus-visible {
   text-transform: uppercase;
 }
 
-.secure-password-form button {
+.secure-password-actions {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  position: sticky;
+  bottom: 12px;
+  z-index: 2;
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.secure-password-actions button {
   min-height: 46px;
   border: 0;
   border-radius: 6px;
@@ -422,6 +457,12 @@ textarea:focus-visible {
   color: #ffffff;
   font-weight: 900;
   cursor: pointer;
+}
+
+.secure-password-actions .secondary-button {
+  border: 1px solid rgba(13, 58, 87, 0.2);
+  background: rgba(238, 244, 248, 0.92);
+  color: var(--blue);
 }
 
 .sign-in-sequence {
