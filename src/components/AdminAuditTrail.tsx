@@ -8,10 +8,14 @@ type AuditEntry = {
   id: string;
   createdAt: string;
   actorProfileId: string | null;
+  actorName: string | null;
+  actorEmail: string | null;
   actorRole: string;
   action: string;
   entityType: string;
   entityId: string | null;
+  entityName: string | null;
+  entityEmail: string | null;
   scope: string;
   details: Record<string, unknown>;
 };
@@ -25,7 +29,14 @@ function formatAction(action: string) {
 
 function formatActor(entry: AuditEntry) {
   if (!entry.actorProfileId) return entry.actorRole === "admin" ? "Development admin" : "System";
+  if (entry.actorName) return `${entry.actorName} - ${entry.actorRole}`;
   return `${entry.actorRole} - ${entry.actorProfileId.slice(0, 8)}`;
+}
+
+function formatEntity(entry: AuditEntry) {
+  const entityName = entry.entityName ? `${entry.entityName}` : entry.entityType;
+  const entityId = entry.entityId ? ` - ${entry.entityId.slice(0, 8)}` : "";
+  return `${entityName}${entityId}`;
 }
 
 function formatDate(value: string) {
@@ -104,12 +115,13 @@ export function AdminAuditTrail() {
             <div>
               <strong>{formatAction(entry.action)}</strong>
               <small>{formatDate(entry.createdAt)} | {formatActor(entry)}</small>
+              {entry.actorEmail ? <small>{entry.actorEmail}</small> : null}
             </div>
             <div className="meta-row">
               <Tag tone={entry.actorProfileId ? "green" : "amber"}>{entry.actorProfileId ? "Actor linked" : "System/dev"}</Tag>
               <Tag>{entry.scope}</Tag>
             </div>
-            <p>{entry.entityType}{entry.entityId ? ` - ${entry.entityId.slice(0, 8)}` : ""}</p>
+            <p>{formatEntity(entry)}</p>
             <small>{detailSummary(entry.details)}</small>
           </article>
         ))}
@@ -119,4 +131,3 @@ export function AdminAuditTrail() {
     </div>
   );
 }
-

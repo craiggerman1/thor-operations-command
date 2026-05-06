@@ -16,15 +16,36 @@ type AuditRow = {
   details?: Record<string, unknown> | null;
 };
 
-function mapAuditRow(row: AuditRow) {
+type ProfileRow = {
+  id: string;
+  display_name: string;
+  email: string | null;
+  access_level: string | null;
+};
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+
+function isUuid(value: string | null | undefined) {
+  return Boolean(value && uuidPattern.test(value));
+}
+
+function mapAuditRow(row: AuditRow, profiles: Map<string, ProfileRow>) {
+  const actorProfileId = row.actor_profile_id || row.actor_id || null;
+  const actorProfile = actorProfileId ? profiles.get(actorProfileId) : undefined;
+  const targetProfile = row.entity_type === "profiles" && row.entity_id ? profiles.get(row.entity_id) : undefined;
+
   return {
     id: row.id,
     createdAt: row.created_at,
-    actorProfileId: row.actor_profile_id || row.actor_id || null,
+    actorProfileId,
+    actorName: actorProfile?.display_name || null,
+    actorEmail: actorProfile?.email || null,
     actorRole: row.actor_role || "system",
     action: row.action,
     entityType: row.entity_type || row.entity_table || "toc",
     entityId: row.entity_id || null,
+    entityName: targetProfile?.display_name || null,
+    entityEmail: targetProfile?.email || null,
     scope: row.scope || "National",
     details: row.details || {}
   };
@@ -49,9 +70,26 @@ export async function GET(request: Request) {
     return NextResponse.json({ connected: false, entries: [], error: error.message }, { status: 500 });
   }
 
+  const auditRows = (data as AuditRow[] | null) || [];
+  const profileIds = Array.from(new Set(auditRows.flatMap((row) => [
+    row.actor_profile_id || row.actor_id,
+    row.entity_type === "profiles" ? row.entity_id : null
+  ]).filter(isUuid) as string[]));
+
+  const profileMap = new Map<string, ProfileRow>();
+  if (profileIds.length) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("id,display_name,email,access_level")
+      .in("id", profileIds);
+
+    ((profileData as ProfileRow[] | null) || []).forEach((profile) => {
+      profileMap.set(profile.id, profile);
+    });
+  }
+
   return NextResponse.json({
     connected: true,
-    entries: ((data as AuditRow[] | null) || []).map(mapAuditRow)
+    entries: auditRows.map((row) => mapAuditRow(row, profileMap))
   });
 }
-
