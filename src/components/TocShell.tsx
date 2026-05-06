@@ -94,7 +94,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       ? Array.from(new Set(["National", ...assignedRegions.filter((region) => region !== "National")]))
       : assignedRegions.length ? assignedRegions : ["Brisbane"];
   const currentScope = currentRegionOptions.includes(session.scope || "") ? session.scope || currentRegionOptions[0] : currentRegionOptions[0];
-  const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || currentScope === "National"));
+  const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National"));
 
   useEffect(() => {
     function applySession(nextSession: StoredSession | null) {
@@ -205,7 +205,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       router.push("/account/password");
       return;
     }
-    if (currentNavItem && (!currentNavItem.roles.includes(activeRole) || (currentNavItem.nationalOnly && currentScope !== "National"))) {
+    if (currentNavItem && (!currentNavItem.roles.includes(activeRole) || (currentNavItem.nationalOnly && !(currentNavItem.adminAlways && activeRole === "admin") && currentScope !== "National"))) {
       router.push("/home");
     }
   }, [activeProfile.role, currentScope, pathname, router, session.mustChangePassword, session.role, sessionReady]);
@@ -295,7 +295,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.242</em>
+              <em>Build 0.243</em>
             </div>
           </div>
           <div className="topbar-actions">

@@ -5,6 +5,7 @@ export type NavItem = {
   href: string;
   roles: AccessRole[];
   nationalOnly?: boolean;
+  adminAlways?: boolean;
 };
 
 export type SessionProfile = {
@@ -23,7 +24,7 @@ export const navigationItems: NavItem[] = [
   { label: "Home", href: "/home", roles: ["admin", "director", "manager"] },
   { label: "Admin Settings", href: "/admin", roles: ["admin"] },
   { label: "National Requests", href: "/national-requests", roles: ["admin", "manager"], nationalOnly: true },
-  { label: "Odin Command", href: "/odin", roles: ["admin", "director", "manager"] },
+  { label: "Odin Command", href: "/odin", roles: ["admin", "manager"], nationalOnly: true, adminAlways: true },
   { label: "Action Centre", href: "/actions", roles: ["admin", "director", "manager"] },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },

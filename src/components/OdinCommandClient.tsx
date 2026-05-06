@@ -44,6 +44,14 @@ export function OdinCommandClient() {
   const [noticed, setNoticed] = useState("");
   const [whyItMatters, setWhyItMatters] = useState("");
   const [recommendedAction, setRecommendedAction] = useState("");
+  const [latestOdinResponse, setLatestOdinResponse] = useState<{
+    summary: string;
+    risk: string;
+    recommendation: string;
+    draftMessage: string;
+    requiresApproval: boolean;
+    confidence: number;
+  } | null>(null);
 
   const pendingItems = useMemo(() => items.filter((item) => item.status === "pending"), [items]);
   const approvalItems = useMemo(() => pendingItems.filter((item) => item.approvalRequired), [pendingItems]);
@@ -74,41 +82,45 @@ export function OdinCommandClient() {
     void loadOdin();
   }, []);
 
-  async function createOdinItem(event: FormEvent<HTMLFormElement>) {
+  async function askOdin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!title.trim()) {
-      setStatus("Odin item title is required.");
+      setStatus("Odin review title is required.");
       return;
     }
 
     setIsLoading(true);
+    setLatestOdinResponse(null);
     try {
-      const response = await tocFetch("/api/odin/items", {
+      const response = await tocFetch("/api/odin/ask", {
         method: "POST",
         body: JSON.stringify({
-          action: "create",
-          itemType,
+          sourceType: "toc_command",
           title,
           region,
-          severity,
-          summary,
-          noticed,
-          whyItMatters,
-          recommendedAction,
-          approvalRequired: true
+          prompt: recommendedAction || summary || `Review ${title} and advise the next operational action.`,
+          context: {
+            itemType,
+            severity,
+            summary,
+            noticed,
+            whyItMatters,
+            recommendedAction
+          }
         })
       }, true);
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Odin item could not be created.");
-      setItems((payload.items || []) as OdinItem[]);
+      if (!response.ok) throw new Error(payload.error || "Odin review could not be created.");
+      setLatestOdinResponse(payload.response || null);
+      await loadOdin();
       setTitle("");
       setSummary("");
       setNoticed("");
       setWhyItMatters("");
       setRecommendedAction("");
-      setStatus("Odin item created and logged.");
+      setStatus(payload.gatewayConnected ? "Odin review completed and logged." : "Odin memory logged. Gateway configuration is still required.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Odin item could not be created.");
+      setStatus(error instanceof Error ? error.message : "Odin review could not be created.");
     } finally {
       setIsLoading(false);
     }
@@ -154,10 +166,10 @@ export function OdinCommandClient() {
       </div>
 
       <section className="odin-command-layout">
-        <form className="odin-command-form" onSubmit={createOdinItem}>
+        <form className="odin-command-form" onSubmit={askOdin}>
           <div>
-            <strong>Ask Odin / create review item</strong>
-            <small>Use this during build testing, or let OpenClaw submit pending recommendations later through the Odin API key. All items remain approval-gated.</small>
+            <strong>Ask Odin</strong>
+            <small>Admin and National users can ask Odin directly. Regional users cannot access Odin directly, but Odin can still monitor all users through the backend watch tower.</small>
           </div>
           <label><span>Type</span><select value={itemType} onChange={(event) => setItemType(event.target.value as OdinItemType)}>{itemTypes.map((type) => <option value={type} key={type}>{odinItemTypeLabels[type]}</option>)}</select></label>
           <label><span>Region</span><select value={region} onChange={(event) => setRegion(event.target.value)}>{allRegions.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
@@ -166,8 +178,18 @@ export function OdinCommandClient() {
           <label><span>Summary</span><textarea value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="What Odin is reporting" /></label>
           <label><span>What Odin noticed</span><textarea value={noticed} onChange={(event) => setNoticed(event.target.value)} placeholder="Signal, pattern or missing item" /></label>
           <label><span>Why it matters</span><textarea value={whyItMatters} onChange={(event) => setWhyItMatters(event.target.value)} placeholder="Operational risk or business impact" /></label>
-          <label><span>Recommended action</span><textarea value={recommendedAction} onChange={(event) => setRecommendedAction(event.target.value)} placeholder="Next action for manager, national or Craig" /></label>
-          <button type="submit" disabled={isLoading}>{isLoading ? "Saving..." : "Create Odin Item"}</button>
+          <label><span>Question / requested action</span><textarea value={recommendedAction} onChange={(event) => setRecommendedAction(event.target.value)} placeholder="Ask Odin what matters, what is missing, and what should happen next" /></label>
+          <button type="submit" disabled={isLoading}>{isLoading ? "Asking Odin..." : "Ask Odin"}</button>
+          {latestOdinResponse ? (
+            <div className="ask-odin-result">
+              <span>Latest Odin response</span>
+              <strong>{latestOdinResponse.summary}</strong>
+              <p>{latestOdinResponse.recommendation}</p>
+              <small>Risk: {latestOdinResponse.risk}</small>
+              {latestOdinResponse.draftMessage ? <small>Draft: {latestOdinResponse.draftMessage}</small> : null}
+              <em>{latestOdinResponse.requiresApproval ? "Approval required before action." : "No sensitive action requested."} Confidence {latestOdinResponse.confidence}%.</em>
+            </div>
+          ) : null}
         </form>
 
         <div className="odin-item-list">
@@ -211,7 +233,8 @@ export function OdinCommandClient() {
       </section>
 
       <div className="odin-command-rhythm">
-        <article className="odin-consent-gate"><span>Consent gate: Odin can observe and create pending recommendations only. TOC users approve, edit, dismiss, reject or close items.</span></article>
+        <article className="odin-consent-gate"><span>Persistent memory active: each Odin request is stored against a session key so Odin can build context over time. Consent gate remains active for every action.</span></article>
+        <article className="odin-consent-gate"><span>Direct access limited: Admin and National users can interact with Odin. Odin backend monitoring can still observe all regions and users through controlled APIs.</span></article>
         {odinCommandFeatures.map((feature) => <article key={feature}><span>{feature}</span></article>)}
         {(context?.operatingRhythm || []).map((item) => <article key={item}><span>{item}</span></article>)}
       </div>

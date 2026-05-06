@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireOdinOrTocUser } from "@/lib/odin-auth";
+import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { canAccessScope, hasNationalAccess, resolvePermittedScope } from "@/lib/toc-auth";
 
 async function tableCount(table: string, filters: Record<string, unknown> = {}) {
@@ -16,7 +16,7 @@ async function tableCount(table: string, filters: Record<string, unknown> = {}) 
 }
 
 export async function GET(request: Request) {
-  const permission = await requireOdinOrTocUser(request);
+  const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
 
   const supabase = getSupabaseAdminClient();

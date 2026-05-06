@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { isOdinExternal, requireOdinOrTocUser } from "@/lib/odin-auth";
+import { isOdinExternal, requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { canAccessScope, hasNationalAccess } from "@/lib/toc-auth";
 import { normaliseOdinItemType, normaliseOdinSeverity, normaliseOdinStatus } from "@/lib/odin";
 import type { OdinItemStatus } from "@/lib/odin";
@@ -54,13 +54,13 @@ function mapOdinItem(row: OdinItemRow) {
   };
 }
 
-function permittedRegions(permission: Awaited<ReturnType<typeof requireOdinOrTocUser>>) {
+function permittedRegions(permission: Awaited<ReturnType<typeof requireOdinOrTocNationalUser>>) {
   if (permission.kind === "odin") return ["National"];
   if (!permission.user) return [];
   return hasNationalAccess(permission.user) ? ["National"] : permission.user.regions;
 }
 
-function canSeeRegion(permission: Awaited<ReturnType<typeof requireOdinOrTocUser>>, region: string) {
+function canSeeRegion(permission: Awaited<ReturnType<typeof requireOdinOrTocNationalUser>>, region: string) {
   if (permission.kind === "odin") return true;
   return Boolean(permission.user && canAccessScope(permission.user, region));
 }
@@ -87,7 +87,7 @@ async function logOdinActivity(input: {
 }
 
 export async function GET(request: Request) {
-  const permission = await requireOdinOrTocUser(request);
+  const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
 
   const supabase = getSupabaseAdminClient();
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const permission = await requireOdinOrTocUser(request);
+  const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
 
   const supabase = getSupabaseAdminClient();

@@ -30,7 +30,23 @@ export async function requireOdinOrTocUser(request: Request): Promise<OdinPermis
   return { kind: "toc", user: permission.user, error: undefined };
 }
 
+export function hasOdinDirectAccess(user: TocAuthenticatedUser) {
+  return user.role === "admin" || (user.role === "manager" && user.regions.includes("National"));
+}
+
+export async function requireOdinOrTocNationalUser(request: Request): Promise<OdinPermission> {
+  const permission = await requireOdinOrTocUser(request);
+  if (permission.error || permission.kind === "odin") return permission;
+
+  if (hasOdinDirectAccess(permission.user)) return permission;
+
+  return {
+    kind: "none",
+    user: undefined,
+    error: NextResponse.json({ error: "Odin Command is available to Admin and National users only." }, { status: 403 })
+  };
+}
+
 export function isOdinExternal(permission: OdinPermission) {
   return permission.kind === "odin";
 }
-
