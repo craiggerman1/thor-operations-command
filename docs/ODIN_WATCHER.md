@@ -76,4 +76,10 @@ Start with:
 ODIN_DRY_RUN=true
 ```
 
+Test TOC access before connecting Odin/OpenClaw:
+
+```text
+node odin-watcher.mjs --snapshot-only
+```
+
 Only change to `ODIN_DRY_RUN=false` once the output looks correct.

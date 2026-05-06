@@ -24,6 +24,8 @@ const openClawToken = process.env.OPENCLAW_GATEWAY_TOKEN || "";
 const openClawModel = process.env.OPENCLAW_MODEL || "openclaw/default";
 const dryRun = String(process.env.ODIN_DRY_RUN || "true").toLowerCase() !== "false";
 const minimumSeverity = String(process.env.ODIN_MIN_SEVERITY || "amber").toLowerCase();
+const duplicateWindowHours = Math.max(1, Number(process.env.ODIN_DUPLICATE_WINDOW_HOURS) || 24);
+const snapshotOnly = process.argv.includes("--snapshot-only");
 
 const severityRank = { blue: 1, green: 1, amber: 2, yellow: 2, red: 3 };
 
@@ -39,6 +41,12 @@ async function main() {
   const snapshot = await getJson(`${tocBaseUrl}/api/odin/snapshot`, {
     "x-odin-api-key": odinApiKey
   });
+  printSnapshotSummary(snapshot);
+
+  if (snapshotOnly) {
+    console.log("[odin-watcher] Snapshot-only test complete. TOC access is working.");
+    return;
+  }
 
   const prompt = buildPrompt(snapshot);
   console.log("[odin-watcher] Asking local Odin/OpenClaw...");
@@ -52,6 +60,11 @@ async function main() {
 
   if (!passesSeverity(recommendation.severity, minimumSeverity)) {
     console.log(`[odin-watcher] Recommendation severity ${recommendation.severity} is below ${minimumSeverity}. Nothing written.`);
+    return;
+  }
+
+  if (isDuplicateRecommendation(snapshot, recommendation)) {
+    console.log(`[odin-watcher] Duplicate pending recommendation skipped: ${recommendation.title}`);
     return;
   }
 
@@ -82,6 +95,7 @@ function buildPrompt(snapshot) {
     "Severity must be blue, amber, or red.",
     "Only recommend actions that require human review. Do not execute actions.",
     "Focus on the most important operational risk only.",
+    "Avoid repeating any pending Odin item already listed in pendingOdinItems.",
     "",
     JSON.stringify(compactSnapshot(snapshot), null, 2)
   ].join("\n");
@@ -104,6 +118,16 @@ function compactSnapshot(snapshot) {
 
 function rows(section) {
   return Array.isArray(section?.rows) ? section.rows.slice(0, 20) : [];
+}
+
+function printSnapshotSummary(snapshot) {
+  const sections = snapshot?.sections || {};
+  const names = Object.keys(sections);
+  console.log(`[odin-watcher] Snapshot connected: ${Boolean(snapshot?.connected)}. Generated: ${snapshot?.generatedAt || "unknown"}.`);
+  for (const name of names) {
+    const count = Array.isArray(sections[name]?.rows) ? sections[name].rows.length : 0;
+    console.log(`[odin-watcher] ${name}: ${count}`);
+  }
 }
 
 async function askLocalOdin(prompt) {
@@ -178,6 +202,23 @@ function safeText(value, fallback) {
 
 function passesSeverity(severity, minimum) {
   return (severityRank[severity] || 0) >= (severityRank[minimum] || 0);
+}
+
+function isDuplicateRecommendation(snapshot, recommendation) {
+  const pendingItems = rows(snapshot?.sections?.odinItems);
+  const title = normaliseTitle(recommendation.title);
+  const cutoff = Date.now() - duplicateWindowHours * 60 * 60 * 1000;
+
+  return pendingItems.some((item) => {
+    const itemTitle = normaliseTitle(item.title);
+    const itemTime = Date.parse(item.created_at || item.createdAt || "");
+    const insideWindow = Number.isFinite(itemTime) ? itemTime >= cutoff : true;
+    return insideWindow && itemTitle === title;
+  });
+}
+
+function normaliseTitle(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 async function getJson(url, headers) {
