@@ -150,8 +150,15 @@ export function TocShell({ children }: { children: ReactNode }) {
         return false;
       }
 
+      const storedSession = readStoredSession();
+      const profile = profilePayload.profile as StoredSession;
+      const profileRegions = profile.regions?.length ? profile.regions : [];
+      const preservedScope = storedSession?.scope && profileRegions.includes(storedSession.scope)
+        ? storedSession.scope
+        : profile.scope;
       const restoredSession = {
-        ...profilePayload.profile,
+        ...profile,
+        scope: preservedScope,
         authMode: "supabase" as const,
         restoredAt: new Date().toISOString()
       };
@@ -305,7 +312,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.257</em>
+              <em>Build 0.258</em>
             </div>
           </div>
           <div className="topbar-actions">

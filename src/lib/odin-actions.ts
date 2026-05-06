@@ -15,13 +15,21 @@ type OdinDirectActionInput = {
 };
 
 export function normaliseOdinTargetRegions(value: unknown, fallback = "National") {
+  function cleanRegionName(region: string) {
+    const cleaned = region
+      .replace(/\b(manager|managers|region|regions|area|areas|state|states|team|teams)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return cleaned || region.trim();
+  }
+
   if (Array.isArray(value)) {
-    const regions = value.map((region) => String(region).trim()).filter(Boolean);
+    const regions = value.map((region) => cleanRegionName(String(region))).filter(Boolean);
     return regions.length ? regions : [fallback];
   }
 
   if (typeof value === "string" && value.trim()) {
-    return value.split(",").map((region) => region.trim()).filter(Boolean);
+    return value.split(",").map((region) => cleanRegionName(region)).filter(Boolean);
   }
 
   return [fallback];
@@ -77,6 +85,7 @@ async function getTargetRegions(targetRegions: string[]) {
   if (wantsAllManagers) return regions.filter((region) => region.name !== "National");
 
   return targetRegions.map((targetName) => {
+    if (targetName.toLowerCase() === "head office") return { id: null, name: "National" };
     if (targetName === "National") return { id: null, name: "National" };
     return regions.find((region) => region.name.toLowerCase() === targetName.toLowerCase()) || null;
   }).filter(Boolean) as Array<{ id: string | null; name: string }>;

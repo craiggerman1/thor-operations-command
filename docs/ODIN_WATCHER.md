@@ -84,9 +84,10 @@ content-type: application/json
 Direct issue behavior:
 
 - TOC creates real Action Centre items for the target regions immediately.
+- Region names map to the assigned manager region. `Brisbane`, `Brisbane Manager`, or `Brisbane region` all target the Brisbane manager Action Centre.
+- `targetRegions: ["National"]` creates a National action item. `targetRegions: ["all"]` creates one item for every active manager region except National.
 - TOC records the action in Admin Settings audit trail and stores Odin memory against the issued work.
 - Odin still cannot change users, reset passwords, change roles or delete records.
-- Use `targetRegions: ["all"]` for all manager regions except National.
 
 Do not use `/api/odin/items` for manager tasks. If Odin accidentally sends `itemType: "action_request"` to `/api/odin/items`, TOC will now create the Action Centre item directly instead of sending it to an approval page.
 
