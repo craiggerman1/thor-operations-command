@@ -56,6 +56,8 @@ export function OdinCommandClient() {
   const pendingItems = useMemo(() => items.filter((item) => item.status === "pending"), [items]);
   const approvalItems = useMemo(() => pendingItems.filter((item) => item.approvalRequired), [pendingItems]);
   const activeAlerts = useMemo(() => items.filter((item) => item.itemType === "alert" && item.status === "pending"), [items]);
+  const visibleItems = useMemo(() => items.filter((item) => !["dismissed", "rejected", "done"].includes(item.status)), [items]);
+  const clearedItems = useMemo(() => items.filter((item) => ["dismissed", "rejected", "done"].includes(item.status)), [items]);
 
   async function loadOdin() {
     setIsLoading(true);
@@ -136,7 +138,7 @@ export function OdinCommandClient() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Odin item could not be updated.");
       setItems((payload.items || []) as OdinItem[]);
-      setStatus(`Odin item ${action === "done" ? "closed" : action}.`);
+      setStatus(`Odin item ${action === "done" ? "closed" : action === "dismiss" ? "dismissed" : action}.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Odin item could not be updated.");
     } finally {
@@ -200,7 +202,7 @@ export function OdinCommandClient() {
             </div>
             <button type="button" onClick={loadOdin} disabled={isLoading}>{isLoading ? "Refreshing..." : "Refresh"}</button>
           </div>
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <article className={`odin-item-card signal-${item.severity}`} key={item.id}>
               <div className="odin-item-head">
                 <div>
@@ -220,14 +222,15 @@ export function OdinCommandClient() {
                 <div><dt>Confidence</dt><dd>{item.confidence}%</dd></div>
               </dl>
               <div className="odin-item-actions">
-                <button type="button" onClick={() => updateItem(item.id, "approve")}>Approve</button>
-                <button type="button" onClick={() => updateItem(item.id, "done")}>Mark Done</button>
-                <button type="button" className="secondary-button" onClick={() => updateItem(item.id, "dismiss")}>Dismiss</button>
-                <button type="button" className="danger-button" onClick={() => updateItem(item.id, "reject")}>Reject</button>
+                <button type="button" onClick={() => updateItem(item.id, "approve")} disabled={isLoading}>Approve</button>
+                <button type="button" onClick={() => updateItem(item.id, "done")} disabled={isLoading}>Mark Done</button>
+                <button type="button" className="secondary-button" onClick={() => updateItem(item.id, "dismiss")} disabled={isLoading}>Dismiss</button>
+                <button type="button" className="danger-button" onClick={() => updateItem(item.id, "reject")} disabled={isLoading}>Reject</button>
               </div>
             </article>
           ))}
-          {!items.length ? <small className="admin-hint-message">No Odin items yet. Create the first item or connect OpenClaw to the Odin API.</small> : null}
+          {!visibleItems.length ? <small className="admin-hint-message">No active Odin items. Cleared items remain in the database audit trail.</small> : null}
+          {clearedItems.length ? <small className="admin-hint-message">{clearedItems.length} cleared Odin item{clearedItems.length === 1 ? "" : "s"} hidden from the active queue.</small> : null}
           <small className="admin-hint-message">{status}</small>
         </div>
       </section>
