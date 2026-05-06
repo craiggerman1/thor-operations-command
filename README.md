@@ -62,3 +62,24 @@ Recommended live feed endpoints:
 Never commit production API keys or Fleetio tokens. Store them in Vercel environment variables once backend endpoints are added.
 
 This public build must not contain real employee emails, private credentials, API keys, or sensitive internal identifiers.
+
+## Odin / OpenClaw Bridge
+
+TOC talks to Odin through the backend only:
+
+```text
+TOC button -> /api/odin/ask -> OpenClaw Gateway -> /api/odin/ask -> TOC response card
+```
+
+Server-only environment variables:
+
+```text
+OPENCLAW_GATEWAY_URL=
+OPENCLAW_GATEWAY_TOKEN=
+OPENCLAW_MODEL=openclaw/default
+ODIN_API_KEY=
+```
+
+Do not prefix these with `NEXT_PUBLIC_`. The OpenClaw token must never be exposed to the browser.
+
+`OPENCLAW_GATEWAY_URL=http://127.0.0.1:18789` is only valid when the TOC backend is running on the same machine as Odin/OpenClaw. Vercel production requires a secure reachable HTTPS/VPN/Tailnet gateway URL.

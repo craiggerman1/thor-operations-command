@@ -22,7 +22,7 @@ type OdinAskPayload = {
   context?: Record<string, unknown>;
 };
 
-const odinSystemInstruction = "You are Odin inside Thor Operations Command. Analyse the supplied TOC context like an operations manager. Be practical, concise, commercially aware, and action-focused. Identify risks, missing information, recommended next steps, and draft messages where useful. Do not execute external actions unless explicitly approved.";
+const odinSystemInstruction = "You are Odin inside Thor Operations Command. Analyse the supplied TOC context as Thor's AI operations manager. Be concise, practical, commercially aware, and action-focused. Identify risks, missing information, recommended next steps, and draft messages where useful. Do not execute external actions unless explicitly approved.";
 
 const contextTables: Record<string, { table: string; select: string }> = {
   action_item: { table: "action_items", select: "*,region:regions(name)" },
@@ -147,7 +147,7 @@ async function buildTocContext(payload: {
 async function callOdinGateway(input: { sessionKey: string; prompt: string; tocContext: Record<string, unknown>; memory: Record<string, unknown> | null }) {
   const gatewayUrl = (process.env.OPENCLAW_GATEWAY_URL || process.env.ODIN_GATEWAY_URL || "").replace(/\/$/, "");
   const gatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN || process.env.ODIN_GATEWAY_TOKEN || "";
-  const model = process.env.ODIN_GATEWAY_MODEL || "odin";
+  const model = process.env.OPENCLAW_MODEL || process.env.ODIN_GATEWAY_MODEL || "openclaw/default";
 
   const gatewayRequest = {
     model,
