@@ -88,7 +88,7 @@ export default function PasswordResetPage() {
             </label>
             {status ? <small className="admin-hint-message">{status}</small> : null}
             <div className="secure-password-actions">
-              <button type="submit" disabled={saving}>{saving ? "Updating password..." : "Update Password And Continue"}</button>
+              <button className="secure-password-primary" type="submit" disabled={saving}>{saving ? "Updating password..." : "Next: Open TOC"}</button>
               <button className="secondary-button" type="button" onClick={cancelPasswordChange} disabled={saving}>Cancel And Sign Out</button>
             </div>
           </form>
