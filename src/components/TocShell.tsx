@@ -167,6 +167,18 @@ export function TocShell({ children }: { children: ReactNode }) {
     }
 
     async function initialiseSession() {
+      const storedSession = readStoredSession();
+      const hasUsableStoredSession = applySession(storedSession);
+
+      if (hasUsableStoredSession) {
+        setSessionReady(true);
+        if (storedSession?.authMode === "preview" && developmentToolsEnabled) return;
+
+        const restored = await restoreSupabaseSession();
+        if (!restored) router.replace("/");
+        return;
+      }
+
       const restored = await restoreSupabaseSession();
       setSessionReady(true);
       if (!restored) router.replace("/");
@@ -312,7 +324,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.258</em>
+              <em>Build 0.259</em>
             </div>
           </div>
           <div className="topbar-actions">
