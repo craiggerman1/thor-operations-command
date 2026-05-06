@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import type { ActionItem } from "@/lib/action-state";
@@ -16,23 +18,24 @@ const directivePriority = {
 };
 
 export default function ActionsPage() {
+  const router = useRouter();
   const [openActions, setOpenActions] = useState<ActionItem[]>([]);
   const [message, setMessage] = useState("");
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const [scope, setScope] = useState("National");
-  const [role, setRole] = useState<AccessRole>("admin");
+  const [role, setRole] = useState<AccessRole>("manager");
   const scopedActions = getScopedActionItems(openActions, scope, role);
   const sortedActions = [...scopedActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
-  const canQuickManage = role === "admin" || scope === "National";
+  const canQuickManage = role === "admin" || (role === "manager" && scope === "National");
 
   useEffect(() => {
     function syncSession(event?: Event) {
       try {
         const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
-        setRole(storedSession?.role || "admin");
+        setRole(storedSession?.role || "manager");
         setScope(event instanceof CustomEvent && event.detail?.scope ? event.detail.scope : storedSession?.scope || "National");
       } catch {
-        setRole("admin");
+        setRole("manager");
         setScope("National");
       }
     }
@@ -54,6 +57,7 @@ export default function ActionsPage() {
     void syncActions();
     window.addEventListener("storage", syncSession);
     window.addEventListener("toc.scopechange", syncSession);
+    window.addEventListener("toc.sessionchange", syncSession);
     window.addEventListener("storage", syncActions);
     window.addEventListener("toc.actionState.updated", syncActions);
     const refreshInterval = window.setInterval(syncActions, 15000);
@@ -61,6 +65,7 @@ export default function ActionsPage() {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncSession);
       window.removeEventListener("toc.scopechange", syncSession);
+      window.removeEventListener("toc.sessionchange", syncSession);
       window.removeEventListener("storage", syncActions);
       window.removeEventListener("toc.actionState.updated", syncActions);
     };
@@ -96,6 +101,20 @@ export default function ActionsPage() {
     }
   }
 
+  function openAction(href: string) {
+    router.push(href);
+  }
+
+  function openActionWithKeyboard(event: KeyboardEvent<HTMLElement>, href: string) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openAction(href);
+  }
+
+  function stopCardOpen(event: MouseEvent<HTMLElement>) {
+    event.stopPropagation();
+  }
+
   return (
     <TocShell>
       <PageIntro title="Action Centre" detail="Ensure all items are actioned and then cleared." />
@@ -105,7 +124,16 @@ export default function ActionsPage() {
           {message ? <div className="admin-hint-message">{message}</div> : null}
           <div className="signal-action-list">
             {sortedActions.map((signal) => (
-              <article id={signal.id} className={`signal-action-card ${signal.severity}`} key={signal.id}>
+              <article
+                id={signal.id}
+                className={`signal-action-card action-card-clickable ${signal.severity}`}
+                key={signal.id}
+                role="button"
+                tabIndex={0}
+                title="Open action close-out"
+                onClick={() => openAction(signal.href)}
+                onKeyDown={(event) => openActionWithKeyboard(event, signal.href)}
+              >
                 <div>
                   <span className="eyebrow">{signal.source} - {signal.region}</span>
                   <strong>{signal.title}</strong>
@@ -114,11 +142,11 @@ export default function ActionsPage() {
                 </div>
                 <div className="signal-action-controls">
                   <Tag tone={signal.severity}>{signal.directive}</Tag>
-                  <Link className="node-action" href={signal.href}>Open</Link>
+                  <Link className="node-action" href={signal.href} onClick={stopCardOpen}>Open</Link>
                   {canQuickManage ? (
-                    <div className="quick-action-controls">
-                      <button type="button" onClick={() => void mutateActionItem(signal.id, "clear")} disabled={busyActionId === signal.id}>Clear</button>
-                      <button className="danger-button" type="button" onClick={() => void mutateActionItem(signal.id, "delete")} disabled={busyActionId === signal.id}>Delete</button>
+                    <div className="quick-action-controls" onClick={stopCardOpen}>
+                      <button type="button" onClick={(event) => { event.stopPropagation(); void mutateActionItem(signal.id, "clear"); }} disabled={busyActionId === signal.id}>Clear</button>
+                      <button className="danger-button" type="button" onClick={(event) => { event.stopPropagation(); void mutateActionItem(signal.id, "delete"); }} disabled={busyActionId === signal.id}>Delete</button>
                     </div>
                   ) : null}
                 </div>

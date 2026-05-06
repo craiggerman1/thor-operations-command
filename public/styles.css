@@ -2457,6 +2457,15 @@ body:not([data-access="admin"]) .admin-only-panel {
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
+.action-card-clickable {
+  cursor: pointer;
+}
+
+.action-card-clickable:focus-visible {
+  outline: 3px solid rgba(34, 178, 198, 0.42);
+  outline-offset: 3px;
+}
+
 .signal-action-controls {
   display: grid;
   align-items: start;
