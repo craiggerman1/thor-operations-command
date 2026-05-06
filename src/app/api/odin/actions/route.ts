@@ -4,7 +4,7 @@ import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
-type OdinActionOperation = "create" | "update" | "delete" | "close" | "complete" | "clear" | "done";
+type OdinActionOperation = "create" | "update" | "delete" | "delete_duplicates" | "close" | "complete" | "clear" | "done";
 
 const allowedStatuses = new Set(["open", "submitted_for_review", "returned_to_manager", "closed"]);
 const allowedPriorities = new Set(["urgent", "high", "normal", "low"]);
@@ -12,7 +12,7 @@ const allowedDirectives = new Set(["National Ops Directive", "Scheduled Directiv
 
 function normaliseOperation(value: unknown): OdinActionOperation {
   const operation = String(value || "create").trim().toLowerCase();
-  if (["create", "update", "delete", "close", "complete", "clear", "done"].includes(operation)) {
+  if (["create", "update", "delete", "delete_duplicates", "close", "complete", "clear", "done"].includes(operation)) {
     return operation as OdinActionOperation;
   }
   throw new Error(`Unsupported Odin action operation: ${operation || "empty"}.`);
@@ -74,6 +74,60 @@ async function mutateActions(input: {
   const supabase = getSupabaseAdminClient();
   if (!supabase) throw new Error("Supabase server key is not configured.");
 
+  if (input.operation === "delete_duplicates") {
+    const exactTitle = String(input.payload.exactTitle || input.payload.title || "").trim();
+    if (!exactTitle) throw new Error("exactTitle or title is required for duplicate cleanup.");
+
+    const keepPerRegion = Math.max(1, Math.min(Number(input.payload.keepPerRegion) || 1, 10));
+    const { data: matchingRows, error: readError } = await supabase
+      .from("action_items")
+      .select("id,title,status,assigned_region_id,created_at")
+      .eq("title", exactTitle)
+      .neq("status", "closed")
+      .order("created_at", { ascending: true });
+
+    if (readError) throw readError;
+
+    const rows = ((matchingRows as Array<{
+      id: string;
+      title: string;
+      status: string;
+      assigned_region_id: string | null;
+      created_at: string | null;
+    }> | null) || []);
+
+    const keepByRegion = new Map<string, number>();
+    const deleteIds = rows.flatMap((row) => {
+      const regionKey = row.assigned_region_id || "National";
+      const seen = keepByRegion.get(regionKey) || 0;
+      keepByRegion.set(regionKey, seen + 1);
+      return seen >= keepPerRegion ? [row.id] : [];
+    });
+
+    if (!deleteIds.length) {
+      return { action: "delete_duplicates", deletedIds: [], count: 0 };
+    }
+
+    const { data, error } = await supabase
+      .from("action_items")
+      .delete()
+      .in("id", deleteIds)
+      .select("id,title,status");
+
+    if (error) throw error;
+
+    const deletedIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
+    await logTocAudit({
+      actor: input.actor,
+      action: "odin.action.delete_duplicates",
+      entityTable: "action_items",
+      entityId: deletedIds[0],
+      details: { exactTitle, keepPerRegion, matchedCount: rows.length, deletedIds, actorType: input.actorKind }
+    });
+
+    return { action: "delete_duplicates", deletedIds, count: deletedIds.length };
+  }
+
   const ids = actionIdsFromPayload(input.payload);
   if (!ids.length) throw new Error("Action id or ids are required for Odin update/delete/close operations.");
 
@@ -95,7 +149,7 @@ async function mutateActions(input: {
       details: { requestedIds: ids, affectedIds, actorType: input.actorKind }
     });
 
-    return { action: "delete", affectedIds, affectedCount: affectedIds.length };
+    return { action: "delete", deletedIds: affectedIds, count: affectedIds.length };
   }
 
   const updates = input.operation === "update" ? updatePayload(input.payload) : {
@@ -125,7 +179,8 @@ async function mutateActions(input: {
     details: { requestedIds: ids, affectedIds, updates, actorType: input.actorKind }
   });
 
-  return { action: input.operation, affectedIds, affectedCount: affectedIds.length };
+  if (input.operation === "update") return { action: "update", updatedIds: affectedIds, count: affectedIds.length };
+  return { action: input.operation, closedIds: affectedIds, count: affectedIds.length };
 }
 
 export async function POST(request: Request) {

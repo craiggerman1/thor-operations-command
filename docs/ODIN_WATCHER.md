@@ -91,10 +91,32 @@ Cleanup and close-out operations must use Action Centre item IDs from the TOC sn
 }
 ```
 
+Response:
+
+```json
+{
+  "connected": true,
+  "action": "delete",
+  "deletedIds": ["action-id-1", "action-id-2"],
+  "count": 2
+}
+```
+
 ```json
 {
   "action": "close",
   "id": "action-id-1"
+}
+```
+
+Response:
+
+```json
+{
+  "connected": true,
+  "action": "close",
+  "closedIds": ["action-id-1"],
+  "count": 1
 }
 ```
 
@@ -111,6 +133,38 @@ Cleanup and close-out operations must use Action Centre item IDs from the TOC sn
 }
 ```
 
+Response:
+
+```json
+{
+  "connected": true,
+  "action": "update",
+  "updatedIds": ["action-id-1"],
+  "count": 1
+}
+```
+
+For accidental duplicate cleanup, Odin can use an exact-title cleanup. TOC keeps the oldest open matching item per region by default and deletes the rest.
+
+```json
+{
+  "action": "delete_duplicates",
+  "exactTitle": "Reminder: pick up new batteries for pony Thursday",
+  "keepPerRegion": 1
+}
+```
+
+Response:
+
+```json
+{
+  "connected": true,
+  "action": "delete_duplicates",
+  "deletedIds": ["duplicate-action-id-1"],
+  "count": 1
+}
+```
+
 Direct issue behavior:
 
 - TOC creates real Action Centre items for the target regions immediately.
@@ -118,6 +172,7 @@ Direct issue behavior:
 - `targetRegions: ["National"]` creates a National action item. `targetRegions: ["all"]` creates one item for every active manager region except National.
 - `action: "close"`, `complete`, `clear` and `done` close the supplied Action Centre item IDs.
 - `action: "delete"` deletes the supplied Action Centre item IDs.
+- `action: "delete_duplicates"` deletes duplicate open items by exact title while keeping the oldest item per region.
 - TOC records the action in Admin Settings audit trail and stores Odin memory against the issued work.
 - Odin still cannot change users, reset passwords, change roles or modify Admin Settings.
 
