@@ -63,23 +63,35 @@ Never commit production API keys or Fleetio tokens. Store them in Vercel environ
 
 This public build must not contain real employee emails, private credentials, API keys, or sensitive internal identifiers.
 
-## Odin / OpenClaw Bridge
+## Odin Watcher
 
-TOC talks to Odin through the backend only:
+The safer production direction is outbound from the Odin AI PC into TOC:
 
 ```text
-TOC button -> /api/odin/ask -> OpenClaw Gateway -> /api/odin/ask -> TOC response card
+Odin AI PC -> TOC API / Supabase -> pending Odin recommendations in TOC
 ```
 
 Server-only environment variables:
 
 ```text
-OPENCLAW_GATEWAY_URL=
-OPENCLAW_GATEWAY_TOKEN=
-OPENCLAW_MODEL=openclaw/default
 ODIN_API_KEY=
 ```
 
-Do not prefix these with `NEXT_PUBLIC_`. The OpenClaw token must never be exposed to the browser.
+Do not prefix `ODIN_API_KEY` with `NEXT_PUBLIC_`. This key lets the Odin watcher read a TOC snapshot and create pending Odin recommendations only.
 
-`OPENCLAW_GATEWAY_URL=http://127.0.0.1:18789` is only valid when the TOC backend is running on the same machine as Odin/OpenClaw. Vercel production requires a secure reachable HTTPS/VPN/Tailnet gateway URL.
+Odin watcher read endpoint:
+
+```text
+GET /api/odin/snapshot
+Header: x-odin-api-key: <ODIN_API_KEY>
+```
+
+Odin watcher safe write endpoint:
+
+```text
+POST /api/odin/items
+Header: x-odin-api-key: <ODIN_API_KEY>
+Body action: create
+```
+
+External Odin cannot approve, reject, dismiss, close, delete, change users, or perform sensitive actions. It can create pending recommendations for human review.
