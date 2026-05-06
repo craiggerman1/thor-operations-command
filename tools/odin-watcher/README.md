@@ -57,20 +57,21 @@ ODIN_DRY_RUN=false
 The watcher asks Odin to return a `destination` field:
 
 ```text
-action, todo, compliance, equipment, stock_order, note, recommendation
+actions, todos, compliance, equipment, stock_orders, notes
 ```
 
 Routing rules:
 
 - `compliance` -> `/api/odin/compliance`
 - `equipment` -> `/api/odin/equipment`
-- `stock_order` -> `/api/odin/stock-orders`
-- `todo` -> `/api/odin/todos`
-- `action` -> `/api/odin/actions`
-- `note` -> `/api/odin/notes`
-- `recommendation` -> `/api/odin/items`
+- `stock_orders` -> `/api/odin/stock-orders`
+- `todos` -> `/api/odin/todos`
+- `actions` -> `/api/odin/actions`
+- `notes` -> `/api/odin/notes`
 
 If Odin omits `destination`, the watcher infers it from the title, summary and recommended action.
+
+The watcher also creates a small non-overlap lock file before running. If a scheduled run is still active, the next run exits instead of double-writing TOC items.
 
 ## OpenClaw Gateway Requirement
 

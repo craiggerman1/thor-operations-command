@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync, writeFileSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 
 const envPath = resolve(process.cwd(), ".env");
@@ -26,6 +26,8 @@ const openClawSessionKey = process.env.OPENCLAW_SESSION_KEY || "toc:watcher";
 const dryRun = String(process.env.ODIN_DRY_RUN || "true").toLowerCase() !== "false";
 const minimumSeverity = String(process.env.ODIN_MIN_SEVERITY || "amber").toLowerCase();
 const duplicateWindowHours = Math.max(1, Number(process.env.ODIN_DUPLICATE_WINDOW_HOURS) || 24);
+const lockFile = resolve(process.cwd(), process.env.ODIN_LOCK_FILE || ".odin-watcher.lock");
+const staleLockMinutes = Math.max(5, Number(process.env.ODIN_STALE_LOCK_MINUTES) || 30);
 const snapshotOnly = process.argv.includes("--snapshot-only");
 
 const severityRank = { blue: 1, green: 1, amber: 2, yellow: 2, red: 3 };
@@ -37,53 +39,58 @@ main().catch((error) => {
 
 async function main() {
   if (!odinApiKey) throw new Error("ODIN_API_KEY is missing.");
+  const releaseLock = snapshotOnly ? () => undefined : acquireRunLock();
 
-  console.log("[odin-watcher] Reading TOC snapshot...");
-  const snapshot = await getJson(`${tocBaseUrl}/api/odin/snapshot`, {
-    "x-odin-api-key": odinApiKey
-  });
-  printSnapshotSummary(snapshot);
+  try {
+    console.log("[odin-watcher] Reading TOC snapshot...");
+    const snapshot = await getJson(`${tocBaseUrl}/api/odin/snapshot`, {
+      "x-odin-api-key": odinApiKey
+    });
+    printSnapshotSummary(snapshot);
 
-  if (snapshotOnly) {
-    console.log("[odin-watcher] Snapshot-only test complete. TOC access is working.");
-    return;
+    if (snapshotOnly) {
+      console.log("[odin-watcher] Snapshot-only test complete. TOC access is working.");
+      return;
+    }
+
+    const prompt = buildPrompt(snapshot);
+    console.log("[odin-watcher] Asking local Odin/OpenClaw...");
+    const analysis = await askLocalOdin(prompt);
+    const recommendation = parseRecommendation(analysis);
+
+    if (!recommendation.title) {
+      console.log("[odin-watcher] Odin did not return a recommendation title. Nothing to write.");
+      return;
+    }
+
+    if (!passesSeverity(recommendation.severity, minimumSeverity)) {
+      console.log(`[odin-watcher] Recommendation severity ${recommendation.severity} is below ${minimumSeverity}. Nothing written.`);
+      return;
+    }
+
+    if (isDuplicateRecommendation(snapshot, recommendation)) {
+      console.log(`[odin-watcher] Duplicate pending recommendation skipped: ${recommendation.title}`);
+      return;
+    }
+
+    if (dryRun) {
+      console.log("[odin-watcher] Dry run enabled. Recommendation not written to TOC.");
+      console.log(JSON.stringify(recommendation, null, 2));
+      return;
+    }
+
+    const target = writeTarget(recommendation);
+    const body = buildWriteBody(recommendation, target.destination);
+
+    console.log(`[odin-watcher] Writing ${target.destination} item to TOC via ${target.path}...`);
+    const result = await postJson(`${tocBaseUrl}${target.path}`, {
+      "x-odin-api-key": odinApiKey
+    }, body);
+
+    console.log(`[odin-watcher] TOC write complete. Connected: ${Boolean(result.connected)}. Action: ${result.action || body.action}. Count: ${result.count || result.createdCount || result.createdTodoIds?.length || result.createdActionIds?.length || result.createdComplianceIds?.length || 0}.`);
+  } finally {
+    releaseLock();
   }
-
-  const prompt = buildPrompt(snapshot);
-  console.log("[odin-watcher] Asking local Odin/OpenClaw...");
-  const analysis = await askLocalOdin(prompt);
-  const recommendation = parseRecommendation(analysis);
-
-  if (!recommendation.title) {
-    console.log("[odin-watcher] Odin did not return a recommendation title. Nothing to write.");
-    return;
-  }
-
-  if (!passesSeverity(recommendation.severity, minimumSeverity)) {
-    console.log(`[odin-watcher] Recommendation severity ${recommendation.severity} is below ${minimumSeverity}. Nothing written.`);
-    return;
-  }
-
-  if (isDuplicateRecommendation(snapshot, recommendation)) {
-    console.log(`[odin-watcher] Duplicate pending recommendation skipped: ${recommendation.title}`);
-    return;
-  }
-
-  if (dryRun) {
-    console.log("[odin-watcher] Dry run enabled. Recommendation not written to TOC.");
-    console.log(JSON.stringify(recommendation, null, 2));
-    return;
-  }
-
-  const target = writeTarget(recommendation);
-  const body = buildWriteBody(recommendation, target.destination);
-
-  console.log(`[odin-watcher] Writing ${target.destination} item to TOC via ${target.path}...`);
-  const result = await postJson(`${tocBaseUrl}${target.path}`, {
-    "x-odin-api-key": odinApiKey
-  }, body);
-
-  console.log(`[odin-watcher] TOC write complete. Connected: ${Boolean(result.connected)}. Action: ${result.action || body.action}. Count: ${result.count || result.createdCount || result.createdTodoIds?.length || result.createdActionIds?.length || result.createdComplianceIds?.length || 0}.`);
 }
 
 function buildPrompt(snapshot) {
@@ -91,14 +98,14 @@ function buildPrompt(snapshot) {
     "You are Odin inside Thor Operations Command.",
     "Analyse this TOC operational snapshot as Thor's AI operations manager.",
     "Return one concise JSON object only. No markdown.",
-    "Allowed JSON fields: destination, title, summary, region, severity, confidence, noticed, whyItMatters, recommendedAction, dueDate, targetRegions, entityType, entityId, assetName, assetType, stockItem, quantity, urgency.",
-    "destination must be one of: action, todo, compliance, equipment, stock_order, note, recommendation.",
+    "Allowed JSON fields: destination, title, summary, region, severity, confidence, entityType, entityId, dueAt, noticed, whyItMatters, recommendedAction, targetRegions, assetName, assetType, stockItem, quantity, urgency.",
+    "destination must be one of: actions, todos, compliance, equipment, stock_orders, notes.",
     "Route compliance, safety, induction and site readiness risks to destination=compliance.",
-    "Route wash vehicle, truck, ute, wash plant, generator, Honda, Pony or service issues to destination=equipment.",
-    "Route chemical, PPE, parts, consumable or supply ordering needs to destination=stock_order.",
-    "Route quick reminders to destination=todo.",
-    "Route manager close-out work to destination=action.",
-    "Route history-only observations to destination=note.",
+    "Route wash vehicle, truck, trailer, ute, unit, wash plant, generator, Honda, Pony, repair or service issues to destination=equipment.",
+    "Route chemical, PPE, parts, consumable, supplies or stock order needs to destination=stock_orders.",
+    "Route reminders, to-do and checklist items to destination=todos.",
+    "Route manager operational tasks and follow-ups to destination=actions.",
+    "Route notes, context and memory-only observations to destination=notes.",
     "Severity must be blue, amber, or red.",
     "Only recommend actions that require operational attention. Do not send external messages.",
     "Focus on the most important operational risk only.",
@@ -183,7 +190,7 @@ function parseRecommendation(content) {
       noticed: safeText(parsed.noticed, "").slice(0, 700),
       whyItMatters: safeText(parsed.whyItMatters, "").slice(0, 700),
       recommendedAction: safeText(parsed.recommendedAction, "").slice(0, 700),
-      dueDate: safeText(parsed.dueDate, ""),
+      dueAt: safeText(parsed.dueAt || parsed.dueDate, ""),
       targetRegions: Array.isArray(parsed.targetRegions) ? parsed.targetRegions.map((region) => String(region)).filter(Boolean) : undefined,
       entityType: safeText(parsed.entityType, ""),
       entityId: safeText(parsed.entityId, ""),
@@ -200,28 +207,29 @@ function parseRecommendation(content) {
 
 function normaliseDestination(value) {
   const destination = String(value || "").trim().toLowerCase().replace(/[-\s]+/g, "_");
-  if (["todo", "to_do", "reminder"].includes(destination)) return "todo";
+  if (["action", "actions", "manager_task", "manager_follow_up", "follow_up"].includes(destination)) return "actions";
+  if (["todo", "todos", "to_do", "to_dos", "reminder", "checklist"].includes(destination)) return "todos";
   if (["compliance", "safety", "induction", "inductions"].includes(destination)) return "compliance";
   if (["equipment", "equipment_servicing", "asset", "vehicle", "service"].includes(destination)) return "equipment";
-  if (["stock", "stock_order", "stock_orders", "supply", "supplies", "consumable"].includes(destination)) return "stock_order";
-  if (["note", "notes", "memory", "history"].includes(destination)) return "note";
-  if (["recommendation", "odin_item"].includes(destination)) return "recommendation";
-  return "action";
+  if (["stock", "stock_order", "stock_orders", "supply", "supplies", "consumable"].includes(destination)) return "stock_orders";
+  if (["note", "notes", "memory", "history", "context"].includes(destination)) return "notes";
+  if (["recommendation", "recommendations", "odin_item"].includes(destination)) return "recommendation";
+  return "actions";
 }
 
 function writeTarget(recommendation) {
   const destination = normaliseDestination(inferDestination(recommendation));
   const paths = {
-    action: "/api/odin/actions",
-    todo: "/api/odin/todos",
+    actions: "/api/odin/actions",
+    todos: "/api/odin/todos",
     compliance: "/api/odin/compliance",
     equipment: "/api/odin/equipment",
-    stock_order: "/api/odin/stock-orders",
-    note: "/api/odin/notes",
+    stock_orders: "/api/odin/stock-orders",
+    notes: "/api/odin/notes",
     recommendation: "/api/odin/items"
   };
 
-  return { destination, path: paths[destination] || paths.action };
+  return { destination, path: paths[destination] || paths.actions };
 }
 
 function inferDestination(recommendation) {
@@ -229,10 +237,10 @@ function inferDestination(recommendation) {
   const haystack = `${recommendation.title} ${recommendation.summary} ${recommendation.noticed} ${recommendation.recommendedAction}`.toLowerCase();
   if (/\b(induction|compliance|first aid|safety|ppe register|site readiness)\b/.test(haystack)) return "compliance";
   if (/\b(vehicle|truck|ute|unit|u\d+|pony|generator|honda|wash plant|service|repair|odometer|hours)\b/.test(haystack)) return "equipment";
-  if (/\b(stock|chemical|chemicals|consumable|consumables|ppe|gloves|bottle|batteries|hose|parts|order)\b/.test(haystack)) return "stock_order";
-  if (/\b(remind|reminder|to do|todo|follow up)\b/.test(haystack)) return "todo";
-  if (/\b(note|record|history|observed)\b/.test(haystack)) return "note";
-  return "action";
+  if (/\b(stock|chemical|chemicals|consumable|consumables|ppe|gloves|bottle|batteries|hose|parts|order)\b/.test(haystack)) return "stock_orders";
+  if (/\b(remind|reminder|to do|todo|checklist)\b/.test(haystack)) return "todos";
+  if (/\b(note|record|history|observed|context)\b/.test(haystack)) return "notes";
+  return "actions";
 }
 
 function buildWriteBody(recommendation, destination) {
@@ -252,10 +260,11 @@ function buildWriteBody(recommendation, destination) {
     whyItMatters: recommendation.whyItMatters,
     recommendedAction: detail,
     sourceType: "odin_watcher",
-    dueDate: recommendation.dueDate || undefined
+    dueAt: recommendation.dueAt || undefined,
+    dueDate: recommendation.dueAt || undefined
   };
 
-  if (destination === "todo") return { ...base, itemType: "todo", text: recommendation.title, important: recommendation.severity !== "blue" };
+  if (destination === "todos") return { ...base, itemType: "todo", text: recommendation.title, important: recommendation.severity !== "blue" };
   if (destination === "compliance") return { ...base, status: "open", directiveType: recommendation.severity === "red" ? "National Ops Directive" : "Scheduled Directive" };
   if (destination === "equipment") return {
     ...base,
@@ -264,14 +273,14 @@ function buildWriteBody(recommendation, destination) {
     status: recommendation.severity === "red" ? "Repair / stop use" : "Watch",
     serviceNote: detail
   };
-  if (destination === "stock_order") return {
+  if (destination === "stock_orders") return {
     ...base,
     item: recommendation.stockItem || recommendation.title,
     quantity: recommendation.quantity || 1,
     urgency: recommendation.urgency || (recommendation.severity === "red" ? "urgent" : "normal"),
     note: detail
   };
-  if (destination === "note") return {
+  if (destination === "notes") return {
     ...base,
     entityType: recommendation.entityType || "toc",
     entityId: recommendation.entityId || recommendation.region || "National",
@@ -292,6 +301,26 @@ function buildWriteBody(recommendation, destination) {
     itemType: "action",
     sourcePage: "Action Centre",
     directiveType: recommendation.severity === "red" ? "National Ops Directive" : "Scheduled Directive"
+  };
+}
+
+function acquireRunLock() {
+  if (existsSync(lockFile)) {
+    const ageMs = Date.now() - statSync(lockFile).mtimeMs;
+    if (ageMs < staleLockMinutes * 60 * 1000) {
+      throw new Error(`Another Odin Watcher run is already active. Lock: ${lockFile}`);
+    }
+    console.warn(`[odin-watcher] Removing stale lock file older than ${staleLockMinutes} minutes.`);
+    unlinkSync(lockFile);
+  }
+
+  writeFileSync(lockFile, JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }), { flag: "wx" });
+  return () => {
+    try {
+      if (existsSync(lockFile)) unlinkSync(lockFile);
+    } catch {
+      // A stale lock will be cleared by the next run after the configured timeout.
+    }
   };
 }
 

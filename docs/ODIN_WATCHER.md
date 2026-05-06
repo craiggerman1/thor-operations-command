@@ -299,13 +299,14 @@ Odin can return confidence as `0.84` or `84`; the watcher normalises both to `84
 The watcher now asks Odin for a `destination` field and writes to the matching TOC endpoint:
 
 ```text
-action -> /api/odin/actions
-todo -> /api/odin/todos
+actions -> /api/odin/actions
+todos -> /api/odin/todos
 compliance -> /api/odin/compliance
 equipment -> /api/odin/equipment
-stock_order -> /api/odin/stock-orders
-note -> /api/odin/notes
-recommendation -> /api/odin/items
+stock_orders -> /api/odin/stock-orders
+notes -> /api/odin/notes
 ```
 
 If Odin omits `destination`, the watcher infers the route from the returned title, summary and recommended action.
+
+The watcher also uses a local lock file so scheduled runs do not overlap.
