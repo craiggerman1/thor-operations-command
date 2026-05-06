@@ -20,6 +20,13 @@ export type OdinItem = {
   recommendedAction: string;
   assignedTo: string;
   dueAt: string | null;
+  actionRequest?: {
+    targetRegions: string[];
+    directiveType: "National Ops Directive" | "Scheduled Directive" | "To Do";
+    priority: "urgent" | "high" | "normal" | "low";
+    sourcePage: string;
+    createdActionIds?: string[];
+  };
   createdBy: string;
   createdAt: string;
   updatedAt: string;

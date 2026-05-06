@@ -31,6 +31,10 @@ function statusTone(status: string): Status {
   return "blue";
 }
 
+function approveLabel(item: OdinItem) {
+  return item.itemType === "action_request" ? "Approve + Create Action" : "Approve";
+}
+
 export function OdinCommandClient() {
   const [items, setItems] = useState<OdinItem[]>([]);
   const [context, setContext] = useState<OdinContext | null>(null);
@@ -220,9 +224,16 @@ export function OdinCommandClient() {
                 <div><dt>Why it matters</dt><dd>{item.whyItMatters || "No risk note supplied yet."}</dd></div>
                 <div><dt>Recommended action</dt><dd>{item.recommendedAction || "No recommended action supplied yet."}</dd></div>
                 <div><dt>Confidence</dt><dd>{item.confidence}%</dd></div>
+                {item.actionRequest ? (
+                  <>
+                    <div><dt>Target regions</dt><dd>{item.actionRequest.targetRegions.join(", ")}</dd></div>
+                    <div><dt>Directive</dt><dd>{item.actionRequest.directiveType} / {item.actionRequest.priority}</dd></div>
+                    {item.actionRequest.createdActionIds?.length ? <div><dt>Created actions</dt><dd>{item.actionRequest.createdActionIds.length} Action Centre item{item.actionRequest.createdActionIds.length === 1 ? "" : "s"} created.</dd></div> : null}
+                  </>
+                ) : null}
               </dl>
               <div className="odin-item-actions">
-                <button type="button" onClick={() => updateItem(item.id, "approve")} disabled={isLoading}>Approve</button>
+                {item.status === "pending" ? <button type="button" onClick={() => updateItem(item.id, "approve")} disabled={isLoading}>{approveLabel(item)}</button> : null}
                 <button type="button" onClick={() => updateItem(item.id, "done")} disabled={isLoading}>Mark Done</button>
                 <button type="button" className="secondary-button" onClick={() => updateItem(item.id, "dismiss")} disabled={isLoading}>Dismiss</button>
                 <button type="button" className="danger-button" onClick={() => updateItem(item.id, "reject")} disabled={isLoading}>Reject</button>

@@ -53,9 +53,41 @@ Body:
 }
 ```
 
+## Odin Proposed Action Items
+
+Odin can create a pending action request. This does not create manager Action Centre work until an Admin or National user explicitly approves it inside Odin Command.
+
+```json
+{
+  "action": "create",
+  "itemType": "action_request",
+  "title": "Confirm site PPE stock levels",
+  "summary": "Craig asked Odin to prepare a manager action item.",
+  "region": "National",
+  "severity": "amber",
+  "confidence": 90,
+  "noticed": "Craig gave express instruction via Odin.",
+  "whyItMatters": "Managers need to confirm stock before work is blocked.",
+  "recommendedAction": "Confirm all site PPE is stocked and report any gaps.",
+  "targetRegions": ["all"],
+  "directiveType": "National Ops Directive",
+  "priority": "high",
+  "sourcePage": "Action Centre",
+  "dueDate": "2026-05-08"
+}
+```
+
+Approval behavior:
+
+- Pending `action_request` appears in Odin Command.
+- Admin/National clicks `Approve + Create Action`.
+- TOC creates real Action Centre items for the target regions.
+- Odin cannot approve its own action request.
+
 ## Security Rules
 
-- Odin can create pending recommendations only.
+- Odin can create pending recommendations and proposed action requests only.
+- Proposed action requests become real manager Action Centre items only after Admin/National approval.
 - Odin cannot approve, reject, dismiss, close, delete, change users, reset passwords, send messages, or perform sensitive external actions.
 - Human approval remains required for operational changes.
 - Rotate `ODIN_API_KEY` if it is ever pasted somewhere unsafe.

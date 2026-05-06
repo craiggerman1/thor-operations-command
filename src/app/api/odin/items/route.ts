@@ -24,13 +24,21 @@ type OdinItemRow = {
   assigned_to: string | null;
   due_at: string | null;
   created_by: string;
+  payload?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+};
+
+type RegionRow = {
+  id: string;
+  name: string;
+  is_active?: boolean;
 };
 
 const humanOnlyActions = new Set(["approve", "reject", "dismiss", "done", "update"]);
 
 function mapOdinItem(row: OdinItemRow) {
+  const actionRequest = row.item_type === "action_request" ? normaliseActionRequestPayload(row.payload || {}, row.region) : undefined;
   return {
     id: row.id,
     itemType: normaliseOdinItemType(row.item_type),
@@ -48,9 +56,134 @@ function mapOdinItem(row: OdinItemRow) {
     recommendedAction: row.recommended_action || "",
     assignedTo: row.assigned_to || "National",
     dueAt: row.due_at,
+    actionRequest,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at
+  };
+}
+
+function normaliseActionRequestPayload(payload: Record<string, unknown>, fallbackRegion: string) {
+  return {
+    targetRegions: normaliseTargetRegions(payload.targetRegions, fallbackRegion),
+    directiveType: normaliseDirective(payload.directiveType),
+    priority: normalisePriority(payload.priority),
+    sourcePage: normaliseSourcePage(payload.sourcePage),
+    createdActionIds: Array.isArray(payload.createdActionIds) ? payload.createdActionIds.map(String) : undefined
+  };
+}
+
+function normaliseTargetRegions(value: unknown, fallbackRegion: string) {
+  if (Array.isArray(value)) {
+    const regions = value.map((region) => String(region).trim()).filter(Boolean);
+    return regions.length ? regions : [fallbackRegion || "National"];
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.split(",").map((region) => region.trim()).filter(Boolean);
+  }
+
+  return [fallbackRegion || "National"];
+}
+
+function normaliseDirective(value: unknown): "National Ops Directive" | "Scheduled Directive" | "To Do" {
+  if (value === "National Ops Directive" || value === "Scheduled Directive" || value === "To Do") return value;
+  return "National Ops Directive";
+}
+
+function normalisePriority(value: unknown): "urgent" | "high" | "normal" | "low" {
+  if (value === "urgent" || value === "high" || value === "normal" || value === "low") return value;
+  return "high";
+}
+
+function normaliseSourcePage(value: unknown) {
+  const source = String(value || "Action Centre").trim();
+  const map: Record<string, string> = {
+    "Action Centre": "action-centre",
+    Compliance: "compliance",
+    Productivity: "productivity",
+    "Equipment Servicing": "equipment-servicing",
+    "Stock Orders": "stock-orders",
+    Jobsheets: "jobsheets",
+    Calendar: "calendar",
+    "Staff Availability": "staff-availability",
+    "To Do": "to-do"
+  };
+
+  return map[source] || source.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "action-centre";
+}
+
+async function getTargetRegions(targetRegions: string[]) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return [];
+
+  const wantsAllManagers = targetRegions.some((region) => ["all", "all managers", "all regions"].includes(region.toLowerCase()));
+  const { data, error } = await supabase
+    .from("regions")
+    .select("id,name,is_active")
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+
+  const regions = ((data as RegionRow[] | null) || []).filter((region) => region.is_active !== false);
+  if (wantsAllManagers) return regions.filter((region) => region.name !== "National");
+
+  return targetRegions.map((targetName) => {
+    if (targetName === "National") return { id: null, name: "National" };
+    return regions.find((region) => region.name.toLowerCase() === targetName.toLowerCase()) || null;
+  }).filter(Boolean) as Array<{ id: string | null; name: string }>;
+}
+
+function actionDueDate(item: OdinItemRow, payload: Record<string, unknown>) {
+  const rawDueDate = payload.dueDate || payload.dueAt || item.due_at;
+  if (!rawDueDate) return null;
+  const date = String(rawDueDate);
+  const parsed = date.includes("T") ? new Date(date) : new Date(`${date}T17:00:00+10:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+async function createActionItemsFromOdinRequest(itemId: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+
+  const { data, error } = await supabase
+    .from("odin_items")
+    .select("id,item_type,title,summary,region,severity,status,noticed,why_it_matters,recommended_action,assigned_to,due_at,payload")
+    .eq("id", itemId)
+    .single();
+
+  if (error) throw error;
+  const item = data as OdinItemRow;
+  if (item.item_type !== "action_request") return { createdActionIds: [], itemPayload: item.payload || {} };
+  if (item.status !== "pending") throw new Error("Only pending Odin action requests can create Action Centre items.");
+
+  const payload = item.payload || {};
+  const actionRequest = normaliseActionRequestPayload(payload, item.region);
+  const targetRegions = await getTargetRegions(actionRequest.targetRegions);
+  if (!targetRegions.length) throw new Error("No valid target regions supplied for Odin action request.");
+
+  const detail = String(payload.actionDetail || item.recommended_action || item.summary || "Odin proposed this action item for manager close-out.");
+  const dueAt = actionDueDate(item, payload);
+  const actionRows = targetRegions.map((region) => ({
+    title: item.title,
+    detail,
+    source_page: actionRequest.sourcePage,
+    directive_type: actionRequest.directiveType,
+    priority: actionRequest.priority,
+    status: "open",
+    assigned_region_id: region.id,
+    due_at: dueAt
+  }));
+
+  const { data: createdActions, error: insertError } = await supabase
+    .from("action_items")
+    .insert(actionRows)
+    .select("id");
+
+  if (insertError) throw insertError;
+  return {
+    createdActionIds: ((createdActions as Array<{ id: string }> | null) || []).map((row) => row.id),
+    itemPayload: payload
   };
 }
 
@@ -100,7 +233,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("odin_items")
-    .select("id,item_type,title,summary,region,source_type,source_id,severity,confidence,approval_required,status,noticed,why_it_matters,recommended_action,assigned_to,due_at,created_by,created_at,updated_at")
+    .select("id,item_type,title,summary,region,source_type,source_id,severity,confidence,approval_required,status,noticed,why_it_matters,recommended_action,assigned_to,due_at,created_by,payload,created_at,updated_at")
     .order("created_at", { ascending: false })
     .limit(80);
 
@@ -131,7 +264,7 @@ export async function POST(request: Request) {
   const payload = await request.json();
   const action = String(payload.action || "create");
   if (isOdinExternal(permission) && humanOnlyActions.has(action)) {
-    return NextResponse.json({ error: "Odin can observe and create pending recommendations only. A TOC user must approve, edit, reject, dismiss or close items." }, { status: 403 });
+    return NextResponse.json({ error: "Odin can observe and create pending recommendations or proposed action requests only. A TOC user must approve, create manager actions, edit, reject, dismiss or close items." }, { status: 403 });
   }
 
   if (action === "create") {
@@ -158,7 +291,15 @@ export async function POST(request: Request) {
       assigned_to: String(payload.assignedTo || region),
       due_at: payload.dueAt ? new Date(payload.dueAt).toISOString() : null,
       created_by: permission.kind === "odin" ? "odin" : permission.user?.id || "toc_user",
-      payload: typeof payload.extra === "object" && payload.extra ? payload.extra : {}
+      payload: {
+        ...(typeof payload.extra === "object" && payload.extra ? payload.extra : {}),
+        ...(payload.targetRegions ? { targetRegions: payload.targetRegions } : {}),
+        ...(payload.directiveType ? { directiveType: payload.directiveType } : {}),
+        ...(payload.priority ? { priority: payload.priority } : {}),
+        ...(payload.sourcePage ? { sourcePage: payload.sourcePage } : {}),
+        ...(payload.actionDetail ? { actionDetail: payload.actionDetail } : {}),
+        ...(payload.dueDate ? { dueDate: payload.dueDate } : {})
+      }
     };
 
     const { data, error } = await supabase.from("odin_items").insert(item).select("id").single();
@@ -188,11 +329,13 @@ export async function POST(request: Request) {
     const id = String(payload.id || "");
     if (!id) return NextResponse.json({ error: "Odin item id is required." }, { status: 400 });
 
-    const updates: Record<string, string | number | boolean | null> = { updated_at: new Date().toISOString() };
+    const updates: Record<string, string | number | boolean | null | Record<string, unknown>> = { updated_at: new Date().toISOString() };
     if (action === "approve") {
+      const { createdActionIds, itemPayload } = await createActionItemsFromOdinRequest(id);
       updates.status = "approved";
       updates.approved_by = permission.kind === "toc" ? permission.user?.id || null : null;
       updates.approved_at = new Date().toISOString();
+      if (createdActionIds.length) updates.payload = { ...itemPayload, createdActionIds };
     }
     if (action === "reject") updates.status = "rejected";
     if (action === "dismiss") updates.status = "dismissed";
