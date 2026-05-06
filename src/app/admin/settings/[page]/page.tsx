@@ -50,13 +50,30 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
           </div>
         </Panel>
         {setting.slug === "admin-settings" ? (
+          <Panel wide eyebrow="Admin Settings" title="Settings hub">
+            <div className="admin-setting-detail">
+              <p>Admin controls have been separated into dedicated settings pages so each control area stays clear and manageable.</p>
+              <div className="meta-row">
+                <Link className="node-action" href="/admin/settings/user-access">User Access</Link>
+                <Link className="node-action" href="/admin/settings/staff-register">Staff Register</Link>
+                <Link className="node-action" href="/admin/settings/messages">Messages And Hints</Link>
+                <Link className="node-action" href="/admin/settings/audit-trail">Audit Trail</Link>
+              </div>
+            </div>
+          </Panel>
+        ) : null}
+        {setting.slug === "user-access" ? (
+          <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility">
+            <AdminAccessManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "staff-register" ? (
+          <Panel wide eyebrow="Staff entities" title="Staff register, regions, skills and protected contacts">
+            <AdminStaffManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "messages" ? (
           <>
-            <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility">
-              <AdminAccessManager />
-            </Panel>
-            <Panel wide eyebrow="Audit trail" title="Odin, security and admin activity">
-              <AdminAuditTrail />
-            </Panel>
             <Panel wide eyebrow="Guidance controls" title="Page hints">
               <AdminHintControls />
             </Panel>
@@ -70,6 +87,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
               <DirectorBroadcastControls />
             </Panel>
           </>
+        ) : null}
+        {setting.slug === "audit-trail" ? (
+          <Panel wide eyebrow="Audit trail" title="Odin, security and admin activity">
+            <AdminAuditTrail />
+          </Panel>
         ) : null}
         {setting.slug === "national-requests" ? (
           <>
@@ -142,14 +164,9 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
           </Panel>
         ) : null}
         {setting.slug === "staff-availability" ? (
-          <>
-            <Panel wide eyebrow="Staff Availability" title="Availability sheet source control">
-              <AdminSheetSourceManager slug="staff-availability" label="Staff Availability" />
-            </Panel>
-            <Panel wide eyebrow="Staff entities" title="Staff register, regions, skills and protected contacts">
-              <AdminStaffManager />
-            </Panel>
-          </>
+          <Panel wide eyebrow="Staff Availability" title="Availability sheet source control">
+            <AdminSheetSourceManager slug="staff-availability" label="Staff Availability" />
+          </Panel>
         ) : null}
         {setting.slug === "inductions" ? (
           <Panel wide eyebrow="Inductions" title="Induction sheet source control">

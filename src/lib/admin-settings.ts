@@ -21,6 +21,10 @@ export const adminSettingStateDescriptions: Record<AdminPageSetting["state"], st
 };
 
 export const pageSettings: AdminPageSetting[] = [
+  { page: "User Access", slug: "user-access", owner: "Security and permissions", control: "Register users, reset passwords, assign access levels and assign region responsibility.", state: "Active" },
+  { page: "Staff Register", slug: "staff-register", owner: "People control", control: "Manage staff entities, roles, regions, skills, sheet links, notes and protected contact fields.", state: "Active" },
+  { page: "Messages And Hints", slug: "messages", owner: "Global communications", control: "Manage urgent notices, Director messages, operational news and page hint controls.", state: "Active" },
+  { page: "Audit Trail", slug: "audit-trail", owner: "Security and Odin logging", control: "Review Odin, user access, security and admin activity written to the audit log.", state: "Active" },
   { page: "Home", slug: "home", owner: "Command signals and go-live pathway", control: "Set which national signals, roadmap items and Director scorecard items appear on Home.", state: "Active" },
   { page: "Admin Settings", slug: "admin-settings", owner: "TOC control room", control: "Register users, assign access levels, assign regions, tune page settings and manage global notices.", state: "Active" },
   { page: "National Requests", slug: "national-requests", owner: "National action queue", control: "Review stock order requests, manager-submitted close-outs and requests that need national follow-up.", state: "Active" },
