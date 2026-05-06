@@ -115,10 +115,12 @@ export async function GET(request: Request) {
     actor: permission.kind,
     mode: "read_only_snapshot",
     instructions: {
-      writeBackEndpoint: "/api/odin/items",
-      allowedWriteAction: "create",
-      approvalRequired: true,
-      prohibitedActions: ["approve", "reject", "dismiss", "done", "delete", "send_message", "change_user", "change_password"]
+      actionWriteEndpoint: "/api/odin/actions",
+      recommendationWriteEndpoint: "/api/odin/items",
+      allowedWriteActions: ["direct_action_create", "create_recommendation"],
+      actionCreationApprovalRequired: false,
+      note: "Use /api/odin/actions for manager tasks or reminders. /api/odin/items is for non-action recommendations and audit memory only.",
+      prohibitedActions: ["approve", "reject", "dismiss", "done", "delete", "send_message", "change_user", "change_password", "change_role", "admin_settings"]
     },
     sections
   });

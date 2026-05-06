@@ -27,13 +27,15 @@ x-odin-api-key: <ODIN_API_KEY>
 
 This returns a read-only operations snapshot for Odin to analyse.
 
-## Odin Write Endpoint
+## Odin Recommendation Memory Endpoint
 
 ```http
 POST https://thor-operations-command-app.vercel.app/api/odin/items
 x-odin-api-key: <ODIN_API_KEY>
 content-type: application/json
 ```
+
+Use this endpoint for non-action recommendations, briefs and Odin memory only.
 
 Body:
 
@@ -82,15 +84,15 @@ content-type: application/json
 Direct issue behavior:
 
 - TOC creates real Action Centre items for the target regions immediately.
-- TOC records an approved Odin Command item as an audit trail.
+- TOC records the action in Admin Settings audit trail and stores Odin memory against the issued work.
 - Odin still cannot change users, reset passwords, change roles or delete records.
 - Use `targetRegions: ["all"]` for all manager regions except National.
 
-The older pending action-request approval flow still exists, but direct action issue is now the preferred flow when Craig gives express permission.
+Do not use `/api/odin/items` for manager tasks. If Odin accidentally sends `itemType: "action_request"` to `/api/odin/items`, TOC will now create the Action Centre item directly instead of sending it to an approval page.
 
 ## Security Rules
 
-- Odin can create pending recommendations and direct Action Centre items when explicitly instructed.
+- Odin can create recommendations and direct Action Centre items when explicitly instructed.
 - Odin cannot delete records, change users, reset passwords, change roles or modify Admin Settings.
 - Human approval remains required for destructive, admin, account, pricing, payroll, external-message or client-sensitive actions.
 - Rotate `ODIN_API_KEY` if it is ever pasted somewhere unsafe.

@@ -20,10 +20,6 @@ type TodoRow = {
   owner_role: string | null;
   owner_scope: string | null;
 };
-type OdinRow = {
-  status: string;
-  approval_required: boolean;
-};
 
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -74,7 +70,7 @@ export async function GET(request: Request) {
   const scope = resolvePermittedScope(permission.user, url.searchParams.get("scope"));
   const role = permission.user.role;
 
-  const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }, { data: odinData }] = await Promise.all([
+  const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }] = await Promise.all([
     supabase
       .from("action_items")
       .select("source_page,directive_type,priority,status,region:regions(name)")
@@ -89,12 +85,7 @@ export async function GET(request: Request) {
       .in("status", ["submitted", "awaiting_review", "cancel_requested"]),
     supabase
       .from("todo_items")
-      .select("is_done,shared_with,owner_role,owner_scope"),
-    supabase
-      .from("odin_items")
-      .select("status,approval_required")
-      .eq("status", "pending")
-      .eq("approval_required", true)
+      .select("is_done,shared_with,owner_role,owner_scope")
   ]);
 
   const scopedActions = ((actionData as ActionRow[] | null) || []).filter((item) => {
@@ -110,7 +101,6 @@ export async function GET(request: Request) {
   const countByDirective = (directives: string[]) => scopedActions.filter((item) => directives.includes(item.directive_type)).length;
   const nationalRequestCount = scope === "National" ? ((requestData as { status: string }[] | null) || []).length + scopedStock.length : 0;
   const todoCount = ((todoData as TodoRow[] | null) || []).filter((item) => isTodoVisibleForScope(item, role, scope)).length;
-  const odinApprovalCount = scope === "National" || role === "admin" ? ((odinData as OdinRow[] | null) || []).length : 0;
 
   return NextResponse.json({
     connected: true,
@@ -123,8 +113,7 @@ export async function GET(request: Request) {
       Jobsheets: makeBadge(countBySource(["Thor Portal", "Jobsheets"]), "amber"),
       "Stock Orders": makeBadge(scopedStock.length, scopedStock.length > 2 ? "red" : "amber"),
       "To Do": makeBadge(todoCount || countByDirective(["To Do"]), todoCount ? "blue" : "blue"),
-      "National Requests": makeBadge(nationalRequestCount, "red"),
-      "Odin Command": makeBadge(odinApprovalCount, "red")
+      "National Requests": makeBadge(nationalRequestCount, "red")
     }
   });
 }

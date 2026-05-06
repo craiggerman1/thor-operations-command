@@ -45,7 +45,7 @@ export async function requireOdinOrTocNationalUser(request: Request): Promise<Od
   return {
     kind: "none",
     user: undefined,
-    error: NextResponse.json({ error: "Odin Command is available to Admin and National users only." }, { status: 403 })
+    error: NextResponse.json({ error: "Odin access is available to Admin and National users only." }, { status: 403 })
   };
 }
 

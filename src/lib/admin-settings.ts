@@ -24,7 +24,6 @@ export const pageSettings: AdminPageSetting[] = [
   { page: "Home", slug: "home", owner: "Command signals and go-live pathway", control: "Set which national signals, roadmap items and Director scorecard items appear on Home.", state: "Active" },
   { page: "Admin Settings", slug: "admin-settings", owner: "TOC control room", control: "Register users, assign access levels, assign regions, tune page settings and manage global notices.", state: "Active" },
   { page: "National Requests", slug: "national-requests", owner: "National action queue", control: "Review stock order requests, manager-submitted close-outs and requests that need national follow-up.", state: "Active" },
-  { page: "Odin Command", slug: "odin-command", owner: "AI operations watch tower", control: "Manage Odin alerts, recommendations, briefs, follow-ups, approval status and AI action accountability.", state: "Active" },
   { page: "Action Centre", slug: "action-centre", owner: "Action item workflow", control: "Create directives, assign due dates, set priority type and review manager close-out submissions.", state: "Active" },
   { page: "Region Health", slug: "region-health", owner: "Region scoring", control: "Tune region health scoring from open actions, compliance load and productivity score inputs.", state: "Mapped" },
   { page: "Productivity", slug: "productivity", owner: "Productivity scoring", control: "Configure site score sources, manager response requirements and national review rules.", state: "Mapped" },

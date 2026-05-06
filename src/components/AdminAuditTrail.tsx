@@ -104,8 +104,8 @@ export function AdminAuditTrail() {
       </div>
       <div className="admin-audit-toolbar">
         <div>
-          <strong>Security and admin activity</strong>
-          <small>Shows recent database-backed TOC activity. Real Supabase users should populate the actor column.</small>
+          <strong>Odin, security and admin activity</strong>
+          <small>Shows recent Odin-issued actions, account controls and database-backed TOC activity.</small>
         </div>
         <button type="button" onClick={loadAuditTrail} disabled={isLoading}>{isLoading ? "Refreshing..." : "Refresh Audit Trail"}</button>
       </div>

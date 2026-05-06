@@ -3,6 +3,7 @@ import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { isOdinExternal, requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { canAccessScope, hasNationalAccess } from "@/lib/toc-auth";
+import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { normaliseOdinItemType, normaliseOdinSeverity, normaliseOdinStatus } from "@/lib/odin";
 import type { OdinItemStatus } from "@/lib/odin";
 
@@ -264,7 +265,7 @@ export async function POST(request: Request) {
   const payload = await request.json();
   const action = String(payload.action || "create");
   if (isOdinExternal(permission) && humanOnlyActions.has(action)) {
-    return NextResponse.json({ error: "Odin can observe and create pending recommendations or proposed action requests only. A TOC user must approve, create manager actions, edit, reject, dismiss or close items." }, { status: 403 });
+    return NextResponse.json({ error: "Odin can create operational items directly, but cannot approve, reject, dismiss, close, delete, or edit account controls." }, { status: 403 });
   }
 
   if (action === "create") {
@@ -274,8 +275,25 @@ export async function POST(request: Request) {
     const region = String(payload.region || "National");
     if (!canSeeRegion(permission, region)) return NextResponse.json({ error: "You do not have permission to create Odin items for this region." }, { status: 403 });
 
+    const itemType = normaliseOdinItemType(payload.itemType);
+    if (permission.kind === "odin" && itemType === "action_request") {
+      try {
+        const directResult = await createOdinDirectActionItems({
+          payload: {
+            ...payload,
+            targetRegions: payload.targetRegions || payload.regions || payload.region || region,
+            detail: payload.detail || payload.actionDetail || payload.recommendedAction || payload.summary
+          },
+          actorKind: "odin"
+        });
+        return NextResponse.json({ connected: true, directActionCreated: true, ...directResult });
+      } catch (error) {
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Odin action could not be created." }, { status: 400 });
+      }
+    }
+
     const item = {
-      item_type: normaliseOdinItemType(payload.itemType),
+      item_type: itemType,
       title,
       summary: String(payload.summary || ""),
       region,

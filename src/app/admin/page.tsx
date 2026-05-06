@@ -32,7 +32,7 @@ export default function AdminPage() {
         <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility" pill="Admin only">
           <AdminAccessManager />
         </Panel>
-        <Panel wide eyebrow="Audit trail" title="Security and admin activity" pill="Live database">
+        <Panel wide eyebrow="Audit trail" title="Odin, security and admin activity" pill="Live database">
           <AdminAuditTrail />
         </Panel>
         <Panel wide eyebrow="Guidance controls" title="Page hints" pill="Admin only" className="admin-hint-panel">
