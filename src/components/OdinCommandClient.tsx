@@ -138,7 +138,7 @@ export function OdinCommandClient() {
         <div>
           <span className="eyebrow">AI watch tower</span>
           <h2>Odin Command</h2>
-          <p>Odin reads TOC signals through controlled APIs, writes recommendations into this command queue, and waits for human approval before sensitive actions proceed.</p>
+          <p>Odin reads TOC signals through controlled APIs, writes recommendations into this command queue, and cannot edit, close, approve or execute anything without express human approval.</p>
         </div>
         <div className="odin-command-status">
           <strong>{context?.connected ? "Online" : "Ready"}</strong>
@@ -156,8 +156,8 @@ export function OdinCommandClient() {
       <section className="odin-command-layout">
         <form className="odin-command-form" onSubmit={createOdinItem}>
           <div>
-            <strong>Create Odin item</strong>
-            <small>Use this during build testing, or let OpenClaw create items later through the Odin API key.</small>
+            <strong>Ask Odin / create review item</strong>
+            <small>Use this during build testing, or let OpenClaw submit pending recommendations later through the Odin API key. All items remain approval-gated.</small>
           </div>
           <label><span>Type</span><select value={itemType} onChange={(event) => setItemType(event.target.value as OdinItemType)}>{itemTypes.map((type) => <option value={type} key={type}>{odinItemTypeLabels[type]}</option>)}</select></label>
           <label><span>Region</span><select value={region} onChange={(event) => setRegion(event.target.value)}>{allRegions.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
@@ -211,10 +211,10 @@ export function OdinCommandClient() {
       </section>
 
       <div className="odin-command-rhythm">
+        <article className="odin-consent-gate"><span>Consent gate: Odin can observe and create pending recommendations only. TOC users approve, edit, dismiss, reject or close items.</span></article>
         {odinCommandFeatures.map((feature) => <article key={feature}><span>{feature}</span></article>)}
         {(context?.operatingRhythm || []).map((item) => <article key={item}><span>{item}</span></article>)}
       </div>
     </div>
   );
 }
-

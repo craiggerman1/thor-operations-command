@@ -28,7 +28,7 @@ type OdinItemRow = {
   updated_at: string;
 };
 
-const humanOnlyActions = new Set(["approve", "reject", "dismiss", "done"]);
+const humanOnlyActions = new Set(["approve", "reject", "dismiss", "done", "update"]);
 
 function mapOdinItem(row: OdinItemRow) {
   return {
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
   const payload = await request.json();
   const action = String(payload.action || "create");
   if (isOdinExternal(permission) && humanOnlyActions.has(action)) {
-    return NextResponse.json({ error: "Odin can prepare this item, but a TOC user must approve, reject, dismiss or close it." }, { status: 403 });
+    return NextResponse.json({ error: "Odin can observe and create pending recommendations only. A TOC user must approve, edit, reject, dismiss or close items." }, { status: 403 });
   }
 
   if (action === "create") {
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
       source_id: payload.sourceId ? String(payload.sourceId) : null,
       severity: normaliseOdinSeverity(payload.severity),
       confidence: Math.max(0, Math.min(Number(payload.confidence) || 75, 100)),
-      approval_required: payload.approvalRequired !== false,
+      approval_required: permission.kind === "odin" ? true : payload.approvalRequired !== false,
       status: "pending",
       noticed: String(payload.noticed || ""),
       why_it_matters: String(payload.whyItMatters || ""),
@@ -226,4 +226,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ error: "Unsupported Odin item action." }, { status: 400 });
 }
-

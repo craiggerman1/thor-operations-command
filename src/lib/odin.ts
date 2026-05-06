@@ -46,7 +46,7 @@ export const odinStatusLabels: Record<OdinItemStatus, string> = {
 export const odinCommandFeatures = [
   "Ask Odin about TOC records and operational risk.",
   "Review Odin Alerts, recommendations, daily briefs and follow-ups.",
-  "Approve, reject, dismiss or close Odin action recommendations.",
+  "TOC users approve, reject, dismiss or close Odin action recommendations.",
   "Keep every Odin action visible and logged before sensitive work proceeds."
 ];
 
@@ -66,4 +66,3 @@ export function normaliseOdinSeverity(value: unknown): Status {
   if (value === "red" || value === "amber" || value === "green" || value === "blue") return value;
   return "blue";
 }
-

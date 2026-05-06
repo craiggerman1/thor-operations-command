@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { AskOdinButton } from "@/components/AskOdinButton";
 import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
 import { tocFetch } from "@/lib/toc-client-auth";
 
@@ -139,6 +140,17 @@ export default function NationalRequestDetailPage() {
                 <Tag tone={actionRequest.status === "Approved by national" ? "green" : actionRequest.status === "Returned to manager" ? "amber" : "blue"}>{actionRequest.status}</Tag>
               </div>
               <div className="stock-actions">
+                <AskOdinButton
+                  sourceType="national_request"
+                  sourceId={actionRequest.id}
+                  title={actionRequest.title}
+                  region={actionRequest.region}
+                  severity={actionRequest.status === "Awaiting national review" ? "amber" : "blue"}
+                  summary={`National request from ${actionRequest.region}: ${actionRequest.managerResponse}`}
+                  noticed={`${actionRequest.title} is waiting for national review with evidence: ${actionRequest.evidence}`}
+                  whyItMatters="National review decisions clear or return manager action items and affect live action queues."
+                  recommendedAction="Review whether the manager close-out is sufficient, then recommend approve or return with clear reasoning."
+                />
                 <Link className="node-action" href={`/actions/${actionRequest.actionId}`}>Open source action</Link>
                 <button className="review-decision-button approve" type="button" onClick={() => void saveActionRequest("Approved by national")}>Approve Close-Out</button>
                 <button className="review-decision-button return" type="button" onClick={() => void saveActionRequest("Returned to manager")}>Return To Manager</button>
@@ -155,6 +167,17 @@ export default function NationalRequestDetailPage() {
               <label className="admin-tracking-field"><span>National update</span><input value={stockOrder.update} onChange={(event) => void saveStockOrder({ update: event.target.value, status: "Approved by national" })} /></label>
               <label className="admin-tracking-field"><span>Tracking number</span><input value={stockOrder.trackingNumber || ""} onChange={(event) => void saveStockOrder({ trackingNumber: event.target.value || "Pending" })} placeholder="Add tracking number" /></label>
               <div className="stock-actions">
+                <AskOdinButton
+                  sourceType="stock_order"
+                  sourceId={getOrderId(stockOrder)}
+                  title={stockOrder.item}
+                  region={stockOrder.region}
+                  severity={stockOrder.urgency === "Urgent" ? "red" : "blue"}
+                  summary={`${stockOrder.region} requested ${stockOrder.quantity} x ${stockOrder.item}. Note: ${stockOrder.note}`}
+                  noticed={`Stock order status is ${stockOrder.status}, tracking is ${stockOrder.trackingNumber || "Pending"}.`}
+                  whyItMatters="Stock delays can block crews, equipment repairs or site readiness."
+                  recommendedAction="Review urgency, national update, tracking status and recommend the next response for the manager."
+                />
                 <button className="review-decision-button approve" type="button" onClick={() => void saveStockOrder({ status: "Approved by national", update: stockOrder.update || "Approved by national." })}>Approve Request</button>
                 <button className="review-decision-button return" type="button" onClick={() => void saveStockOrder({ status: "Returned to manager", update: "Returned to manager for clarification." })}>Return To Manager</button>
                 <button type="button" className="danger-button" onClick={() => void deleteStockOrder()}>Delete Order</button>

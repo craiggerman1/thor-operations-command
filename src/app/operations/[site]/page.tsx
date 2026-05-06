@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { AskOdinButton } from "@/components/AskOdinButton";
 import {
   getProductivityScore,
   getProductivityTagTone,
@@ -255,6 +256,17 @@ export default function ProductivitySitePage() {
           </label>
 
           <div className="productivity-detail-actions">
+            <AskOdinButton
+              sourceType="productivity_site"
+              sourceId={currentSite.id}
+              title={currentSite.site}
+              region={currentSite.region}
+              severity={score < 50 ? "red" : score < 70 ? "amber" : "blue"}
+              summary={`${currentSite.site} productivity score is ${score}% with current queue: ${currentSite.queue}.`}
+              noticed={`Productivity signal for ${currentSite.site} is ${score}% and current action is ${currentSite.action}.`}
+              whyItMatters="Productivity issues can reduce operating efficiency and should be reviewed before they become repeated site patterns."
+              recommendedAction="Review the six-month trend, manager response and current queue, then recommend the most practical improvement action."
+            />
             <Link className="calendar-back-link" href="/operations">Back to productivity</Link>
           </div>
         </Panel>
