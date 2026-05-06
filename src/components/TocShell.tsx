@@ -193,6 +193,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     window.addEventListener("toc.actionState.updated", syncNavBadgeCounts);
     window.addEventListener("toc.nationalActionRequests.updated", syncNavBadgeCounts);
     window.addEventListener("toc.stockOrders.updated", syncNavBadgeCounts);
+    window.addEventListener("toc.odin.updated", syncNavBadgeCounts);
     const refreshInterval = window.setInterval(syncNavBadgeCounts, 15000);
     return () => {
       window.clearInterval(refreshInterval);
@@ -201,6 +202,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       window.removeEventListener("toc.actionState.updated", syncNavBadgeCounts);
       window.removeEventListener("toc.nationalActionRequests.updated", syncNavBadgeCounts);
       window.removeEventListener("toc.stockOrders.updated", syncNavBadgeCounts);
+      window.removeEventListener("toc.odin.updated", syncNavBadgeCounts);
     };
   }, [session.role, sessionReady]);
 
@@ -303,7 +305,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.254</em>
+              <em>Build 0.255</em>
             </div>
           </div>
           <div className="topbar-actions">

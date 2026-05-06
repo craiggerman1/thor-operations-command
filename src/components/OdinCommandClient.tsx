@@ -32,7 +32,7 @@ function statusTone(status: string): Status {
 }
 
 function approveLabel(item: OdinItem) {
-  return item.itemType === "action_request" ? "Approve + Create Action" : "Approve";
+  return item.itemType === "action_request" ? "Approve + Create Action" : "Approve Recommendation";
 }
 
 export function OdinCommandClient() {
@@ -141,8 +141,17 @@ export function OdinCommandClient() {
       }, true);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Odin item could not be updated.");
-      setItems((payload.items || []) as OdinItem[]);
-      setStatus(`Odin item ${action === "done" ? "closed" : action === "dismiss" ? "dismissed" : action}.`);
+      const nextItems = (payload.items || []) as OdinItem[];
+      const updatedItem = nextItems.find((item) => item.id === id);
+      const createdCount = updatedItem?.actionRequest?.createdActionIds?.length || 0;
+      setItems(nextItems);
+      window.dispatchEvent(new Event("toc.odin.updated"));
+      if (createdCount) window.dispatchEvent(new Event("toc.actionState.updated"));
+      if (action === "approve" && updatedItem?.itemType === "action_request") {
+        setStatus(`Approved and created ${createdCount} Action Centre item${createdCount === 1 ? "" : "s"}.`);
+      } else {
+        setStatus(`Odin item ${action === "done" ? "closed" : action === "dismiss" ? "dismissed" : action === "approve" ? "approved" : action}.`);
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Odin item could not be updated.");
     } finally {
@@ -249,6 +258,7 @@ export function OdinCommandClient() {
       <div className="odin-command-rhythm">
         <article className="odin-consent-gate"><span>Persistent memory active: each Odin request is stored against a session key so Odin can build context over time. Consent gate remains active for every action.</span></article>
         <article className="odin-consent-gate"><span>Direct access limited: Admin and National users can interact with Odin. Odin backend monitoring can still observe all regions and users through controlled APIs.</span></article>
+        <article className="odin-consent-gate"><span>Action Request approval creates real Action Centre items. Normal recommendations only record your approval.</span></article>
         {odinCommandFeatures.map((feature) => <article key={feature}><span>{feature}</span></article>)}
         {(context?.operatingRhythm || []).map((item) => <article key={item}><span>{item}</span></article>)}
       </div>
