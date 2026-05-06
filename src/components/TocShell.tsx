@@ -8,7 +8,7 @@ import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/
 import type { AccessRole } from "@/lib/access";
 import { TodoManager } from "@/components/TodoManager";
 import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/UrgentBroadcast";
-import { fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
+import { defaultOperationsNews, fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
 import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { tocFetch } from "@/lib/toc-client-auth";
@@ -66,6 +66,11 @@ function getStoredScope() {
 
 const accessRoleOptions = Object.values(sessionProfiles);
 const developmentToolsEnabled = process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "true";
+
+function sameNewsItems(firstItems: string[], secondItems: string[]) {
+  if (firstItems.length !== secondItems.length) return false;
+  return firstItems.every((item, index) => item === secondItems[index]);
+}
 
 function readStoredSession(): StoredSession | null {
   try {
@@ -298,7 +303,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.252</em>
+              <em>Build 0.253</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -351,8 +356,10 @@ export function TocShell({ children }: { children: ReactNode }) {
 export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title: string; detail?: string }) {
   const [scope, setScope] = useState("National");
   const [weather, setWeather] = useState<WeatherState>(weatherByScope.National);
-  const [operationsNews, setOperationsNews] = useState(["Thor Operations Currently Normal"]);
+  const [operationsNews, setOperationsNews] = useState([defaultOperationsNews]);
   const [operationsNewsIndex, setOperationsNewsIndex] = useState(0);
+  const operationsNewsRef = useRef([defaultOperationsNews]);
+  const operationsNewsIndexRef = useRef(0);
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -370,13 +377,26 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
   }, []);
 
   useEffect(() => {
+    function applyOperationsNews(nextItems: string[]) {
+      const cleanItems = nextItems.length ? nextItems : [defaultOperationsNews];
+      const currentItems = operationsNewsRef.current;
+      if (sameNewsItems(currentItems, cleanItems)) return;
+
+      const currentItem = currentItems[operationsNewsIndexRef.current];
+      const preservedIndex = currentItem ? cleanItems.indexOf(currentItem) : -1;
+      const nextIndex = preservedIndex >= 0 ? preservedIndex : 0;
+
+      operationsNewsRef.current = cleanItems;
+      operationsNewsIndexRef.current = nextIndex;
+      setOperationsNews(cleanItems);
+      setOperationsNewsIndex(nextIndex);
+    }
+
     function syncOperationsNews() {
-      setOperationsNews(getStoredOperationsNewsItems());
-      setOperationsNewsIndex(0);
+      applyOperationsNews(getStoredOperationsNewsItems());
       fetchOperationsNewsItems()
         .then((items) => {
-          setOperationsNews(items);
-          setOperationsNewsIndex(0);
+          applyOperationsNews(items);
         })
         .catch(() => undefined);
     }
@@ -396,7 +416,11 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
     if (operationsNews.length <= 1) return;
 
     const intervalId = window.setInterval(() => {
-      setOperationsNewsIndex((currentIndex) => (currentIndex + 1) % operationsNews.length);
+      setOperationsNewsIndex((currentIndex) => {
+        const nextIndex = (currentIndex + 1) % operationsNews.length;
+        operationsNewsIndexRef.current = nextIndex;
+        return nextIndex;
+      });
     }, 10000);
 
     return () => window.clearInterval(intervalId);
