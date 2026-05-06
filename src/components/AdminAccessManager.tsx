@@ -27,6 +27,7 @@ type AdminUserDraft = {
 };
 
 const accessUsersKey = "toc.adminAccessUsers";
+const previewToolsEnabled = process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "true";
 
 const initialAccessUsers: AdminAccessUser[] = [];
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -62,7 +63,7 @@ async function fetchAccessUsers() {
     return users;
   } catch (error) {
     if (error instanceof Error) console.warn(error.message);
-    return readAccessUsers();
+    return [];
   }
 }
 
@@ -281,6 +282,11 @@ export function AdminAccessManager() {
   }
 
   function previewUser(user: AdminAccessUser) {
+    if (!previewToolsEnabled) {
+      setStatus("Preview User View is disabled in secure mode.");
+      return;
+    }
+
     const profile = sessionProfiles[user.role];
     const assignedRegions = normaliseRegionsForRole(user.role, user.regions);
     const scope = assignedRegions[0] || profile.regions[0] || "National";
@@ -358,10 +364,12 @@ export function AdminAccessManager() {
               <div className="admin-user-title"><strong>{user.name}</strong><small>{user.email ? `${user.email} - ` : ""}{user.reference} - {isDatabaseUserId(user.id) ? user.id : "Legacy local profile"}</small></div>
               <div className="meta-row"><Tag>{roleLabel(user.role)}</Tag><Tag tone={user.status === "Active" ? "green" : "amber"}>{user.status}</Tag></div>
             </div>
-            <div className="admin-user-control-note">
-              <strong>Preview User View</strong>
-              <span>Development tool only. It changes your current session to this user role and region view so you can test what they see.</span>
-            </div>
+            {previewToolsEnabled ? (
+              <div className="admin-user-control-note">
+                <strong>Preview User View</strong>
+                <span>Development tool only. It changes your current session to this user role and region view so you can test what they see.</span>
+              </div>
+            ) : null}
             <div className="admin-user-edit-grid">
               {(() => {
                 const draft = getUserDraft(user);
@@ -415,7 +423,7 @@ export function AdminAccessManager() {
               })()}
             </div>
             <div className="admin-user-actions">
-              <button type="button" onClick={() => previewUser(user)}>Preview User View</button>
+              {previewToolsEnabled ? <button type="button" onClick={() => previewUser(user)}>Preview User View</button> : null}
               <button type="button" onClick={() => toggleStatus(user)}>{user.status === "Active" ? "Disable User" : "Reactivate User"}</button>
               <button className="danger-button" type="button" onClick={() => deregisterUser(user.id)}>Deregister User</button>
             </div>

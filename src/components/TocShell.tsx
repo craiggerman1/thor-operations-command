@@ -20,7 +20,7 @@ type StoredSession = {
   scope?: string;
   regions?: string[];
   email?: string;
-  authMode?: "developer" | "preview" | "supabase";
+  authMode?: "preview" | "supabase";
   mustChangePassword?: boolean;
 };
 
@@ -65,7 +65,7 @@ function getStoredScope() {
 }
 
 const accessRoleOptions = Object.values(sessionProfiles);
-const developmentToolsEnabled = true;
+const developmentToolsEnabled = process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "true";
 
 function readStoredSession(): StoredSession | null {
   try {
@@ -98,7 +98,8 @@ export function TocShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function applySession(nextSession: StoredSession | null) {
-      if (nextSession?.authMode === "developer") {
+      const isPermittedPreview = developmentToolsEnabled && nextSession?.authMode === "preview";
+      if (nextSession?.authMode !== "supabase" && !isPermittedPreview) {
         localStorage.removeItem("toc.session");
         setSession({});
         document.body.classList.remove("is-authenticated");
@@ -154,12 +155,6 @@ export function TocShell({ children }: { children: ReactNode }) {
     }
 
     async function initialiseSession() {
-      const storedSession = readStoredSession();
-      if (applySession(storedSession)) {
-        setSessionReady(true);
-        return;
-      }
-
       const restored = await restoreSupabaseSession();
       setSessionReady(true);
       if (!restored) router.replace("/");
