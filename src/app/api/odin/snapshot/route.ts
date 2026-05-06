@@ -118,9 +118,9 @@ export async function GET(request: Request) {
       actionWriteEndpoint: "/api/odin/actions",
       todoReminderEndpoint: "/api/odin/todos",
       recommendationWriteEndpoint: "/api/odin/items",
-      allowedWriteActions: ["direct_action_create", "direct_action_update", "direct_action_close", "direct_action_delete", "direct_action_duplicate_cleanup", "direct_todo_reminder_create", "create_recommendation"],
+      allowedWriteActions: ["direct_action_create", "direct_action_update", "direct_action_close", "direct_action_delete", "direct_action_duplicate_cleanup", "direct_todo_create", "direct_todo_update", "direct_todo_complete", "direct_todo_delete", "create_recommendation"],
       actionCreationApprovalRequired: false,
-      note: "Use /api/odin/actions for manager action items. It supports action=create, update, close, complete, clear, done and delete by id/ids. It also supports action=delete_duplicates with exactTitle and keepPerRegion. Use /api/odin/todos for shared manager To Do reminders. /api/odin/items is for non-action recommendations and audit memory only.",
+      note: "Use /api/odin/actions for manager action items. If itemType=todo is supplied to /api/odin/actions, TOC routes it into the To Do system instead of Action Centre. /api/odin/todos also supports create, update, complete, close, clear, done and delete by id/ids. /api/odin/items is for non-action recommendations and audit memory only.",
       prohibitedActions: ["send_message", "change_user", "change_password", "change_role", "admin_settings"]
     },
     sections

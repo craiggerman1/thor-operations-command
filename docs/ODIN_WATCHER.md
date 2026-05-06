@@ -180,7 +180,7 @@ Do not use `/api/odin/items` for manager tasks. If Odin accidentally sends `item
 
 ## Odin Shared To Do Reminders
 
-Odin can directly create shared To Do reminders for selected manager scopes when Craig/Admin gives express instruction.
+Odin can directly create, update, complete and delete shared To Do reminders for selected manager scopes when Craig/Admin gives express instruction.
 
 ```http
 POST https://thor-operations-command-app.vercel.app/api/odin/todos
@@ -190,6 +190,8 @@ content-type: application/json
 
 ```json
 {
+  "action": "create",
+  "itemType": "todo",
   "title": "Must pickup new batteries for pony Thursday",
   "targetRegions": ["National", "Brisbane"],
   "important": true,
@@ -202,13 +204,44 @@ To Do behavior:
 - `National` targets National Ops / National Manager visibility.
 - `Brisbane` targets the Brisbane Manager visibility.
 - Admin users viewing the same scope also see the shared reminder.
-- This creates To Do reminders only. Use `/api/odin/actions` when the instruction needs an Action Centre close-out workflow.
+- `/api/odin/todos` supports `action: "create"`, `update`, `complete`, `close`, `clear`, `done` and `delete`.
+- `/api/odin/actions` also routes `itemType: "todo"` into the To Do system. This prevents Odin from accidentally creating Action Centre work when Craig asks for a To Do reminder.
+- Non-create To Do operations require `id`, `ids`, `todoIds` or `createdTodoIds`.
+- Use `/api/odin/actions` with `itemType: "action"` or no `itemType` when the instruction needs an Action Centre close-out workflow.
+
+```json
+{
+  "action": "complete",
+  "itemType": "todo",
+  "ids": ["todo-id-1", "todo-id-2"]
+}
+```
+
+```json
+{
+  "action": "update",
+  "itemType": "todo",
+  "id": "todo-id-1",
+  "updates": {
+    "title": "Updated To Do reminder",
+    "important": true
+  }
+}
+```
+
+```json
+{
+  "action": "delete",
+  "itemType": "todo",
+  "id": "todo-id-1"
+}
+```
 
 ## Security Rules
 
 - Odin can create recommendations and direct Action Centre items when explicitly instructed.
 - Odin can update, close and delete Action Centre items when explicitly instructed and when item IDs are supplied.
-- Odin can create direct shared To Do reminders when explicitly instructed.
+- Odin can create, update, complete and delete direct shared To Do reminders when explicitly instructed and when item IDs are supplied for non-create operations.
 - Odin cannot change users, reset passwords, change roles or modify Admin Settings.
 - Human approval remains required for destructive, admin, account, pricing, payroll, external-message or client-sensitive actions.
 - Rotate `ODIN_API_KEY` if it is ever pasted somewhere unsafe.

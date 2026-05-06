@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { logTocAudit } from "@/lib/audit";
+import { handleOdinTodoItems } from "@/lib/odin-todos";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type OdinActionOperation = "create" | "update" | "delete" | "delete_duplicates" | "close" | "complete" | "clear" | "done";
@@ -25,6 +26,11 @@ function actionIdsFromPayload(payload: Record<string, unknown>) {
     .filter(Boolean);
 
   return Array.from(new Set(ids));
+}
+
+function isTodoRequest(payload: Record<string, unknown>) {
+  const itemType = String(payload.itemType || payload.type || payload.targetType || payload.kind || "").trim().toLowerCase();
+  return ["todo", "to-do", "to_do", "reminder", "todo_item", "to do"].includes(itemType);
 }
 
 function normaliseDueAt(value: unknown) {
@@ -192,7 +198,9 @@ export async function POST(request: Request) {
   try {
     const operation = normaliseOperation(payload.action);
     const actor = permission.kind === "toc" ? permission.user : undefined;
-    const result = operation === "create"
+    const result = isTodoRequest(payload)
+      ? await handleOdinTodoItems({ payload, actorKind: permission.kind, actor })
+      : operation === "create"
       ? await createOdinDirectActionItems({ payload, actorKind: permission.kind, actor })
       : await mutateActions({ operation, payload, actorKind: permission.kind, actor });
 
