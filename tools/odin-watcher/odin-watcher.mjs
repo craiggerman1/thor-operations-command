@@ -172,7 +172,7 @@ function parseRecommendation(content) {
       summary: safeText(parsed.summary, fallback.summary).slice(0, 700),
       region: safeText(parsed.region, "National"),
       severity: normaliseSeverity(parsed.severity),
-      confidence: Math.max(0, Math.min(Number(parsed.confidence) || 70, 100)),
+      confidence: normaliseConfidence(parsed.confidence),
       noticed: safeText(parsed.noticed, "").slice(0, 700),
       whyItMatters: safeText(parsed.whyItMatters, "").slice(0, 700),
       recommendedAction: safeText(parsed.recommendedAction, "").slice(0, 700)
@@ -195,6 +195,13 @@ function normaliseSeverity(value) {
   if (severity === "red") return "red";
   if (severity === "blue") return "blue";
   return "amber";
+}
+
+function normaliseConfidence(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 70;
+  const percentage = numeric <= 1 ? numeric * 100 : numeric;
+  return Math.round(Math.max(0, Math.min(percentage, 100)));
 }
 
 function safeText(value, fallback) {

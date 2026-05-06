@@ -85,3 +85,5 @@ node odin-watcher.mjs --snapshot-only
 Only change to `ODIN_DRY_RUN=false` once the output looks correct.
 
 The watcher sends `x-openclaw-session-key: toc:watcher` by default so OpenClaw can keep watcher memory in one stable thread.
+
+Odin can return confidence as `0.84` or `84`; the watcher normalises both to `84`.
