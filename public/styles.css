@@ -54,6 +54,7 @@
   --aero-border: rgba(183, 220, 238, 0.62);
   --aero-highlight: rgba(255, 255, 255, 0.88);
   --nav: #0b3659;
+  --navy: #0a3152;
   --nav-soft: #144568;
   --command: #060709;
   --command-line: #1f6282;
@@ -457,7 +458,7 @@ textarea:focus-visible {
   padding: 0 18px;
   border: 0;
   border-radius: 6px;
-  background: var(--navy);
+  background: var(--navy, #0a3152);
   color: #ffffff;
   font-weight: 900;
   cursor: pointer;
