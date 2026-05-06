@@ -91,9 +91,36 @@ Direct issue behavior:
 
 Do not use `/api/odin/items` for manager tasks. If Odin accidentally sends `itemType: "action_request"` to `/api/odin/items`, TOC will now create the Action Centre item directly instead of sending it to an approval page.
 
+## Odin Shared To Do Reminders
+
+Odin can directly create shared To Do reminders for selected manager scopes when Craig/Admin gives express instruction.
+
+```http
+POST https://thor-operations-command-app.vercel.app/api/odin/todos
+x-odin-api-key: <ODIN_API_KEY>
+content-type: application/json
+```
+
+```json
+{
+  "title": "Must pickup new batteries for pony Thursday",
+  "targetRegions": ["National", "Brisbane"],
+  "important": true,
+  "dueDate": "2026-05-07"
+}
+```
+
+To Do behavior:
+
+- `National` targets National Ops / National Manager visibility.
+- `Brisbane` targets the Brisbane Manager visibility.
+- Admin users viewing the same scope also see the shared reminder.
+- This creates To Do reminders only. Use `/api/odin/actions` when the instruction needs an Action Centre close-out workflow.
+
 ## Security Rules
 
 - Odin can create recommendations and direct Action Centre items when explicitly instructed.
+- Odin can create direct shared To Do reminders when explicitly instructed.
 - Odin cannot delete records, change users, reset passwords, change roles or modify Admin Settings.
 - Human approval remains required for destructive, admin, account, pricing, payroll, external-message or client-sensitive actions.
 - Rotate `ODIN_API_KEY` if it is ever pasted somewhere unsafe.
