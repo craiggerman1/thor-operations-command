@@ -22,6 +22,7 @@ const odinApiKey = process.env.ODIN_API_KEY || "";
 const openClawUrl = trimSlash(process.env.OPENCLAW_LOCAL_URL || "http://127.0.0.1:18789");
 const openClawToken = process.env.OPENCLAW_GATEWAY_TOKEN || "";
 const openClawModel = process.env.OPENCLAW_MODEL || "openclaw/default";
+const openClawSessionKey = process.env.OPENCLAW_SESSION_KEY || "toc:watcher";
 const dryRun = String(process.env.ODIN_DRY_RUN || "true").toLowerCase() !== "false";
 const minimumSeverity = String(process.env.ODIN_MIN_SEVERITY || "amber").toLowerCase();
 const duplicateWindowHours = Math.max(1, Number(process.env.ODIN_DUPLICATE_WINDOW_HOURS) || 24);
@@ -134,7 +135,8 @@ async function askLocalOdin(prompt) {
   if (!openClawToken) throw new Error("OPENCLAW_GATEWAY_TOKEN is missing. Keep it on the AI PC only.");
 
   const response = await postJson(`${openClawUrl}/v1/chat/completions`, {
-    Authorization: `Bearer ${openClawToken}`
+    Authorization: `Bearer ${openClawToken}`,
+    "x-openclaw-session-key": openClawSessionKey
   }, {
     model: openClawModel,
     messages: [

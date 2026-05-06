@@ -19,6 +19,7 @@ This keeps the AI PC private. TOC does not call into the Odin PC.
 ```text
 ODIN_API_KEY=<TOC-side Odin API key>
 OPENCLAW_GATEWAY_TOKEN=<local OpenClaw token>
+OPENCLAW_SESSION_KEY=toc:watcher
 ```
 
 4. Keep `ODIN_DRY_RUN=true` for the first test.
@@ -44,10 +45,21 @@ ODIN_DRY_RUN=false
 
 - Odin can read TOC snapshot data.
 - Odin can create pending recommendations only.
+- Odin uses the configured `OPENCLAW_SESSION_KEY` so watcher analysis has a stable memory thread.
 - Duplicate recommendations are skipped when the same pending title already exists inside the configured duplicate window.
 - Odin cannot approve, reject, dismiss, delete, close, reset passwords, change users, or send external messages from TOC.
 - Telegram and Twilio alerts should be handled on the AI PC side after Odin decides an issue is important.
 - Every recommendation written to TOC is logged and still needs human review.
+
+## OpenClaw Gateway Requirement
+
+The watcher calls:
+
+```text
+POST http://127.0.0.1:18789/v1/chat/completions
+```
+
+If that returns `404`, enable the OpenAI-compatible chat completions endpoint in OpenClaw Gateway and restart it.
 
 ## Production Rhythm Later
 
