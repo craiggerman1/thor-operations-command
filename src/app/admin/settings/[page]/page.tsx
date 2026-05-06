@@ -18,6 +18,7 @@ import { AdminStockCatalogManager } from "@/components/AdminStockCatalogManager"
 import { AdminTodoManager } from "@/components/AdminTodoManager";
 import { DirectorBroadcastControls, UrgentBroadcastControls } from "@/components/UrgentBroadcast";
 import { OperationsNewsControls } from "@/components/OperationsNewsControls";
+import { AdminAuditTrail } from "@/components/AdminAuditTrail";
 import { NationalActionRequests } from "@/components/NationalActionRequests";
 import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
 import { adminSettingStateDescriptions, adminSettingStateLabels, pageSettings } from "@/lib/admin-settings";
@@ -52,6 +53,9 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
           <>
             <Panel wide eyebrow="Access control" title="Register users, access levels and region responsibility">
               <AdminAccessManager />
+            </Panel>
+            <Panel wide eyebrow="Audit trail" title="Odin, security and admin activity">
+              <AdminAuditTrail />
             </Panel>
             <Panel wide eyebrow="Guidance controls" title="Page hints">
               <AdminHintControls />

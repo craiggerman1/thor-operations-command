@@ -255,47 +255,50 @@ export function AdminStaffManager() {
                   <Tag tone={person.inductions.eligibleSites.length ? "green" : "amber"}>{person.inductions.eligibleSites.length} inductions</Tag>
                 </div>
               </div>
-              <div className="admin-action-grid">
-                <label><span>Name</span><input value={personDraft.name} onChange={(event) => updateEditDraft(person.id, { name: event.target.value })} /></label>
-                <label><span>Preferred name</span><input value={personDraft.preferredName} onChange={(event) => updateEditDraft(person.id, { preferredName: event.target.value })} /></label>
-                <label><span>Role</span><input value={personDraft.role} onChange={(event) => updateEditDraft(person.id, { role: event.target.value })} /></label>
-                <label>
-                  <span>Status</span>
-                  <select value={personDraft.status} onChange={(event) => updateEditDraft(person.id, { status: event.target.value as StaffDraft["status"] })}>
-                    <option value="active">Active</option>
-                    <option value="watch">Watch</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Primary region</span>
-                  <select value={personDraft.primaryRegion} onChange={(event) => updateEditDraft(person.id, { primaryRegion: event.target.value })}>
-                    {staffRegions.map((region) => <option key={region}>{region}</option>)}
-                  </select>
-                </label>
-                <label><span>Skills</span><input value={personDraft.skills} onChange={(event) => updateEditDraft(person.id, { skills: event.target.value })} /></label>
-                <label><span>Availability sheet name</span><input value={personDraft.availabilitySheetName} onChange={(event) => updateEditDraft(person.id, { availabilitySheetName: event.target.value })} /></label>
-                <label><span>Induction sheet name</span><input value={personDraft.inductionSheetName} onChange={(event) => updateEditDraft(person.id, { inductionSheetName: event.target.value })} /></label>
-                <label><span>Mobile</span><input value={personDraft.mobile} onChange={(event) => updateEditDraft(person.id, { mobile: event.target.value })} /></label>
-                <label><span>WhatsApp</span><input value={personDraft.whatsapp} onChange={(event) => updateEditDraft(person.id, { whatsapp: event.target.value })} /></label>
-              </div>
-              <fieldset>
-                <legend>Assigned regions</legend>
-                {staffRegions.map((region) => (
-                  <label key={region}>
-                    <input checked={personDraft.regions.includes(region)} type="checkbox" onChange={() => updateEditDraft(person.id, { regions: toggleRegion(personDraft.regions, region) })} /> {region}
+              <details className="admin-staff-details">
+                <summary>Edit staff details</summary>
+                <div className="admin-action-grid">
+                  <label><span>Name</span><input value={personDraft.name} onChange={(event) => updateEditDraft(person.id, { name: event.target.value })} /></label>
+                  <label><span>Preferred name</span><input value={personDraft.preferredName} onChange={(event) => updateEditDraft(person.id, { preferredName: event.target.value })} /></label>
+                  <label><span>Role</span><input value={personDraft.role} onChange={(event) => updateEditDraft(person.id, { role: event.target.value })} /></label>
+                  <label>
+                    <span>Status</span>
+                    <select value={personDraft.status} onChange={(event) => updateEditDraft(person.id, { status: event.target.value as StaffDraft["status"] })}>
+                      <option value="active">Active</option>
+                      <option value="watch">Watch</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
                   </label>
-                ))}
-              </fieldset>
-              <label><span>Reliability/status notes</span><textarea value={personDraft.reliabilityNotes} onChange={(event) => updateEditDraft(person.id, { reliabilityNotes: event.target.value })} /></label>
-              <label className="admin-checkbox-row">
-                <input type="checkbox" checked={personDraft.contactVisibleToOdin} onChange={(event) => updateEditDraft(person.id, { contactVisibleToOdin: event.target.checked })} />
-                <span>Allow Odin service to read protected contact fields</span>
-              </label>
-              <div className="admin-action-controls">
-                <button type="button" onClick={() => saveStaff(person)} disabled={isSaving}>Save Staff Entity</button>
-                <button className="danger-button" type="button" onClick={() => deleteStaff(person)} disabled={isSaving}>Delete Staff Entity</button>
-              </div>
+                  <label>
+                    <span>Primary region</span>
+                    <select value={personDraft.primaryRegion} onChange={(event) => updateEditDraft(person.id, { primaryRegion: event.target.value })}>
+                      {staffRegions.map((region) => <option key={region}>{region}</option>)}
+                    </select>
+                  </label>
+                  <label><span>Skills</span><input value={personDraft.skills} onChange={(event) => updateEditDraft(person.id, { skills: event.target.value })} /></label>
+                  <label><span>Availability sheet name</span><input value={personDraft.availabilitySheetName} onChange={(event) => updateEditDraft(person.id, { availabilitySheetName: event.target.value })} /></label>
+                  <label><span>Induction sheet name</span><input value={personDraft.inductionSheetName} onChange={(event) => updateEditDraft(person.id, { inductionSheetName: event.target.value })} /></label>
+                  <label><span>Mobile</span><input value={personDraft.mobile} onChange={(event) => updateEditDraft(person.id, { mobile: event.target.value })} /></label>
+                  <label><span>WhatsApp</span><input value={personDraft.whatsapp} onChange={(event) => updateEditDraft(person.id, { whatsapp: event.target.value })} /></label>
+                </div>
+                <fieldset>
+                  <legend>Assigned regions</legend>
+                  {staffRegions.map((region) => (
+                    <label key={region}>
+                      <input checked={personDraft.regions.includes(region)} type="checkbox" onChange={() => updateEditDraft(person.id, { regions: toggleRegion(personDraft.regions, region) })} /> {region}
+                    </label>
+                  ))}
+                </fieldset>
+                <label><span>Reliability/status notes</span><textarea value={personDraft.reliabilityNotes} onChange={(event) => updateEditDraft(person.id, { reliabilityNotes: event.target.value })} /></label>
+                <label className="admin-checkbox-row">
+                  <input type="checkbox" checked={personDraft.contactVisibleToOdin} onChange={(event) => updateEditDraft(person.id, { contactVisibleToOdin: event.target.checked })} />
+                  <span>Allow Odin service to read protected contact fields</span>
+                </label>
+                <div className="admin-action-controls">
+                  <button type="button" onClick={() => saveStaff(person)} disabled={isSaving}>Save Staff Entity</button>
+                  <button className="danger-button" type="button" onClick={() => deleteStaff(person)} disabled={isSaving}>Delete Staff Entity</button>
+                </div>
+              </details>
             </article>
           );
         })}
