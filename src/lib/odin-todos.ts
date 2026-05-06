@@ -1,5 +1,6 @@
 import { logTocAudit } from "@/lib/audit";
 import { normaliseOdinTargetRegions } from "@/lib/odin-actions";
+import { buildOdinOperationalContext, saveOdinOperationalMemory } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import type { TocAuthenticatedUser } from "@/lib/toc-auth";
 
@@ -122,14 +123,41 @@ export async function handleOdinTodoItems(input: OdinTodoInput) {
     if (error) throw error;
 
     const createdTodoIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
+    const ownership = targetRegions.map((region, index) => ({
+      todoId: createdTodoIds[index],
+      region,
+      ...buildOdinOperationalContext({
+        payload: input.payload,
+        destination: "todos",
+        region,
+        title,
+        sourcePage: "To Do",
+        severity: input.payload.important === false ? "blue" : "amber",
+        priority: input.payload.important === false ? "normal" : "high",
+        dueAt: dueToIso(input.payload.dueDate || input.payload.dueAt)
+      })
+    }));
     await logTocAudit({
       actor: input.actor,
       action: "odin.todo.direct_create",
       entityTable: "todo_items",
       entityId: createdTodoIds[0],
       scope: targetRegions.join(", "),
-      details: { title, targetRegions, createdTodoIds, actorType: input.actorKind }
+      details: { title, targetRegions, createdTodoIds, ownership, actorType: input.actorKind }
     });
+
+    await Promise.all(ownership.map((context) => context.todoId
+      ? saveOdinOperationalMemory({
+        context,
+        sourceType: "todo_item",
+        sourceId: context.todoId,
+        region: context.region,
+        title,
+        summary: "Odin-created shared To Do reminder.",
+        lastResponse: { createdBy: "odin" }
+      })
+      : Promise.resolve()
+    ));
 
     return { action: "create", createdTodoIds, count: createdTodoIds.length, targetRegions };
   }

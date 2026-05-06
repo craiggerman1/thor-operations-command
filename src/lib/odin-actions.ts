@@ -1,6 +1,7 @@
 import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import type { TocAuthenticatedUser } from "@/lib/toc-auth";
+import { buildOdinOperationalContext, saveOdinOperationalMemory } from "@/lib/odin-operational-context";
 
 type RegionRow = {
   id: string;
@@ -127,6 +128,20 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
   if (insertError) throw insertError;
 
   const createdActionIds = ((createdActions as Array<{ id: string }> | null) || []).map((row) => row.id);
+  const operationalContexts = targetRegions.map((region, index) => ({
+    actionId: createdActionIds[index],
+    region: region.name,
+    ...buildOdinOperationalContext({
+      payload,
+      destination: "actions",
+      region: region.name,
+      title,
+      sourcePage,
+      severity: String(payload.severity || (priority === "urgent" ? "red" : "amber")),
+      priority,
+      dueAt
+    })
+  }));
   const odinItemPayload = {
     targetRegions: targetRegions.map((region) => region.name),
     directiveType,
@@ -134,7 +149,8 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     sourcePage,
     dueDate: payload.dueDate || payload.dueAt || null,
     createdActionIds,
-    directIssue: true
+    directIssue: true,
+    ownership: operationalContexts
   };
 
   const { data: odinItem, error: odinError } = await supabase
@@ -173,9 +189,23 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
       targetRegions: targetRegions.map((region) => region.name),
       createdActionIds,
       odinItemId: odinItem.id,
+      ownership: operationalContexts,
       actorType: input.actorKind
     }
   });
+
+  await Promise.all(operationalContexts.map((context) => context.actionId
+    ? saveOdinOperationalMemory({
+      context,
+      sourceType: "action_item",
+      sourceId: context.actionId,
+      region: context.region,
+      title,
+      summary: detail,
+      lastResponse: { createdBy: "odin", odinItemId: odinItem.id }
+    })
+    : Promise.resolve()
+  ));
 
   return {
     createdActionIds,

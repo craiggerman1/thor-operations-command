@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { odinDueToIso, odinIdsFromPayload, odinNumber, odinOperation, odinRegionId } from "@/lib/odin-api-utils";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
+import { buildOdinOperationalContext, saveOdinOperationalMemory } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type EquipmentAssetRow = {
@@ -119,7 +120,27 @@ export async function POST(request: Request) {
 
       if (error) throw error;
       const actionId = await syncLinkedAction(data as EquipmentAssetRow);
-      await logTocAudit({ actor, action: "odin.equipment.create", entityTable: "equipment_assets", entityId: data.id, details: { assetName, linkedActionId: actionId, actorType: permission.kind } });
+      const regionName = String(payload.region || "National");
+      const operationalContext = buildOdinOperationalContext({
+        payload: { ...payload, assetName },
+        destination: "equipment",
+        region: regionName,
+        title: assetName,
+        sourcePage: "Equipment Servicing",
+        severity: String(payload.severity || (isRiskStatus(String(payload.status || "")) ? "amber" : "blue")),
+        priority: String(payload.priority || "normal"),
+        dueAt: null
+      });
+      await logTocAudit({ actor, action: "odin.equipment.create", entityTable: "equipment_assets", entityId: data.id, details: { assetName, linkedActionId: actionId, ownership: operationalContext, actorType: permission.kind } });
+      await saveOdinOperationalMemory({
+        context: operationalContext,
+        sourceType: "equipment_asset",
+        sourceId: data.id,
+        region: regionName,
+        title: assetName,
+        summary: String(payload.serviceNote || payload.note || "Odin-created equipment servicing record."),
+        lastResponse: { linkedActionId: actionId, createdBy: "odin" }
+      });
       return NextResponse.json({ connected: true, action: "create", createdAssetIds: [data.id], linkedActionIds: actionId ? [actionId] : [], count: 1 });
     }
 

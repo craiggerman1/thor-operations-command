@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { odinDueToIso, odinIdsFromPayload, odinOperation, odinRegionId } from "@/lib/odin-api-utils";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
+import { buildOdinOperationalContext, saveOdinOperationalMemory } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 function normaliseStatus(value: unknown) {
@@ -87,6 +88,18 @@ export async function POST(request: Request) {
 
       if (registerError) throw registerError;
 
+      const regionName = String(payload.region || payload.ownerScope || "National");
+      const operationalContext = buildOdinOperationalContext({
+        payload,
+        destination: "compliance",
+        region: regionName,
+        title,
+        sourcePage: "Compliance",
+        severity: payload.severity === "blue" ? "blue" : "red",
+        priority: normalisePriority(payload.priority),
+        dueAt
+      });
+
       const { data: actionItem, error: actionError } = await supabase
         .from("action_items")
         .insert({
@@ -115,7 +128,16 @@ export async function POST(request: Request) {
         action: "odin.compliance.create",
         entityTable: "compliance_items",
         entityId: registerItem.id,
-        details: { actionItemId: actionItem.id, title, actorType: permission.kind }
+        details: { actionItemId: actionItem.id, title, ownership: operationalContext, actorType: permission.kind }
+      });
+      await saveOdinOperationalMemory({
+        context: operationalContext,
+        sourceType: "compliance_item",
+        sourceId: registerItem.id,
+        region: regionName,
+        title,
+        summary: detail,
+        lastResponse: { linkedActionId: actionItem.id, createdBy: "odin" }
       });
 
       return NextResponse.json({ connected: true, action: "create", createdComplianceIds: [registerItem.id], createdActionIds: [actionItem.id], count: 1 });

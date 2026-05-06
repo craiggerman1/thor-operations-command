@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
+import { buildOdinOperationalContext, odinDedupeKey } from "@/lib/odin-operational-context";
 
 const snapshotLimit = 80;
 const dueSoonDays = 3;
@@ -87,12 +88,6 @@ function severityForStock(row: SnapshotRow) {
   return "blue";
 }
 
-function dedupeKey(parts: Array<unknown>) {
-  return parts
-    .map((part) => String(part || "none").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))
-    .join(":");
-}
-
 function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
   const region = regionName(row);
   const id = String(row.id || "");
@@ -108,6 +103,16 @@ function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
     : entityType === "stock_order"
     ? severityForStock(row)
     : String(row.severity || "blue");
+  const operationalContext = buildOdinOperationalContext({
+    payload: row,
+    destination: String(source || entityType),
+    region,
+    title: String(title || "Untitled TOC item"),
+    sourcePage: String(source || entityType),
+    severity,
+    priority: typeof row.priority === "string" ? row.priority : null,
+    dueAt: due ? String(due) : null
+  });
 
   return {
     id,
@@ -120,7 +125,16 @@ function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
     source,
     href: entityType === "action_item" ? `/actions/${id}` : `/api/odin/context/${entityType}/${id}`,
     contextEndpoint: `/api/odin/context/${entityType}/${id}`,
-    dedupeKey: dedupeKey([region, entityType, source, title, due]),
+    dedupeKey: operationalContext.dedupeKey || odinDedupeKey([region, entityType, source, title, due]),
+    owner: operationalContext.owner,
+    ownerRegion: operationalContext.ownerRegion,
+    visibility: operationalContext.visibility,
+    escalationPath: operationalContext.escalationPath,
+    escalationLevel: operationalContext.escalationLevel,
+    interruptCraig: operationalContext.interruptCraig,
+    entity: operationalContext.entity,
+    issueType: operationalContext.issueType,
+    category: operationalContext.category,
     isOverdue: isPastDue(due, generatedAt),
     isDueSoon: isDueSoon(due, generatedAt)
   };
@@ -160,6 +174,20 @@ function countBySeverity(entityLinks: ReturnType<typeof buildEntityLinks>) {
     lookup[link.severity] = (lookup[link.severity] || 0) + 1;
     return lookup;
   }, { red: 0, amber: 0, blue: 0 });
+}
+
+function countByOwner(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  return entityLinks.reduce<Record<string, number>>((lookup, link) => {
+    lookup[link.owner] = (lookup[link.owner] || 0) + 1;
+    return lookup;
+  }, {});
+}
+
+function countByEscalation(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  return entityLinks.reduce<Record<string, number>>((lookup, link) => {
+    lookup[link.escalationLevel] = (lookup[link.escalationLevel] || 0) + 1;
+    return lookup;
+  }, { none: 0, watch: 0, national: 0, craig: 0 });
 }
 
 async function readRows(input: {
@@ -394,6 +422,8 @@ export async function GET(request: Request) {
       totalOpenWork: entityLinks.length,
       openBySeverity: countBySeverity(entityLinks),
       openByRegion: countByRegion(entityLinks),
+      openByOwner: countByOwner(entityLinks),
+      openByEscalation: countByEscalation(entityLinks),
       overdueCount: overdueItems.length,
       dueSoonCount: dueSoonItems.length,
       redCount: redItems.length,
@@ -414,6 +444,7 @@ export async function GET(request: Request) {
       dueSoonItems,
       duplicateIssueGroups,
       tomorrowJobs: calendarJobs.rows.filter((row) => row.job_date === dateOnly(addDays(generatedAt, 1))),
+      ownerQueue: entityLinks.filter((item) => item.escalationLevel !== "none"),
       recentlyCompleted: recentCompleted.rows
     },
     entityLinks,

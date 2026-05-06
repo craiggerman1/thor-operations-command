@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { odinIdsFromPayload, odinOperation } from "@/lib/odin-api-utils";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
+import { buildOdinOperationalContext, saveOdinOperationalMemory } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 function normaliseSeverity(value: unknown) {
@@ -97,7 +98,27 @@ export async function POST(request: Request) {
       }).select("id").single();
 
       if (error) throw error;
-      await logTocAudit({ actor, action: "odin.job.create", entityTable: "calendar_jobs", entityId: data.id, details: { jobDate, jobTitle, actorType: permission.kind } });
+      const regionName = String(payload.location || payload.region || "National");
+      const operationalContext = buildOdinOperationalContext({
+        payload: { ...payload, job: jobTitle },
+        destination: "jobs",
+        region: regionName,
+        title: jobTitle,
+        sourcePage: "Calendar",
+        severity: normaliseSeverity(payload.severity),
+        priority: payload.priority ? String(payload.priority) : null,
+        dueAt: `${jobDate}T${String(payload.time || "07:00")}:00+10:00`
+      });
+      await logTocAudit({ actor, action: "odin.job.create", entityTable: "calendar_jobs", entityId: data.id, details: { jobDate, jobTitle, ownership: operationalContext, actorType: permission.kind } });
+      await saveOdinOperationalMemory({
+        context: operationalContext,
+        sourceType: "calendar_job",
+        sourceId: data.id,
+        region: regionName,
+        title: jobTitle,
+        summary: String(payload.notes || payload.note || "Odin-created calendar job record."),
+        lastResponse: { createdBy: "odin" }
+      });
       return NextResponse.json({ connected: true, action: "create", createdJobIds: [data.id], count: 1 });
     }
 

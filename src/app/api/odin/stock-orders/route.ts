@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { odinIdsFromPayload, odinOperation, odinRegionId } from "@/lib/odin-api-utils";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
+import { buildOdinOperationalContext, saveOdinOperationalMemory } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 function normaliseUrgency(value: unknown) {
@@ -85,7 +86,28 @@ export async function POST(request: Request) {
 
       if (error) throw error;
 
-      await logTocAudit({ actor, action: "odin.stock_order.create", entityTable: "stock_orders", entityId: data.id, details: { item: payload.item || payload.itemName, region: payload.region, actorType: permission.kind } });
+      const itemName = String(payload.item || payload.itemName || "Stock order");
+      const regionName = String(payload.region || "National");
+      const operationalContext = buildOdinOperationalContext({
+        payload: { ...payload, itemName },
+        destination: "stock_orders",
+        region: regionName,
+        title: itemName,
+        sourcePage: "Stock Orders",
+        severity: normaliseUrgency(payload.urgency) === "urgent" ? "amber" : "blue",
+        priority: normaliseUrgency(payload.urgency),
+        dueAt: null
+      });
+      await logTocAudit({ actor, action: "odin.stock_order.create", entityTable: "stock_orders", entityId: data.id, details: { item: itemName, region: regionName, ownership: operationalContext, actorType: permission.kind } });
+      await saveOdinOperationalMemory({
+        context: operationalContext,
+        sourceType: "stock_order",
+        sourceId: data.id,
+        region: regionName,
+        title: itemName,
+        summary: String(payload.note || "Odin-created stock order request."),
+        lastResponse: { createdBy: "odin" }
+      });
       return NextResponse.json({ connected: true, action: "create", createdStockOrderIds: [data.id], count: 1 });
     }
 
