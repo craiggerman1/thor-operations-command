@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
+    "prebuild": "node scripts/clean-next.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
