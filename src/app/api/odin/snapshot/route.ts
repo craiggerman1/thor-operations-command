@@ -117,10 +117,15 @@ export async function GET(request: Request) {
     instructions: {
       actionWriteEndpoint: "/api/odin/actions",
       todoReminderEndpoint: "/api/odin/todos",
+      complianceWriteEndpoint: "/api/odin/compliance",
+      equipmentWriteEndpoint: "/api/odin/equipment",
+      stockOrderWriteEndpoint: "/api/odin/stock-orders",
+      notesWriteEndpoint: "/api/odin/notes",
+      entityContextEndpoint: "/api/odin/context/:entityType/:id",
       recommendationWriteEndpoint: "/api/odin/items",
-      allowedWriteActions: ["direct_action_create", "direct_action_update", "direct_action_close", "direct_action_delete", "direct_action_duplicate_cleanup", "direct_todo_create", "direct_todo_update", "direct_todo_complete", "direct_todo_delete", "create_recommendation"],
+      allowedWriteActions: ["direct_action_create", "direct_action_update", "direct_action_close", "direct_action_delete", "direct_action_duplicate_cleanup", "direct_todo_create", "direct_todo_update", "direct_todo_complete", "direct_todo_delete", "direct_compliance_lifecycle", "direct_equipment_lifecycle", "direct_stock_order_lifecycle", "direct_note_memory", "create_recommendation"],
       actionCreationApprovalRequired: false,
-      note: "Use /api/odin/actions for manager action items. If itemType=todo is supplied to /api/odin/actions, TOC routes it into the To Do system instead of Action Centre. /api/odin/todos also supports create, update, complete, close, clear, done and delete by id/ids. /api/odin/items is for non-action recommendations and audit memory only.",
+      note: "Use the specific Odin endpoint for the destination: actions, todos, compliance, equipment, stock-orders, notes or context. If itemType=todo is supplied to /api/odin/actions, TOC routes it into the To Do system instead of Action Centre. Non-create lifecycle operations require id/ids. /api/odin/items is for non-action recommendations and audit memory only.",
       prohibitedActions: ["send_message", "change_user", "change_password", "change_role", "admin_settings"]
     },
     sections

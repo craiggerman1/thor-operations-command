@@ -237,6 +237,28 @@ To Do behavior:
 }
 ```
 
+## Odin Destination API Contract
+
+Use the specific destination route whenever possible. Every write requires `x-odin-api-key`, runs server-side only, and writes an audit entry.
+
+| Destination | Endpoint | Lifecycle |
+| --- | --- | --- |
+| Action Centre | `/api/odin/actions` | `create`, `update`, `close`, `complete`, `clear`, `done`, `delete`, `delete_duplicates` |
+| To Do | `/api/odin/todos` | `create`, `update`, `complete`, `close`, `clear`, `done`, `delete` |
+| Compliance | `/api/odin/compliance` | `create`, `update`, `complete`, `close`, `clear`, `done`, `delete` |
+| Equipment servicing | `/api/odin/equipment` | `create`, `update`, `complete`, `close`, `clear`, `done`, `delete` |
+| Stock orders | `/api/odin/stock-orders` | `create`, `update`, `complete`, `close`, `clear`, `done`, `delete` |
+| Operational notes | `/api/odin/notes` | `create`, `update`, `delete` |
+| Entity context | `/api/odin/context/:entityType/:id` | `GET` only |
+
+For entity context, supported `entityType` values include:
+
+```text
+action, compliance, equipment, stock_order, todo, national_request, calendar_job, productivity_site
+```
+
+Use this before writing if Odin needs reliable context for a specific TOC record.
+
 ## Security Rules
 
 - Odin can create recommendations and direct Action Centre items when explicitly instructed.
