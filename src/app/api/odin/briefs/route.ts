@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
+import { handleOdinTodoItems } from "@/lib/odin-todos";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -19,8 +20,15 @@ type BriefPriorityItem = {
   dedupeKey?: string;
   entityType?: string;
   entityId?: string;
+  destination?: string;
+  item?: string;
+  assetName?: string;
+  assetType?: string;
+  quantity?: number;
+  urgency?: string;
   autoAction?: boolean;
   linkedActionIds?: string[];
+  destinationIds?: string[];
   actionHref?: string;
 };
 
@@ -100,6 +108,7 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       dedupeKey: gap.dedupeKey,
       entityType: gap.entityType,
       entityId: gap.entityId,
+      destination: "actions",
       autoAction: true
     })),
     ...(nationalRequests ? [{ title: "National requests awaiting review", region: "National", severity: "amber", recommendedAction: "Review National Requests queue.", href: "/national-requests", autoAction: false }] : []),
@@ -129,6 +138,7 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
 }
 
 async function createBriefFollowThroughActions(input: {
+  request: Request;
   brief: {
     briefDate: string;
     briefType: BriefType;
@@ -147,47 +157,28 @@ async function createBriefFollowThroughActions(input: {
       continue;
     }
 
-    const result = await createOdinDirectActionItems({
-      actorKind: input.actorKind,
-      actor: input.actor,
-      payload: {
-        action: "create",
-        title: item.title,
-        detail: item.recommendedAction || "Odin daily rhythm raised this priority for manager close-out.",
-        summary: item.recommendedAction || item.title,
-        region: item.region || input.brief.region,
-        targetRegions: [item.region || input.brief.region],
-        priority: item.severity === "red" ? "urgent" : "high",
-        severity: item.severity || "amber",
-        directiveType: item.severity === "red" ? "National Ops Directive" : "Scheduled Directive",
-        sourcePage: "Action Centre",
-        sourceType: "odin_daily_brief",
-        issueType: "daily-brief-priority",
-        category: "daily-rhythm",
-        dueAt: item.dueAt,
-        dueDate: item.dueAt,
-        entityType: item.entityType || "daily_brief_priority",
-        entityId: item.entityId || item.dedupeKey || item.title,
-        dedupeKey: item.dedupeKey || `daily-brief:${input.brief.briefDate}:${input.brief.briefType}:${item.region || input.brief.region}:${item.title}`
-      }
-    });
-    const linkedActionIds = [
-      ...((result.createdActionIds || []) as string[]),
-      ...((result.linkedActionIds || []) as string[])
-    ];
-    const actionHref = linkedActionIds[0] ? `/actions/${linkedActionIds[0]}` : item.href || "/actions";
+    const destination = normaliseBriefDestination(item);
+    const payload = briefPriorityPayload(item, input.brief, destination);
+    const result = await createDestinationRecord(input.request, destination, payload, input.actorKind, input.actor);
+    const linkedActionIds = destinationResultActionIds(result);
+    const destinationIds = destinationResultIds(result, destination);
+    const actionHref = linkedActionIds[0] ? `/actions/${linkedActionIds[0]}` : destinationHref(destination, destinationIds[0], item.href);
 
     actionResults.push({
       title: item.title,
-      createdActionIds: result.createdActionIds || [],
-      linkedActionIds: result.linkedActionIds || [],
-      skippedDuplicateCount: result.skippedDuplicateCount || 0
+      destination,
+      createdActionIds: arrayOfStrings(result.createdActionIds),
+      linkedActionIds: arrayOfStrings(result.linkedActionIds),
+      destinationIds,
+      skippedDuplicateCount: Number(result.skippedDuplicateCount || 0)
     });
     updatedPriorityItems.push({
       ...item,
+      destination,
       href: actionHref,
       actionHref,
       linkedActionIds,
+      destinationIds,
       actionBacked: Boolean(linkedActionIds.length)
     });
   }
@@ -198,6 +189,136 @@ async function createBriefFollowThroughActions(input: {
     createdCount: actionResults.reduce((total, result) => total + result.createdActionIds.length, 0),
     linkedCount: actionResults.reduce((total, result) => total + result.linkedActionIds.length, 0)
   };
+}
+
+function normaliseBriefDestination(item: BriefPriorityItem) {
+  const explicit = String(item.destination || "").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  if (["actions", "todos", "compliance", "equipment", "stock_orders", "jobs", "notes"].includes(explicit)) return explicit;
+
+  const text = `${item.title || ""} ${item.recommendedAction || ""} ${item.entityType || ""}`.toLowerCase();
+  if (/\b(compliance|safety|induction|first aid|audit)\b/.test(text)) return "compliance";
+  if (/\b(equipment|vehicle|truck|ute|unit|pony|generator|honda|repair|service)\b/.test(text)) return "equipment";
+  if (/\b(stock|chemical|ppe|consumable|supply|order|glove|bottle|hose|battery)\b/.test(text)) return "stock_orders";
+  if (/\b(todo|to do|remind|reminder|checklist)\b/.test(text)) return "todos";
+  if (/\b(job|jobsheet|photo|checklist|calendar|roster)\b/.test(text)) return "jobs";
+  return "actions";
+}
+
+function briefPriorityPayload(item: BriefPriorityItem, brief: { briefDate: string; briefType: BriefType; region: string }, destination: string) {
+  const region = item.region || brief.region;
+  const detail = item.recommendedAction || "Odin daily rhythm raised this priority for manager close-out.";
+  const base = {
+    action: "create",
+    title: item.title,
+    detail,
+    summary: detail,
+    region,
+    targetRegions: [region],
+    priority: item.severity === "red" ? "urgent" : "high",
+    severity: item.severity || "amber",
+    directiveType: item.severity === "red" ? "National Ops Directive" : "Scheduled Directive",
+    sourcePage: sourcePageForDestination(destination),
+    sourceType: "odin_daily_brief",
+    issueType: "daily-brief-priority",
+    category: "daily-rhythm",
+    dueAt: item.dueAt,
+    dueDate: item.dueAt,
+    entityType: item.entityType || "daily_brief_priority",
+    entityId: item.entityId || item.dedupeKey || item.title,
+    dedupeKey: item.dedupeKey || `daily-brief:${brief.briefDate}:${brief.briefType}:${region}:${item.title}`
+  };
+
+  if (destination === "todos") return { ...base, itemType: "todo", text: item.title, important: item.severity !== "blue" };
+  if (destination === "equipment") return { ...base, assetName: item.assetName || item.entityId || item.title, assetType: item.assetType || "Wash asset", status: item.severity === "red" ? "Repair / stop use" : "Watch", serviceNote: detail };
+  if (destination === "stock_orders") return { ...base, item: item.item || item.title, itemName: item.item || item.title, quantity: item.quantity || 1, urgency: item.urgency || (item.severity === "red" ? "urgent" : "normal"), note: detail };
+  if (destination === "jobs") return { ...base, job: item.title, jobDate: brief.briefDate, date: brief.briefDate, location: region, site: item.entityId || "Unassigned site", notes: detail };
+  if (destination === "notes") return { ...base, note: detail, facts: { briefDate: brief.briefDate, briefType: brief.briefType, priorityItem: item } };
+  return base;
+}
+
+function sourcePageForDestination(destination: string) {
+  const map: Record<string, string> = {
+    actions: "Action Centre",
+    todos: "To Do",
+    compliance: "Compliance",
+    equipment: "Equipment Servicing",
+    stock_orders: "Stock Orders",
+    jobs: "Calendar",
+    notes: "Odin"
+  };
+  return map[destination] || "Action Centre";
+}
+
+async function createDestinationRecord(
+  request: Request,
+  destination: string,
+  payload: Record<string, unknown>,
+  actorKind: "odin" | "toc",
+  actor?: Parameters<typeof logTocAudit>[0]["actor"]
+): Promise<Record<string, unknown>> {
+  if (destination === "actions") {
+    return await createOdinDirectActionItems({ payload, actorKind, actor }) as Record<string, unknown>;
+  }
+  if (destination === "todos") {
+    return await handleOdinTodoItems({ payload, actorKind, actor }) as Record<string, unknown>;
+  }
+
+  const paths: Record<string, string> = {
+    compliance: "/api/odin/compliance",
+    equipment: "/api/odin/equipment",
+    stock_orders: "/api/odin/stock-orders",
+    jobs: "/api/odin/jobs",
+    notes: "/api/odin/notes"
+  };
+  const path = paths[destination] || "/api/odin/actions";
+  const origin = new URL(request.url).origin;
+  const response = await fetch(`${origin}${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-odin-api-key": process.env.ODIN_API_KEY || ""
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.connected === false) throw new Error(data.error || `Odin ${destination} follow-through failed.`);
+  return data as Record<string, unknown>;
+}
+
+function destinationResultActionIds(result: Record<string, unknown>) {
+  return [
+    ...arrayOfStrings(result.createdActionIds),
+    ...arrayOfStrings(result.linkedActionIds),
+    ...arrayOfStrings(result.updatedActionIds)
+  ];
+}
+
+function destinationResultIds(result: Record<string, unknown>, destination: string) {
+  const keys: Record<string, string[]> = {
+    actions: ["createdActionIds", "linkedActionIds"],
+    todos: ["createdTodoIds", "linkedTodoIds"],
+    compliance: ["createdComplianceIds", "updatedComplianceIds"],
+    equipment: ["createdAssetIds", "updatedAssetIds"],
+    stock_orders: ["createdStockOrderIds", "updatedStockOrderIds"],
+    jobs: ["createdJobIds", "updatedJobIds"],
+    notes: ["noteId", "noteIds"]
+  };
+  return (keys[destination] || []).flatMap((key) => arrayOfStrings(result[key]));
+}
+
+function arrayOfStrings(value: unknown) {
+  return (Array.isArray(value) ? value : value ? [value] : []).map((item) => String(item)).filter(Boolean);
+}
+
+function destinationHref(destination: string, id?: string, fallback = "/actions") {
+  if (destination === "actions" && id) return `/actions/${id}`;
+  if (destination === "compliance") return "/compliance";
+  if (destination === "equipment") return "/equipment-servicing";
+  if (destination === "stock_orders") return "/stock-orders";
+  if (destination === "todos") return "/todo";
+  if (destination === "jobs") return "/calendar";
+  if (destination === "notes") return "/home";
+  return fallback || "/actions";
 }
 
 function mapBriefRow(row: Record<string, unknown>) {
@@ -308,6 +429,7 @@ export async function POST(request: Request) {
   if (autoCreateActions && action === "generate" && Array.isArray(briefData.priorityItems) && briefData.priorityItems.length) {
     try {
       followThrough = await createBriefFollowThroughActions({
+        request,
         brief: {
           briefDate: briefData.briefDate,
           briefType: briefData.briefType,
