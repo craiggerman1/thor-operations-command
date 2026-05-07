@@ -41,7 +41,8 @@
 
 :root {
   --font-display: "Absolute Empire", Impact, Haettenschweiler, "Arial Black", sans-serif;
-  --font-sans: "Maven Pro", "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-heading: "Maven Pro", "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --ink: #101820;
   --muted: #5f6f7f;
   --line: #d7e0e7;
@@ -941,7 +942,7 @@ h1 {
 }
 
 h2 {
-  font-family: var(--font-sans);
+  font-family: var(--font-heading);
   color: #071726;
   font-size: 22px;
   line-height: 1.08;
@@ -1889,7 +1890,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .flow-heading h2 {
   max-width: 960px;
   color: #071726;
-  font-family: var(--font-sans);
+  font-family: var(--font-heading);
   font-size: 15px;
   letter-spacing: 0;
   line-height: 1.25;
@@ -5342,7 +5343,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 .calendar-expanded-job h3 {
   margin: 0 0 4px;
   color: #071726;
-  font-family: var(--font-sans);
+  font-family: var(--font-heading);
   font-size: 18px;
   letter-spacing: 0;
 }
