@@ -30,6 +30,8 @@ type BriefPriorityItem = {
   linkedActionIds?: string[];
   destinationIds?: string[];
   actionHref?: string;
+  followThroughStatus?: "created" | "linked" | "failed" | "skipped";
+  followThroughError?: string;
 };
 
 function dateOnly(date = new Date(), timeZone = "Australia/Brisbane") {
@@ -150,24 +152,51 @@ async function createBriefFollowThroughActions(input: {
 }) {
   const actionResults = [];
   const updatedPriorityItems = [];
+  let failureCount = 0;
 
   for (const item of input.brief.priorityItems) {
     if (item.autoAction === false || !item.title) {
-      updatedPriorityItems.push(item);
+      updatedPriorityItems.push({ ...item, followThroughStatus: "skipped" });
       continue;
     }
 
     const destination = normaliseBriefDestination(item);
     const payload = briefPriorityPayload(item, input.brief, destination);
-    const result = await createDestinationRecord(input.request, destination, payload, input.actorKind, input.actor);
+    let result: Record<string, unknown>;
+
+    try {
+      result = await createDestinationRecord(input.request, destination, payload, input.actorKind, input.actor);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Priority follow-through failed.";
+      failureCount += 1;
+      actionResults.push({
+        title: item.title,
+        destination,
+        createdActionIds: [],
+        linkedActionIds: [],
+        destinationIds: [],
+        skippedDuplicateCount: 0,
+        error: message
+      });
+      updatedPriorityItems.push({
+        ...item,
+        destination,
+        href: item.href || destinationHref(destination),
+        followThroughStatus: "failed",
+        followThroughError: message
+      });
+      continue;
+    }
+
+    const createdActionIds = arrayOfStrings(result.createdActionIds);
     const linkedActionIds = destinationResultActionIds(result);
     const destinationIds = destinationResultIds(result, destination);
     const actionHref = linkedActionIds[0] ? `/actions/${linkedActionIds[0]}` : destinationHref(destination, destinationIds[0], item.href);
-
+    const followThroughStatus = createdActionIds.length || destinationIds.length ? "created" : linkedActionIds.length ? "linked" : "skipped";
     actionResults.push({
       title: item.title,
       destination,
-      createdActionIds: arrayOfStrings(result.createdActionIds),
+      createdActionIds,
       linkedActionIds: arrayOfStrings(result.linkedActionIds),
       destinationIds,
       skippedDuplicateCount: Number(result.skippedDuplicateCount || 0)
@@ -179,7 +208,8 @@ async function createBriefFollowThroughActions(input: {
       actionHref,
       linkedActionIds,
       destinationIds,
-      actionBacked: Boolean(linkedActionIds.length)
+      actionBacked: Boolean(linkedActionIds.length),
+      followThroughStatus
     });
   }
 
@@ -187,7 +217,8 @@ async function createBriefFollowThroughActions(input: {
     priorityItems: updatedPriorityItems,
     actionResults,
     createdCount: actionResults.reduce((total, result) => total + result.createdActionIds.length, 0),
-    linkedCount: actionResults.reduce((total, result) => total + result.linkedActionIds.length, 0)
+    linkedCount: actionResults.reduce((total, result) => total + result.linkedActionIds.length, 0),
+    failureCount
   };
 }
 
@@ -447,7 +478,8 @@ export async function POST(request: Request) {
           metrics: {
             ...briefData.metrics,
             actionItemsCreated: followThrough.createdCount,
-            actionItemsLinked: followThrough.linkedCount
+            actionItemsLinked: followThrough.linkedCount,
+            followThroughFailures: followThrough.failureCount
           },
           updated_at: new Date().toISOString()
         })
@@ -473,6 +505,7 @@ export async function POST(request: Request) {
       actorType: permission.kind,
       followThroughCreated: followThrough?.createdCount || 0,
       followThroughLinked: followThrough?.linkedCount || 0,
+      followThroughFailures: followThrough?.failureCount || 0,
       followThroughError: followThroughError || undefined
     }
   });
