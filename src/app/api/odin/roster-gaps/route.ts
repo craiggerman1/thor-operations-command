@@ -4,6 +4,17 @@ import { logTocAudit } from "@/lib/audit";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 
+function actionDetailForGap(gap: Awaited<ReturnType<typeof buildOdinRosterGaps>>["gaps"][number] | null, fallbackDetail: string) {
+  if (!gap) return fallbackDetail;
+  const suggestions = gap.staffSuggestionNames?.length
+    ? ` Suggested staff: ${gap.staffSuggestionNames.slice(0, 5).join(", ")}.`
+    : "";
+  const coverage = typeof gap.requiredCrew === "number"
+    ? ` Crew visible: ${gap.assignedCrewCount || 0}/${gap.requiredCrew}.`
+    : "";
+  return `${gap.reason} ${gap.recommendedAction}${coverage}${suggestions}`.trim();
+}
+
 export async function GET(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
@@ -28,14 +39,15 @@ export async function POST(request: Request) {
 
   const actor = permission.kind === "toc" ? permission.user : undefined;
   const gaps = await buildOdinRosterGaps();
-  const gap = typeof payload.gapId === "string" ? gaps.gaps.find((item) => item.id === payload.gapId) : null;
+  const gap = typeof payload.gapId === "string" ? gaps.gaps.find((item) => item.id === payload.gapId) || null : null;
+  const detail = payload.detail || payload.recommendedAction || actionDetailForGap(gap, "Odin identified a roster gap requiring manager action.");
 
   const result = await createOdinDirectActionItems({
     actorKind: permission.kind,
     actor,
     payload: {
       title: payload.title || gap?.title || "Roster gap requires manager review",
-      detail: payload.detail || payload.recommendedAction || gap?.recommendedAction || "Odin identified a roster gap requiring manager action.",
+      detail,
       region: payload.region || gap?.region || "National",
       targetRegions: payload.targetRegions || [payload.region || gap?.region || "National"],
       dueAt: payload.dueAt || gap?.dueAt || null,
@@ -46,7 +58,8 @@ export async function POST(request: Request) {
       sourceType: "odin_roster_gap",
       entityType: gap?.entityType,
       entityId: gap?.entityId,
-      recommendedAction: payload.recommendedAction || gap?.recommendedAction
+      recommendedAction: payload.recommendedAction || gap?.recommendedAction,
+      staffSuggestions: gap?.staffSuggestionNames || []
     }
   });
 

@@ -330,7 +330,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.280</em>
+              <em>Build 0.281</em>
             </div>
           </div>
           <div className="topbar-actions">
