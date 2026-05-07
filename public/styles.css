@@ -3780,6 +3780,53 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
+.odin-rhythm-health {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid var(--green);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(236, 246, 249, 0.62)),
+    rgba(255, 255, 255, 0.76);
+}
+
+.odin-rhythm-health.amber {
+  border-left-color: var(--amber);
+}
+
+.odin-rhythm-health.red {
+  border-left-color: var(--red);
+}
+
+.odin-rhythm-health > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.odin-rhythm-health strong {
+  color: var(--blue);
+  font-size: 1.04rem;
+  line-height: 1.15;
+}
+
+.odin-rhythm-health small {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.odin-rhythm-warning {
+  grid-column: 1 / -1;
+  padding: 8px;
+  border: 1px solid rgba(200, 54, 54, 0.26);
+  border-radius: 6px;
+  background: rgba(255, 232, 230, 0.82);
+}
+
 .odin-rhythm-console > .admin-hint-message {
   grid-column: 1 / -1;
 }
@@ -7728,6 +7775,8 @@ body:not([data-access="admin"]) .admin-only-panel {
   .stock-layout,
   .stock-form,
   .chat-layout,
+  .odin-rhythm-health,
+  .odin-rhythm-console,
   .meeting-action-strip,
   .manager-meeting-grid,
   .meeting-note-form,

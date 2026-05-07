@@ -7,6 +7,8 @@ import { tocFetch } from "@/lib/toc-client-auth";
 
 type BriefType = "morning" | "midday" | "end_of_day";
 
+type OdinPriorityItem = { title?: string; region?: string; severity?: string; recommendedAction?: string; href?: string };
+
 type OdinBrief = {
   id: string;
   briefDate: string;
@@ -15,15 +17,15 @@ type OdinBrief = {
   title: string;
   summary: string;
   severity: "blue" | "amber" | "red";
-  priorityItems: Array<{ title?: string; region?: string; severity?: string; recommendedAction?: string; href?: string }>;
+  priorityItems: OdinPriorityItem[];
   metrics: Record<string, number>;
   updatedAt: string;
 };
 
-const rhythmTypes: Array<{ type: BriefType; label: string }> = [
-  { type: "morning", label: "Morning Brief" },
-  { type: "midday", label: "Midday Check" },
-  { type: "end_of_day", label: "End-of-Day Closeout" }
+const rhythmTypes: Array<{ type: BriefType; label: string; startHour: number; endHour: number }> = [
+  { type: "morning", label: "Morning Brief", startHour: 5, endHour: 10 },
+  { type: "midday", label: "Midday Check", startHour: 11, endHour: 14 },
+  { type: "end_of_day", label: "End-of-Day Closeout", startHour: 16, endHour: 21 }
 ];
 
 function getStoredScope() {
@@ -40,11 +42,61 @@ function latestByType(briefs: OdinBrief[], type: BriefType) {
   return briefs.find((brief) => brief.briefType === type);
 }
 
+function brisbaneNowParts() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Brisbane",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(new Date()).reduce((output, part) => {
+    output[part.type] = part.value;
+    return output;
+  }, {} as Record<string, string>);
+
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    hour: Number(parts.hour),
+    minute: Number(parts.minute)
+  };
+}
+
 function formatUpdated(value?: string) {
   if (!value) return "Not generated";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function todayBriefs(briefs: OdinBrief[]) {
+  const today = brisbaneNowParts().date;
+  return briefs.filter((brief) => brief.briefDate === today);
+}
+
+function rhythmHealth(briefs: OdinBrief[]) {
+  const now = brisbaneNowParts();
+  const todaysBriefs = todayBriefs(briefs);
+  const generatedTypes = new Set(todaysBriefs.map((brief) => brief.briefType));
+  const missed = rhythmTypes.filter((item) => now.hour >= item.endHour && !generatedTypes.has(item.type));
+  const activeWindow = rhythmTypes.find((item) => now.hour >= item.startHour && now.hour < item.endHour);
+  const nextExpected = activeWindow && !generatedTypes.has(activeWindow.type)
+    ? activeWindow
+    : rhythmTypes.find((item) => now.hour < item.startHour && !generatedTypes.has(item.type));
+  const lastBrief = [...briefs].sort((a, b) => Date.parse(b.updatedAt || "") - Date.parse(a.updatedAt || ""))[0];
+  const priorityItems = todaysBriefs.flatMap((brief) => brief.priorityItems || []);
+  const tone = missed.length ? "red" : nextExpected && activeWindow ? "amber" : "green";
+  const label = missed.length ? "Missed brief" : nextExpected && activeWindow ? "Due now" : "Healthy";
+
+  return { now, missed, activeWindow, nextExpected, lastBrief, priorityItems, tone, label };
+}
+
+function formatWindow(item?: { startHour: number; endHour: number; label: string }) {
+  if (!item) return "All due briefs complete";
+  const start = `${String(item.startHour).padStart(2, "0")}:00`;
+  const end = `${String(item.endHour).padStart(2, "0")}:00`;
+  return `${item.label} ${start}-${end}`;
 }
 
 export function OdinDailyRhythmPanel() {
@@ -111,8 +163,33 @@ export function OdinDailyRhythmPanel() {
 
   if (!isNationalScope) return null;
 
+  const health = rhythmHealth(briefs);
+
   return (
     <div className="odin-rhythm-console">
+      <section className={`odin-rhythm-health ${health.tone}`}>
+        <div>
+          <span className="eyebrow">Rhythm health</span>
+          <strong>{health.label}</strong>
+          <small>Last generated: {formatUpdated(health.lastBrief?.updatedAt)}</small>
+        </div>
+        <div>
+          <span className="eyebrow">Next expected</span>
+          <strong>{formatWindow(health.nextExpected)}</strong>
+          <small>Brisbane time {String(health.now.hour).padStart(2, "0")}:{String(health.now.minute).padStart(2, "0")}</small>
+        </div>
+        <div>
+          <span className="eyebrow">Priority links</span>
+          <strong>{health.priorityItems.length}</strong>
+          <small>{health.priorityItems.length ? "Linked items from today's briefs" : "No linked priorities today"}</small>
+        </div>
+        {health.missed.length ? (
+          <div className="odin-rhythm-warning">
+            <strong>Missed: {health.missed.map((item) => item.label).join(", ")}</strong>
+            <small>Use manual generation if the watcher was offline.</small>
+          </div>
+        ) : null}
+      </section>
       {rhythmTypes.map((item) => {
         const brief = latestByType(briefs, item.type);
         return (
