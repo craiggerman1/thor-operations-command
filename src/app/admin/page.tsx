@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 const groups: Array<{ title: string; detail: string; slugs: string[] }> = [
   {
     title: "Access And System",
-    detail: "Security, users, staff records, global messages and audit history.",
-    slugs: ["user-access", "staff-register", "messages", "audit-trail"]
+    detail: "Security, users, staff records, global messages, audit history and Odin data confidence.",
+    slugs: ["user-access", "staff-register", "messages", "audit-trail", "odin-confidence"]
   },
   {
     title: "Operations Flow",

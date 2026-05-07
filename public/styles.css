@@ -3720,6 +3720,183 @@ body:not([data-access="admin"]) .admin-only-panel {
   overflow-wrap: anywhere;
 }
 
+.odin-confidence-console {
+  display: grid;
+  gap: 14px;
+}
+
+.odin-confidence-toolbar,
+.odin-confidence-filter,
+.odin-confidence-section-head,
+.odin-confidence-issue-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.odin-confidence-toolbar strong,
+.odin-confidence-filter strong,
+.odin-confidence-section-head strong,
+.odin-confidence-issue strong {
+  display: block;
+  color: #071726;
+}
+
+.odin-confidence-toolbar small,
+.odin-confidence-filter small,
+.odin-confidence-section-head small,
+.odin-confidence-issue small,
+.odin-confidence-mini-list small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.odin-confidence-toolbar button,
+.odin-confidence-filter button {
+  min-height: 36px;
+  border: 1px solid rgba(13, 58, 87, 0.16);
+  border-radius: 6px;
+  padding: 0 12px;
+  background: #eef5fb;
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.odin-confidence-filter button.active {
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.odin-confidence-toolbar button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.odin-confidence-score-row,
+.odin-confidence-metrics,
+.odin-confidence-sections {
+  display: grid;
+  gap: 10px;
+}
+
+.odin-confidence-score-row {
+  grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr));
+}
+
+.odin-confidence-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.odin-confidence-sections {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.odin-confidence-score-row article,
+.odin-confidence-metrics article,
+.odin-confidence-section,
+.odin-confidence-issue {
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(239, 249, 252, 0.7)),
+    rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.odin-confidence-score-row article,
+.odin-confidence-metrics article,
+.odin-confidence-section {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.odin-confidence-score-row span,
+.odin-confidence-metrics span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.odin-confidence-score-row strong {
+  color: var(--blue);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.odin-confidence-score strong {
+  font-size: 42px;
+}
+
+.odin-confidence-score.green {
+  border-left: 6px solid var(--green);
+}
+
+.odin-confidence-score.amber {
+  border-left: 6px solid var(--amber);
+}
+
+.odin-confidence-score.red {
+  border-left: 6px solid var(--red);
+}
+
+.odin-confidence-metrics strong {
+  color: var(--blue);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.odin-confidence-mini-list,
+.odin-confidence-list {
+  display: grid;
+  gap: 9px;
+}
+
+.odin-confidence-mini-list div {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(244, 248, 251, 0.82);
+}
+
+.odin-confidence-mini-list span {
+  color: #071726;
+  font-weight: 900;
+}
+
+.odin-confidence-issue {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-left: 6px solid var(--blue);
+}
+
+.odin-confidence-issue.amber {
+  border-left-color: var(--amber);
+}
+
+.odin-confidence-issue.red {
+  border-left-color: var(--red);
+}
+
+.odin-confidence-issue p {
+  margin: 0;
+  color: #071726;
+  font-weight: 800;
+  line-height: 1.38;
+}
+
+.subtle-action {
+  min-height: 28px;
+  padding: 0 9px;
+  background: #eef5fb;
+  color: var(--blue);
+}
+
 .roster-gap-console,
 .roster-gap-list {
   display: grid;
@@ -7383,7 +7560,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   .signal-command-grid,
   .go-live-pathway,
   .command-grid,
-  .productivity-site-list {
+  .productivity-site-list,
+  .odin-confidence-score-row,
+  .odin-confidence-metrics,
+  .odin-confidence-sections {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -7856,6 +8036,9 @@ body:not([data-access="admin"]) .admin-only-panel {
   .director-brief,
   .admin-layout,
   .admin-config-grid,
+  .odin-confidence-score-row,
+  .odin-confidence-metrics,
+  .odin-confidence-sections,
   .equipment-row,
   .stock-layout,
   .stock-form,
@@ -7872,6 +8055,10 @@ body:not([data-access="admin"]) .admin-only-panel {
   }
 
   .manager-meetings-head,
+  .odin-confidence-toolbar,
+  .odin-confidence-filter,
+  .odin-confidence-section-head,
+  .odin-confidence-issue-head,
   .odin-command-hero,
   .odin-list-head,
   .odin-item-head,
