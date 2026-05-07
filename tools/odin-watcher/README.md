@@ -98,6 +98,22 @@ node odin-watcher.mjs --brief=midday --briefs-only
 node odin-watcher.mjs --brief=end_of_day --briefs-only
 ```
 
+## Mixed Routing Test
+
+To verify Odin-authored briefs can route priorities into the correct TOC destinations, copy `test-brief-routing.mjs` to the AI PC watcher folder and run:
+
+```powershell
+node .\test-brief-routing.mjs
+```
+
+That prints the seeded payload only. To write the test brief and create/link follow-through records:
+
+```powershell
+node .\test-brief-routing.mjs --live
+```
+
+The live test creates uniquely named `Routing test ...` records so they can be found and cleaned up if needed.
+
 ## OpenClaw Gateway Requirement
 
 The watcher calls:

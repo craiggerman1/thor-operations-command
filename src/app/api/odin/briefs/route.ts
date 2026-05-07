@@ -426,7 +426,7 @@ export async function POST(request: Request) {
   let followThroughError = "";
   const autoCreateActions = payload.autoCreateActions !== false;
 
-  if (autoCreateActions && action === "generate" && Array.isArray(briefData.priorityItems) && briefData.priorityItems.length) {
+  if (autoCreateActions && ["generate", "upsert", "create"].includes(action) && Array.isArray(briefData.priorityItems) && briefData.priorityItems.length) {
     try {
       followThrough = await createBriefFollowThroughActions({
         request,
