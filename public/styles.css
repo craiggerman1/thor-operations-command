@@ -3774,6 +3774,94 @@ body:not([data-access="admin"]) .admin-only-panel {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.odin-rhythm-console {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.odin-rhythm-console > .admin-hint-message {
+  grid-column: 1 / -1;
+}
+
+.odin-rhythm-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 13px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid var(--teal);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(37, 161, 189, 0.09), transparent 56%),
+    rgba(255, 255, 255, 0.82);
+}
+
+.odin-rhythm-card.red {
+  border-left-color: var(--red);
+}
+
+.odin-rhythm-card.amber {
+  border-left-color: var(--amber);
+}
+
+.odin-rhythm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.odin-rhythm-card strong {
+  color: var(--blue);
+}
+
+.odin-rhythm-card p {
+  margin: 0;
+  color: #27384a;
+  font-weight: 900;
+  line-height: 1.38;
+}
+
+.odin-rhythm-card small {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.odin-rhythm-priorities {
+  display: grid;
+  gap: 6px;
+}
+
+.odin-rhythm-priorities a {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(236, 246, 249, 0.76);
+  color: inherit;
+  text-decoration: none;
+}
+
+.odin-rhythm-card button {
+  width: fit-content;
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 1000;
+}
+
+.odin-rhythm-card button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .admin-user-edit-grid {
   display: grid;
   grid-template-columns: minmax(210px, 0.34fr) minmax(0, 1fr);
