@@ -28,9 +28,21 @@ const minimumSeverity = String(process.env.ODIN_MIN_SEVERITY || "amber").toLower
 const duplicateWindowHours = Math.max(1, Number(process.env.ODIN_DUPLICATE_WINDOW_HOURS) || 24);
 const lockFile = resolve(process.cwd(), process.env.ODIN_LOCK_FILE || ".odin-watcher.lock");
 const staleLockMinutes = Math.max(5, Number(process.env.ODIN_STALE_LOCK_MINUTES) || 30);
+const dailyRhythmEnabled = String(process.env.ODIN_DAILY_RHYTHM || "true").toLowerCase() !== "false";
+const briefTimezone = process.env.ODIN_BRIEF_TIMEZONE || "Australia/Brisbane";
+const briefMarkerFile = resolve(process.cwd(), process.env.ODIN_BRIEF_MARKER_FILE || ".odin-brief-runs.json");
 const snapshotOnly = process.argv.includes("--snapshot-only");
+const briefsOnly = process.argv.includes("--briefs-only");
+const forcedBriefArg = process.argv.find((arg) => arg.startsWith("--brief="));
+const forcedBriefType = forcedBriefArg ? forcedBriefArg.split("=").slice(1).join("=").trim() : "";
 
 const severityRank = { blue: 1, green: 1, amber: 2, yellow: 2, red: 3 };
+const validBriefTypes = new Set(["morning", "midday", "end_of_day"]);
+const briefWindows = [
+  { type: "morning", label: "Morning Brief", startHour: 5, endHour: 10 },
+  { type: "midday", label: "Midday Check", startHour: 11, endHour: 14 },
+  { type: "end_of_day", label: "End-of-Day Closeout", startHour: 16, endHour: 21 }
+];
 
 main().catch((error) => {
   console.error(`[odin-watcher] ${error.message}`);
@@ -50,6 +62,16 @@ async function main() {
 
     if (snapshotOnly) {
       console.log("[odin-watcher] Snapshot-only test complete. TOC access is working.");
+      return;
+    }
+
+    const generatedBriefs = await runDailyOperatingRhythm();
+    if (generatedBriefs.length) {
+      console.log(`[odin-watcher] Daily rhythm generated: ${generatedBriefs.join(", ")}.`);
+    }
+
+    if (briefsOnly) {
+      console.log("[odin-watcher] Briefs-only run complete.");
       return;
     }
 
@@ -91,6 +113,100 @@ async function main() {
   } finally {
     releaseLock();
   }
+}
+
+async function runDailyOperatingRhythm() {
+  if (!dailyRhythmEnabled && !forcedBriefType) return [];
+  if (dryRun) {
+    console.log("[odin-watcher] Daily rhythm skipped because ODIN_DRY_RUN is enabled.");
+    return [];
+  }
+
+  const localNow = getZonedNow(briefTimezone);
+  const markerState = readBriefMarkerState();
+  const dueBriefs = forcedBriefType
+    ? [normaliseBriefType(forcedBriefType)].filter(Boolean)
+    : briefWindows
+      .filter((window) => localNow.hour >= window.startHour && localNow.hour < window.endHour)
+      .map((window) => window.type);
+  const generated = [];
+
+  for (const briefType of dueBriefs) {
+    const markerKey = `${localNow.date}:${briefType}:National`;
+    if (!forcedBriefType && markerState[markerKey]) {
+      console.log(`[odin-watcher] ${briefLabel(briefType)} already generated for ${localNow.date}.`);
+      continue;
+    }
+
+    console.log(`[odin-watcher] Generating ${briefLabel(briefType)} for ${localNow.date}...`);
+    const result = await postJson(`${tocBaseUrl}/api/odin/briefs`, {
+      "x-odin-api-key": odinApiKey
+    }, {
+      action: "generate",
+      briefType,
+      region: "National",
+      briefDate: localNow.date,
+      source: "odin_watcher"
+    });
+
+    if (!result.connected) throw new Error(`TOC brief write failed for ${briefType}.`);
+    markerState[markerKey] = new Date().toISOString();
+    generated.push(briefLabel(briefType));
+  }
+
+  if (generated.length) writeBriefMarkerState(markerState);
+  return generated;
+}
+
+function normaliseBriefType(value) {
+  const cleaned = String(value || "").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  if (cleaned === "eod" || cleaned === "closeout" || cleaned === "endofday") return "end_of_day";
+  return validBriefTypes.has(cleaned) ? cleaned : "";
+}
+
+function briefLabel(type) {
+  return briefWindows.find((window) => window.type === type)?.label || type;
+}
+
+function readBriefMarkerState() {
+  if (!existsSync(briefMarkerFile)) return {};
+  try {
+    const parsed = JSON.parse(readFileSync(briefMarkerFile, "utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeBriefMarkerState(state) {
+  const entries = Object.entries(state)
+    .filter(([key]) => {
+      const date = key.slice(0, 10);
+      return /^\d{4}-\d{2}-\d{2}$/.test(date);
+    })
+    .slice(-120);
+  writeFileSync(briefMarkerFile, JSON.stringify(Object.fromEntries(entries), null, 2));
+}
+
+function getZonedNow(timeZone) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(new Date()).reduce((output, part) => {
+    output[part.type] = part.value;
+    return output;
+  }, {});
+
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    hour: Number(parts.hour),
+    minute: Number(parts.minute)
+  };
 }
 
 function buildPrompt(snapshot) {

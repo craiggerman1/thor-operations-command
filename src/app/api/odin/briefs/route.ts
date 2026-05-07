@@ -8,11 +8,26 @@ type BriefType = "morning" | "midday" | "end_of_day" | "weekly";
 
 const briefTypes: BriefType[] = ["morning", "midday", "end_of_day", "weekly"];
 
-function dateOnly(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+function dateOnly(date = new Date(), timeZone = "Australia/Brisbane") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date).reduce((output, part) => {
+    output[part.type] = part.value;
+    return output;
+  }, {} as Record<string, string>);
+
+  const year = parts.year;
+  const month = parts.month;
+  const day = parts.day;
   return `${year}-${month}-${day}`;
+}
+
+function cleanDateOnly(value: unknown) {
+  const text = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : dateOnly();
 }
 
 function cleanBriefType(value: unknown): BriefType {
@@ -45,7 +60,7 @@ async function countRows(input: { table: string; statuses?: string[]; statusColu
   return count || 0;
 }
 
-async function buildGeneratedBrief(type: BriefType, region: string) {
+async function buildGeneratedBrief(type: BriefType, region: string, briefDate = dateOnly()) {
   const [openActions, nationalRequests, stockOrders, complianceItems, rosterGaps] = await Promise.all([
     countRows({ table: "action_items", statuses: ["open", "submitted_for_review", "returned_to_manager"] }),
     countRows({ table: "national_requests", statuses: ["awaiting_review", "returned_to_manager", "pending"] }),
@@ -71,7 +86,7 @@ async function buildGeneratedBrief(type: BriefType, region: string) {
   ].slice(0, 8);
 
   return {
-    briefDate: dateOnly(),
+    briefDate,
     briefType: type,
     region,
     title: `${typeLabel} - ${region}`,
@@ -120,7 +135,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const region = url.searchParams.get("region") || "National";
-  const briefDate = url.searchParams.get("date") || dateOnly();
+  const briefDate = cleanDateOnly(url.searchParams.get("date"));
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit")) || 20, 80));
 
   const { data, error } = await supabase
@@ -154,9 +169,9 @@ export async function POST(request: Request) {
   const briefType = cleanBriefType(payload.briefType || payload.type);
   const region = String(payload.region || "National");
   const briefData = action === "generate"
-    ? await buildGeneratedBrief(briefType, region)
+    ? await buildGeneratedBrief(briefType, region, cleanDateOnly(payload.briefDate || payload.date))
     : {
-      briefDate: String(payload.briefDate || payload.date || dateOnly()),
+      briefDate: cleanDateOnly(payload.briefDate || payload.date),
       briefType,
       region,
       title: String(payload.title || `${briefTypeLabel(briefType)} - ${region}`),

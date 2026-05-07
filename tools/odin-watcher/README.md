@@ -35,7 +35,13 @@ node odin-watcher.mjs --snapshot-only
 node odin-watcher.mjs
 ```
 
-7. Only after the dry-run recommendation looks right, set:
+7. Test the daily operating rhythm write:
+
+```powershell
+node odin-watcher.mjs --brief=morning --briefs-only
+```
+
+8. Only after the dry-run recommendation looks right, set:
 
 ```text
 ODIN_DRY_RUN=false
@@ -48,6 +54,7 @@ ODIN_DRY_RUN=false
 - Odin uses the configured `OPENCLAW_SESSION_KEY` so watcher analysis has a stable memory thread.
 - Odin confidence values can be returned as either `0.84` or `84`; the watcher normalises both to `84`.
 - Duplicate recommendations are skipped when the same open title already exists inside the configured duplicate window.
+- Daily operating briefs are generated once per Brisbane day/type using `.odin-brief-runs.json` as a local marker file. TOC also upserts by brief date/type/region, so a rerun updates the same database record rather than creating duplicates.
 - Odin cannot approve, reject, dismiss, reset passwords, change users, change admin settings, or send external messages from TOC.
 - Telegram and Twilio alerts should be handled on the AI PC side after Odin decides an issue is important.
 - Every watcher write uses `ODIN_API_KEY` and is audited server-side by TOC.
@@ -72,6 +79,24 @@ Routing rules:
 If Odin omits `destination`, the watcher infers it from the title, summary and recommended action.
 
 The watcher also creates a small non-overlap lock file before running. If a scheduled run is still active, the next run exits instead of double-writing TOC items.
+
+## Daily Operating Rhythm
+
+When `ODIN_DRY_RUN=false` and `ODIN_DAILY_RHYTHM=true`, each normal watcher run also checks the Brisbane local time and creates the due National brief:
+
+- `morning` between 5:00 AM and 10:00 AM
+- `midday` between 11:00 AM and 2:00 PM
+- `end_of_day` between 4:00 PM and 9:00 PM
+
+The hourly watcher can therefore run at `xx:30` and still catch the correct operating window. Manual TOC generation remains available as a backup/control button.
+
+Forced test commands:
+
+```powershell
+node odin-watcher.mjs --brief=morning --briefs-only
+node odin-watcher.mjs --brief=midday --briefs-only
+node odin-watcher.mjs --brief=end_of_day --briefs-only
+```
 
 ## OpenClaw Gateway Requirement
 
