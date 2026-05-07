@@ -33,6 +33,9 @@ type BriefPriorityItem = {
   actionHref?: string;
   followThroughStatus?: "created" | "linked" | "failed" | "skipped";
   followThroughError?: string;
+  routeConfidence?: number;
+  routeReason?: string;
+  routeExplicit?: boolean;
 };
 
 type BriefActionRow = {
@@ -47,6 +50,20 @@ type BriefActionRow = {
   created_at: string;
   updated_at: string;
   region?: { name: string } | { name: string }[] | null;
+};
+
+type RoutingDecision = {
+  destination: string;
+  confidence: number;
+  explicit: boolean;
+  reason: string;
+  ambiguous: boolean;
+};
+
+type ExistingRouteRecord = {
+  id: string;
+  href: string;
+  actionIds: string[];
 };
 
 function dateOnly(date = new Date(), timeZone = "Australia/Brisbane") {
@@ -326,8 +343,66 @@ async function createBriefFollowThroughActions(input: {
       continue;
     }
 
-    const destination = normaliseBriefDestination(item);
+    const route = normaliseBriefDestination(item);
+    const destination = route.destination;
+    if (route.ambiguous || route.confidence < 60) {
+      const message = route.ambiguous
+        ? `Routing ambiguous: ${route.reason}`
+        : `Routing confidence too low: ${route.reason}`;
+      failureCount += 1;
+      actionResults.push({
+        title: item.title,
+        destination,
+        createdActionIds: [],
+        linkedActionIds: [],
+        destinationIds: [],
+        skippedDuplicateCount: 0,
+        error: message
+      });
+      updatedPriorityItems.push({
+        ...item,
+        destination,
+        routeConfidence: route.confidence,
+        routeReason: route.reason,
+        routeExplicit: route.explicit,
+        href: item.href || destinationHref(destination),
+        followThroughStatus: "failed",
+        followThroughError: message
+      });
+      continue;
+    }
+
     const payload = briefPriorityPayload(item, input.brief, destination);
+    const dedupeKey = String(payload.dedupeKey || "");
+    const existingRecord = await existingRecordForDedupeKey(destination, dedupeKey);
+    if (existingRecord) {
+      const linkedActionIds = existingRecord.actionIds;
+      const destinationIds = [existingRecord.id];
+      const actionHref = linkedActionIds[0] ? `/actions/${linkedActionIds[0]}` : existingRecord.href;
+      actionResults.push({
+        title: item.title,
+        destination,
+        createdActionIds: [],
+        linkedActionIds,
+        destinationIds,
+        skippedDuplicateCount: 1
+      });
+      updatedPriorityItems.push({
+        ...item,
+        destination,
+        routeConfidence: route.confidence,
+        routeReason: route.reason,
+        routeExplicit: route.explicit,
+        href: actionHref,
+        actionHref,
+        linkedActionIds,
+        destinationIds,
+        actionBacked: Boolean(linkedActionIds.length),
+        followThroughStatus: "linked"
+      });
+      continue;
+    }
+
     let result: Record<string, unknown>;
 
     try {
@@ -347,6 +422,9 @@ async function createBriefFollowThroughActions(input: {
       updatedPriorityItems.push({
         ...item,
         destination,
+        routeConfidence: route.confidence,
+        routeReason: route.reason,
+        routeExplicit: route.explicit,
         href: item.href || destinationHref(destination),
         followThroughStatus: "failed",
         followThroughError: message
@@ -357,19 +435,24 @@ async function createBriefFollowThroughActions(input: {
     const createdActionIds = arrayOfStrings(result.createdActionIds);
     const linkedActionIds = destinationResultActionIds(result);
     const destinationIds = destinationResultIds(result, destination);
+    const skippedDuplicateCount = Number(result.skippedDuplicateCount || 0);
     const actionHref = linkedActionIds[0] ? `/actions/${linkedActionIds[0]}` : destinationHref(destination, destinationIds[0], item.href);
-    const followThroughStatus = createdActionIds.length || destinationIds.length ? "created" : linkedActionIds.length ? "linked" : "skipped";
+    const hasNewDestinationRecord = destinationIds.length > 0 && skippedDuplicateCount === 0;
+    const followThroughStatus = createdActionIds.length || hasNewDestinationRecord ? "created" : linkedActionIds.length || destinationIds.length ? "linked" : "skipped";
     actionResults.push({
       title: item.title,
       destination,
       createdActionIds,
       linkedActionIds: arrayOfStrings(result.linkedActionIds),
       destinationIds,
-      skippedDuplicateCount: Number(result.skippedDuplicateCount || 0)
+      skippedDuplicateCount
     });
     updatedPriorityItems.push({
       ...item,
       destination,
+      routeConfidence: route.confidence,
+      routeReason: route.reason,
+      routeExplicit: route.explicit,
       href: actionHref,
       actionHref,
       linkedActionIds,
@@ -388,17 +471,36 @@ async function createBriefFollowThroughActions(input: {
   };
 }
 
-function normaliseBriefDestination(item: BriefPriorityItem) {
+function normaliseBriefDestination(item: BriefPriorityItem): RoutingDecision {
   const explicit = String(item.destination || "").trim().toLowerCase().replace(/[-\s]+/g, "_");
-  if (["actions", "todos", "compliance", "equipment", "stock_orders", "jobs", "notes"].includes(explicit)) return explicit;
+  if (["actions", "todos", "compliance", "equipment", "stock_orders", "jobs", "notes"].includes(explicit)) {
+    return { destination: explicit, confidence: 100, explicit: true, reason: "Explicit priority destination supplied.", ambiguous: false };
+  }
 
   const text = `${item.title || ""} ${item.recommendedAction || ""} ${item.entityType || ""}`.toLowerCase();
-  if (/\b(compliance|safety|induction|first aid|audit)\b/.test(text)) return "compliance";
-  if (/\b(equipment|vehicle|truck|ute|unit|pony|generator|honda|repair|service)\b/.test(text)) return "equipment";
-  if (/\b(stock|chemical|ppe|consumable|supply|order|glove|bottle|hose|battery)\b/.test(text)) return "stock_orders";
-  if (/\b(todo|to do|remind|reminder|checklist)\b/.test(text)) return "todos";
-  if (/\b(job|jobsheet|photo|checklist|calendar|roster)\b/.test(text)) return "jobs";
-  return "actions";
+  const matches = [
+    { destination: "compliance", pattern: /\b(compliance|safety|induction|first aid|audit)\b/, reason: "Compliance/safety language detected." },
+    { destination: "equipment", pattern: /\b(equipment|vehicle|truck|ute|unit|pony|generator|honda|repair|service)\b/, reason: "Equipment/service language detected." },
+    { destination: "stock_orders", pattern: /\b(stock|chemical|ppe|consumable|supply|order|glove|bottle|hose|battery)\b/, reason: "Stock/order language detected." },
+    { destination: "todos", pattern: /\b(todo|to do|remind|reminder)\b/, reason: "Reminder/to-do language detected." },
+    { destination: "jobs", pattern: /\b(job|jobsheet|photo|checklist|calendar|roster)\b/, reason: "Job/calendar language detected." }
+  ].filter((candidate) => candidate.pattern.test(text));
+
+  if (matches.length === 1) {
+    return { destination: matches[0].destination, confidence: 74, explicit: false, reason: matches[0].reason, ambiguous: false };
+  }
+
+  if (matches.length > 1) {
+    return {
+      destination: "actions",
+      confidence: 42,
+      explicit: false,
+      reason: `Matched multiple destinations: ${matches.map((item) => item.destination).join(", ")}.`,
+      ambiguous: true
+    };
+  }
+
+  return { destination: "actions", confidence: 62, explicit: false, reason: "No specific route detected; defaulted to Action Centre.", ambiguous: false };
 }
 
 function briefPriorityPayload(item: BriefPriorityItem, brief: { briefDate: string; briefType: BriefType; region: string }, destination: string) {
@@ -422,7 +524,16 @@ function briefPriorityPayload(item: BriefPriorityItem, brief: { briefDate: strin
     dueDate: item.dueAt,
     entityType: item.entityType || "daily_brief_priority",
     entityId: item.entityId || item.dedupeKey || item.title,
-    dedupeKey: item.dedupeKey || `daily-brief:${brief.briefDate}:${brief.briefType}:${region}:${item.title}`
+    dedupeKey: item.dedupeKey || [
+      "daily-brief",
+      brief.briefDate,
+      brief.briefType,
+      destination,
+      region,
+      item.entityType || "priority",
+      item.entityId || item.title,
+      item.dueAt || "no-due"
+    ].join(":")
   };
 
   if (destination === "todos") return { ...base, itemType: "todo", text: item.title, important: item.severity !== "blue" };
@@ -431,6 +542,76 @@ function briefPriorityPayload(item: BriefPriorityItem, brief: { briefDate: strin
   if (destination === "jobs") return { ...base, job: item.title, jobDate: brief.briefDate, date: brief.briefDate, location: region, site: item.entityId || "Unassigned site", notes: detail };
   if (destination === "notes") return { ...base, note: detail, facts: { briefDate: brief.briefDate, briefType: brief.briefType, priorityItem: item } };
   return base;
+}
+
+async function existingRecordForDedupeKey(destination: string, dedupeKey: string): Promise<ExistingRouteRecord | null> {
+  if (!dedupeKey) return null;
+
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  const sourceType = sourceTypeForDestination(destination);
+  const { data: memoryRow } = await supabase
+    .from("odin_memory")
+    .select("source_id,last_response")
+    .eq("source_type", sourceType)
+    .contains("facts", { dedupeKey })
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const sourceId = typeof memoryRow?.source_id === "string" ? memoryRow.source_id : "";
+  if (!sourceId) return null;
+
+  const record = await readExistingDestinationRecord(destination, sourceId);
+  if (!record) return null;
+
+  const lastResponse = memoryRow?.last_response && typeof memoryRow.last_response === "object" ? memoryRow.last_response as Record<string, unknown> : {};
+  const linkedActionId = typeof lastResponse.linkedActionId === "string" ? lastResponse.linkedActionId : "";
+  return {
+    id: sourceId,
+    href: destinationHref(destination, sourceId),
+    actionIds: linkedActionId ? [linkedActionId] : arrayOfStrings(record.linked_action_id)
+  };
+}
+
+function sourceTypeForDestination(destination: string) {
+  const map: Record<string, string> = {
+    actions: "action_item",
+    todos: "todo_item",
+    compliance: "compliance_item",
+    equipment: "equipment_asset",
+    stock_orders: "stock_order",
+    jobs: "calendar_job",
+    notes: "odin_note"
+  };
+  return map[destination] || "action_item";
+}
+
+async function readExistingDestinationRecord(destination: string, sourceId: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  const config: Record<string, { table: string; select: string; active: (row: Record<string, unknown>) => boolean }> = {
+    actions: { table: "action_items", select: "id,status", active: (row) => row.status !== "closed" },
+    todos: { table: "todo_items", select: "id,is_done", active: (row) => row.is_done !== true },
+    compliance: { table: "compliance_items", select: "id,status,linked_action_id", active: (row) => !["complete", "closed"].includes(String(row.status)) },
+    equipment: { table: "equipment_assets", select: "id,current_status,linked_action_id", active: () => true },
+    stock_orders: { table: "stock_orders", select: "id,status", active: (row) => !["delivered", "cancelled", "closed"].includes(String(row.status)) },
+    jobs: { table: "calendar_jobs", select: "id,status", active: (row) => !["Completed", "Cancelled", "closed", "complete"].includes(String(row.status)) },
+    notes: { table: "odin_memory", select: "id", active: () => true }
+  };
+  const route = config[destination];
+  if (!route) return null;
+
+  const { data } = await supabase
+    .from(route.table)
+    .select(route.select)
+    .eq("id", sourceId)
+    .maybeSingle();
+
+  const row = data as Record<string, unknown> | null;
+  return row && route.active(row) ? row : null;
 }
 
 function sourcePageForDestination(destination: string) {
@@ -494,10 +675,10 @@ function destinationResultIds(result: Record<string, unknown>, destination: stri
   const keys: Record<string, string[]> = {
     actions: ["createdActionIds", "linkedActionIds"],
     todos: ["createdTodoIds", "linkedTodoIds"],
-    compliance: ["createdComplianceIds", "updatedComplianceIds"],
-    equipment: ["createdAssetIds", "updatedAssetIds"],
-    stock_orders: ["createdStockOrderIds", "updatedStockOrderIds"],
-    jobs: ["createdJobIds", "updatedJobIds"],
+    compliance: ["createdComplianceIds", "linkedComplianceIds", "updatedComplianceIds"],
+    equipment: ["createdAssetIds", "linkedAssetIds", "updatedAssetIds"],
+    stock_orders: ["createdStockOrderIds", "linkedStockOrderIds", "updatedStockOrderIds"],
+    jobs: ["createdJobIds", "linkedJobIds", "updatedJobIds"],
     notes: ["noteId", "noteIds"]
   };
   return (keys[destination] || []).flatMap((key) => arrayOfStrings(result[key]));

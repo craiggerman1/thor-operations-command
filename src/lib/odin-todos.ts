@@ -77,6 +77,23 @@ function createTitle(payload: Record<string, unknown>) {
   return `${title}${detailSuffix}`;
 }
 
+async function existingOpenTodos(title: string, targetRegions: string[]) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase || !targetRegions.length) return new Map<string, string>();
+
+  const { data } = await supabase
+    .from("todo_items")
+    .select("id,title,owner_scope,is_done")
+    .eq("title", title)
+    .eq("is_done", false)
+    .in("owner_scope", targetRegions);
+
+  return ((data || []) as Array<{ id: string; owner_scope: string | null }>).reduce<Map<string, string>>((lookup, row) => {
+    if (row.owner_scope && row.id) lookup.set(row.owner_scope, row.id);
+    return lookup;
+  }, new Map());
+}
+
 function todoUpdates(payload: Record<string, unknown>) {
   const source = (payload.updates && typeof payload.updates === "object" ? payload.updates : payload) as Record<string, unknown>;
   const updates: Record<string, string | boolean | null> = { updated_at: new Date().toISOString() };
@@ -105,8 +122,21 @@ export async function handleOdinTodoItems(input: OdinTodoInput) {
     const title = createTitle(input.payload);
     const targetRegions = await getTodoTargetRegions(normaliseOdinTargetRegions(input.payload.targetRegions || input.payload.regions || input.payload.region));
     if (!targetRegions.length) throw new Error("No valid To Do target regions supplied.");
+    const existingTodos = await existingOpenTodos(title, targetRegions);
+    const createRegions = targetRegions.filter((region) => !existingTodos.has(region));
 
-    const rows = targetRegions.map((region) => ({
+    if (!createRegions.length) {
+      return {
+        action: "create",
+        createdTodoIds: [],
+        linkedTodoIds: Array.from(existingTodos.values()),
+        skippedDuplicateCount: targetRegions.length,
+        count: 0,
+        targetRegions
+      };
+    }
+
+    const rows = createRegions.map((region) => ({
       title,
       is_done: false,
       is_important: input.payload.important !== false,
@@ -123,7 +153,7 @@ export async function handleOdinTodoItems(input: OdinTodoInput) {
     if (error) throw error;
 
     const createdTodoIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
-    const ownership = targetRegions.map((region, index) => ({
+    const ownership = createRegions.map((region, index) => ({
       todoId: createdTodoIds[index],
       region,
       ...buildOdinOperationalContext({
@@ -159,7 +189,14 @@ export async function handleOdinTodoItems(input: OdinTodoInput) {
       : Promise.resolve()
     ));
 
-    return { action: "create", createdTodoIds, count: createdTodoIds.length, targetRegions };
+    return {
+      action: "create",
+      createdTodoIds,
+      linkedTodoIds: Array.from(existingTodos.values()),
+      skippedDuplicateCount: targetRegions.length - createRegions.length,
+      count: createdTodoIds.length,
+      targetRegions
+    };
   }
 
   const ids = todoIdsFromPayload(input.payload);

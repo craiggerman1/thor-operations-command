@@ -42,6 +42,27 @@ function jobUpdates(payload: Record<string, unknown>) {
   return updates;
 }
 
+async function existingActiveJob(input: { jobDate: string; jobTime: string; location: string; site: string; jobTitle: string }) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("calendar_jobs")
+    .select("id")
+    .eq("job_date", input.jobDate)
+    .eq("job_time", input.jobTime)
+    .eq("location", input.location)
+    .eq("site", input.site)
+    .eq("job_title", input.jobTitle)
+    .not("status", "in", "(Completed,Cancelled,Closed)")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id || null;
+}
+
 export async function GET(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
@@ -81,12 +102,26 @@ export async function POST(request: Request) {
       const jobDate = String(payload.date || payload.jobDate || "").trim();
       const jobTitle = String(payload.job || payload.title || "").trim();
       if (!jobDate || !jobTitle) throw new Error("Job date and title are required.");
+      const jobTime = String(payload.time || "07:00");
+      const location = String(payload.location || payload.region || "National");
+      const site = String(payload.site || "Unassigned site");
+      const existingJobId = await existingActiveJob({ jobDate, jobTime, location, site, jobTitle });
+      if (existingJobId) {
+        return NextResponse.json({
+          connected: true,
+          action: "create",
+          createdJobIds: [],
+          linkedJobIds: [existingJobId],
+          skippedDuplicateCount: 1,
+          count: 0
+        });
+      }
 
       const { data, error } = await supabase.from("calendar_jobs").insert({
         job_date: jobDate,
-        job_time: payload.time || "07:00",
-        location: payload.location || payload.region || "National",
-        site: payload.site || "Unassigned site",
+        job_time: jobTime,
+        location,
+        site,
         crew: payload.crew || "Unassigned crew",
         job_title: jobTitle,
         status: normaliseStatus(payload.status),
@@ -98,7 +133,7 @@ export async function POST(request: Request) {
       }).select("id").single();
 
       if (error) throw error;
-      const regionName = String(payload.location || payload.region || "National");
+      const regionName = location;
       const operationalContext = buildOdinOperationalContext({
         payload: { ...payload, job: jobTitle },
         destination: "jobs",

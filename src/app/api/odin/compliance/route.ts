@@ -53,6 +53,26 @@ function complianceUpdates(payload: Record<string, unknown>) {
   return { updates, actionUpdates, source };
 }
 
+async function existingOpenComplianceItem(title: string, regionId: string | null, dueAt: string | null) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  let query = supabase
+    .from("compliance_items")
+    .select("id,linked_action_id")
+    .eq("title", title)
+    .in("status", ["open", "not_started", "in_progress", "blocked"])
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  query = regionId ? query.eq("region_id", regionId) : query.is("region_id", null);
+  query = dueAt ? query.eq("due_at", dueAt) : query.is("due_at", null);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  return data as { id: string; linked_action_id: string | null } | null;
+}
+
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
@@ -73,6 +93,18 @@ export async function POST(request: Request) {
       const detail = String(payload.detail || payload.recommendedAction || "Compliance action requires manager close-out.");
       const regionId = await odinRegionId(payload.region || payload.ownerScope || "National");
       const dueAt = odinDueToIso(payload.dueDate || payload.dueAt) || null;
+      const existingItem = await existingOpenComplianceItem(title, regionId, dueAt);
+      if (existingItem) {
+        return NextResponse.json({
+          connected: true,
+          action: "create",
+          createdComplianceIds: [],
+          linkedComplianceIds: [existingItem.id],
+          linkedActionIds: existingItem.linked_action_id ? [existingItem.linked_action_id] : [],
+          skippedDuplicateCount: 1,
+          count: 0
+        });
+      }
 
       const { data: registerItem, error: registerError } = await supabase
         .from("compliance_items")

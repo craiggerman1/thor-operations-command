@@ -89,6 +89,24 @@ function equipmentUpdates(payload: Record<string, unknown>) {
   return { updates, source };
 }
 
+async function existingEquipmentAsset(assetName: string, regionId: string | null) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  let query = supabase
+    .from("equipment_assets")
+    .select("id,asset_name,asset_type,region_id,current_status,service_note,linked_action_id")
+    .eq("asset_name", assetName)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  query = regionId ? query.eq("region_id", regionId) : query.is("region_id", null);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  return data as EquipmentAssetRow | null;
+}
+
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
@@ -105,11 +123,36 @@ export async function POST(request: Request) {
     if (action === "create") {
       const assetName = String(payload.assetName || payload.name || "").trim();
       if (!assetName) throw new Error("Asset name is required.");
+      const regionId = await odinRegionId(payload.region || "National");
+      const existingAsset = await existingEquipmentAsset(assetName, regionId);
+
+      if (existingAsset) {
+        const updateBundle = equipmentUpdates(payload);
+        if (Object.keys(updateBundle.updates).length > 1) {
+          await supabase.from("equipment_assets").update(updateBundle.updates).eq("id", existingAsset.id).throwOnError();
+        }
+        const { data: refreshedAsset, error: refreshError } = await supabase
+          .from("equipment_assets")
+          .select("id,asset_name,asset_type,region_id,current_status,service_note,linked_action_id")
+          .eq("id", existingAsset.id)
+          .single();
+        if (refreshError) throw refreshError;
+        const actionId = await syncLinkedAction(refreshedAsset as EquipmentAssetRow);
+        return NextResponse.json({
+          connected: true,
+          action: "create",
+          createdAssetIds: [],
+          linkedAssetIds: [existingAsset.id],
+          linkedActionIds: actionId ? [actionId] : [],
+          skippedDuplicateCount: 1,
+          count: 0
+        });
+      }
 
       const { data, error } = await supabase.from("equipment_assets").insert({
         asset_name: assetName,
         asset_type: payload.assetType || "Wash asset",
-        region_id: await odinRegionId(payload.region || "National"),
+        region_id: regionId,
         current_status: payload.status || "Serviceable",
         latest_odometer: odinNumber(payload.latestOdometer),
         latest_hours: odinNumber(payload.latestHours),

@@ -102,6 +102,39 @@ async function existingOpenActionsByDedupeKey(dedupeKeys: string[]) {
   return linked;
 }
 
+async function existingOpenActionsBySignature(input: {
+  title: string;
+  detail: string;
+  sourcePage: string;
+  dueAt: string | null;
+  targetRegions: Array<{ id: string | null; name: string }>;
+}) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase || !input.targetRegions.length) return new Map<string, string>();
+
+  const activeStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
+  const linked = new Map<string, string>();
+
+  await Promise.all(input.targetRegions.map(async (region) => {
+    let query = supabase
+      .from("action_items")
+      .select("id,assigned_region_id,due_at,detail")
+      .eq("title", input.title)
+      .eq("source_page", input.sourcePage)
+      .in("status", activeStatuses)
+      .limit(1);
+
+    query = region.id ? query.eq("assigned_region_id", region.id) : query.is("assigned_region_id", null);
+    query = input.dueAt ? query.eq("due_at", input.dueAt) : query.is("due_at", null);
+
+    const { data } = await query;
+    const row = (data as Array<{ id: string }> | null)?.[0];
+    if (row?.id) linked.set(region.name, row.id);
+  }));
+
+  return linked;
+}
+
 async function getTargetRegions(targetRegions: string[]) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return [];
@@ -154,10 +187,11 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     })
   }));
   const existingActions = await existingOpenActionsByDedupeKey(previewContexts.map((item) => item.context.dedupeKey));
-  const actionTargets = previewContexts.filter((item) => !existingActions.has(item.context.dedupeKey));
+  const signatureMatches = await existingOpenActionsBySignature({ title, detail, sourcePage, dueAt, targetRegions });
+  const actionTargets = previewContexts.filter((item) => !existingActions.has(item.context.dedupeKey) && !signatureMatches.has(item.region.name));
 
   if (!actionTargets.length) {
-    const linkedActionIds = Array.from(existingActions.values());
+    const linkedActionIds = Array.from(new Set([...Array.from(existingActions.values()), ...Array.from(signatureMatches.values())]));
     return {
       createdActionIds: [],
       createdCount: 0,
@@ -191,6 +225,7 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     region: region.name,
     ...context
   }));
+  const skippedDuplicateActionIds = Array.from(new Set([...Array.from(existingActions.values()), ...Array.from(signatureMatches.values())]));
   const odinItemPayload = {
     targetRegions: actionTargets.map(({ region }) => region.name),
     directiveType,
@@ -198,7 +233,7 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     sourcePage,
     dueDate: payload.dueDate || payload.dueAt || null,
     createdActionIds,
-    skippedDuplicateActionIds: Array.from(existingActions.values()),
+    skippedDuplicateActionIds,
     directIssue: true,
     ownership: operationalContexts
   };
@@ -238,7 +273,7 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
       title,
       targetRegions: actionTargets.map(({ region }) => region.name),
       createdActionIds,
-      skippedDuplicateActionIds: Array.from(existingActions.values()),
+      skippedDuplicateActionIds,
       odinItemId: odinItem.id,
       ownership: operationalContexts,
       actorType: input.actorKind
@@ -262,8 +297,9 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     createdActionIds,
     createdCount: createdActionIds.length,
     odinItemId: odinItem.id,
-    linkedActionIds: Array.from(existingActions.values()),
+    linkedActionIds: skippedDuplicateActionIds,
     skippedDuplicateCount: previewContexts.length - actionTargets.length,
+    skippedSignatureDuplicateActionIds: Array.from(signatureMatches.values()),
     targetRegions: targetRegions.map((region) => region.name)
   };
 }

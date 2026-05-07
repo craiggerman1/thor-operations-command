@@ -39,6 +39,23 @@ async function stockItemId(itemName: unknown) {
   return data?.id || null;
 }
 
+async function existingOpenStockOrder(regionId: string, itemId: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+
+  const { data } = await supabase
+    .from("stock_orders")
+    .select("id")
+    .eq("region_id", regionId)
+    .eq("item_id", itemId)
+    .in("status", ["submitted", "awaiting_review", "approved", "ordered", "dispatched", "cancel_requested", "returned"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.id || null;
+}
+
 function stockUpdates(payload: Record<string, unknown>) {
   const source = (payload.updates && typeof payload.updates === "object" ? payload.updates : payload) as Record<string, unknown>;
   const updates: Record<string, string | number | null> = { updated_at: new Date().toISOString() };
@@ -72,6 +89,17 @@ export async function POST(request: Request) {
       const itemId = await stockItemId(payload.item || payload.itemName);
       if (!regionId) throw new Error("Stock order region could not be matched.");
       if (!itemId) throw new Error("Stock order item could not be matched to an active catalogue item.");
+      const existingOrderId = await existingOpenStockOrder(regionId, itemId);
+      if (existingOrderId) {
+        return NextResponse.json({
+          connected: true,
+          action: "create",
+          createdStockOrderIds: [],
+          linkedStockOrderIds: [existingOrderId],
+          skippedDuplicateCount: 1,
+          count: 0
+        });
+      }
 
       const { data, error } = await supabase.from("stock_orders").insert({
         region_id: regionId,
