@@ -235,6 +235,15 @@ function compactSnapshot(snapshot) {
   const sections = snapshot?.sections || {};
   return {
     generatedAt: snapshot?.generatedAt,
+    summary: snapshot?.summary || {},
+    actionClosure: snapshot?.summary?.actionClosure || {},
+    closureFocusQueues: {
+      overdueItems: snapshot?.focusQueues?.overdueItems || [],
+      dueSoonItems: snapshot?.focusQueues?.dueSoonItems || [],
+      actionCarryover: snapshot?.focusQueues?.actionCarryover || [],
+      duplicateIssueGroups: snapshot?.focusQueues?.duplicateIssueGroups || [],
+      ownerQueue: snapshot?.focusQueues?.ownerQueue || []
+    },
     actionItems: rows(sections.actionItems),
     nationalRequests: rows(sections.nationalRequests),
     stockOrders: rows(sections.stockOrders),

@@ -34,6 +34,20 @@ type BriefPriorityItem = {
   followThroughError?: string;
 };
 
+type BriefActionRow = {
+  id: string;
+  title: string;
+  detail: string | null;
+  source_page: string | null;
+  directive_type: string | null;
+  priority: string | null;
+  status: string;
+  due_at: string | null;
+  created_at: string;
+  updated_at: string;
+  region?: { name: string } | { name: string }[] | null;
+};
+
 function dateOnly(date = new Date(), timeZone = "Australia/Brisbane") {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -86,20 +100,150 @@ async function countRows(input: { table: string; statuses?: string[]; statusColu
   return count || 0;
 }
 
+function firstRelated<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function hoursSince(value: string | null | undefined, now = new Date()) {
+  if (!value) return 0;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / 3600000));
+}
+
+function isPastDue(value: string | null, now = new Date()) {
+  if (!value) return false;
+  const dueDate = new Date(value);
+  return !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < now.getTime();
+}
+
+function actionRegion(row: BriefActionRow) {
+  return firstRelated(row.region)?.name || "National";
+}
+
+function actionSeverity(row: BriefActionRow) {
+  const priority = String(row.priority || "").toLowerCase();
+  if (row.directive_type === "National Ops Directive" || priority === "urgent" || priority === "high") return "red";
+  if (row.directive_type === "Scheduled Directive" || priority === "normal") return "amber";
+  return "blue";
+}
+
+function actionEscalationLevel(row: BriefActionRow, now = new Date()) {
+  const overdue = isPastDue(row.due_at, now);
+  const staleHours = hoursSince(row.updated_at || row.created_at, now);
+  const urgent = row.directive_type === "National Ops Directive" || row.priority === "urgent";
+  if (overdue && urgent) return "craig";
+  if (overdue || row.status === "returned_to_manager" || staleHours >= 48) return "national";
+  if (staleHours >= 24 || row.status === "submitted_for_review") return "watch";
+  return "none";
+}
+
+function actionDedupeGroup(row: BriefActionRow) {
+  return `${actionRegion(row)}:${row.source_page || "action"}:${String(row.title || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}`;
+}
+
+async function readActionClosureContext(region: string, now = new Date()) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    return {
+      actionRows: [] as BriefActionRow[],
+      overdueActions: [] as BriefActionRow[],
+      staleActions: [] as BriefActionRow[],
+      carryoverActions: [] as BriefActionRow[],
+      craigEscalationCandidates: [] as BriefActionRow[],
+      repeatedIssueGroups: [] as { key: string; count: number; title: string; region: string }[],
+      managerPressure: [] as { region: string; total: number; overdue: number; stale: number; carryover: number; craig: number }[]
+    };
+  }
+
+  const { data } = await supabase
+    .from("action_items")
+    .select("id,title,detail,source_page,directive_type,priority,status,due_at,created_at,updated_at,region:regions(name)")
+    .in("status", ["open", "submitted_for_review", "returned_to_manager"])
+    .order("created_at", { ascending: false })
+    .limit(120);
+
+  const allRows = ((data || []) as BriefActionRow[])
+    .filter((row) => region === "National" || actionRegion(row) === region);
+  const overdueActions = allRows.filter((row) => isPastDue(row.due_at, now));
+  const staleActions = allRows.filter((row) => hoursSince(row.updated_at || row.created_at, now) >= 24);
+  const carryoverActions = allRows.filter((row) => isPastDue(row.due_at, now) || hoursSince(row.updated_at || row.created_at, now) >= 24 || row.status === "returned_to_manager");
+  const craigEscalationCandidates = allRows.filter((row) => actionEscalationLevel(row, now) === "craig");
+  const managerPressureLookup = allRows.reduce<Record<string, { region: string; total: number; overdue: number; stale: number; carryover: number; craig: number }>>((lookup, row) => {
+    const rowRegion = actionRegion(row);
+    const current = lookup[rowRegion] || { region: rowRegion, total: 0, overdue: 0, stale: 0, carryover: 0, craig: 0 };
+    const stale = hoursSince(row.updated_at || row.created_at, now) >= 24;
+    const overdue = isPastDue(row.due_at, now);
+    lookup[rowRegion] = {
+      ...current,
+      total: current.total + 1,
+      overdue: current.overdue + (overdue ? 1 : 0),
+      stale: current.stale + (stale ? 1 : 0),
+      carryover: current.carryover + (overdue || stale || row.status === "returned_to_manager" ? 1 : 0),
+      craig: current.craig + (actionEscalationLevel(row, now) === "craig" ? 1 : 0)
+    };
+    return lookup;
+  }, {});
+  const repeatedLookup = allRows.reduce<Record<string, { key: string; count: number; title: string; region: string }>>((lookup, row) => {
+    const key = actionDedupeGroup(row);
+    const current = lookup[key] || { key, count: 0, title: row.title, region: actionRegion(row) };
+    lookup[key] = { ...current, count: current.count + 1 };
+    return lookup;
+  }, {});
+
+  return {
+    actionRows: allRows,
+    overdueActions,
+    staleActions,
+    carryoverActions,
+    craigEscalationCandidates,
+    repeatedIssueGroups: Object.values(repeatedLookup).filter((group) => group.count > 1).sort((a, b) => b.count - a.count),
+    managerPressure: Object.values(managerPressureLookup).sort((a, b) => b.craig - a.craig || b.overdue - a.overdue || b.carryover - a.carryover || b.total - a.total)
+  };
+}
+
+function actionPriorityItem(row: BriefActionRow, reason: string): BriefPriorityItem {
+  const staleHours = hoursSince(row.updated_at || row.created_at);
+  const overdue = isPastDue(row.due_at);
+  const severity = actionEscalationLevel(row) === "craig" || overdue ? "red" : staleHours >= 24 ? "amber" : actionSeverity(row);
+
+  return {
+    title: row.title,
+    region: actionRegion(row),
+    severity,
+    recommendedAction: `${reason}. Review the existing Action Centre item and drive close-out.`,
+    href: `/actions/${row.id}`,
+    actionHref: `/actions/${row.id}`,
+    dueAt: row.due_at || undefined,
+    dedupeKey: `closure:${row.id}`,
+    entityType: "action_item",
+    entityId: row.id,
+    destination: "actions",
+    autoAction: false,
+    linkedActionIds: [row.id],
+    followThroughStatus: "linked"
+  };
+}
+
 async function buildGeneratedBrief(type: BriefType, region: string, briefDate = dateOnly(), generatedBy = "toc", source = "generated") {
-  const [openActions, nationalRequests, stockOrders, complianceItems, rosterGaps] = await Promise.all([
+  const [openActions, nationalRequests, stockOrders, complianceItems, rosterGaps, closureContext] = await Promise.all([
     countRows({ table: "action_items", statuses: ["open", "submitted_for_review", "returned_to_manager"] }),
     countRows({ table: "national_requests", statuses: ["awaiting_review", "returned_to_manager", "pending"] }),
     countRows({ table: "stock_orders", statuses: ["submitted", "awaiting_review", "cancel_requested", "update_requested"] }),
     countRows({ table: "compliance_items", statuses: ["open", "in_progress", "blocked", "not_started"] }),
-    buildOdinRosterGaps()
+    buildOdinRosterGaps(),
+    readActionClosureContext(region)
   ]);
   const openRosterGaps = rosterGaps.gaps.filter((gap) => !gap.alreadyActioned && (region === "National" || gap.region === region));
   const redRosterGaps = openRosterGaps.filter((gap) => gap.severity === "red").length;
-  const amberCount = openActions + nationalRequests + stockOrders + complianceItems + openRosterGaps.length;
-  const severity = severityFromCounts(redRosterGaps, amberCount);
+  const redClosureCount = closureContext.craigEscalationCandidates.length + closureContext.overdueActions.length;
+  const amberCount = openActions + nationalRequests + stockOrders + complianceItems + openRosterGaps.length + closureContext.staleActions.length + closureContext.carryoverActions.length;
+  const severity = severityFromCounts(redRosterGaps + redClosureCount, amberCount);
   const typeLabel = briefTypeLabel(type);
   const priorityItems = [
+    ...closureContext.craigEscalationCandidates.slice(0, 2).map((row) => actionPriorityItem(row, "Craig escalation candidate")),
+    ...closureContext.overdueActions.filter((row) => !closureContext.craigEscalationCandidates.some((candidate) => candidate.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Overdue action")),
+    ...closureContext.staleActions.filter((row) => !closureContext.overdueActions.some((overdue) => overdue.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Stale manager action")),
     ...openRosterGaps.slice(0, 4).map((gap) => ({
       title: gap.title,
       region: gap.region,
@@ -113,16 +257,31 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       destination: "actions",
       autoAction: true
     })),
+    ...closureContext.repeatedIssueGroups.slice(0, 2).map((group) => ({
+      title: `Repeated issue watch: ${group.title}`,
+      region: group.region,
+      severity: "amber",
+      recommendedAction: `${group.count} matching open action items exist. Review pattern and close duplicates or consolidate ownership.`,
+      href: "/actions",
+      dedupeKey: `repeated-action:${group.key}`,
+      entityType: "action_pattern",
+      entityId: group.key,
+      destination: "actions",
+      autoAction: false
+    })),
     ...(nationalRequests ? [{ title: "National requests awaiting review", region: "National", severity: "amber", recommendedAction: "Review National Requests queue.", href: "/national-requests", autoAction: false }] : []),
     ...(complianceItems ? [{ title: "Compliance items open", region: "National", severity: "amber", recommendedAction: "Review Compliance and linked Action Centre items.", href: "/compliance", autoAction: false }] : [])
   ].slice(0, 8);
+  const topManagerPressure = closureContext.managerPressure[0];
+  const closureSummary = `${closureContext.overdueActions.length} overdue, ${closureContext.staleActions.length} stale, ${closureContext.carryoverActions.length} carryover`;
+  const pressureSummary = topManagerPressure ? ` Top pressure: ${topManagerPressure.region} with ${topManagerPressure.total} open.` : "";
 
   return {
     briefDate,
     briefType: type,
     region,
     title: `${typeLabel} - ${region}`,
-    summary: `${typeLabel}: ${openActions} open action items, ${nationalRequests} national requests, ${stockOrders} stock orders, ${complianceItems} compliance items and ${openRosterGaps.length} roster gaps need visibility.`,
+    summary: `${typeLabel}: ${openActions} open action items (${closureSummary}), ${nationalRequests} national requests, ${stockOrders} stock orders, ${complianceItems} compliance items and ${openRosterGaps.length} roster gaps need visibility.${pressureSummary}`,
     severity,
     status: "current",
     priorityItems,
@@ -132,7 +291,13 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       stockOrders,
       complianceItems,
       rosterGaps: openRosterGaps.length,
-      redRosterGaps
+      redRosterGaps,
+      overdueActions: closureContext.overdueActions.length,
+      staleActions: closureContext.staleActions.length,
+      carryoverActions: closureContext.carryoverActions.length,
+      repeatedIssueGroups: closureContext.repeatedIssueGroups.length,
+      craigEscalationCandidates: closureContext.craigEscalationCandidates.length,
+      managerPressure: closureContext.managerPressure
     },
     generatedBy,
     source
