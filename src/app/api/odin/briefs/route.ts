@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
+import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type BriefType = "morning" | "midday" | "end_of_day" | "weekly";
 
 const briefTypes: BriefType[] = ["morning", "midday", "end_of_day", "weekly"];
+
+type BriefPriorityItem = {
+  title?: string;
+  region?: string;
+  severity?: string;
+  recommendedAction?: string;
+  href?: string;
+  dueAt?: string;
+  dedupeKey?: string;
+  entityType?: string;
+  entityId?: string;
+  autoAction?: boolean;
+  linkedActionIds?: string[];
+  actionHref?: string;
+};
 
 function dateOnly(date = new Date(), timeZone = "Australia/Brisbane") {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -60,7 +76,7 @@ async function countRows(input: { table: string; statuses?: string[]; statusColu
   return count || 0;
 }
 
-async function buildGeneratedBrief(type: BriefType, region: string, briefDate = dateOnly()) {
+async function buildGeneratedBrief(type: BriefType, region: string, briefDate = dateOnly(), generatedBy = "toc", source = "generated") {
   const [openActions, nationalRequests, stockOrders, complianceItems, rosterGaps] = await Promise.all([
     countRows({ table: "action_items", statuses: ["open", "submitted_for_review", "returned_to_manager"] }),
     countRows({ table: "national_requests", statuses: ["awaiting_review", "returned_to_manager", "pending"] }),
@@ -79,10 +95,15 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       region: gap.region,
       severity: gap.severity,
       recommendedAction: gap.recommendedAction,
-      href: gap.linkedActionHref || "/national-requests"
+      href: gap.linkedActionHref || "/national-requests",
+      dueAt: gap.dueAt,
+      dedupeKey: gap.dedupeKey,
+      entityType: gap.entityType,
+      entityId: gap.entityId,
+      autoAction: true
     })),
-    ...(nationalRequests ? [{ title: "National requests awaiting review", region: "National", severity: "amber", recommendedAction: "Review National Requests queue.", href: "/national-requests" }] : []),
-    ...(complianceItems ? [{ title: "Compliance items open", region: "National", severity: "amber", recommendedAction: "Review Compliance and linked Action Centre items.", href: "/compliance" }] : [])
+    ...(nationalRequests ? [{ title: "National requests awaiting review", region: "National", severity: "amber", recommendedAction: "Review National Requests queue.", href: "/national-requests", autoAction: false }] : []),
+    ...(complianceItems ? [{ title: "Compliance items open", region: "National", severity: "amber", recommendedAction: "Review Compliance and linked Action Centre items.", href: "/compliance", autoAction: false }] : [])
   ].slice(0, 8);
 
   return {
@@ -102,8 +123,80 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       rosterGaps: openRosterGaps.length,
       redRosterGaps
     },
-    generatedBy: "toc",
-    source: "generated"
+    generatedBy,
+    source
+  };
+}
+
+async function createBriefFollowThroughActions(input: {
+  brief: {
+    briefDate: string;
+    briefType: BriefType;
+    region: string;
+    priorityItems: BriefPriorityItem[];
+  };
+  actorKind: "odin" | "toc";
+  actor?: Parameters<typeof logTocAudit>[0]["actor"];
+}) {
+  const actionResults = [];
+  const updatedPriorityItems = [];
+
+  for (const item of input.brief.priorityItems) {
+    if (item.autoAction === false || !item.title) {
+      updatedPriorityItems.push(item);
+      continue;
+    }
+
+    const result = await createOdinDirectActionItems({
+      actorKind: input.actorKind,
+      actor: input.actor,
+      payload: {
+        action: "create",
+        title: item.title,
+        detail: item.recommendedAction || "Odin daily rhythm raised this priority for manager close-out.",
+        summary: item.recommendedAction || item.title,
+        region: item.region || input.brief.region,
+        targetRegions: [item.region || input.brief.region],
+        priority: item.severity === "red" ? "urgent" : "high",
+        severity: item.severity || "amber",
+        directiveType: item.severity === "red" ? "National Ops Directive" : "Scheduled Directive",
+        sourcePage: "Action Centre",
+        sourceType: "odin_daily_brief",
+        issueType: "daily-brief-priority",
+        category: "daily-rhythm",
+        dueAt: item.dueAt,
+        dueDate: item.dueAt,
+        entityType: item.entityType || "daily_brief_priority",
+        entityId: item.entityId || item.dedupeKey || item.title,
+        dedupeKey: item.dedupeKey || `daily-brief:${input.brief.briefDate}:${input.brief.briefType}:${item.region || input.brief.region}:${item.title}`
+      }
+    });
+    const linkedActionIds = [
+      ...((result.createdActionIds || []) as string[]),
+      ...((result.linkedActionIds || []) as string[])
+    ];
+    const actionHref = linkedActionIds[0] ? `/actions/${linkedActionIds[0]}` : item.href || "/actions";
+
+    actionResults.push({
+      title: item.title,
+      createdActionIds: result.createdActionIds || [],
+      linkedActionIds: result.linkedActionIds || [],
+      skippedDuplicateCount: result.skippedDuplicateCount || 0
+    });
+    updatedPriorityItems.push({
+      ...item,
+      href: actionHref,
+      actionHref,
+      linkedActionIds,
+      actionBacked: Boolean(linkedActionIds.length)
+    });
+  }
+
+  return {
+    priorityItems: updatedPriorityItems,
+    actionResults,
+    createdCount: actionResults.reduce((total, result) => total + result.createdActionIds.length, 0),
+    linkedCount: actionResults.reduce((total, result) => total + result.linkedActionIds.length, 0)
   };
 }
 
@@ -168,8 +261,10 @@ export async function POST(request: Request) {
   const action = String(payload.action || "upsert");
   const briefType = cleanBriefType(payload.briefType || payload.type);
   const region = String(payload.region || "National");
+  const source = String(payload.source || (permission.kind === "odin" ? "odin" : "toc"));
+  const generatedBy = permission.kind === "odin" ? "odin" : "toc";
   const briefData = action === "generate"
-    ? await buildGeneratedBrief(briefType, region, cleanDateOnly(payload.briefDate || payload.date))
+    ? await buildGeneratedBrief(briefType, region, cleanDateOnly(payload.briefDate || payload.date), generatedBy, source)
     : {
       briefDate: cleanDateOnly(payload.briefDate || payload.date),
       briefType,
@@ -180,8 +275,8 @@ export async function POST(request: Request) {
       status: String(payload.status || "current"),
       priorityItems: Array.isArray(payload.priorityItems) ? payload.priorityItems : [],
       metrics: payload.metrics && typeof payload.metrics === "object" ? payload.metrics : {},
-      generatedBy: permission.kind === "odin" ? "odin" : "toc",
-      source: String(payload.source || (permission.kind === "odin" ? "odin" : "toc"))
+      generatedBy,
+      source
     };
 
   const { data, error } = await supabase
@@ -205,14 +300,66 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ connected: false, error: error.message }, { status: 500 });
 
+  let briefRow = data as Record<string, unknown>;
+  let followThrough: Awaited<ReturnType<typeof createBriefFollowThroughActions>> | null = null;
+  let followThroughError = "";
+  const autoCreateActions = payload.autoCreateActions !== false;
+
+  if (autoCreateActions && action === "generate" && Array.isArray(briefData.priorityItems) && briefData.priorityItems.length) {
+    try {
+      followThrough = await createBriefFollowThroughActions({
+        brief: {
+          briefDate: briefData.briefDate,
+          briefType: briefData.briefType,
+          region: briefData.region,
+          priorityItems: briefData.priorityItems as BriefPriorityItem[]
+        },
+        actorKind: permission.kind,
+        actor: permission.kind === "toc" ? permission.user : undefined
+      });
+
+      const { data: updatedBrief, error: updateError } = await supabase
+        .from("odin_daily_briefs")
+        .update({
+          priority_items: followThrough.priorityItems,
+          metrics: {
+            ...briefData.metrics,
+            actionItemsCreated: followThrough.createdCount,
+            actionItemsLinked: followThrough.linkedCount
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", data.id)
+        .select("*")
+        .single();
+
+      if (updateError) throw updateError;
+      briefRow = updatedBrief as Record<string, unknown>;
+    } catch (error) {
+      followThroughError = error instanceof Error ? error.message : "Brief follow-through action creation failed.";
+    }
+  }
+
   await logTocAudit({
     actor: permission.kind === "toc" ? permission.user : undefined,
     action: action === "generate" ? "odin.brief.generate" : "odin.brief.upsert",
     entityTable: "odin_daily_briefs",
     entityId: data.id,
     scope: briefData.region,
-    details: { briefType: briefData.briefType, actorType: permission.kind }
+    details: {
+      briefType: briefData.briefType,
+      actorType: permission.kind,
+      followThroughCreated: followThrough?.createdCount || 0,
+      followThroughLinked: followThrough?.linkedCount || 0,
+      followThroughError: followThroughError || undefined
+    }
   });
 
-  return NextResponse.json({ connected: true, action, brief: mapBriefRow(data as Record<string, unknown>) });
+  return NextResponse.json({
+    connected: true,
+    action,
+    brief: mapBriefRow(briefRow),
+    followThrough,
+    followThroughError: followThroughError || undefined
+  });
 }

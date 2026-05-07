@@ -70,6 +70,38 @@ export function normaliseOdinDueDate(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
+async function existingOpenActionsByDedupeKey(dedupeKeys: string[]) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase || !dedupeKeys.length) return new Map<string, string>();
+
+  const { data: memoryRows } = await supabase
+    .from("odin_memory")
+    .select("source_id,facts")
+    .eq("source_type", "action_item");
+
+  const matchingRows = ((memoryRows || []) as Array<{
+    source_id?: string | null;
+    facts?: { dedupeKey?: string } | null;
+  }>).filter((row) => row.source_id && row.facts?.dedupeKey && dedupeKeys.includes(row.facts.dedupeKey));
+  const actionIds = Array.from(new Set(matchingRows.map((row) => row.source_id).filter(Boolean) as string[]));
+  if (!actionIds.length) return new Map();
+
+  const { data: actionRows } = await supabase
+    .from("action_items")
+    .select("id,status")
+    .in("id", actionIds);
+  const openActionIds = new Set(((actionRows || []) as Array<{ id: string; status: string }>).filter((row) => row.status !== "closed").map((row) => row.id));
+  const linked = new Map<string, string>();
+
+  matchingRows.forEach((row) => {
+    if (row.source_id && row.facts?.dedupeKey && openActionIds.has(row.source_id)) {
+      linked.set(row.facts.dedupeKey, row.source_id);
+    }
+  });
+
+  return linked;
+}
+
 async function getTargetRegions(targetRegions: string[]) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return [];
@@ -108,8 +140,34 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
   const priority = normaliseOdinPriority(payload.priority);
   const sourcePage = normaliseOdinSourcePage(payload.sourcePage);
   const dueAt = normaliseOdinDueDate(payload.dueDate || payload.dueAt);
+  const previewContexts = targetRegions.map((region) => ({
+    region,
+    context: buildOdinOperationalContext({
+      payload,
+      destination: "actions",
+      region: region.name,
+      title,
+      sourcePage,
+      severity: String(payload.severity || (priority === "urgent" ? "red" : "amber")),
+      priority,
+      dueAt
+    })
+  }));
+  const existingActions = await existingOpenActionsByDedupeKey(previewContexts.map((item) => item.context.dedupeKey));
+  const actionTargets = previewContexts.filter((item) => !existingActions.has(item.context.dedupeKey));
 
-  const actionRows = targetRegions.map((region) => ({
+  if (!actionTargets.length) {
+    const linkedActionIds = Array.from(existingActions.values());
+    return {
+      createdActionIds: [],
+      createdCount: 0,
+      linkedActionIds,
+      skippedDuplicateCount: previewContexts.length,
+      targetRegions: targetRegions.map((region) => region.name)
+    };
+  }
+
+  const actionRows = actionTargets.map(({ region }) => ({
     title,
     detail,
     source_page: sourcePage,
@@ -128,27 +186,19 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
   if (insertError) throw insertError;
 
   const createdActionIds = ((createdActions as Array<{ id: string }> | null) || []).map((row) => row.id);
-  const operationalContexts = targetRegions.map((region, index) => ({
+  const operationalContexts = actionTargets.map(({ region, context }, index) => ({
     actionId: createdActionIds[index],
     region: region.name,
-    ...buildOdinOperationalContext({
-      payload,
-      destination: "actions",
-      region: region.name,
-      title,
-      sourcePage,
-      severity: String(payload.severity || (priority === "urgent" ? "red" : "amber")),
-      priority,
-      dueAt
-    })
+    ...context
   }));
   const odinItemPayload = {
-    targetRegions: targetRegions.map((region) => region.name),
+    targetRegions: actionTargets.map(({ region }) => region.name),
     directiveType,
     priority,
     sourcePage,
     dueDate: payload.dueDate || payload.dueAt || null,
     createdActionIds,
+    skippedDuplicateActionIds: Array.from(existingActions.values()),
     directIssue: true,
     ownership: operationalContexts
   };
@@ -183,11 +233,12 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     action: "odin.action.direct_create",
     entityTable: "action_items",
     entityId: createdActionIds[0],
-    scope: targetRegions.map((region) => region.name).join(", "),
+    scope: actionTargets.map(({ region }) => region.name).join(", "),
     details: {
       title,
-      targetRegions: targetRegions.map((region) => region.name),
+      targetRegions: actionTargets.map(({ region }) => region.name),
       createdActionIds,
+      skippedDuplicateActionIds: Array.from(existingActions.values()),
       odinItemId: odinItem.id,
       ownership: operationalContexts,
       actorType: input.actorKind
@@ -211,6 +262,8 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     createdActionIds,
     createdCount: createdActionIds.length,
     odinItemId: odinItem.id,
+    linkedActionIds: Array.from(existingActions.values()),
+    skippedDuplicateCount: previewContexts.length - actionTargets.length,
     targetRegions: targetRegions.map((region) => region.name)
   };
 }
