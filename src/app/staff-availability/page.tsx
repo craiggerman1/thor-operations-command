@@ -17,6 +17,7 @@ type RosterGap = {
   dueAt: string;
   reason: string;
   staffSuggestionNames?: string[];
+  alreadyActioned?: boolean;
 };
 
 function getStoredScope() {
@@ -58,6 +59,7 @@ export default function StaffAvailabilityPage() {
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
   const scopedRosterGaps = rosterGaps.filter((gap) => scope === "National" || gap.region === scope);
   const redRosterGaps = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
+  const actionedRosterGaps = scopedRosterGaps.filter((gap) => gap.alreadyActioned).length;
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -169,7 +171,7 @@ export default function StaffAvailabilityPage() {
           <div className={`staff-risk-strip ${redRosterGaps ? "red" : scopedRosterGaps.length ? "amber" : "clear"}`}>
             <div>
               <strong>{scopedRosterGaps.length ? `${scopedRosterGaps.length} roster risk${scopedRosterGaps.length === 1 ? "" : "s"} visible` : "No roster risks visible"}</strong>
-              <small>{rosterGapStatus}. Red gaps should be actioned before the job proceeds.</small>
+              <small>{rosterGapStatus}. {actionedRosterGaps ? `${actionedRosterGaps} already linked to Action Centre. ` : ""}Red gaps should be actioned before the job proceeds.</small>
             </div>
             {scopedRosterGaps.length ? (
               <div className="staff-risk-list">

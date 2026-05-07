@@ -156,6 +156,7 @@ export function buildOdinOperationalContext(input: {
   const category = categoryFor(payload, sourcePage);
   const entity = inferEntity(payload, input.title);
   const issueType = issueTypeFor({ payload, title: input.title, sourcePage, category });
+  const explicitDedupeKey = field(payload, ["dedupeKey", "dedupe_key"]);
   const escalationResult = escalation({
     region: input.region,
     severity: input.severity || String(payload.severity || "amber"),
@@ -172,7 +173,7 @@ export function buildOdinOperationalContext(input: {
     entity,
     issueType,
     category,
-    dedupeKey: odinDedupeKey([input.region, entity.type, entity.id || entity.label || input.title, issueType, input.dueAt || "no-due-date"]),
+    dedupeKey: explicitDedupeKey || odinDedupeKey([input.region, entity.type, entity.id || entity.label || input.title, issueType, input.dueAt || "no-due-date"]),
     ...escalationResult
   };
 }

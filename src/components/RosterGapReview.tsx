@@ -17,6 +17,7 @@ type StaffSuggestion = {
 
 type RosterGap = {
   id: string;
+  dedupeKey?: string;
   title: string;
   region: string;
   severity: "red" | "amber" | "blue" | string;
@@ -27,6 +28,10 @@ type RosterGap = {
   assignedCrewCount?: number;
   staffSuggestions?: StaffSuggestion[];
   staffSuggestionNames?: string[];
+  alreadyActioned?: boolean;
+  linkedActionId?: string | null;
+  linkedActionHref?: string | null;
+  linkedActionStatus?: string | null;
 };
 
 type RosterGapPayload = {
@@ -88,7 +93,9 @@ export function RosterGapReview() {
       });
       const payload = await response.json();
       if (!response.ok || payload.connected === false) throw new Error(payload.error || "Manager action could not be created.");
-      setStatus("Roster gap action created and sent to Action Centre.");
+      setStatus(payload.action === "already_actioned"
+        ? "Roster gap already has an open Action Centre item."
+        : "Roster gap action created and sent to Action Centre.");
       window.dispatchEvent(new Event("toc.actionState.updated"));
       await loadRosterGaps();
     } catch (error) {
@@ -122,6 +129,7 @@ export function RosterGapReview() {
               <div className="meta-row">
                 <Tag tone={toneForSeverity(gap.severity)}>{gap.severity}</Tag>
                 {typeof gap.requiredCrew === "number" ? <Tag>{gap.assignedCrewCount || 0}/{gap.requiredCrew} crew</Tag> : null}
+                {gap.alreadyActioned ? <Tag tone="green">Actioned</Tag> : null}
               </div>
             </div>
             <p>{gap.reason}</p>
@@ -136,9 +144,13 @@ export function RosterGapReview() {
                 ))}
               </div>
             ) : null}
-            <button type="button" onClick={() => createManagerAction(gap)} disabled={activeGapId === gap.id || isLoading}>
-              {activeGapId === gap.id ? "Creating..." : "Create Manager Action"}
-            </button>
+            {gap.alreadyActioned && gap.linkedActionHref ? (
+              <a className="node-action" href={gap.linkedActionHref}>Open Linked Action</a>
+            ) : (
+              <button type="button" onClick={() => createManagerAction(gap)} disabled={activeGapId === gap.id || isLoading}>
+                {activeGapId === gap.id ? "Creating..." : "Create Manager Action"}
+              </button>
+            )}
           </article>
         ))}
         {!gaps.length ? <div className="empty-state">{status}</div> : null}

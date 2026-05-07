@@ -1,4 +1,5 @@
 import { isStaffAvailableForJob, isStaffInductedForSite, readOdinStaffEntities, type OdinStaffEntity } from "@/lib/odin-staff";
+import { odinDedupeKey } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type CalendarJobRow = {
@@ -67,6 +68,10 @@ function jobRequiresMoreThanOnePerson(job: CalendarJobRow) {
 
 function requiredCrewCount(job: CalendarJobRow) {
   return jobRequiresMoreThanOnePerson(job) ? 2 : 1;
+}
+
+function rosterGapKey(input: { region: string; jobId: string; gapType: string; entityId?: string | null; dueAt: string }) {
+  return odinDedupeKey(["roster-gap", input.region, input.jobId, input.gapType, input.entityId || "job", input.dueAt]);
 }
 
 function matchSkill(person: OdinStaffEntity, job: CalendarJobRow) {
@@ -186,13 +191,47 @@ async function readRosterJobs() {
   };
 }
 
+async function readLinkedRosterActions(dedupeKeys: string[]) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase || !dedupeKeys.length) return new Map<string, { id: string; status: string; title: string }>();
+
+  const { data } = await supabase
+    .from("odin_memory")
+    .select("facts,source_id,title")
+    .eq("source_type", "action_item");
+
+  const memoryRows = ((data || []) as Array<{
+    facts?: { dedupeKey?: string } | null;
+    source_id?: string | null;
+    title?: string | null;
+  }>).filter((row) => row.source_id && row.facts?.dedupeKey && dedupeKeys.includes(row.facts.dedupeKey));
+  const actionIds = Array.from(new Set(memoryRows.map((row) => row.source_id).filter(Boolean) as string[]));
+  if (!actionIds.length) return new Map();
+
+  const { data: actionRows } = await supabase
+    .from("action_items")
+    .select("id,status,title")
+    .in("id", actionIds);
+  const actions = new Map(((actionRows || []) as Array<{ id: string; status: string; title: string }>).map((row) => [row.id, row]));
+  const linked = new Map<string, { id: string; status: string; title: string }>();
+
+  memoryRows.forEach((row) => {
+    const action = row.source_id ? actions.get(row.source_id) : undefined;
+    if (row.facts?.dedupeKey && action && action.status !== "closed") {
+      linked.set(row.facts.dedupeKey, action);
+    }
+  });
+
+  return linked;
+}
+
 export async function buildOdinRosterGaps() {
   const [staffResult, jobsResult] = await Promise.all([
     readOdinStaffEntities({ includeProtected: true }),
     readRosterJobs()
   ]);
 
-  const gaps = jobsResult.jobs.flatMap((job) => {
+  const rawGaps = jobsResult.jobs.flatMap((job) => {
     const region = job.location || "National";
     const site = job.site || "Unassigned site";
     const time = job.job_time || "07:00";
@@ -209,6 +248,8 @@ export async function buildOdinRosterGaps() {
     const items = [];
 
     if (crewLooksUnassigned(job.crew)) {
+      const dueAt = `${job.job_date}T${time}:00+10:00`;
+      const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "crew", dueAt });
       const recommendedAction = recommendationWithSuggestions(
         `Assign a suitable ${region} crew for ${site}. Check availability and induction eligibility before confirming.`,
         suitableStaff
@@ -219,7 +260,9 @@ export async function buildOdinRosterGaps() {
         title: `${region} roster gap - ${site}`,
         region,
         severity: job.severity === "red" ? "red" : "amber",
-        dueAt: `${job.job_date}T${time}:00+10:00`,
+        dueAt,
+        dedupeKey,
+        gapType: "crew",
         reason: "No assigned crew is visible for this scheduled job.",
         recommendedAction,
         requiredCrew,
@@ -232,6 +275,8 @@ export async function buildOdinRosterGaps() {
     }
 
     if (!crewLooksUnassigned(job.crew) && assignedStaff.length < requiredCrew) {
+      const dueAt = `${job.job_date}T${time}:00+10:00`;
+      const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "under-covered", dueAt });
       const needed = requiredCrew - assignedStaff.length;
       const recommendedAction = recommendationWithSuggestions(
         `Add ${needed} more suitable staff member${needed === 1 ? "" : "s"} for ${site} before confirming the roster.`,
@@ -243,7 +288,9 @@ export async function buildOdinRosterGaps() {
         title: `${region} under-covered job - ${site}`,
         region,
         severity: job.severity === "red" ? "red" : "amber",
-        dueAt: `${job.job_date}T${time}:00+10:00`,
+        dueAt,
+        dedupeKey,
+        gapType: "under-covered",
         reason: `Only ${assignedStaff.length} of ${requiredCrew} required crew are visible for this job.`,
         recommendedAction,
         requiredCrew,
@@ -256,13 +303,17 @@ export async function buildOdinRosterGaps() {
     }
 
     if (regionalStaff.length && !availableStaff.length) {
+      const dueAt = `${job.job_date}T${time}:00+10:00`;
+      const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "availability", dueAt });
       items.push({
         id: `availability:${job.id}`,
         jobId: job.id,
         title: `${region} availability gap - ${site}`,
         region,
         severity: "amber",
-        dueAt: `${job.job_date}T${time}:00+10:00`,
+        dueAt,
+        dedupeKey,
+        gapType: "availability",
         reason: "No available staff windows match this scheduled job time.",
         recommendedAction: `Review staff availability for ${region} before confirming ${site}.`,
         requiredCrew,
@@ -275,13 +326,17 @@ export async function buildOdinRosterGaps() {
     }
 
     if (site !== "Unassigned site" && regionalStaff.length && !inductedStaff.length) {
+      const dueAt = `${job.job_date}T${time}:00+10:00`;
+      const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "induction", dueAt });
       items.push({
         id: `induction:${job.id}`,
         jobId: job.id,
         title: `${region} induction gap - ${site}`,
         region,
         severity: "red",
-        dueAt: `${job.job_date}T${time}:00+10:00`,
+        dueAt,
+        dedupeKey,
+        gapType: "induction",
         reason: "No inducted regional staff are visible for this site.",
         recommendedAction: `Confirm site induction coverage for ${site} before the job proceeds.`,
         requiredCrew,
@@ -294,6 +349,8 @@ export async function buildOdinRosterGaps() {
     }
 
     assignedUnavailable.forEach((person) => {
+      const dueAt = `${job.job_date}T${time}:00+10:00`;
+      const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "assigned-unavailable", entityId: person.id, dueAt });
       const replacementSuggestions = staffSuitabilityForJob(regionalStaff, job, region, site, time, [person.id]);
       items.push({
         id: `assigned-unavailable:${job.id}:${person.id}`,
@@ -301,7 +358,9 @@ export async function buildOdinRosterGaps() {
         title: `${person.name} unavailable for ${site}`,
         region,
         severity: "amber",
-        dueAt: `${job.job_date}T${time}:00+10:00`,
+        dueAt,
+        dedupeKey,
+        gapType: "assigned-unavailable",
         reason: "Assigned staff member appears unavailable for this job window.",
         recommendedAction: recommendationWithSuggestions(`Review ${person.name}'s availability or replace them before the shift.`, replacementSuggestions),
         requiredCrew,
@@ -314,6 +373,8 @@ export async function buildOdinRosterGaps() {
     });
 
     assignedNotInducted.forEach((person) => {
+      const dueAt = `${job.job_date}T${time}:00+10:00`;
+      const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "assigned-not-inducted", entityId: person.id, dueAt });
       const replacementSuggestions = staffSuitabilityForJob(inductedStaff, job, region, site, time, [person.id]);
       items.push({
         id: `assigned-not-inducted:${job.id}:${person.id}`,
@@ -321,7 +382,9 @@ export async function buildOdinRosterGaps() {
         title: `${person.name} not inducted for ${site}`,
         region,
         severity: "red",
-        dueAt: `${job.job_date}T${time}:00+10:00`,
+        dueAt,
+        dedupeKey,
+        gapType: "assigned-not-inducted",
         reason: "Assigned staff member is not showing as inducted for this site.",
         recommendedAction: recommendationWithSuggestions(`Do not confirm ${person.name} for ${site} unless induction status is corrected.`, replacementSuggestions),
         requiredCrew,
@@ -334,6 +397,17 @@ export async function buildOdinRosterGaps() {
     });
 
     return items;
+  });
+  const linkedActions = await readLinkedRosterActions(rawGaps.map((gap) => gap.dedupeKey));
+  const gaps = rawGaps.map((gap) => {
+    const linkedAction = linkedActions.get(gap.dedupeKey);
+    return {
+      ...gap,
+      alreadyActioned: Boolean(linkedAction),
+      linkedActionId: linkedAction?.id || null,
+      linkedActionStatus: linkedAction?.status || null,
+      linkedActionHref: linkedAction ? `/actions/${linkedAction.id}` : null
+    };
   });
 
   return {

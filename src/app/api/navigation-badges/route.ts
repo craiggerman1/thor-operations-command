@@ -116,7 +116,7 @@ export async function GET(request: Request) {
   const complianceBadgeCount = Math.max(countBySource(["Compliance"]), openComplianceRegisterCount);
   const nationalRequestCount = scope === "National" ? ((requestData as { status: string }[] | null) || []).length + scopedStock.length : 0;
   const todoCount = ((todoData as TodoRow[] | null) || []).filter((item) => isTodoVisibleForScope(item, role, scope)).length;
-  const scopedRosterGaps = rosterGaps.gaps.filter((gap) => scope === "National" || gap.region === scope);
+  const scopedRosterGaps = rosterGaps.gaps.filter((gap) => (scope === "National" || gap.region === scope) && !gap.alreadyActioned);
   const redRosterGapCount = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
   const rosterGapTone = redRosterGapCount ? "red" : scopedRosterGaps.length ? "amber" : "blue";
 
