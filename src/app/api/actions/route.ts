@@ -16,6 +16,8 @@ type ActionRow = {
   priority: "urgent" | "high" | "normal" | "low";
   status: ActionStatus;
   due_at: string | null;
+  created_at: string;
+  updated_at: string;
   region?: { name: string } | { name: string }[] | null;
 };
 
@@ -113,6 +115,75 @@ function displayStatus(status: ActionStatus) {
 function displayDueDate(value: string | null) {
   if (!value) return "No due date set";
   return new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function hoursSince(value: string | null | undefined, now = new Date()) {
+  if (!value) return 0;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / 3600000));
+}
+
+function actionAgeLabel(hours: number) {
+  if (hours < 1) return "Just raised";
+  if (hours < 24) return `${hours}h open`;
+  const days = Math.floor(hours / 24);
+  return `${days}d open`;
+}
+
+function isDueSoon(value: string | null, now = new Date()) {
+  if (!value) return false;
+  const dueDate = new Date(value);
+  if (Number.isNaN(dueDate.getTime())) return false;
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  return dueDate.getTime() >= now.getTime() && dueDate.getTime() <= now.getTime() + threeDays;
+}
+
+function isOverdue(value: string | null, now = new Date()) {
+  if (!value) return false;
+  const dueDate = new Date(value);
+  return !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < now.getTime();
+}
+
+function closureSignalForAction(row: ActionRow, now = new Date()) {
+  const ageHours = hoursSince(row.created_at, now);
+  const staleHours = hoursSince(row.updated_at || row.created_at, now);
+  const overdue = isOverdue(row.due_at, now);
+  const stale = staleHours >= 24 && row.status === "open";
+  const returned = row.status === "returned_to_manager";
+  const submitted = row.status === "submitted_for_review";
+  const urgent = row.priority === "urgent" || row.directive_type === "National Ops Directive";
+  const carryover = overdue || stale || returned;
+  const escalationLevel = overdue && urgent
+    ? "craig"
+    : overdue || returned || staleHours >= 48
+      ? "national"
+      : stale || submitted || isDueSoon(row.due_at, now)
+        ? "watch"
+        : "none";
+  const escalationLabel = escalationLevel === "craig"
+    ? "Craig escalation"
+    : escalationLevel === "national"
+      ? "National follow-up"
+      : escalationLevel === "watch"
+        ? "Watch"
+        : "On track";
+
+  return {
+    ageHours,
+    staleHours,
+    ageLabel: actionAgeLabel(ageHours),
+    staleLabel: staleHours < 1 ? "Updated just now" : `${actionAgeLabel(staleHours).replace("open", "since update")}`,
+    isOverdue: overdue,
+    isDueSoon: isDueSoon(row.due_at, now),
+    isStale: stale,
+    isCarryover: carryover,
+    escalationLevel,
+    escalationLabel,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    dueAt: row.due_at
+  };
 }
 
 function normaliseDirective(value: string): ActionRow["directive_type"] {
@@ -243,6 +314,7 @@ function mapAction(row: ActionRow) {
   const source = titleCase(row.source_page || "Action Centre");
   const region = firstRelated(row.region);
   const severity = severityForAction(row);
+  const closureSignal = closureSignalForAction(row);
 
   return {
     id: row.id,
@@ -255,6 +327,7 @@ function mapAction(row: ActionRow) {
     href: `/actions/${row.id}`,
     detail: row.detail || "Action item requires manager review and close-out.",
     status: displayStatus(row.status),
+    ...closureSignal,
     closeFlow: "Complete the required action, record the response, and submit for national approval.",
     closeActions: [
       `Open the source page: ${source}`,
@@ -285,7 +358,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("action_items")
-    .select("id,title,detail,source_page,directive_type,priority,status,due_at,region:regions(name)")
+    .select("id,title,detail,source_page,directive_type,priority,status,due_at,created_at,updated_at,region:regions(name)")
     .order("created_at", { ascending: false });
 
   if (id) query = query.eq("id", id);

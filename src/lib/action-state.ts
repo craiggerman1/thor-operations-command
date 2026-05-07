@@ -8,6 +8,26 @@ export type ActionOverride = {
   updatedAt: string;
 };
 
+export type ActionEscalationLevel = "none" | "watch" | "national" | "craig";
+
+export type ActionClosureSignal = {
+  ageHours: number;
+  staleHours: number;
+  ageLabel: string;
+  staleLabel: string;
+  isOverdue: boolean;
+  isDueSoon: boolean;
+  isStale: boolean;
+  isCarryover: boolean;
+  escalationLevel: ActionEscalationLevel;
+  escalationLabel: string;
+  createdAt?: string;
+  updatedAt?: string;
+  dueAt?: string | null;
+};
+
+export type EnhancedActionItem = ActionItem & ActionClosureSignal;
+
 export const actionStateKey = "toc.actionState";
 
 export function readActionState() {

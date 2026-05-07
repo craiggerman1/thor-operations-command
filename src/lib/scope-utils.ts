@@ -11,6 +11,6 @@ export function isActionVisibleForSession(item: ActionItem, scope: string, role?
   return item.region === scope;
 }
 
-export function getScopedActionItems(items: ActionItem[], scope: string, role?: AccessRole) {
+export function getScopedActionItems<T extends ActionItem>(items: T[], scope: string, role?: AccessRole) {
   return items.filter((item) => isActionVisibleForSession(item, scope, role));
 }

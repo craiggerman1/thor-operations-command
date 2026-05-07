@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import type { ActionItem } from "@/lib/action-state";
+import type { EnhancedActionItem } from "@/lib/action-state";
 import type { AccessRole } from "@/lib/access";
 import { getScopedActionItems } from "@/lib/scope-utils";
 import { tocFetch } from "@/lib/toc-client-auth";
@@ -19,7 +19,7 @@ const directivePriority = {
 
 export default function ActionsPage() {
   const router = useRouter();
-  const [openActions, setOpenActions] = useState<ActionItem[]>([]);
+  const [openActions, setOpenActions] = useState<EnhancedActionItem[]>([]);
   const [message, setMessage] = useState("");
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const [scope, setScope] = useState("National");
@@ -27,6 +27,9 @@ export default function ActionsPage() {
   const scopedActions = getScopedActionItems(openActions, scope, role);
   const sortedActions = [...scopedActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
   const canQuickManage = role === "admin" || (role === "manager" && scope === "National");
+  const closureSummary = buildClosureSummary(sortedActions);
+  const managerWorkload = buildManagerWorkload(sortedActions);
+  const repeatGroups = buildRepeatGroups(sortedActions);
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -46,7 +49,7 @@ export default function ActionsPage() {
         const nextScope = storedSession?.scope || "National";
         const response = await tocFetch(`/api/actions?scope=${encodeURIComponent(nextScope)}`, { cache: "no-store" });
         const payload = await response.json();
-        const actions = (payload.actions || []) as ActionItem[];
+        const actions = (payload.actions || []) as EnhancedActionItem[];
         setOpenActions(actions.filter((item) => item.status !== "Closed"));
       } catch {
         setOpenActions([]);
@@ -120,6 +123,30 @@ export default function ActionsPage() {
       <PageIntro title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <FlowHeading eyebrow="Action Centre" title="Ensure all items are actioned, owned, escalated where needed, and then cleared from the queue." />
       <section className="command-grid route-grid">
+        <Panel wide eyebrow="Odin closure control" title="Action ageing and escalation" pill={`${closureSummary.carryover} carryover`}>
+          <div className="closure-control-grid">
+            <ClosureMetric label="Open actions" value={sortedActions.length} tone={sortedActions.length ? "amber" : "green"} />
+            <ClosureMetric label="Overdue" value={closureSummary.overdue} tone={closureSummary.overdue ? "red" : "green"} />
+            <ClosureMetric label="Stale >24h" value={closureSummary.stale} tone={closureSummary.stale ? "amber" : "green"} />
+            <ClosureMetric label="Craig escalation" value={closureSummary.craigEscalations} tone={closureSummary.craigEscalations ? "red" : "green"} />
+          </div>
+          <div className="manager-workload-grid">
+            {managerWorkload.map((item) => (
+              <article className={`manager-workload-card ${item.tone}`} key={item.region}>
+                <span>{item.region}</span>
+                <strong>{item.total}</strong>
+                <small>{item.overdue} overdue / {item.carryover} carryover</small>
+              </article>
+            ))}
+            {managerWorkload.length ? null : <div className="empty-state">No manager workload pressure currently open.</div>}
+          </div>
+          {repeatGroups.length ? (
+            <div className="repeat-issue-strip">
+              <span className="eyebrow">Repeated issue watch</span>
+              {repeatGroups.map((group) => <Tag tone="amber" key={group.key}>{group.count} x {group.label}</Tag>)}
+            </div>
+          ) : null}
+        </Panel>
         <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} open actions`}>
           {message ? <div className="admin-hint-message">{message}</div> : null}
           <div className="signal-action-list">
@@ -139,6 +166,10 @@ export default function ActionsPage() {
                   <strong>{signal.title}</strong>
                   <small>{signal.detail}</small>
                   <span className="action-due-date">Due: {signal.dueDate}</span>
+                  <div className="action-closure-meta">
+                    <Tag tone={signal.isOverdue ? "red" : signal.isStale || signal.isDueSoon ? "amber" : "green"}>{signal.ageLabel || "New"}</Tag>
+                    <Tag tone={signal.escalationLevel === "craig" ? "red" : signal.escalationLevel === "national" ? "amber" : "blue"}>{signal.escalationLabel || "On track"}</Tag>
+                  </div>
                 </div>
                 <div className="signal-action-controls">
                   <Tag tone={signal.severity}>{signal.directive}</Tag>
@@ -157,5 +188,63 @@ export default function ActionsPage() {
         </Panel>
       </section>
     </TocShell>
+  );
+}
+
+function buildClosureSummary(actions: EnhancedActionItem[]) {
+  return actions.reduce((summary, action) => ({
+    overdue: summary.overdue + (action.isOverdue ? 1 : 0),
+    stale: summary.stale + (action.isStale ? 1 : 0),
+    carryover: summary.carryover + (action.isCarryover ? 1 : 0),
+    craigEscalations: summary.craigEscalations + (action.escalationLevel === "craig" ? 1 : 0)
+  }), { overdue: 0, stale: 0, carryover: 0, craigEscalations: 0 });
+}
+
+function buildManagerWorkload(actions: EnhancedActionItem[]) {
+  const workload = actions.reduce<Record<string, { region: string; total: number; overdue: number; carryover: number }>>((lookup, action) => {
+    const region = action.region || "National";
+    const current = lookup[region] || { region, total: 0, overdue: 0, carryover: 0 };
+    lookup[region] = {
+      ...current,
+      total: current.total + 1,
+      overdue: current.overdue + (action.isOverdue ? 1 : 0),
+      carryover: current.carryover + (action.isCarryover ? 1 : 0)
+    };
+    return lookup;
+  }, {});
+
+  return Object.values(workload)
+    .sort((a, b) => b.overdue - a.overdue || b.carryover - a.carryover || b.total - a.total)
+    .map((item) => ({
+      ...item,
+      tone: item.overdue ? "red" : item.carryover ? "amber" : "green" as "red" | "amber" | "green"
+    }));
+}
+
+function normaliseRepeatKey(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function buildRepeatGroups(actions: EnhancedActionItem[]) {
+  const groups = actions.reduce<Record<string, { key: string; label: string; count: number }>>((lookup, action) => {
+    const label = `${action.region} ${action.source} ${normaliseRepeatKey(action.title)}`;
+    const key = normaliseRepeatKey(label);
+    const current = lookup[key] || { key, label: action.title, count: 0 };
+    lookup[key] = { ...current, count: current.count + 1 };
+    return lookup;
+  }, {});
+
+  return Object.values(groups)
+    .filter((group) => group.count > 1)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+}
+
+function ClosureMetric({ label, value, tone }: { label: string; value: number; tone: "red" | "amber" | "green" }) {
+  return (
+    <article className={`closure-metric-card ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
   );
 }

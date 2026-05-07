@@ -62,6 +62,13 @@ function isDueSoon(value: unknown, generatedAt: Date) {
   return dueDate <= dueSoonCutoff;
 }
 
+function hoursSince(value: unknown, generatedAt: Date) {
+  if (!value) return 0;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.floor((generatedAt.getTime() - date.getTime()) / 3600000));
+}
+
 function severityForAction(row: SnapshotRow) {
   const priority = String(row.priority || "").toLowerCase();
   if (row.directive_type === "National Ops Directive" || priority === "urgent" || priority === "high") return "red";
@@ -125,6 +132,10 @@ function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
     severity,
     dueAt: due || null,
     source,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+    ageHours: hoursSince(row.created_at, generatedAt),
+    staleHours: hoursSince(row.updated_at || row.created_at, generatedAt),
     href: entityType === "action_item" ? `/actions/${id}` : `/api/odin/context/${entityType}/${id}`,
     contextEndpoint: `/api/odin/context/${entityType}/${id}`,
     dedupeKey: operationalContext.dedupeKey || odinDedupeKey([region, entityType, source, title, due]),
@@ -190,6 +201,35 @@ function countByEscalation(entityLinks: ReturnType<typeof buildEntityLinks>) {
     lookup[link.escalationLevel] = (lookup[link.escalationLevel] || 0) + 1;
     return lookup;
   }, { none: 0, watch: 0, national: 0, craig: 0 });
+}
+
+function actionClosureSummary(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  const actionLinks = entityLinks.filter((item) => item.entityType === "action_item");
+  const stale24 = actionLinks.filter((item) => item.staleHours >= 24);
+  const stale48 = actionLinks.filter((item) => item.staleHours >= 48);
+  const overdue = actionLinks.filter((item) => item.isOverdue);
+  const carryover = actionLinks.filter((item) => item.isOverdue || item.staleHours >= 24 || item.status === "returned_to_manager");
+  const byOwner = actionLinks.reduce<Record<string, { owner: string; count: number; overdue: number; carryover: number }>>((lookup, item) => {
+    const current = lookup[item.owner] || { owner: item.owner, count: 0, overdue: 0, carryover: 0 };
+    lookup[item.owner] = {
+      ...current,
+      count: current.count + 1,
+      overdue: current.overdue + (item.isOverdue ? 1 : 0),
+      carryover: current.carryover + (item.isOverdue || item.staleHours >= 24 ? 1 : 0)
+    };
+    return lookup;
+  }, {});
+
+  return {
+    openActionCount: actionLinks.length,
+    stale24Count: stale24.length,
+    stale48Count: stale48.length,
+    overdueCount: overdue.length,
+    carryoverCount: carryover.length,
+    managerWorkload: Object.values(byOwner).sort((a, b) => b.overdue - a.overdue || b.carryover - a.carryover || b.count - a.count),
+    carryoverItems: carryover,
+    staleItems: [...new Set([...stale48, ...stale24])].slice(0, 20)
+  };
 }
 
 function buildStaffReadiness(staff: Awaited<ReturnType<typeof readOdinStaffEntities>>["staff"]) {
@@ -425,6 +465,7 @@ export async function GET(request: Request) {
   const dueSoonItems = entityLinks.filter((item) => item.isDueSoon);
   const redItems = entityLinks.filter((item) => item.severity === "red");
   const duplicateIssueGroups = duplicateGroups(entityLinks);
+  const actionClosure = actionClosureSummary(entityLinks);
 
   return NextResponse.json({
     connected: true,
@@ -484,6 +525,7 @@ export async function GET(request: Request) {
       staffEntities: staffResult.staff.length,
       rosterGapCount: rosterGaps.gapCount,
       recentCompletedCount: recentCompleted.rows.length,
+      actionClosure,
       dataGaps: {
         staffPhoneNumbers: staffResult.source === "database" ? "protected_staff_profiles" : "staff_profiles_table_pending",
         liveRoster: "calendar_jobs_only",
@@ -501,6 +543,7 @@ export async function GET(request: Request) {
       tomorrowJobs: calendarJobs.rows.filter((row) => row.job_date === dateOnly(addDays(generatedAt, 1))),
       rosterGaps: rosterGaps.gaps,
       ownerQueue: entityLinks.filter((item) => item.escalationLevel !== "none"),
+      actionCarryover: actionClosure.carryoverItems,
       recentlyCompleted: recentCompleted.rows
     },
     staffRoster: {

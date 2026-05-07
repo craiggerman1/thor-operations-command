@@ -2322,6 +2322,91 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 10px;
 }
 
+.closure-control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.closure-metric-card,
+.manager-workload-card {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-height: 74px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  padding: 12px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(238, 248, 251, 0.68)),
+    var(--glass);
+  overflow: hidden;
+}
+
+.closure-metric-card::before,
+.manager-workload-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--green);
+}
+
+.closure-metric-card.red::before,
+.manager-workload-card.red::before {
+  background: var(--red);
+}
+
+.closure-metric-card.amber::before,
+.manager-workload-card.amber::before {
+  background: var(--amber);
+}
+
+.closure-metric-card span,
+.manager-workload-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.closure-metric-card strong,
+.manager-workload-card strong {
+  color: var(--blue);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.manager-workload-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manager-workload-card small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.repeat-issue-strip,
+.action-closure-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.repeat-issue-strip {
+  margin-top: 12px;
+  border-top: 1px solid rgba(183, 220, 238, 0.54);
+  padding-top: 12px;
+}
+
+.action-closure-meta {
+  margin-top: 8px;
+}
+
 .action-centre-brief {
   display: grid;
   gap: 4px;
