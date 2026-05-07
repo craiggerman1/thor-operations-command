@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { resolvePermittedScope, requireTocUser } from "@/lib/toc-auth";
 
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
   const scope = resolvePermittedScope(permission.user, url.searchParams.get("scope"));
   const role = permission.user.role;
 
-  const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }, { data: complianceData }] = await Promise.all([
+  const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }, { data: complianceData }, rosterGaps] = await Promise.all([
     supabase
       .from("action_items")
       .select("source_page,directive_type,priority,status,region:regions(name)")
@@ -93,7 +94,8 @@ export async function GET(request: Request) {
     supabase
       .from("compliance_items")
       .select("status,region:regions(name)")
-      .neq("status", "complete")
+      .neq("status", "complete"),
+    buildOdinRosterGaps()
   ]);
 
   const scopedActions = ((actionData as ActionRow[] | null) || []).filter((item) => {
@@ -114,6 +116,9 @@ export async function GET(request: Request) {
   const complianceBadgeCount = Math.max(countBySource(["Compliance"]), openComplianceRegisterCount);
   const nationalRequestCount = scope === "National" ? ((requestData as { status: string }[] | null) || []).length + scopedStock.length : 0;
   const todoCount = ((todoData as TodoRow[] | null) || []).filter((item) => isTodoVisibleForScope(item, role, scope)).length;
+  const scopedRosterGaps = rosterGaps.gaps.filter((gap) => scope === "National" || gap.region === scope);
+  const redRosterGapCount = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
+  const rosterGapTone = redRosterGapCount ? "red" : scopedRosterGaps.length ? "amber" : "blue";
 
   return NextResponse.json({
     connected: true,
@@ -122,11 +127,11 @@ export async function GET(request: Request) {
       "Region Health": makeBadge(scopedActions.length, urgentActionCount ? "red" : "amber"),
       "Equipment Servicing": makeBadge(countBySource(["Equipment Servicing", "Workshop"]), "amber"),
       Compliance: makeBadge(complianceBadgeCount, complianceBadgeCount ? "red" : "blue"),
-      "Staff Availability": makeBadge(countBySource(["Roster"]), "amber"),
+      "Staff Availability": makeBadge(scopedRosterGaps.length || countBySource(["Roster"]), rosterGapTone),
       Jobsheets: makeBadge(countBySource(["Thor Portal", "Jobsheets"]), "amber"),
       "Stock Orders": makeBadge(scopedStock.length, scopedStock.length > 2 ? "red" : "amber"),
       "To Do": makeBadge(todoCount || countByDirective(["To Do"]), todoCount ? "blue" : "blue"),
-      "National Requests": makeBadge(nationalRequestCount, "red")
+      "National Requests": makeBadge(nationalRequestCount + (scope === "National" ? scopedRosterGaps.length : 0), redRosterGapCount || nationalRequestCount ? "red" : rosterGapTone)
     }
   });
 }

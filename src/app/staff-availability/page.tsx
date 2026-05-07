@@ -9,6 +9,16 @@ import { sheetSourceDefaults } from "@/lib/sheet-source-settings";
 import type { SheetSourceConfig } from "@/lib/sheet-source-settings";
 import { tocFetch } from "@/lib/toc-client-auth";
 
+type RosterGap = {
+  id: string;
+  title: string;
+  region: string;
+  severity: string;
+  dueAt: string;
+  reason: string;
+  staffSuggestionNames?: string[];
+};
+
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
   try {
@@ -41,9 +51,13 @@ export default function StaffAvailabilityPage() {
   const [feed, setFeed] = useState<StaffAvailabilityFeed>(staffAvailabilitySheet);
   const [sourceConfig, setSourceConfig] = useState<SheetSourceConfig>(sheetSourceDefaults["staff-availability"]);
   const [feedStatus, setFeedStatus] = useState("Source loading");
+  const [rosterGaps, setRosterGaps] = useState<RosterGap[]>([]);
+  const [rosterGapStatus, setRosterGapStatus] = useState("Odin roster scan loading");
   const sheetRegion = sourceConfig.region;
   const isMappedScope = scope === sheetRegion;
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
+  const scopedRosterGaps = rosterGaps.filter((gap) => scope === "National" || gap.region === scope);
+  const redRosterGaps = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -112,6 +126,33 @@ export default function StaffAvailabilityPage() {
     };
   }, [isMappedScope, scope, sheetRegion, sourceConfig.connected]);
 
+  useEffect(() => {
+    let isActive = true;
+    function syncRosterGaps() {
+      tocFetch("/api/odin/roster-gaps", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Roster scan unavailable")))
+        .then((payload) => {
+          if (!isActive) return;
+          setRosterGaps(payload.gaps || []);
+          setRosterGapStatus(payload.gapCount ? `${payload.gapCount} roster gap${payload.gapCount === 1 ? "" : "s"} detected` : "No roster gaps detected");
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setRosterGaps([]);
+          setRosterGapStatus("Odin roster scan unavailable");
+        });
+    }
+
+    syncRosterGaps();
+    const refreshInterval = window.setInterval(syncRosterGaps, 30000);
+    window.addEventListener("toc.actionState.updated", syncRosterGaps);
+    return () => {
+      isActive = false;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("toc.actionState.updated", syncRosterGaps);
+    };
+  }, []);
+
   return (
     <TocShell>
       <PageIntro title="Staff Availability" detail="Staff coverage by day and time window." />
@@ -123,6 +164,25 @@ export default function StaffAvailabilityPage() {
           </Panel>
         ) : null}
         {isMappedScope ? (
+        <>
+        <Panel wide eyebrow="Odin roster risk" title="Staffing risks detected from schedule, availability and inductions" pill={scopedRosterGaps.length ? `${scopedRosterGaps.length} open` : "Clear"}>
+          <div className={`staff-risk-strip ${redRosterGaps ? "red" : scopedRosterGaps.length ? "amber" : "clear"}`}>
+            <div>
+              <strong>{scopedRosterGaps.length ? `${scopedRosterGaps.length} roster risk${scopedRosterGaps.length === 1 ? "" : "s"} visible` : "No roster risks visible"}</strong>
+              <small>{rosterGapStatus}. Red gaps should be actioned before the job proceeds.</small>
+            </div>
+            {scopedRosterGaps.length ? (
+              <div className="staff-risk-list">
+                {scopedRosterGaps.slice(0, 3).map((gap) => (
+                  <span key={gap.id}>
+                    <strong>{gap.title}</strong>
+                    <small>{gap.reason}</small>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </Panel>
         <Panel wide eyebrow="Availability source" title="Staff coverage by day and time window" pill={`${feed.staff.length} staff listed`}>
           <div className="staff-source-strip">
             <div>
@@ -179,6 +239,7 @@ export default function StaffAvailabilityPage() {
             ))}
           </div>
         </Panel>
+        </>
         ) : null}
       </section>
     </TocShell>
