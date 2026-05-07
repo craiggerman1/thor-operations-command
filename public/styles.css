@@ -3635,6 +3635,94 @@ body:not([data-access="admin"]) .admin-only-panel {
   overflow-wrap: anywhere;
 }
 
+.roster-gap-console,
+.roster-gap-list {
+  display: grid;
+  gap: 10px;
+}
+
+.roster-gap-card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid rgba(37, 161, 189, 0.76);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(37, 161, 189, 0.08), transparent 56%),
+    rgba(255, 255, 255, 0.82);
+}
+
+.roster-gap-card.red {
+  border-left-color: var(--red);
+  background:
+    linear-gradient(135deg, rgba(191, 62, 57, 0.09), transparent 56%),
+    rgba(255, 255, 255, 0.84);
+}
+
+.roster-gap-card.amber {
+  border-left-color: var(--amber);
+  background:
+    linear-gradient(135deg, rgba(211, 142, 15, 0.1), transparent 56%),
+    rgba(255, 255, 255, 0.84);
+}
+
+.roster-gap-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.roster-gap-card strong {
+  color: var(--blue);
+}
+
+.roster-gap-card p {
+  margin: 0;
+  color: #27384a;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.roster-gap-card small {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.roster-suggestion-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.roster-suggestion-strip span {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(236, 246, 249, 0.78);
+}
+
+.roster-gap-card button {
+  width: fit-content;
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 1000;
+}
+
+.roster-gap-card button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .admin-user-edit-grid {
   display: grid;
   grid-template-columns: minmax(210px, 0.34fr) minmax(0, 1fr);
