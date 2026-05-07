@@ -22,6 +22,7 @@ type StoredSession = {
   email?: string;
   authMode?: "preview" | "supabase";
   mustChangePassword?: boolean;
+  restoredAt?: string;
 };
 
 type WeatherState = {
@@ -66,6 +67,9 @@ function getStoredScope() {
 
 const accessRoleOptions = Object.values(sessionProfiles);
 const developmentToolsEnabled = process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "true";
+const profileRevalidateMs = 5 * 60 * 1000;
+const navBadgeCacheMs = 12000;
+const weatherCacheMs = 10 * 60 * 1000;
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
@@ -92,6 +96,33 @@ function hasUsableStoredSession(storedSession: StoredSession | null) {
 function getInitialStoredSession() {
   const storedSession = readStoredSession();
   return hasUsableStoredSession(storedSession) ? storedSession || {} : {};
+}
+
+function isRecentlyRestoredSession(storedSession: StoredSession | null) {
+  if (!storedSession?.restoredAt) return false;
+  return Date.now() - new Date(storedSession.restoredAt).getTime() < profileRevalidateMs;
+}
+
+function readJsonCache<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(key) || "null") as { expiresAt?: number; value?: T } | null;
+    if (!cached?.expiresAt || cached.expiresAt < Date.now()) return null;
+    return cached.value || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeJsonCache<T>(key: string, value: T, ttlMs: number) {
+  if (typeof window === "undefined") return;
+
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ value, expiresAt: Date.now() + ttlMs }));
+  } catch {
+    // Session cache is a speed hint only.
+  }
 }
 
 export function TocShell({ children }: { children: ReactNode }) {
@@ -179,6 +210,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       if (hasUsableStoredSession) {
         setSessionReady(true);
         if (storedSession?.authMode === "preview" && developmentToolsEnabled) return;
+        if (storedSession?.authMode === "supabase" && isRecentlyRestoredSession(storedSession)) return;
 
         const restored = await restoreSupabaseSession();
         if (!restored) router.replace("/");
@@ -202,13 +234,19 @@ export function TocShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function syncNavBadgeCounts() {
       if (!sessionReady || !session.role) return;
+      const scope = getStoredScope();
+      const cacheKey = `toc.navBadges.${session.role}.${scope}`;
+      const cachedBadges = readJsonCache<Record<string, NavBadge>>(cacheKey);
+      if (cachedBadges) setNavBadgeCounts(cachedBadges);
+
       try {
-        const scope = getStoredScope();
         const response = await tocFetch(`/api/navigation-badges?scope=${encodeURIComponent(scope)}&role=${encodeURIComponent(session.role || defaultSession.role)}`, { cache: "no-store" });
         const payload = await response.json();
-        setNavBadgeCounts(payload.badges || {});
+        const nextBadges = payload.badges || {};
+        writeJsonCache(cacheKey, nextBadges, navBadgeCacheMs);
+        setNavBadgeCounts(nextBadges);
       } catch {
-        setNavBadgeCounts({});
+        if (!cachedBadges) setNavBadgeCounts({});
       }
     }
 
@@ -330,7 +368,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.292</em>
+              <em>Build 0.293</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -456,7 +494,9 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
   useEffect(() => {
     let isActive = true;
     const fallbackWeather = weatherByScope[scope] || weatherByScope.National;
-    setWeather(fallbackWeather);
+    const cacheKey = `toc.weather.${scope}`;
+    const cachedWeather = readJsonCache<WeatherState>(cacheKey);
+    setWeather(cachedWeather || fallbackWeather);
 
     fetch(`/api/weather?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Weather feed unavailable")))
@@ -464,7 +504,7 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
         if (!isActive) return;
         const apparentTemp = payload.current.apparentTemp !== null ? `Feels ${Math.round(payload.current.apparentTemp)} C` : payload.current.condition;
         const wind = payload.current.wind !== null ? `Wind ${Math.round(payload.current.wind)} km/h` : "Wind not supplied";
-        setWeather({
+        const nextWeather = {
           location: payload.location,
           condition: payload.current.condition,
           summary: `${apparentTemp} - ${wind}`,
@@ -473,11 +513,13 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
           warning: payload.warning.message,
           warningActive: payload.warning.active,
           warningLink: payload.warning.link
-        });
+        };
+        writeJsonCache(cacheKey, nextWeather, weatherCacheMs);
+        setWeather(nextWeather);
       })
       .catch(() => {
         if (!isActive) return;
-        setWeather({ ...fallbackWeather, warning: "Live weather feed unavailable", warningActive: false });
+        if (!cachedWeather) setWeather({ ...fallbackWeather, warning: "Live weather feed unavailable", warningActive: false });
       });
 
     return () => {

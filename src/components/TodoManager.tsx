@@ -57,14 +57,24 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
   async function loadTodos() {
     const floatingSetting = getFloatingSetting();
     const session = getStoredSession();
+    const storageKey = getTodoStorageKey();
+
+    try {
+      const cachedTodos = JSON.parse(localStorage.getItem(storageKey) || "[]") as TodoItem[];
+      if (cachedTodos.length) setTodos(cachedTodos);
+    } catch {
+      // Local cache is only used to avoid a blank panel during page changes.
+    }
 
     try {
       const response = await tocFetch(`/api/todos?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
       const payload = await response.json();
-      setTodos(payload.todos || []);
+      const nextTodos = payload.todos || [];
+      setTodos(nextTodos);
+      localStorage.setItem(storageKey, JSON.stringify(nextTodos));
     } catch {
       try {
-        setTodos(JSON.parse(localStorage.getItem(getTodoStorageKey()) || "[]"));
+        setTodos(JSON.parse(localStorage.getItem(storageKey) || "[]"));
       } catch {
         setTodos([]);
       }
