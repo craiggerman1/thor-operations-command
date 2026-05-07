@@ -1,6 +1,9 @@
 import { staffAvailabilitySheet, staffInductionsSheet, type StaffSheetStatus } from "@/lib/toc-data";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
+const availabilityCsvUrl = "https://docs.google.com/spreadsheets/d/1dFwTlBmOUPeq21LQdv6AzHFztuLDRC-j7io-B_1zWx0/gviz/tq?tqx=out:csv&gid=0";
+const inductionsCsvUrl = "https://docs.google.com/spreadsheets/d/1MFFxCPAhPzTzB9Q7zPOBLJyNyz04S23NoJ1GZ6-VRlM/gviz/tq?tqx=out:csv&gid=0";
+
 type StaffProfileRow = {
   id: string;
   display_name: string;
@@ -29,6 +32,24 @@ type RegionRow = {
 type StaffRegionLinkRow = {
   staff_profile_id: string;
   region_id: string;
+};
+
+type LiveAvailabilityStaff = {
+  name: string;
+  availability: StaffSheetStatus[][];
+};
+
+type LiveInductionStaff = {
+  name: string;
+  inductions: { site: string; status: string; expiry: string }[];
+};
+
+type LiveStaffFeeds = {
+  availabilityStaff: LiveAvailabilityStaff[];
+  inductionSites: { name: string; region: string }[];
+  inductionStaff: LiveInductionStaff[];
+  availabilitySource: string;
+  inductionsSource: string;
 };
 
 export type OdinStaffEntity = {
@@ -80,22 +101,129 @@ function titleCaseName(name: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function availabilityForName(name: string) {
-  return staffAvailabilitySheet.staff.find((staff) => staff.name.toLowerCase() === name.toLowerCase());
+function parseCsv(csv: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = 0; index < csv.length; index += 1) {
+    const char = csv[index];
+    const next = csv[index + 1];
+
+    if (char === "\"" && quoted && next === "\"") {
+      cell += "\"";
+      index += 1;
+    } else if (char === "\"") {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      row.push(cell);
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell);
+      if (row.some((value) => value.trim())) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+
+  row.push(cell);
+  if (row.some((value) => value.trim())) rows.push(row);
+  return rows;
 }
 
-function inductionsForName(name: string) {
-  return staffInductionsSheet.staff.find((staff) => staff.name.toLowerCase() === name.toLowerCase());
+function normalizeAvailabilityStatus(value: string): StaffSheetStatus {
+  const trimmed = value.trim();
+  if (trimmed === "Available") return "Available";
+  if (trimmed === "Not Available") return "Not Available";
+  return "";
 }
 
-function availabilitySummary(name: string) {
-  const match = availabilityForName(name);
+function normalizeInductionStatus(value: string) {
+  const trimmed = value.trim();
+  if (trimmed === "Inducted") return "Inducted";
+  if (trimmed === "Not Inducted") return "Not Inducted";
+  if (trimmed === "Expired") return "Expired";
+  if (trimmed === "Expiring Soon") return "Expiring Soon";
+  if (trimmed === "Expiring This Month") return "Expiring This Month";
+  return "";
+}
+
+async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
+  const [availabilityResponse, inductionsResponse] = await Promise.allSettled([
+    fetch(availabilityCsvUrl, { cache: "no-store" }),
+    fetch(inductionsCsvUrl, { cache: "no-store" })
+  ]);
+
+  let availabilityStaff: LiveAvailabilityStaff[] = staffAvailabilitySheet.staff;
+  let inductionSites = staffInductionsSheet.sites;
+  let inductionStaff: LiveInductionStaff[] = staffInductionsSheet.staff;
+
+  if (availabilityResponse.status === "fulfilled" && availabilityResponse.value.ok) {
+    const rows = parseCsv(await availabilityResponse.value.text());
+    const staffRows = rows.slice(2).filter((row) => row[0]?.trim());
+    availabilityStaff = staffRows.map((row) => ({
+      name: row[0].trim(),
+      availability: staffAvailabilitySheet.days.map((_, dayIndex) => {
+        const startColumn = 1 + dayIndex * staffAvailabilitySheet.windows.length;
+        return staffAvailabilitySheet.windows.map((_, windowIndex) => normalizeAvailabilityStatus(row[startColumn + windowIndex] || ""));
+      })
+    }));
+  }
+
+  if (inductionsResponse.status === "fulfilled" && inductionsResponse.value.ok) {
+    const rows = parseCsv(await inductionsResponse.value.text());
+    const siteRow = rows[0] || [];
+    inductionSites = siteRow
+      .slice(1)
+      .filter((_, index) => index % 2 === 0)
+      .map((name) => ({ name: name.trim().replace(/\s+Status$/i, ""), region: "Brisbane" }))
+      .filter((site) => site.name);
+    const staffRows = rows.slice(1).filter((row) => {
+      const staffName = row[0]?.trim() || "";
+      return staffName && !/^staff\b/i.test(staffName);
+    });
+    inductionStaff = staffRows.map((row) => ({
+      name: row[0].trim(),
+      inductions: inductionSites.map((site, index) => {
+        const statusColumn = 1 + index * 2;
+        return {
+          site: site.name,
+          status: normalizeInductionStatus(row[statusColumn] || ""),
+          expiry: (row[statusColumn + 1] || "").trim()
+        };
+      })
+    }));
+  }
+
+  return {
+    availabilityStaff,
+    inductionSites,
+    inductionStaff,
+    availabilitySource: staffAvailabilitySheet.sourceName,
+    inductionsSource: staffInductionsSheet.sourceName
+  };
+}
+
+function availabilityForName(name: string, feeds: LiveStaffFeeds) {
+  return feeds.availabilityStaff.find((staff) => staff.name.toLowerCase() === name.toLowerCase());
+}
+
+function inductionsForName(name: string, feeds: LiveStaffFeeds) {
+  return feeds.inductionStaff.find((staff) => staff.name.toLowerCase() === name.toLowerCase());
+}
+
+function availabilitySummary(name: string, feeds: LiveStaffFeeds) {
+  const match = availabilityForName(name, feeds);
   const matrix = match?.availability || [];
   const totalWindows = matrix.reduce((total, day) => total + day.length, 0);
   const availableWindows = matrix.flat().filter((status) => status === "Available").length;
 
   return {
-    source: staffAvailabilitySheet.sourceName,
+    source: feeds.availabilitySource,
     days: staffAvailabilitySheet.days,
     windows: staffAvailabilitySheet.windows,
     matrix,
@@ -104,8 +232,8 @@ function availabilitySummary(name: string) {
   };
 }
 
-function inductionSummary(name: string) {
-  const match = inductionsForName(name);
+function inductionSummary(name: string, feeds: LiveStaffFeeds) {
+  const match = inductionsForName(name, feeds);
   const records = (match?.inductions || []).map((induction) => ({
     site: induction.site,
     status: induction.status || "Unknown",
@@ -113,16 +241,16 @@ function inductionSummary(name: string) {
   }));
 
   return {
-    source: staffInductionsSheet.sourceName,
+    source: feeds.inductionsSource,
     eligibleSites: records.filter((record) => record.status === "Inducted").map((record) => record.site),
     records
   };
 }
 
-function fallbackStaffEntities(includeProtected: boolean): OdinStaffEntity[] {
+function fallbackStaffEntities(includeProtected: boolean, feeds: LiveStaffFeeds): OdinStaffEntity[] {
   const names = Array.from(new Set([
-    ...staffAvailabilitySheet.staff.map((staff) => staff.name),
-    ...staffInductionsSheet.staff.map((staff) => staff.name)
+    ...feeds.availabilityStaff.map((staff) => staff.name),
+    ...feeds.inductionStaff.map((staff) => staff.name)
   ])).sort((a, b) => a.localeCompare(b));
 
   return names.map((name) => ({
@@ -138,8 +266,8 @@ function fallbackStaffEntities(includeProtected: boolean): OdinStaffEntity[] {
     preferredWindows: {},
     availabilitySheetName: name,
     inductionSheetName: name,
-    availability: availabilitySummary(name),
-    inductions: inductionSummary(name),
+    availability: availabilitySummary(name, feeds),
+    inductions: inductionSummary(name, feeds),
     contact: includeProtected ? { mobile: null, whatsapp: null, emergencyContact: {} } : undefined,
     source: "availability_sheet",
     updatedAt: null
@@ -147,12 +275,13 @@ function fallbackStaffEntities(includeProtected: boolean): OdinStaffEntity[] {
 }
 
 export async function readOdinStaffEntities(options: { includeProtected: boolean }): Promise<StaffReadResult> {
+  const feeds = await readLiveStaffFeeds();
   const supabase = getSupabaseAdminClient();
   if (!supabase) {
     return {
       connected: false,
       source: "availability_sheet",
-      staff: fallbackStaffEntities(options.includeProtected),
+      staff: fallbackStaffEntities(options.includeProtected, feeds),
       error: "Supabase server key is not configured.",
       protectedFieldsIncluded: options.includeProtected
     };
@@ -181,7 +310,7 @@ export async function readOdinStaffEntities(options: { includeProtected: boolean
       return {
         connected: true,
         source: "availability_sheet",
-        staff: fallbackStaffEntities(options.includeProtected),
+        staff: fallbackStaffEntities(options.includeProtected, feeds),
         error: null,
         protectedFieldsIncluded: options.includeProtected
       };
@@ -226,8 +355,8 @@ export async function readOdinStaffEntities(options: { includeProtected: boolean
           preferredWindows: profile.preferred_windows || {},
           availabilitySheetName: availabilityName,
           inductionSheetName: inductionName,
-          availability: availabilitySummary(availabilityName),
-          inductions: inductionSummary(inductionName),
+          availability: availabilitySummary(availabilityName, feeds),
+          inductions: inductionSummary(inductionName, feeds),
           contact: canShowContact ? {
             mobile: profile.contact_mobile,
             whatsapp: profile.contact_whatsapp,
@@ -242,7 +371,7 @@ export async function readOdinStaffEntities(options: { includeProtected: boolean
     return {
       connected: false,
       source: "availability_sheet",
-      staff: fallbackStaffEntities(options.includeProtected),
+      staff: fallbackStaffEntities(options.includeProtected, feeds),
       error: error instanceof Error ? error.message : "Staff profile table could not be read.",
       protectedFieldsIncluded: options.includeProtected
     };

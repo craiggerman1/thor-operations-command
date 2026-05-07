@@ -192,6 +192,48 @@ function countByEscalation(entityLinks: ReturnType<typeof buildEntityLinks>) {
   }, { none: 0, watch: 0, national: 0, craig: 0 });
 }
 
+function buildStaffReadiness(staff: Awaited<ReturnType<typeof readOdinStaffEntities>>["staff"]) {
+  const regionCounts = staff.reduce<Record<string, number>>((lookup, person) => {
+    person.regions.forEach((region) => {
+      lookup[region] = (lookup[region] || 0) + 1;
+    });
+    return lookup;
+  }, {});
+  const statusCounts = staff.reduce<Record<string, number>>((lookup, person) => {
+    lookup[person.status] = (lookup[person.status] || 0) + 1;
+    return lookup;
+  }, { active: 0, watch: 0, inactive: 0 });
+  const availableWindows = staff.reduce((total, person) => total + person.availability.availableWindows, 0);
+  const totalWindows = staff.reduce((total, person) => total + person.availability.totalWindows, 0);
+  const inductionRecords = staff.flatMap((person) => person.inductions.records);
+  const inductionStatusCounts = inductionRecords.reduce<Record<string, number>>((lookup, record) => {
+    const status = record.status || "Unknown";
+    lookup[status] = (lookup[status] || 0) + 1;
+    return lookup;
+  }, {});
+  const staffWithNoAvailability = staff
+    .filter((person) => person.status !== "inactive" && person.availability.totalWindows > 0 && person.availability.availableWindows === 0)
+    .map((person) => ({ id: person.id, name: person.name, regions: person.regions }));
+  const staffWithNoInductions = staff
+    .filter((person) => person.status !== "inactive" && !person.inductions.eligibleSites.length)
+    .map((person) => ({ id: person.id, name: person.name, regions: person.regions }));
+
+  return {
+    activeStaff: statusCounts.active || 0,
+    watchStaff: statusCounts.watch || 0,
+    inactiveStaff: statusCounts.inactive || 0,
+    regionCounts,
+    availabilityWindows: {
+      available: availableWindows,
+      total: totalWindows,
+      percentage: totalWindows ? Math.round((availableWindows / totalWindows) * 100) : null
+    },
+    inductionStatusCounts,
+    staffWithNoAvailability,
+    staffWithNoInductions
+  };
+}
+
 async function readRows(input: {
   table: string;
   select: string;
@@ -378,6 +420,7 @@ export async function GET(request: Request) {
     recentCompleted
   };
   const entityLinks = buildEntityLinks(sections, generatedAt);
+  const staffReadiness = buildStaffReadiness(staffResult.staff);
   const overdueItems = entityLinks.filter((item) => item.isOverdue);
   const dueSoonItems = entityLinks.filter((item) => item.isDueSoon);
   const redItems = entityLinks.filter((item) => item.severity === "red");
@@ -465,6 +508,7 @@ export async function GET(request: Request) {
       staffConnected: staffResult.connected,
       staffError: staffResult.error,
       staffCount: staffResult.staff.length,
+      staffReadiness,
       protectedFieldsInSnapshot: false,
       sampleStaff: staffResult.staff.slice(0, 20).map((staff) => ({
         id: staff.id,
