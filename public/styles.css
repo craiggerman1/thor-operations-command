@@ -2669,6 +2669,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .action-due-panel span,
+.action-lifecycle-panel span,
 .action-closeout-form span {
   color: var(--muted);
   font-size: 11px;
@@ -2694,6 +2695,48 @@ body:not([data-access="admin"]) .admin-only-panel {
   color: var(--ink);
   font-weight: 800;
   line-height: 1.38;
+}
+
+.action-lifecycle-panel {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-radius: 6px;
+  background: rgba(244, 248, 251, 0.78);
+}
+
+.action-lifecycle-panel strong {
+  color: var(--blue);
+  font-size: 20px;
+}
+
+.action-lifecycle-panel small {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.action-lifecycle-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.action-lifecycle-buttons button {
+  min-height: 34px;
+  border: 1px solid rgba(13, 58, 87, 0.14);
+  border-radius: 6px;
+  padding: 0 9px;
+  background: #eef5fb;
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.action-lifecycle-buttons button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
 }
 
 .action-closeout-form {

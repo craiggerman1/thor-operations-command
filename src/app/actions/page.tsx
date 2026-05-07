@@ -167,6 +167,7 @@ export default function ActionsPage() {
                   <small>{signal.detail}</small>
                   <span className="action-due-date">Due: {signal.dueDate}</span>
                   <div className="action-closure-meta">
+                    <Tag tone={signal.lifecycleTone || "blue"}>{signal.lifecycleLabel || signal.status}</Tag>
                     <Tag tone={signal.isOverdue ? "red" : signal.isStale || signal.isDueSoon ? "amber" : "green"}>{signal.ageLabel || "New"}</Tag>
                     <Tag tone={signal.escalationLevel === "craig" ? "red" : signal.escalationLevel === "national" ? "amber" : "blue"}>{signal.escalationLabel || "On track"}</Tag>
                   </div>

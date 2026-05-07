@@ -9,6 +9,7 @@ export type ActionOverride = {
 };
 
 export type ActionEscalationLevel = "none" | "watch" | "national" | "craig";
+export type ActionLifecycleStatus = "open" | "acknowledged" | "in_progress" | "blocked" | "submitted_for_review" | "returned_to_manager" | "reopened" | "escalated" | "closed";
 
 export type ActionClosureSignal = {
   ageHours: number;
@@ -24,6 +25,11 @@ export type ActionClosureSignal = {
   createdAt?: string;
   updatedAt?: string;
   dueAt?: string | null;
+  storageStatus?: ActionLifecycleStatus;
+  lifecycleStatus?: ActionLifecycleStatus;
+  lifecycleLabel?: string;
+  lifecycleTone?: "green" | "amber" | "red" | "blue";
+  lifecycleHelp?: string;
 };
 
 export type EnhancedActionItem = ActionItem & ActionClosureSignal;

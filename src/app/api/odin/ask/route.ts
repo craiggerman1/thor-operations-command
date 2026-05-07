@@ -34,6 +34,7 @@ const contextTables: Record<string, { table: string; select: string }> = {
   calendar_job: { table: "calendar_jobs", select: "*,region:regions(name)" },
   todo_item: { table: "todo_items", select: "*" }
 };
+const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
 
 function cleanText(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -85,7 +86,7 @@ async function countTable(table: string, filters: Record<string, unknown> = {}) 
 
   let query = supabase.from(table).select("id", { count: "exact", head: true });
   Object.entries(filters).forEach(([key, value]) => {
-    query = query.eq(key, value);
+    query = Array.isArray(value) ? query.in(key, value) : query.eq(key, value);
   });
 
   const { count } = await query;
@@ -117,7 +118,7 @@ async function buildTocContext(payload: {
 }) {
   const [sourceRecord, openActions, pendingNationalRequests, pendingOdinItems, openStockOrders, complianceItems, equipmentWatch] = await Promise.all([
     readSourceRecord(payload.sourceType, payload.sourceId),
-    countTable("action_items", { status: "open" }),
+    countTable("action_items", { status: activeActionStatuses }),
     countTable("national_requests", { status: "awaiting_review" }),
     countTable("odin_items", { status: "pending" }),
     countTable("stock_orders", { status: "submitted" }),

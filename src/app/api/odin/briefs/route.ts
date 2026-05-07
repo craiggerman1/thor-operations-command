@@ -9,6 +9,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 type BriefType = "morning" | "midday" | "end_of_day" | "weekly";
 
 const briefTypes: BriefType[] = ["morning", "midday", "end_of_day", "weekly"];
+const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
 
 type BriefPriorityItem = {
   title?: string;
@@ -132,9 +133,9 @@ function actionEscalationLevel(row: BriefActionRow, now = new Date()) {
   const overdue = isPastDue(row.due_at, now);
   const staleHours = hoursSince(row.updated_at || row.created_at, now);
   const urgent = row.directive_type === "National Ops Directive" || row.priority === "urgent";
-  if (overdue && urgent) return "craig";
-  if (overdue || row.status === "returned_to_manager" || staleHours >= 48) return "national";
-  if (staleHours >= 24 || row.status === "submitted_for_review") return "watch";
+  if ((overdue && urgent) || (row.status === "blocked" && urgent)) return "craig";
+  if (overdue || ["returned_to_manager", "blocked", "escalated"].includes(row.status) || staleHours >= 48) return "national";
+  if (staleHours >= 24 || ["submitted_for_review", "in_progress", "reopened"].includes(row.status)) return "watch";
   return "none";
 }
 
@@ -159,7 +160,7 @@ async function readActionClosureContext(region: string, now = new Date()) {
   const { data } = await supabase
     .from("action_items")
     .select("id,title,detail,source_page,directive_type,priority,status,due_at,created_at,updated_at,region:regions(name)")
-    .in("status", ["open", "submitted_for_review", "returned_to_manager"])
+    .in("status", activeActionStatuses)
     .order("created_at", { ascending: false })
     .limit(120);
 
@@ -167,7 +168,7 @@ async function readActionClosureContext(region: string, now = new Date()) {
     .filter((row) => region === "National" || actionRegion(row) === region);
   const overdueActions = allRows.filter((row) => isPastDue(row.due_at, now));
   const staleActions = allRows.filter((row) => hoursSince(row.updated_at || row.created_at, now) >= 24);
-  const carryoverActions = allRows.filter((row) => isPastDue(row.due_at, now) || hoursSince(row.updated_at || row.created_at, now) >= 24 || row.status === "returned_to_manager");
+  const carryoverActions = allRows.filter((row) => isPastDue(row.due_at, now) || hoursSince(row.updated_at || row.created_at, now) >= 24 || ["returned_to_manager", "blocked", "escalated", "reopened"].includes(row.status));
   const craigEscalationCandidates = allRows.filter((row) => actionEscalationLevel(row, now) === "craig");
   const managerPressureLookup = allRows.reduce<Record<string, { region: string; total: number; overdue: number; stale: number; carryover: number; craig: number }>>((lookup, row) => {
     const rowRegion = actionRegion(row);
@@ -179,7 +180,7 @@ async function readActionClosureContext(region: string, now = new Date()) {
       total: current.total + 1,
       overdue: current.overdue + (overdue ? 1 : 0),
       stale: current.stale + (stale ? 1 : 0),
-      carryover: current.carryover + (overdue || stale || row.status === "returned_to_manager" ? 1 : 0),
+      carryover: current.carryover + (overdue || stale || ["returned_to_manager", "blocked", "escalated", "reopened"].includes(row.status) ? 1 : 0),
       craig: current.craig + (actionEscalationLevel(row, now) === "craig" ? 1 : 0)
     };
     return lookup;
@@ -227,7 +228,7 @@ function actionPriorityItem(row: BriefActionRow, reason: string): BriefPriorityI
 
 async function buildGeneratedBrief(type: BriefType, region: string, briefDate = dateOnly(), generatedBy = "toc", source = "generated") {
   const [openActions, nationalRequests, stockOrders, complianceItems, rosterGaps, closureContext] = await Promise.all([
-    countRows({ table: "action_items", statuses: ["open", "submitted_for_review", "returned_to_manager"] }),
+    countRows({ table: "action_items", statuses: activeActionStatuses }),
     countRows({ table: "national_requests", statuses: ["awaiting_review", "returned_to_manager", "pending"] }),
     countRows({ table: "stock_orders", statuses: ["submitted", "awaiting_review", "cancel_requested", "update_requested"] }),
     countRows({ table: "compliance_items", statuses: ["open", "in_progress", "blocked", "not_started"] }),

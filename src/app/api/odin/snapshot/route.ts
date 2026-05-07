@@ -7,7 +7,7 @@ import { readOdinStaffEntities } from "@/lib/odin-staff";
 
 const snapshotLimit = 80;
 const dueSoonDays = 3;
-const activeActionStatuses = ["open", "submitted_for_review", "returned_to_manager"];
+const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
 const activeNationalRequestStatuses = ["awaiting_review", "returned_to_manager", "pending"];
 const activeStockStatuses = ["submitted", "awaiting_review", "cancel_requested", "update_requested"];
 const activeEquipmentStatuses = ["watch", "service_due", "overdue"];
@@ -208,7 +208,7 @@ function actionClosureSummary(entityLinks: ReturnType<typeof buildEntityLinks>) 
   const stale24 = actionLinks.filter((item) => item.staleHours >= 24);
   const stale48 = actionLinks.filter((item) => item.staleHours >= 48);
   const overdue = actionLinks.filter((item) => item.isOverdue);
-  const carryover = actionLinks.filter((item) => item.isOverdue || item.staleHours >= 24 || item.status === "returned_to_manager");
+  const carryover = actionLinks.filter((item) => item.isOverdue || item.staleHours >= 24 || ["returned_to_manager", "blocked", "escalated", "reopened"].includes(String(item.status)));
   const byOwner = actionLinks.reduce<Record<string, { owner: string; count: number; overdue: number; carryover: number }>>((lookup, item) => {
     const current = lookup[item.owner] || { owner: item.owner, count: 0, overdue: 0, carryover: 0 };
     lookup[item.owner] = {

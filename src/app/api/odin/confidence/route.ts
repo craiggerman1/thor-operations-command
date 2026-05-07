@@ -24,7 +24,7 @@ type ReadResult = {
   error: string | null;
 };
 
-const activeActionStatuses = ["open", "submitted_for_review", "returned_to_manager"];
+const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
 const activeComplianceStatuses = ["open", "in_progress", "blocked", "not_started"];
 const activeEquipmentStatuses = ["watch", "service_due", "overdue"];
 const activeStockStatuses = ["submitted", "awaiting_review", "approved", "ordered", "dispatched", "cancel_requested", "returned"];

@@ -8,7 +8,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type OdinActionOperation = "create" | "update" | "delete" | "delete_duplicates" | "close" | "complete" | "clear" | "done";
 
-const allowedStatuses = new Set(["open", "submitted_for_review", "returned_to_manager", "closed"]);
+const allowedStatuses = new Set(["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated", "closed"]);
 const allowedPriorities = new Set(["urgent", "high", "normal", "low"]);
 const allowedDirectives = new Set(["National Ops Directive", "Scheduled Directive", "To Do"]);
 
@@ -181,7 +181,7 @@ async function mutateActions(input: {
   const affectedIds = ((data as Array<{ id: string }> | null) || []).map((row) => row.id);
   if (input.operation === "update") {
     if (updates.status === "closed") await markComplianceForClosedActions(affectedIds);
-    if (updates.status === "open" || updates.status === "returned_to_manager") await reopenComplianceForReturnedActions(affectedIds);
+    if (typeof updates.status === "string" && updates.status !== "closed") await reopenComplianceForReturnedActions(affectedIds);
   } else {
     await markComplianceForClosedActions(affectedIds);
   }

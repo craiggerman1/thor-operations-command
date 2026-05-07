@@ -115,7 +115,15 @@ function mapAction(action: ActionRow) {
     dueDate: displayDueDate(action.due_at),
     href: `/actions/${action.id}`,
     detail: action.detail || "Compliance action requires manager close-out.",
-    status: action.status === "submitted_for_review" ? "Awaiting national review" : action.status === "returned_to_manager" ? "Returned to manager" : "Open"
+    status: action.status === "submitted_for_review"
+      ? "Resolved pending review"
+      : action.status === "returned_to_manager"
+        ? "Returned to manager"
+        : action.status === "blocked"
+          ? "Blocked"
+          : action.status === "in_progress"
+            ? "In progress"
+            : "Open"
   };
 }
 

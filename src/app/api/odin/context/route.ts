@@ -3,13 +3,15 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { canAccessScope, hasNationalAccess, resolvePermittedScope } from "@/lib/toc-auth";
 
+const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
+
 async function tableCount(table: string, filters: Record<string, unknown> = {}) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return 0;
 
   let query = supabase.from(table).select("id", { count: "exact", head: true });
   Object.entries(filters).forEach(([key, value]) => {
-    query = query.eq(key, value);
+    query = Array.isArray(value) ? query.in(key, value) : query.eq(key, value);
   });
   const { count } = await query;
   return count || 0;
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
   ] = await Promise.all([
     tableCount("odin_items", { status: "pending" }),
     tableCount("odin_items", { status: "pending", approval_required: true }),
-    tableCount("action_items", { status: "open" }),
+    tableCount("action_items", { status: activeActionStatuses }),
     tableCount("national_requests", { status: "pending" }),
     tableCount("stock_orders", { status: "submitted" }),
     tableCount("compliance_items", { status: "open" }),

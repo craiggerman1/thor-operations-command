@@ -6,16 +6,31 @@ import { FormEvent, useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { AskOdinButton } from "@/components/AskOdinButton";
-import type { ActionItem } from "@/lib/action-state";
+import type { EnhancedActionItem } from "@/lib/action-state";
 import { tocFetch } from "@/lib/toc-client-auth";
+
+const lifecycleButtons = [
+  { status: "acknowledged", label: "Acknowledge", activeLabel: "Acknowledged" },
+  { status: "in_progress", label: "Start Work", activeLabel: "In progress" },
+  { status: "blocked", label: "Mark Blocked", activeLabel: "Blocked" },
+  { status: "escalated", label: "Escalate", activeLabel: "Escalated" },
+  { status: "reopened", label: "Reopen", activeLabel: "Reopened" }
+];
+
+type ActionDetailItem = EnhancedActionItem & {
+  sourceHref?: string;
+  closeFlow: string;
+  closeActions: string[];
+};
 
 export default function ActionDetailPage() {
   const params = useParams<{ id: string }>();
-  const [action, setAction] = useState<(ActionItem & { sourceHref?: string }) | null>(null);
+  const [action, setAction] = useState<ActionDetailItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [managerResponse, setManagerResponse] = useState("");
   const [evidence, setEvidence] = useState("");
   const [message, setMessage] = useState("");
+  const [isUpdatingLifecycle, setIsUpdatingLifecycle] = useState(false);
 
   useEffect(() => {
     async function loadAction() {
@@ -63,7 +78,9 @@ export default function ActionDetailPage() {
 
   const currentAction = action;
   const sourceHref = currentAction.sourceHref || "/actions";
-  const isAwaitingNational = currentAction.status === "Awaiting national review";
+  const lifecycleStatus = String(currentAction.lifecycleStatus || currentAction.storageStatus || "").trim();
+  const isAwaitingNational = currentAction.status === "Awaiting national review" || currentAction.status === "Resolved pending review" || lifecycleStatus === "submitted_for_review";
+  const isClosed = currentAction.status === "Closed";
 
   function saveDraft() {
     localStorage.setItem(`toc.actionDraft.${currentAction.id}`, JSON.stringify({ managerResponse, evidence, updatedAt: new Date().toISOString() }));
@@ -92,6 +109,27 @@ export default function ActionDetailPage() {
     setMessage("Submitted to National Requests for approval.");
   }
 
+  async function updateLifecycle(status: string) {
+    setIsUpdatingLifecycle(true);
+    setMessage("");
+    try {
+      const response = await tocFetch("/api/actions", {
+        method: "POST",
+        body: JSON.stringify({ action: "lifecycle", id: currentAction.id, status })
+      }, true);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Action lifecycle could not be updated.");
+      const nextAction = (payload.actions || []).find((item: ActionDetailItem) => item.id === currentAction.id) || null;
+      if (nextAction) setAction(nextAction);
+      window.dispatchEvent(new Event("toc.actionState.updated"));
+      setMessage("Action lifecycle updated.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Action lifecycle could not be updated.");
+    } finally {
+      setIsUpdatingLifecycle(false);
+    }
+  }
+
   return (
     <TocShell>
       <PageIntro title="Action Centre" detail={`${currentAction.id} close-out workflow.`} />
@@ -105,8 +143,25 @@ export default function ActionDetailPage() {
               <p>{currentAction.detail}</p>
               <div className="meta-row">
                 <Tag tone={currentAction.severity}>{currentAction.directive}</Tag>
-                <Tag>{currentAction.status}</Tag>
+                <Tag tone={currentAction.lifecycleTone || "blue"}>{currentAction.lifecycleLabel || currentAction.status}</Tag>
                 <Tag>{currentAction.region}</Tag>
+              </div>
+              <div className="action-lifecycle-panel">
+                <span>Lifecycle status</span>
+                <strong>{currentAction.lifecycleLabel || currentAction.status}</strong>
+                <small>{currentAction.lifecycleHelp || "Use the buttons below to keep National and Odin clear on where this action sits."}</small>
+                <div className="action-lifecycle-buttons">
+                  {lifecycleButtons.map((item) => (
+                    <button
+                      type="button"
+                      key={item.status}
+                      disabled={isUpdatingLifecycle || isAwaitingNational || isClosed || lifecycleStatus === item.status}
+                      onClick={() => void updateLifecycle(item.status)}
+                    >
+                      {lifecycleStatus === item.status ? item.activeLabel : item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="action-due-panel">
                 <span>Due date</span>

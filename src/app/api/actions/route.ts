@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { clearComplianceForDeletedActions, markComplianceForClosedActions, reopenComplianceForReturnedActions } from "@/lib/linked-record-sync";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocNationalAccess, requireTocScope } from "@/lib/toc-auth";
+import { canAccessScope, requireTocNationalAccess, requireTocScope, requireTocUser } from "@/lib/toc-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import type { Status } from "@/lib/toc-data";
 
-type ActionStatus = "open" | "submitted_for_review" | "returned_to_manager" | "closed";
+type ActionStatus = "open" | "acknowledged" | "in_progress" | "blocked" | "submitted_for_review" | "returned_to_manager" | "reopened" | "escalated" | "closed";
 
 type ActionRow = {
   id: string;
@@ -104,12 +104,24 @@ function severityForAction(row: ActionRow): Status {
 function displayStatus(status: ActionStatus) {
   const labels = {
     open: "Open",
-    submitted_for_review: "Awaiting national review",
+    acknowledged: "Acknowledged",
+    in_progress: "In progress",
+    blocked: "Blocked",
+    submitted_for_review: "Resolved pending review",
     returned_to_manager: "Returned to manager",
+    reopened: "Reopened",
+    escalated: "Escalated",
     closed: "Closed"
   };
 
   return labels[status];
+}
+
+function lifecycleTone(status: ActionStatus): Status {
+  if (status === "blocked" || status === "escalated" || status === "returned_to_manager") return "red";
+  if (status === "submitted_for_review" || status === "in_progress" || status === "reopened") return "amber";
+  if (status === "closed") return "green";
+  return "blue";
 }
 
 function displayDueDate(value: string | null) {
@@ -149,14 +161,16 @@ function closureSignalForAction(row: ActionRow, now = new Date()) {
   const ageHours = hoursSince(row.created_at, now);
   const staleHours = hoursSince(row.updated_at || row.created_at, now);
   const overdue = isOverdue(row.due_at, now);
-  const stale = staleHours >= 24 && row.status === "open";
+  const stale = staleHours >= 24 && ["open", "acknowledged", "reopened"].includes(row.status);
   const returned = row.status === "returned_to_manager";
   const submitted = row.status === "submitted_for_review";
+  const blocked = row.status === "blocked";
+  const escalated = row.status === "escalated";
   const urgent = row.priority === "urgent" || row.directive_type === "National Ops Directive";
-  const carryover = overdue || stale || returned;
-  const escalationLevel = overdue && urgent
+  const carryover = overdue || stale || returned || blocked || escalated;
+  const escalationLevel = (overdue && urgent) || (blocked && urgent)
     ? "craig"
-    : overdue || returned || staleHours >= 48
+    : overdue || returned || blocked || escalated || staleHours >= 48
       ? "national"
       : stale || submitted || isDueSoon(row.due_at, now)
         ? "watch"
@@ -197,8 +211,39 @@ function normalisePriority(value: string): ActionRow["priority"] {
 }
 
 function normaliseStatus(value: string): ActionStatus {
-  if (value === "submitted_for_review" || value === "returned_to_manager" || value === "closed") return value;
+  if (
+    value === "acknowledged" ||
+    value === "in_progress" ||
+    value === "blocked" ||
+    value === "submitted_for_review" ||
+    value === "returned_to_manager" ||
+    value === "reopened" ||
+    value === "escalated" ||
+    value === "closed"
+  ) return value;
+  if (value === "resolved_pending_review") return "submitted_for_review";
+  if (value === "started") return "in_progress";
   return "open";
+}
+
+function actionIsActive(status: string) {
+  return status !== "closed";
+}
+
+function displayLifecycleHelp(status: ActionStatus) {
+  const help: Record<ActionStatus, string> = {
+    open: "New action awaiting manager acknowledgement.",
+    acknowledged: "Manager has seen the action and owns the next update.",
+    in_progress: "Work is underway and needs progress or close-out.",
+    blocked: "Manager has marked this blocked and National should watch the blocker.",
+    submitted_for_review: "Manager has submitted close-out and National needs to approve or return it.",
+    returned_to_manager: "National returned the item to the manager for more work or evidence.",
+    reopened: "Item was reopened and needs fresh manager action.",
+    escalated: "Action has been escalated for National attention.",
+    closed: "Action is closed and no longer active."
+  };
+
+  return help[status];
 }
 
 async function getRegionId(regionName: string) {
@@ -327,6 +372,11 @@ function mapAction(row: ActionRow) {
     href: `/actions/${row.id}`,
     detail: row.detail || "Action item requires manager review and close-out.",
     status: displayStatus(row.status),
+    storageStatus: row.status,
+    lifecycleStatus: row.status,
+    lifecycleLabel: displayStatus(row.status),
+    lifecycleTone: lifecycleTone(row.status),
+    lifecycleHelp: displayLifecycleHelp(row.status),
     ...closureSignal,
     closeFlow: "Complete the required action, record the response, and submit for national approval.",
     closeActions: [
@@ -377,7 +427,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const permission = await requireTocNationalAccess(request);
+  const payload = await request.json();
+  const action = payload.action || "create";
+  const permission = action === "lifecycle"
+    ? await requireTocUser(request)
+    : await requireTocNationalAccess(request);
   if (permission.error) return permission.error;
 
   const supabase = getSupabaseAdminClient();
@@ -386,8 +440,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ actions: [], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  const payload = await request.json();
-  const action = payload.action || "create";
+  if (action === "lifecycle") {
+    if (!payload.id) return NextResponse.json({ error: "Action id is required." }, { status: 400 });
+    const nextStatus = normaliseStatus(String(payload.status || ""));
+    if (nextStatus === "closed" || nextStatus === "submitted_for_review") {
+      return NextResponse.json({ error: "Use the close-out or national approval flow for review and closure." }, { status: 400 });
+    }
+
+    const { data: existingAction, error: readError } = await supabase
+      .from("action_items")
+      .select("id,status,region:regions(name)")
+      .eq("id", payload.id)
+      .maybeSingle();
+
+    if (readError) return NextResponse.json({ error: readError.message }, { status: 500 });
+    if (!existingAction) return NextResponse.json({ error: "Action item was not found." }, { status: 404 });
+
+    const existingRow = existingAction as ActionRow;
+    const region = firstRelated(existingRow.region)?.name || "National";
+    if (!canAccessScope(permission.user, region)) {
+      return NextResponse.json({ error: "You do not have permission to update this action item." }, { status: 403 });
+    }
+
+    const { error } = await supabase
+      .from("action_items")
+      .update({ status: nextStatus, updated_at: new Date().toISOString(), closed_at: null })
+      .eq("id", payload.id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await reopenComplianceForReturnedActions([payload.id]);
+    const { data: updatedAction, error: updatedReadError } = await supabase
+      .from("action_items")
+      .select("id,title,detail,source_page,directive_type,priority,status,due_at,created_at,updated_at,region:regions(name)")
+      .eq("id", payload.id)
+      .maybeSingle();
+
+    if (updatedReadError) return NextResponse.json({ error: updatedReadError.message }, { status: 500 });
+    return NextResponse.json({ actions: updatedAction ? [mapAction(updatedAction as ActionRow)] : [], connected: true });
+  }
 
   if (action === "create") {
     const title = String(payload.title || "").trim();
@@ -425,6 +515,7 @@ export async function POST(request: Request) {
       const status = normaliseStatus(updates.status);
       dbUpdates.status = status;
       if (status === "closed") dbUpdates.closed_at = new Date().toISOString();
+      if (actionIsActive(status)) dbUpdates.closed_at = null;
     }
     if (typeof updates.dueDate === "string") dbUpdates.due_at = updates.dueDate ? new Date(`${updates.dueDate}T17:00:00+10:00`).toISOString() : null;
     if (typeof updates.region === "string") dbUpdates.assigned_region_id = await getRegionId(updates.region);
@@ -433,7 +524,7 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (dbUpdates.status === "closed") {
       await markComplianceForClosedActions([payload.id]);
-    } else if (dbUpdates.status === "returned_to_manager" || dbUpdates.status === "open") {
+    } else if (typeof dbUpdates.status === "string" && actionIsActive(dbUpdates.status)) {
       await reopenComplianceForReturnedActions([payload.id]);
     }
     return GET(request);
