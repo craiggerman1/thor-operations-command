@@ -51,6 +51,7 @@ ODIN_DRY_RUN=false
 
 - Odin can read TOC snapshot data.
 - Odin can route watcher output to the correct TOC destination endpoint.
+- Direct Craig instructions use `toc-command.mjs`; Odin should not search local files, sessions, memory, or the repo when Craig says to log or create something in TOC.
 - Odin uses the configured `OPENCLAW_SESSION_KEY` so watcher analysis has a stable memory thread.
 - Odin confidence values can be returned as either `0.84` or `84`; the watcher normalises both to `84`.
 - Duplicate recommendations are skipped when the same open title already exists inside the configured duplicate window.
@@ -129,3 +130,35 @@ If that returns `404`, enable the OpenAI-compatible chat completions endpoint in
 Once the manual run is proven, run the watcher every 5 to 15 minutes using Windows Task Scheduler on the Odin AI PC.
 
 Keep the first scheduled version read-only or dry-run until Craig confirms the output quality.
+
+## Direct Craig Commands
+
+When Craig asks Odin to log an operational item in TOC, use the direct command client instead of searching the local workspace.
+
+Example:
+
+```powershell
+node .\toc-command.mjs log "There has been a major complaint in Melbourne make sure Melbourne manager treats this as critical and fixes this compliance issue. Log TOC"
+```
+
+Expected behaviour:
+
+- compliance/complaint/safety/critical language routes to `/api/odin/compliance`
+- reminders/to-do/checklist language routes to `/api/odin/todos`
+- equipment/repair/unit/trailer language routes to `/api/odin/equipment`
+- stock/PPE/chemical/supply language routes to `/api/odin/stock-orders`
+- everything else routes to `/api/odin/actions`
+
+Useful explicit options:
+
+```powershell
+node .\toc-command.mjs compliance --region Melbourne --title "Critical Melbourne compliance complaint" --detail "Manager must treat as critical and close out in TOC." --severity red
+node .\toc-command.mjs todos --region Brisbane --title "Pick up tyre shine bottles Thursday"
+node .\toc-command.mjs log --dry-run "Test only, do not write"
+```
+
+Rule for Odin:
+
+```text
+If Craig says "log TOC", "create in TOC", "send manager action", "create To Do", or "raise compliance", run toc-command.mjs once with the instruction text. Do not inspect files first.
+```
