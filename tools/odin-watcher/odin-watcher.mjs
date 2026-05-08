@@ -92,22 +92,26 @@ async function main() {
 
     if (!recommendation.title) {
       console.log("[odin-watcher] Odin did not return a recommendation title. Nothing to write.");
+      await writeWatcherHeartbeat(snapshot, "no_recommendation");
       return;
     }
 
     if (!passesSeverity(recommendation.severity, minimumSeverity)) {
       console.log(`[odin-watcher] Recommendation severity ${recommendation.severity} is below ${minimumSeverity}. Nothing written.`);
+      await writeWatcherHeartbeat(snapshot, "below_minimum_severity", { lastRecommendationSeverity: recommendation.severity });
       return;
     }
 
     if (isDuplicateRecommendation(snapshot, recommendation)) {
       console.log(`[odin-watcher] Duplicate pending recommendation skipped: ${recommendation.title}`);
+      await writeWatcherHeartbeat(snapshot, "duplicate_skipped", { lastRecommendationTitle: recommendation.title });
       return;
     }
 
     if (dryRun) {
       console.log("[odin-watcher] Dry run enabled. Recommendation not written to TOC.");
       console.log(JSON.stringify(recommendation, null, 2));
+      await writeWatcherHeartbeat(snapshot, "dry_run_recommendation", { lastRecommendationTitle: recommendation.title });
       return;
     }
 
