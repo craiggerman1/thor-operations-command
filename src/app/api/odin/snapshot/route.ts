@@ -311,6 +311,74 @@ function buildManagerFollowThroughDigests(entityLinks: ReturnType<typeof buildEn
     .slice(0, 8);
 }
 
+function includesAny(value: string, terms: string[]) {
+  const text = value.toLowerCase();
+  return terms.some((term) => text.includes(term));
+}
+
+function buildCraigEscalationPolicy(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  const relevantItems = entityLinks.filter((item) => item.severity === "red" || item.isOverdue || item.escalationLevel === "craig");
+  const candidates = relevantItems.map((item) => {
+    const evidence = [
+      item.title,
+      item.source,
+      item.category,
+      item.issueType,
+      item.entity?.client,
+      item.entity?.site,
+      item.entity?.vehicle,
+      String(item.status || "")
+    ].filter(Boolean).join(" ");
+    const safetyOrCompliance = includesAny(evidence, ["safety", "compliance", "injury", "incident", "first aid", "audit", "defect", "unsafe", "stop use"]);
+    const clientCritical = includesAny(evidence, ["client", "complaint", "national account", "key account", "major complaint", "site failure"]);
+    const jobFailure = includesAny(evidence, ["job failure", "missed job", "jobsheet", "no crew", "uncovered", "not inducted", "roster gap"]);
+    const material = safetyOrCompliance || clientCritical || jobFailure;
+    const callCraig = item.escalationLevel === "craig" && material && (item.severity === "red" || item.isOverdue);
+    const messageCraig = callCraig || (item.severity === "red" && material) || (item.isOverdue && material);
+    const reason = callCraig
+      ? "Material red/overdue safety, compliance, client or job-failure risk."
+      : messageCraig
+        ? "Material exception suitable for Craig notification, not an automatic phone call."
+        : "Keep with manager or National unless it repeats, worsens or blocks work.";
+
+    return {
+      id: item.id,
+      title: item.title,
+      region: item.region,
+      owner: item.owner,
+      severity: item.severity,
+      status: item.status,
+      href: item.href,
+      dueAt: item.dueAt,
+      escalationLevel: item.escalationLevel,
+      callCraig,
+      messageCraig,
+      nationalOnly: !messageCraig,
+      reason,
+      triggers: {
+        safetyOrCompliance,
+        clientCritical,
+        jobFailure,
+        overdue: item.isOverdue,
+        red: item.severity === "red"
+      }
+    };
+  });
+
+  return {
+    purpose: "Protect Craig's attention by separating phone-call exceptions from manager/national follow-up work.",
+    rules: {
+      callCraig: "Only call Craig for red or overdue material safety, compliance, client-critical or job-failure risk.",
+      messageCraig: "Message Craig for material red/overdue risk that needs awareness but not an immediate call.",
+      nationalOnly: "All other red/overdue work stays with the manager and National queue until repeated, blocked or worsened."
+    },
+    callCandidates: candidates.filter((item) => item.callCraig),
+    messageCandidates: candidates.filter((item) => item.messageCraig && !item.callCraig),
+    nationalOnlyCandidates: candidates.filter((item) => item.nationalOnly),
+    suppressedCount: candidates.filter((item) => item.nationalOnly).length
+  };
+}
+
 function buildStaffReadiness(staff: Awaited<ReturnType<typeof readOdinStaffEntities>>["staff"]) {
   const regionCounts = staff.reduce<Record<string, number>>((lookup, person) => {
     person.regions.forEach((region) => {
@@ -546,6 +614,7 @@ export async function GET(request: Request) {
   const duplicateIssueGroups = duplicateGroups(entityLinks);
   const actionClosure = actionClosureSummary(entityLinks);
   const managerFollowThrough = buildManagerFollowThroughDigests(entityLinks);
+  const craigEscalationPolicy = buildCraigEscalationPolicy(entityLinks);
 
   return NextResponse.json({
     connected: true,
@@ -555,9 +624,10 @@ export async function GET(request: Request) {
     operatingModel: {
       purpose: "Give Odin a single business snapshot so it can detect risk, route work to the correct TOC destination, and reduce manager drift.",
       alertRules: {
-        red: "Telegram immediately. Call Craig only if urgent, safety, compliance or client-critical. Create manager action automatically.",
-        amber: "Manager Action Centre or relevant page. Include in daily summary. Telegram only if overdue or repeated.",
-        blue: "Dashboard/memory only. No interruption."
+        red: "Create/route work immediately. Message Craig only for material red risk. Call Craig only when craigEscalationPolicy.callCandidates says callCraig=true.",
+        amber: "Manager Action Centre or relevant page. Include in daily summary. Escalate only if overdue, repeated or blocked.",
+        blue: "Dashboard/memory only. No interruption.",
+        craigProtection: "Craig should not be interrupted for routine manager follow-up, duplicates, or non-material red work unless the policy marks it as a call/message candidate."
       },
       duplicatePrevention: "Prefer dedupeKey over title matching: region + entity type + source/category + title/entity + due date.",
       managerAccountability: "Use owner region, due date, status, last update and returned/submitted workflow to chase manager follow-through."
@@ -607,6 +677,7 @@ export async function GET(request: Request) {
       recentCompletedCount: recentCompleted.rows.length,
       actionClosure,
       managerFollowThrough,
+      craigEscalationPolicy,
       dataGaps: {
         staffPhoneNumbers: staffResult.source === "database" ? "protected_staff_profiles" : "staff_profiles_table_pending",
         liveRoster: "calendar_jobs_only",
@@ -626,6 +697,7 @@ export async function GET(request: Request) {
       ownerQueue: entityLinks.filter((item) => item.escalationLevel !== "none"),
       actionCarryover: actionClosure.carryoverItems,
       managerFollowThrough,
+      craigEscalationPolicy,
       recentlyCompleted: recentCompleted.rows
     },
     staffRoster: {

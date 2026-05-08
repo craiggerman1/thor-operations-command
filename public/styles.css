@@ -2325,7 +2325,7 @@ body:not([data-access="admin"]) .admin-only-panel {
 
 .closure-control-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -2538,6 +2538,66 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .manager-digest-items a {
+  border-radius: 999px;
+  border: 1px solid rgba(183, 220, 238, 0.84);
+  padding: 5px 8px;
+  background: rgba(239, 249, 252, 0.82);
+  color: var(--blue);
+  font-size: 0.74rem;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.craig-policy-strip {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr;
+  gap: 10px;
+}
+
+.craig-policy-strip article {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid var(--teal);
+  border-radius: 6px;
+  padding: 12px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(238, 248, 251, 0.68)),
+    var(--glass);
+}
+
+.craig-policy-strip article.red {
+  border-left-color: var(--red);
+}
+
+.craig-policy-strip article.amber {
+  border-left-color: var(--amber);
+}
+
+.craig-policy-strip article.green {
+  border-left-color: var(--green);
+}
+
+.craig-policy-strip span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.craig-policy-strip strong {
+  color: var(--blue);
+  font-size: 1rem;
+}
+
+.craig-policy-strip small {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.craig-policy-strip a {
+  justify-self: start;
   border-radius: 999px;
   border: 1px solid rgba(183, 220, 238, 0.84);
   padding: 5px 8px;
@@ -8242,6 +8302,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   .odin-confidence-metrics,
   .odin-confidence-sections,
   .manager-digest-grid,
+  .craig-policy-strip,
   .equipment-row,
   .stock-layout,
   .stock-form,

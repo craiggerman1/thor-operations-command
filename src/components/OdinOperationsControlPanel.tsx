@@ -47,6 +47,13 @@ type ManagerDigest = {
   topItems: SnapshotLink[];
 };
 
+type CraigPolicyCandidate = SnapshotLink & {
+  callCraig: boolean;
+  messageCraig: boolean;
+  nationalOnly: boolean;
+  reason: string;
+};
+
 type OdinSnapshotPayload = {
   connected: boolean;
   generatedAt: string;
@@ -68,6 +75,13 @@ type OdinSnapshotPayload = {
       staleItems: SnapshotLink[];
     };
     managerFollowThrough: ManagerDigest[];
+    craigEscalationPolicy: {
+      purpose: string;
+      callCandidates: CraigPolicyCandidate[];
+      messageCandidates: CraigPolicyCandidate[];
+      nationalOnlyCandidates: CraigPolicyCandidate[];
+      suppressedCount: number;
+    };
   };
   focusQueues: {
     redItems: SnapshotLink[];
@@ -77,6 +91,7 @@ type OdinSnapshotPayload = {
     actionCarryover: SnapshotLink[];
     rosterGaps: SnapshotLink[];
     managerFollowThrough: ManagerDigest[];
+    craigEscalationPolicy: OdinSnapshotPayload["summary"]["craigEscalationPolicy"];
   };
 };
 
@@ -165,6 +180,8 @@ export function OdinOperationsControlPanel() {
   const closure = payload?.summary.actionClosure;
   const managerPressure = closure?.managerWorkload?.slice(0, 4) || [];
   const managerDigests = (payload?.summary.managerFollowThrough || payload?.focusQueues.managerFollowThrough || []).slice(0, 3);
+  const craigPolicy = payload?.summary.craigEscalationPolicy || payload?.focusQueues.craigEscalationPolicy;
+  const callCandidate = craigPolicy?.callCandidates?.[0];
   const craigCount = payload?.summary.openByEscalation?.craig || 0;
 
   return (
@@ -199,6 +216,11 @@ export function OdinOperationsControlPanel() {
               <span>Craig escalation</span>
               <strong>{craigCount}</strong>
               <small>Only material exceptions</small>
+            </article>
+            <article className={`closure-metric-card ${metricTone(craigPolicy?.callCandidates?.length || 0)}`}>
+              <span>Call Craig</span>
+              <strong>{craigPolicy?.callCandidates?.length || 0}</strong>
+              <small>{craigPolicy?.suppressedCount || 0} kept off Craig</small>
             </article>
           </div>
 
@@ -268,6 +290,33 @@ export function OdinOperationsControlPanel() {
               {!managerDigests.length ? <div className="empty-state">No owner needs follow-through right now.</div> : null}
             </div>
           </section>
+
+          {craigPolicy ? (
+            <section className="odin-control-section">
+              <div className="odin-control-section-head">
+                <strong>Craig attention protection</strong>
+                <small>{craigPolicy.purpose}</small>
+              </div>
+              <div className="craig-policy-strip">
+                <article className={callCandidate ? "red" : "green"}>
+                  <span>Phone call candidate</span>
+                  <strong>{callCandidate ? callCandidate.title : "None"}</strong>
+                  <small>{callCandidate ? callCandidate.reason : "Odin should keep current exceptions in TOC/National unless risk worsens."}</small>
+                  {callCandidate?.href ? <Link href={normaliseHref(callCandidate)}>Open item</Link> : null}
+                </article>
+                <article className={craigPolicy.messageCandidates.length ? "amber" : "green"}>
+                  <span>Message Craig</span>
+                  <strong>{craigPolicy.messageCandidates.length}</strong>
+                  <small>Material awareness only, not an automatic phone call.</small>
+                </article>
+                <article className="blue">
+                  <span>National only</span>
+                  <strong>{craigPolicy.nationalOnlyCandidates.length}</strong>
+                  <small>Manager/National follow-up without interrupting Craig.</small>
+                </article>
+              </div>
+            </section>
+          ) : null}
         </>
       ) : (
         <div className="empty-state">{status}</div>

@@ -223,6 +223,8 @@ function buildPrompt(snapshot) {
     "Route manager operational tasks and follow-ups to destination=actions.",
     "Route notes, context and memory-only observations to destination=notes.",
     "Severity must be blue, amber, or red.",
+    "Obey snapshot.craigEscalationPolicy: do not recommend interrupting Craig unless an item is listed as callCraig or messageCraig there.",
+    "Routine manager chasing must stay in TOC as actions or todos, not as Craig escalation.",
     "Only recommend actions that require operational attention. Do not send external messages.",
     "Focus on the most important operational risk only.",
     "Avoid repeating existing open TOC items already listed in the snapshot.",
@@ -237,6 +239,8 @@ function compactSnapshot(snapshot) {
     generatedAt: snapshot?.generatedAt,
     summary: snapshot?.summary || {},
     actionClosure: snapshot?.summary?.actionClosure || {},
+    managerFollowThrough: snapshot?.summary?.managerFollowThrough || [],
+    craigEscalationPolicy: snapshot?.summary?.craigEscalationPolicy || snapshot?.focusQueues?.craigEscalationPolicy || {},
     closureFocusQueues: {
       overdueItems: snapshot?.focusQueues?.overdueItems || [],
       dueSoonItems: snapshot?.focusQueues?.dueSoonItems || [],
