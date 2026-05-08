@@ -26,6 +26,9 @@ type ComplianceRow = {
   region?: { name: string } | { name: string }[] | null;
 };
 
+const badgeCache = new Map<string, { expiresAt: number; payload: Record<string, unknown> }>();
+const badgeCacheMs = 20000;
+
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -74,6 +77,11 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const scope = resolvePermittedScope(permission.user, url.searchParams.get("scope"));
   const role = permission.user.role;
+  const cacheKey = `${role}:${scope}`;
+  const cached = badgeCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return NextResponse.json(cached.payload);
+  }
 
   const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }, { data: complianceData }, rosterGaps] = await Promise.all([
     supabase
@@ -120,7 +128,7 @@ export async function GET(request: Request) {
   const redRosterGapCount = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
   const rosterGapTone = redRosterGapCount ? "red" : scopedRosterGaps.length ? "amber" : "blue";
 
-  return NextResponse.json({
+  const payload = {
     connected: true,
     badges: {
       "Action Centre": makeBadge(scopedActions.length, urgentActionCount ? "red" : "amber"),
@@ -133,5 +141,7 @@ export async function GET(request: Request) {
       "To Do": makeBadge(todoCount || countByDirective(["To Do"]), todoCount ? "blue" : "blue"),
       "National Requests": makeBadge(nationalRequestCount + (scope === "National" ? scopedRosterGaps.length : 0), redRosterGapCount || nationalRequestCount ? "red" : rosterGapTone)
     }
-  });
+  };
+  badgeCache.set(cacheKey, { expiresAt: Date.now() + badgeCacheMs, payload });
+  return NextResponse.json(payload);
 }

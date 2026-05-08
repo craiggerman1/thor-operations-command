@@ -133,7 +133,7 @@ export default function HomePage() {
       syncTodos();
       syncActions();
       syncHomeSettings();
-    }, 15000);
+    }, 60000);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncSession);

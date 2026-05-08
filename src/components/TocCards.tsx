@@ -96,7 +96,7 @@ export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: st
     window.addEventListener("storage", syncHintState);
     window.addEventListener("toc.pageHintsRedeployed", syncHintState);
     window.addEventListener("toc.pageHintsSettingChanged", syncHintState);
-    const refreshInterval = window.setInterval(syncHintState, 30000);
+    const refreshInterval = window.setInterval(syncHintState, 60000);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncHintState);
@@ -141,7 +141,7 @@ export function AdminHintControls() {
     syncHintSetting();
     window.addEventListener("storage", syncHintSetting);
     window.addEventListener("toc.pageHintsSettingChanged", syncHintSetting);
-    const refreshInterval = window.setInterval(syncHintSetting, 30000);
+    const refreshInterval = window.setInterval(syncHintSetting, 60000);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncHintSetting);

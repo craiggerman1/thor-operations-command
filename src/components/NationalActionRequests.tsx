@@ -41,7 +41,7 @@ export function NationalActionRequests() {
     syncRequests();
     window.addEventListener("storage", syncRequests);
     window.addEventListener("toc.nationalActionRequests.updated", syncRequests);
-    const refreshInterval = window.setInterval(syncRequests, 15000);
+    const refreshInterval = window.setInterval(syncRequests, 30000);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncRequests);

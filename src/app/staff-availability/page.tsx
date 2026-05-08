@@ -146,7 +146,7 @@ export default function StaffAvailabilityPage() {
     }
 
     syncRosterGaps();
-    const refreshInterval = window.setInterval(syncRosterGaps, 30000);
+    const refreshInterval = window.setInterval(syncRosterGaps, 60000);
     window.addEventListener("toc.actionState.updated", syncRosterGaps);
     return () => {
       isActive = false;

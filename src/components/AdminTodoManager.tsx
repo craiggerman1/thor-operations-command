@@ -58,7 +58,7 @@ export function AdminTodoManager() {
 
     syncTodos();
     window.addEventListener("toc.todos.updated", syncTodos);
-    const refreshInterval = window.setInterval(syncTodos, 20000);
+    const refreshInterval = window.setInterval(syncTodos, 30000);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("toc.todos.updated", syncTodos);

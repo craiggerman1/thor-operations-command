@@ -63,7 +63,7 @@ export default function ActionsPage() {
     window.addEventListener("toc.sessionchange", syncSession);
     window.addEventListener("storage", syncActions);
     window.addEventListener("toc.actionState.updated", syncActions);
-    const refreshInterval = window.setInterval(syncActions, 15000);
+    const refreshInterval = window.setInterval(syncActions, 30000);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncSession);
