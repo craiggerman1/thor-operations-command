@@ -18,12 +18,15 @@ main().catch((error) => {
 });
 
 async function main() {
-  if (!text && !args.title) throw new Error("Tell me what to log. Example: node toc-command.mjs log \"Critical Melbourne compliance complaint...\"");
+  const commandName = String(command || "").trim().toLowerCase().replace(/-/g, "_");
+  const isLifecycleCommand = lifecycleCommands.has(commandName);
+  if (!isLifecycleCommand && !text && !args.title) throw new Error("Tell me what to log. Example: node toc-command.mjs log \"Critical Melbourne compliance complaint...\"");
 
   const request = buildRequest(command, args, text);
   console.log(`[toc-command] Destination: ${request.destination}`);
-  console.log(`[toc-command] Region: ${request.body.region}`);
-  console.log(`[toc-command] Title: ${request.body.title || request.body.text || request.body.item || "TOC command"}`);
+  console.log(`[toc-command] Operation: ${request.body.action || "create"}`);
+  if (request.body.region) console.log(`[toc-command] Region: ${request.body.region}`);
+  console.log(`[toc-command] Target: ${request.body.title || request.body.text || request.body.item || request.body.exactTitle || request.body.id || request.body.ids?.join?.(", ") || "TOC command"}`);
 
   if (args.dryRun || args["dry-run"]) {
     console.log("[toc-command] Dry run only. Nothing written to TOC.");
@@ -189,7 +192,7 @@ function buildLifecycleRequest(inputCommand, inputArgs, inputText) {
       action: operation,
       ids,
       id: ids[0],
-      updates
+      updates: Object.keys(updates).length ? updates : undefined
     }
   };
 }
