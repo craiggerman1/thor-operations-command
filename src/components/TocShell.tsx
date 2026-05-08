@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
@@ -152,7 +152,10 @@ export function TocShell({ children }: { children: ReactNode }) {
       ? Array.from(new Set(["National", ...assignedRegions.filter((region) => region !== "National")]))
       : assignedRegions.length ? assignedRegions : ["Brisbane"];
   const currentScope = currentRegionOptions.includes(session.scope || "") ? session.scope || currentRegionOptions[0] : currentRegionOptions[0];
-  const visibleNav = navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National"));
+  const visibleNav = useMemo(
+    () => navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National")),
+    [activeProfile.role, currentScope]
+  );
 
   useEffect(() => {
     function applySession(nextSession: StoredSession | null) {
@@ -306,6 +309,18 @@ export function TocShell({ children }: { children: ReactNode }) {
     }
   }, [activeProfile.role, currentScope, pathname, router, session.mustChangePassword, session.role, sessionReady]);
 
+  useEffect(() => {
+    if (!sessionReady || !session.role) return;
+
+    const timeoutId = window.setTimeout(() => {
+      visibleNav.forEach((item) => {
+        if (item.href !== pathname) router.prefetch(item.href);
+      });
+    }, 1200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pathname, router, session.role, sessionReady, visibleNav]);
+
   function updateScope(scope: string) {
     const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope, regions: currentRegionOptions };
     setSession(nextSession);
@@ -391,7 +406,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.304</em>
+              <em>Build 0.305</em>
             </div>
           </div>
           <div className="topbar-actions">

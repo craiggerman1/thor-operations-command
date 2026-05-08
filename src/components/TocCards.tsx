@@ -29,6 +29,9 @@ const hintVersionKey = "toc.pageHintVersion";
 const hintEnabledKey = "toc.pageHintsEnabled";
 const defaultHintVersion = "0.062";
 const pageHintsApi = "/api/page-hints";
+const remoteHintCacheMs = 60000;
+let remoteHintCache: { expiresAt: number; state: { enabled?: boolean; version?: string } } | null = null;
+let remoteHintInFlight: Promise<{ enabled?: boolean; version?: string }> | null = null;
 
 function getHintVersion() {
   if (typeof window === "undefined") return defaultHintVersion;
@@ -60,9 +63,22 @@ function applyRemoteHintState(state: { enabled?: boolean; version?: string }) {
 }
 
 async function fetchRemoteHintState() {
-  const response = await tocFetch(pageHintsApi, { cache: "no-store" });
-  if (!response.ok) throw new Error("Page hint database read failed.");
-  return await response.json() as { enabled?: boolean; version?: string };
+  if (remoteHintCache && remoteHintCache.expiresAt > Date.now()) return remoteHintCache.state;
+  if (remoteHintInFlight) return remoteHintInFlight;
+
+  remoteHintInFlight = (async () => {
+    const response = await tocFetch(pageHintsApi, { cache: "no-store" });
+    if (!response.ok) throw new Error("Page hint database read failed.");
+    const state = await response.json() as { enabled?: boolean; version?: string };
+    remoteHintCache = { state, expiresAt: Date.now() + remoteHintCacheMs };
+    return state;
+  })();
+
+  try {
+    return await remoteHintInFlight;
+  } finally {
+    remoteHintInFlight = null;
+  }
 }
 
 async function saveRemoteHintState(enabled: boolean, version: string) {
@@ -71,7 +87,9 @@ async function saveRemoteHintState(enabled: boolean, version: string) {
     body: JSON.stringify({ enabled, version })
   }, true);
   if (!response.ok) throw new Error("Page hint database update failed.");
-  return await response.json() as { enabled?: boolean; version?: string };
+  const state = await response.json() as { enabled?: boolean; version?: string };
+  remoteHintCache = { state, expiresAt: Date.now() + remoteHintCacheMs };
+  return state;
 }
 
 export function FlowHeading({ eyebrow, title, id }: { step?: string; eyebrow: string; title: string; id?: string }) {
