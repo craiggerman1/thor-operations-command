@@ -80,6 +80,14 @@ function countByCategory(issues: ConfidenceIssue[]) {
   }, {} as Record<IssueCategory, number>);
 }
 
+function countActionsByStatus(actions: DataRow[]) {
+  return actions.reduce<Record<string, number>>((lookup, row) => {
+    const status = text(row.status, "unknown");
+    lookup[status] = (lookup[status] || 0) + 1;
+    return lookup;
+  }, {});
+}
+
 async function readRows(table: string, select: string, options: { limit?: number; orderBy?: string; statuses?: { column: string; values: string[] } } = {}): Promise<ReadResult> {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { rows: [], error: "Supabase server key is not configured." };
@@ -447,6 +455,7 @@ export async function GET(request: Request) {
   });
   const severityCounts = countBySeverity(visibleIssues);
   const categoryCounts = countByCategory(visibleIssues);
+  const actionStatusCounts = countActionsByStatus(actions.rows);
 
   return NextResponse.json({
     connected: true,
@@ -457,6 +466,11 @@ export async function GET(request: Request) {
       issueCount: visibleIssues.length,
       severityCounts,
       categoryCounts,
+      actionStatusCounts,
+      blockedActions: actionStatusCounts.blocked || 0,
+      inProgressActions: actionStatusCounts.in_progress || 0,
+      submittedForReviewActions: actionStatusCounts.submitted_for_review || 0,
+      acknowledgedActions: actionStatusCounts.acknowledged || 0,
       openActions: actions.rows.length,
       activeCompliance: compliance.rows.length,
       activeEquipment: equipment.rows.length,

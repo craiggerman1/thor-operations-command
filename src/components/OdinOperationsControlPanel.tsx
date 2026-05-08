@@ -98,7 +98,7 @@ type OdinSnapshotPayload = {
 type WatcherStatusPayload = {
   connected: boolean;
   expectedWatcherVersion: string;
-  status: "healthy" | "dry_run" | "version_mismatch" | "stale" | "not_seen";
+  status: "healthy" | "dry_run" | "version_mismatch" | "stale" | "not_seen" | "brief_seen_no_heartbeat";
   healthy: boolean;
   lastSeenAt: string | null;
   lastSeenMinutes: number | null;
@@ -114,6 +114,8 @@ type WatcherStatusPayload = {
   };
   checks: {
     heartbeatSeen: boolean;
+    watcherBriefSeen?: boolean;
+    recentBriefWithoutHeartbeat?: boolean;
     versionCurrent: boolean;
     dryRunDisabled: boolean;
     freshWithin90Minutes: boolean;
@@ -259,7 +261,7 @@ export function OdinOperationsControlPanel() {
             <article className={`closure-metric-card ${watcherTone}`}>
               <span>Watcher</span>
               <strong>{watcherStatus?.status?.replace("_", " ") || "unknown"}</strong>
-              <small>{watcherStatus?.lastSeenMinutes === null || watcherStatus?.lastSeenMinutes === undefined ? "No heartbeat" : `${watcherStatus.lastSeenMinutes}m ago`}</small>
+              <small>{watcherStatus?.checks?.recentBriefWithoutHeartbeat ? "Brief seen, heartbeat missing" : watcherStatus?.lastSeenMinutes === null || watcherStatus?.lastSeenMinutes === undefined ? "No heartbeat" : `${watcherStatus.lastSeenMinutes}m ago`}</small>
             </article>
           </div>
 

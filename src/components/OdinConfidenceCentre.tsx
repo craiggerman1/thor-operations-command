@@ -28,6 +28,10 @@ type ConfidencePayload = {
     severityCounts: Record<Severity, number>;
     categoryCounts: Partial<Record<IssueCategory, number>>;
     openActions: number;
+    blockedActions: number;
+    inProgressActions: number;
+    submittedForReviewActions: number;
+    acknowledgedActions: number;
     activeCompliance: number;
     activeEquipment: number;
     activeStockOrders: number;
@@ -192,6 +196,10 @@ export function OdinConfidenceCentre() {
         <>
           <div className="odin-confidence-metrics">
             <article><span>Open actions</span><strong>{payload.summary.openActions}</strong></article>
+            <article><span>Blocked</span><strong>{payload.summary.blockedActions}</strong></article>
+            <article><span>In progress</span><strong>{payload.summary.inProgressActions}</strong></article>
+            <article><span>Awaiting review</span><strong>{payload.summary.submittedForReviewActions}</strong></article>
+            <article><span>Acknowledged</span><strong>{payload.summary.acknowledgedActions}</strong></article>
             <article><span>Compliance</span><strong>{payload.summary.activeCompliance}</strong></article>
             <article><span>Equipment</span><strong>{payload.summary.activeEquipment}</strong></article>
             <article><span>Stock orders</span><strong>{payload.summary.activeStockOrders}</strong></article>

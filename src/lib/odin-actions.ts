@@ -15,6 +15,17 @@ type OdinDirectActionInput = {
   actor?: TocAuthenticatedUser;
 };
 
+const systemDataIssuePattern = /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/i;
+
+function isSystemDataIssue(input: { title: string; detail: string; payload: Record<string, unknown> }) {
+  const explicitCategory = String(input.payload.category || input.payload.issueType || input.payload.entityType || input.payload.sourceType || "").toLowerCase();
+  const text = `${input.title} ${input.detail} ${explicitCategory}`;
+  return explicitCategory.includes("system") ||
+    explicitCategory.includes("data") ||
+    explicitCategory.includes("source") ||
+    systemDataIssuePattern.test(text);
+}
+
 export function normaliseOdinTargetRegions(value: unknown, fallback = "National") {
   function cleanRegionName(region: string) {
     const cleaned = region
@@ -194,13 +205,15 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
   const title = String(payload.title || "").trim();
   if (!title) throw new Error("Action title is required.");
 
-  const targetRegions = await getTargetRegions(normaliseOdinTargetRegions(payload.targetRegions || payload.regions || payload.region));
+  const detail = String(payload.detail || payload.actionDetail || payload.recommendedAction || "Odin issued this Action Centre item for manager close-out.");
+  const systemDataIssue = isSystemDataIssue({ title, detail, payload });
+  const requestedTargetRegions = normaliseOdinTargetRegions(payload.targetRegions || payload.regions || payload.region);
+  const targetRegions = await getTargetRegions(systemDataIssue ? ["National"] : requestedTargetRegions);
   if (!targetRegions.length) throw new Error("No valid target regions supplied.");
 
-  const detail = String(payload.detail || payload.actionDetail || payload.recommendedAction || "Odin issued this Action Centre item for manager close-out.");
   const directiveType = normaliseOdinDirective(payload.directiveType);
   const priority = normaliseOdinPriority(payload.priority);
-  const sourcePage = normaliseOdinSourcePage(payload.sourcePage);
+  const sourcePage = normaliseOdinSourcePage(systemDataIssue ? payload.sourcePage || "Admin Settings" : payload.sourcePage);
   const dueAt = normaliseOdinDueDate(payload.dueDate || payload.dueAt);
   const previewContexts = targetRegions.map((region) => ({
     region,

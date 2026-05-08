@@ -91,7 +91,13 @@ function issueTypeFor(input: {
 }
 
 function categoryFor(payload: Record<string, unknown>, sourcePage: string) {
-  return slug(field(payload, ["category", "type", "destination"]) || sourcePage || "operations", "operations");
+  const explicit = field(payload, ["category", "type", "destination"]);
+  const text = `${explicit || ""} ${sourcePage || ""} ${field(payload, ["title", "detail", "summary", "recommendedAction"]) || ""}`;
+  if (/\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|configuration|watcher|heartbeat|cron)\b/i.test(text)) {
+    return "system-data";
+  }
+
+  return slug(explicit || sourcePage || "operations", "operations");
 }
 
 function escalation(input: {

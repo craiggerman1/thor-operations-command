@@ -40,8 +40,10 @@ export async function GET(request: Request) {
   const isCurrent = version === expectedWatcherVersion;
   const dryRun = facts.dryRun === true;
   const stale = lastSeenMinutes === null || lastSeenMinutes > 90;
+  const latestBriefMinutes = ageMinutes(latestBrief?.updated_at);
+  const recentBriefWithoutHeartbeat = !heartbeat && latestBriefMinutes !== null && latestBriefMinutes <= 90;
   const status = !heartbeat
-    ? "not_seen"
+    ? recentBriefWithoutHeartbeat ? "brief_seen_no_heartbeat" : "not_seen"
     : stale
       ? "stale"
       : !isCurrent
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
     expectedWatcherVersion,
     watcherSessionKey,
     status,
-    healthy: status === "healthy",
+    healthy: status === "healthy" || status === "brief_seen_no_heartbeat",
     lastSeenAt: heartbeat?.updated_at || null,
     lastSeenMinutes,
     summary: heartbeat?.summary || "No Odin watcher heartbeat has been recorded yet.",
@@ -63,9 +65,11 @@ export async function GET(request: Request) {
     latestBrief: latestBrief || null,
     checks: {
       heartbeatSeen: Boolean(heartbeat),
+      watcherBriefSeen: Boolean(latestBrief),
+      recentBriefWithoutHeartbeat,
       versionCurrent: isCurrent,
       dryRunDisabled: !dryRun,
-      freshWithin90Minutes: !stale
+      freshWithin90Minutes: !stale || recentBriefWithoutHeartbeat
     }
   });
 }
