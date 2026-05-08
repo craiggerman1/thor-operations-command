@@ -209,6 +209,11 @@ function actionClosureSummary(entityLinks: ReturnType<typeof buildEntityLinks>) 
   const stale48 = actionLinks.filter((item) => item.staleHours >= 48);
   const overdue = actionLinks.filter((item) => item.isOverdue);
   const carryover = actionLinks.filter((item) => item.isOverdue || item.staleHours >= 24 || ["returned_to_manager", "blocked", "escalated", "reopened"].includes(String(item.status)));
+  const statusBreakdown = actionLinks.reduce<Record<string, number>>((lookup, item) => {
+    const status = String(item.status || "unknown");
+    lookup[status] = (lookup[status] || 0) + 1;
+    return lookup;
+  }, {});
   const byOwner = actionLinks.reduce<Record<string, { owner: string; count: number; overdue: number; carryover: number }>>((lookup, item) => {
     const current = lookup[item.owner] || { owner: item.owner, count: 0, overdue: 0, carryover: 0 };
     lookup[item.owner] = {
@@ -226,6 +231,11 @@ function actionClosureSummary(entityLinks: ReturnType<typeof buildEntityLinks>) 
     stale48Count: stale48.length,
     overdueCount: overdue.length,
     carryoverCount: carryover.length,
+    statusBreakdown,
+    blockedCount: statusBreakdown.blocked || 0,
+    inProgressCount: statusBreakdown.in_progress || 0,
+    acknowledgedCount: statusBreakdown.acknowledged || 0,
+    submittedForReviewCount: statusBreakdown.submitted_for_review || 0,
     managerWorkload: Object.values(byOwner).sort((a, b) => b.overdue - a.overdue || b.carryover - a.carryover || b.count - a.count),
     carryoverItems: carryover,
     staleItems: [...new Set([...stale48, ...stale24])].slice(0, 20)
@@ -251,6 +261,8 @@ function buildManagerFollowThroughDigests(entityLinks: ReturnType<typeof buildEn
     overdue: number;
     dueSoon: number;
     carryover: number;
+    blocked: number;
+    submittedForReview: number;
     craigEscalation: number;
     topItems: typeof accountableItems;
   }>>((lookup, item) => {
@@ -263,6 +275,8 @@ function buildManagerFollowThroughDigests(entityLinks: ReturnType<typeof buildEn
       overdue: 0,
       dueSoon: 0,
       carryover: 0,
+      blocked: 0,
+      submittedForReview: 0,
       craigEscalation: 0,
       topItems: []
     };
@@ -274,6 +288,8 @@ function buildManagerFollowThroughDigests(entityLinks: ReturnType<typeof buildEn
       overdue: current.overdue + (item.isOverdue ? 1 : 0),
       dueSoon: current.dueSoon + (item.isDueSoon ? 1 : 0),
       carryover: current.carryover + (carryover ? 1 : 0),
+      blocked: current.blocked + (String(item.status || "") === "blocked" ? 1 : 0),
+      submittedForReview: current.submittedForReview + (String(item.status || "") === "submitted_for_review" ? 1 : 0),
       craigEscalation: current.craigEscalation + (item.escalationLevel === "craig" ? 1 : 0),
       topItems: [...current.topItems, item]
         .sort((a, b) => {
@@ -294,8 +310,12 @@ function buildManagerFollowThroughDigests(entityLinks: ReturnType<typeof buildEn
       const escalationLevel = digest.craigEscalation ? "craig" : digest.overdue || digest.red ? "national" : digest.carryover || digest.dueSoon ? "watch" : "none";
       const recommendedAction = digest.craigEscalation
         ? `Review ${digest.owner}'s Craig escalation candidate before the next operating check.`
+        : digest.blocked
+          ? `Clear blockers with ${digest.owner} before the next operating check.`
         : digest.overdue
           ? `Ask ${digest.owner} for close-out or blocker detail on ${digest.overdue} overdue item${digest.overdue === 1 ? "" : "s"}.`
+          : digest.submittedForReview
+            ? `Review ${digest.submittedForReview} close-out item${digest.submittedForReview === 1 ? "" : "s"} submitted by ${digest.owner}.`
           : digest.carryover
             ? `Chase ${digest.owner} to update carryover work before it becomes overdue.`
             : `Keep ${digest.owner}'s queue visible in the next rhythm brief.`;
@@ -307,7 +327,7 @@ function buildManagerFollowThroughDigests(entityLinks: ReturnType<typeof buildEn
         nextCheck: digest.craigEscalation || digest.overdue ? "now" : digest.carryover ? "today" : "next_brief"
       };
     })
-    .sort((a, b) => b.craigEscalation - a.craigEscalation || b.overdue - a.overdue || b.red - a.red || b.carryover - a.carryover || b.totalOpen - a.totalOpen)
+    .sort((a, b) => b.craigEscalation - a.craigEscalation || b.blocked - a.blocked || b.overdue - a.overdue || b.red - a.red || b.submittedForReview - a.submittedForReview || b.carryover - a.carryover || b.totalOpen - a.totalOpen)
     .slice(0, 8);
 }
 
