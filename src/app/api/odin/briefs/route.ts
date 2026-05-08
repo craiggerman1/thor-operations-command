@@ -170,6 +170,8 @@ async function readActionClosureContext(region: string, now = new Date()) {
       carryoverActions: [] as BriefActionRow[],
       craigEscalationCandidates: [] as BriefActionRow[],
       repeatedIssueGroups: [] as { key: string; count: number; title: string; region: string }[],
+      blockedActions: [] as BriefActionRow[],
+      submittedForReviewActions: [] as BriefActionRow[],
       managerPressure: [] as { region: string; total: number; overdue: number; stale: number; carryover: number; craig: number }[]
     };
   }
@@ -186,6 +188,8 @@ async function readActionClosureContext(region: string, now = new Date()) {
   const overdueActions = allRows.filter((row) => isPastDue(row.due_at, now));
   const staleActions = allRows.filter((row) => hoursSince(row.updated_at || row.created_at, now) >= 24);
   const carryoverActions = allRows.filter((row) => isPastDue(row.due_at, now) || hoursSince(row.updated_at || row.created_at, now) >= 24 || ["returned_to_manager", "blocked", "escalated", "reopened"].includes(row.status));
+  const blockedActions = allRows.filter((row) => row.status === "blocked");
+  const submittedForReviewActions = allRows.filter((row) => row.status === "submitted_for_review");
   const craigEscalationCandidates = allRows.filter((row) => actionEscalationLevel(row, now) === "craig");
   const managerPressureLookup = allRows.reduce<Record<string, { region: string; total: number; overdue: number; stale: number; carryover: number; craig: number }>>((lookup, row) => {
     const rowRegion = actionRegion(row);
@@ -215,6 +219,8 @@ async function readActionClosureContext(region: string, now = new Date()) {
     staleActions,
     carryoverActions,
     craigEscalationCandidates,
+    blockedActions,
+    submittedForReviewActions,
     repeatedIssueGroups: Object.values(repeatedLookup).filter((group) => group.count > 1).sort((a, b) => b.count - a.count),
     managerPressure: Object.values(managerPressureLookup).sort((a, b) => b.craig - a.craig || b.overdue - a.overdue || b.carryover - a.carryover || b.total - a.total)
   };
@@ -260,7 +266,9 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
   const typeLabel = briefTypeLabel(type);
   const priorityItems = [
     ...closureContext.craigEscalationCandidates.slice(0, 2).map((row) => actionPriorityItem(row, "Craig escalation candidate")),
+    ...closureContext.blockedActions.filter((row) => !closureContext.craigEscalationCandidates.some((candidate) => candidate.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Blocked action requiring manager or National unblock")),
     ...closureContext.overdueActions.filter((row) => !closureContext.craigEscalationCandidates.some((candidate) => candidate.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Overdue action")),
+    ...closureContext.submittedForReviewActions.filter((row) => !closureContext.overdueActions.some((overdue) => overdue.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Manager close-out waiting for National review")),
     ...closureContext.staleActions.filter((row) => !closureContext.overdueActions.some((overdue) => overdue.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Stale manager action")),
     ...openRosterGaps.slice(0, 4).map((gap) => ({
       title: gap.title,
@@ -313,6 +321,8 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       overdueActions: closureContext.overdueActions.length,
       staleActions: closureContext.staleActions.length,
       carryoverActions: closureContext.carryoverActions.length,
+      blockedActions: closureContext.blockedActions.length,
+      submittedForReviewActions: closureContext.submittedForReviewActions.length,
       repeatedIssueGroups: closureContext.repeatedIssueGroups.length,
       craigEscalationCandidates: closureContext.craigEscalationCandidates.length,
       managerPressure: closureContext.managerPressure
