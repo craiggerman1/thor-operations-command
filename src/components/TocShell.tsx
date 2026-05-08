@@ -72,6 +72,8 @@ const navBadgeCacheMs = 12000;
 const weatherCacheMs = 10 * 60 * 1000;
 const navBadgeRefreshMs = 60000;
 const operationsNewsRefreshMs = 120000;
+let shellSessionCache: StoredSession | null = null;
+let shellRestoreInFlight: Promise<StoredSession | null> | null = null;
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
@@ -79,10 +81,14 @@ function sameNewsItems(firstItems: string[], secondItems: string[]) {
 }
 
 function readStoredSession(): StoredSession | null {
+  if (typeof window === "undefined") return shellSessionCache;
+
   try {
-    return JSON.parse(localStorage.getItem("toc.session") || "null");
+    const storedSession = JSON.parse(localStorage.getItem("toc.session") || "null");
+    shellSessionCache = hasUsableStoredSession(storedSession) ? storedSession : null;
+    return shellSessionCache;
   } catch {
-    return null;
+    return shellSessionCache;
   }
 }
 
@@ -96,7 +102,7 @@ function hasUsableStoredSession(storedSession: StoredSession | null) {
 }
 
 function getInitialStoredSession() {
-  const storedSession = readStoredSession();
+  const storedSession = shellSessionCache || readStoredSession();
   return hasUsableStoredSession(storedSession) ? storedSession || {} : {};
 }
 
@@ -135,7 +141,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, NavBadge>>({});
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>(() => getInitialStoredSession());
-  const [sessionReady, setSessionReady] = useState(() => hasUsableStoredSession(readStoredSession()));
+  const [sessionReady, setSessionReady] = useState(() => hasUsableStoredSession(shellSessionCache || readStoredSession()));
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
   const currentRegionOptions = developmentToolsEnabled && activeProfile.role !== "director"
@@ -152,12 +158,14 @@ export function TocShell({ children }: { children: ReactNode }) {
     function applySession(nextSession: StoredSession | null) {
       if (!hasUsableStoredSession(nextSession)) {
         localStorage.removeItem("toc.session");
+        shellSessionCache = null;
         setSession({});
         document.body.classList.remove("is-authenticated");
         delete document.body.dataset.access;
         return false;
       }
 
+      shellSessionCache = nextSession || null;
       setSession(nextSession || {});
       document.body.dataset.access = nextSession?.role || "";
       document.body.classList.add("is-authenticated");
@@ -170,39 +178,53 @@ export function TocShell({ children }: { children: ReactNode }) {
     }
 
     async function restoreSupabaseSession() {
-      const supabase = getSupabaseBrowserClient();
-      if (!supabase) return false;
-
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return false;
-
-      const profileResponse = await fetch("/api/auth/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        cache: "no-store"
-      });
-      const profilePayload = await profileResponse.json();
-      if (!profileResponse.ok || !profilePayload.profile) {
-        await supabase.auth.signOut();
-        return false;
+      if (shellRestoreInFlight) {
+        const restoredSession = await shellRestoreInFlight;
+        return restoredSession ? applySession(restoredSession) : false;
       }
 
-      const storedSession = readStoredSession();
-      const profile = profilePayload.profile as StoredSession;
-      const profileRegions = profile.regions?.length ? profile.regions : [];
-      const preservedScope = storedSession?.scope && profileRegions.includes(storedSession.scope)
-        ? storedSession.scope
-        : profile.scope;
-      const restoredSession = {
-        ...profile,
-        scope: preservedScope,
-        authMode: "supabase" as const,
-        restoredAt: new Date().toISOString()
-      };
-      localStorage.setItem("toc.session", JSON.stringify(restoredSession));
-      return applySession(restoredSession);
+      shellRestoreInFlight = (async () => {
+        const supabase = getSupabaseBrowserClient();
+        if (!supabase) return null;
+
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return null;
+
+        const profileResponse = await fetch("/api/auth/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          cache: "no-store"
+        });
+        const profilePayload = await profileResponse.json();
+        if (!profileResponse.ok || !profilePayload.profile) {
+          await supabase.auth.signOut();
+          return null;
+        }
+
+        const storedSession = readStoredSession();
+        const profile = profilePayload.profile as StoredSession;
+        const profileRegions = profile.regions?.length ? profile.regions : [];
+        const preservedScope = storedSession?.scope && profileRegions.includes(storedSession.scope)
+          ? storedSession.scope
+          : profile.scope;
+        const restoredSession = {
+          ...profile,
+          scope: preservedScope,
+          authMode: "supabase" as const,
+          restoredAt: new Date().toISOString()
+        };
+        localStorage.setItem("toc.session", JSON.stringify(restoredSession));
+        return restoredSession;
+      })();
+
+      try {
+        const restoredSession = await shellRestoreInFlight;
+        return restoredSession ? applySession(restoredSession) : false;
+      } finally {
+        shellRestoreInFlight = null;
+      }
     }
 
     async function initialiseSession() {
@@ -369,7 +391,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.303</em>
+              <em>Build 0.304</em>
             </div>
           </div>
           <div className="topbar-actions">
