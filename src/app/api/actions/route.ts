@@ -3,6 +3,7 @@ import { clearComplianceForDeletedActions, markComplianceForClosedActions, reope
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { canAccessScope, requireTocNationalAccess, requireTocScope, requireTocUser } from "@/lib/toc-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
+import { logTocAudit } from "@/lib/audit";
 import type { Status } from "@/lib/toc-data";
 
 type ActionStatus = "open" | "acknowledged" | "in_progress" | "blocked" | "submitted_for_review" | "returned_to_manager" | "reopened" | "escalated" | "closed";
@@ -433,6 +434,7 @@ export async function POST(request: Request) {
     ? await requireTocUser(request)
     : await requireTocNationalAccess(request);
   if (permission.error) return permission.error;
+  const actor = permission.user;
 
   const supabase = getSupabaseAdminClient();
 
@@ -469,6 +471,14 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await reopenComplianceForReturnedActions([payload.id]);
+    await logTocAudit({
+      actor,
+      action: "action.lifecycle.update",
+      entityTable: "action_items",
+      entityId: payload.id,
+      scope: region,
+      details: { previousStatus: existingRow.status, nextStatus }
+    });
     const { data: updatedAction, error: updatedReadError } = await supabase
       .from("action_items")
       .select("id,title,detail,source_page,directive_type,priority,status,due_at,created_at,updated_at,region:regions(name)")
@@ -486,7 +496,7 @@ export async function POST(request: Request) {
     const assignedRegionId = await getRegionId(payload.region || "National");
     const dueAt = payload.dueDate ? new Date(`${payload.dueDate}T17:00:00+10:00`).toISOString() : null;
 
-    const { error } = await supabase.from("action_items").insert({
+    const { data: createdAction, error } = await supabase.from("action_items").insert({
       title,
       detail: payload.detail || "Action item requires manager review and close-out.",
       source_page: normaliseSourcePage(payload.sourcePage || "Action Centre"),
@@ -495,9 +505,17 @@ export async function POST(request: Request) {
       status: "open",
       assigned_region_id: assignedRegionId,
       due_at: dueAt
-    });
+    }).select("id").single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await logTocAudit({
+      actor,
+      action: "action.create",
+      entityTable: "action_items",
+      entityId: createdAction?.id,
+      scope: payload.region || "National",
+      details: { title, sourcePage: payload.sourcePage || "Action Centre", directiveType: payload.directiveType || "Scheduled Directive", priority: payload.priority || "normal", dueAt }
+    });
     return GET(request);
   }
 
@@ -527,6 +545,13 @@ export async function POST(request: Request) {
     } else if (typeof dbUpdates.status === "string" && actionIsActive(dbUpdates.status)) {
       await reopenComplianceForReturnedActions([payload.id]);
     }
+    await logTocAudit({
+      actor,
+      action: "action.update",
+      entityTable: "action_items",
+      entityId: payload.id,
+      details: { updates: dbUpdates }
+    });
     return GET(request);
   }
 
@@ -535,6 +560,13 @@ export async function POST(request: Request) {
     await clearComplianceForDeletedActions([payload.id]);
     const { error } = await supabase.from("action_items").delete().eq("id", payload.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await logTocAudit({
+      actor,
+      action: "action.delete",
+      entityTable: "action_items",
+      entityId: payload.id,
+      details: { requestedId: payload.id }
+    });
     return GET(request);
   }
 
