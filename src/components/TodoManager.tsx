@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useLayoutEffect, useState } from "react";
-import { tocFetch } from "@/lib/toc-client-auth";
+import { tocFetch, tocJson } from "@/lib/toc-client-auth";
 
 type TodoItem = {
   id: string;
@@ -14,6 +14,7 @@ type TodoItem = {
 const shareTargets = ["National Ops", "Workshop", "Brisbane Manager", "Sydney Manager", "Director"];
 const floatingStartTop = 186;
 const floatingDockTop = 28;
+const todoRefreshMs = 60000;
 
 function getTodoStorageKey() {
   const session = JSON.parse(localStorage.getItem("toc.session") || "null");
@@ -33,7 +34,7 @@ function getStoredSession() {
 }
 
 function getFloatingSetting() {
-  return localStorage.getItem("toc.todoFloating") !== "off";
+  return localStorage.getItem("toc.todoFloating") === "on";
 }
 
 function dispatchTodoUpdate() {
@@ -67,8 +68,7 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     }
 
     try {
-      const response = await tocFetch(`/api/todos?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
-      const payload = await response.json();
+      const payload = await tocJson<{ todos?: TodoItem[] }>(`/api/todos?role=${encodeURIComponent(session.role)}&scope=${encodeURIComponent(session.scope)}`, { cache: "no-store" });
       const nextTodos = payload.todos || [];
       setTodos(nextTodos);
       localStorage.setItem(storageKey, JSON.stringify(nextTodos));
@@ -91,7 +91,7 @@ export function TodoManager({ mode = "floating" }: { mode?: "floating" | "page" 
     window.addEventListener("storage", loadTodos);
     window.addEventListener("toc.todos.updated", loadTodos);
     window.addEventListener("toc.scopechange", loadTodos);
-    const refreshInterval = window.setInterval(loadTodos, 15000);
+    const refreshInterval = window.setInterval(loadTodos, todoRefreshMs);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", loadTodos);

@@ -11,7 +11,7 @@ import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/Urg
 import { defaultOperationsNews, fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
 import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { tocFetch } from "@/lib/toc-client-auth";
+import { tocJson } from "@/lib/toc-client-auth";
 
 type StoredSession = {
   id?: string;
@@ -70,6 +70,8 @@ const developmentToolsEnabled = process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "
 const profileRevalidateMs = 5 * 60 * 1000;
 const navBadgeCacheMs = 12000;
 const weatherCacheMs = 10 * 60 * 1000;
+const navBadgeRefreshMs = 60000;
+const operationsNewsRefreshMs = 120000;
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
@@ -240,8 +242,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       if (cachedBadges) setNavBadgeCounts(cachedBadges);
 
       try {
-        const response = await tocFetch(`/api/navigation-badges?scope=${encodeURIComponent(scope)}&role=${encodeURIComponent(session.role || defaultSession.role)}`, { cache: "no-store" });
-        const payload = await response.json();
+        const payload = await tocJson<{ badges?: Record<string, NavBadge> }>(`/api/navigation-badges?scope=${encodeURIComponent(scope)}&role=${encodeURIComponent(session.role || defaultSession.role)}`, { cache: "no-store" });
         const nextBadges = payload.badges || {};
         writeJsonCache(cacheKey, nextBadges, navBadgeCacheMs);
         setNavBadgeCounts(nextBadges);
@@ -257,7 +258,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     window.addEventListener("toc.nationalActionRequests.updated", syncNavBadgeCounts);
     window.addEventListener("toc.stockOrders.updated", syncNavBadgeCounts);
     window.addEventListener("toc.odin.updated", syncNavBadgeCounts);
-    const refreshInterval = window.setInterval(syncNavBadgeCounts, 15000);
+    const refreshInterval = window.setInterval(syncNavBadgeCounts, navBadgeRefreshMs);
     return () => {
       window.clearInterval(refreshInterval);
       window.removeEventListener("storage", syncNavBadgeCounts);
@@ -368,7 +369,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.300</em>
+              <em>Build 0.301</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -457,23 +458,29 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
       setOperationsNewsIndex(nextIndex);
     }
 
-    function syncOperationsNews() {
+    function syncOperationsNews(force = false) {
       applyOperationsNews(getStoredOperationsNewsItems());
+      const cacheKey = "toc.operationsNews.lastFetchAt";
+      const lastFetchAt = Number(sessionStorage.getItem(cacheKey) || 0);
+      if (!force && lastFetchAt && Date.now() - lastFetchAt < operationsNewsRefreshMs) return;
+
       fetchOperationsNewsItems()
         .then((items) => {
+          sessionStorage.setItem(cacheKey, String(Date.now()));
           applyOperationsNews(items);
         })
         .catch(() => undefined);
     }
 
     syncOperationsNews();
-    window.addEventListener("storage", syncOperationsNews);
-    window.addEventListener(operationsNewsUpdatedEvent, syncOperationsNews);
-    const refreshInterval = window.setInterval(syncOperationsNews, 30000);
+    const forceSyncOperationsNews = () => syncOperationsNews(true);
+    window.addEventListener("storage", forceSyncOperationsNews);
+    window.addEventListener(operationsNewsUpdatedEvent, forceSyncOperationsNews);
+    const refreshInterval = window.setInterval(syncOperationsNews, operationsNewsRefreshMs);
     return () => {
       window.clearInterval(refreshInterval);
-      window.removeEventListener("storage", syncOperationsNews);
-      window.removeEventListener(operationsNewsUpdatedEvent, syncOperationsNews);
+      window.removeEventListener("storage", forceSyncOperationsNews);
+      window.removeEventListener(operationsNewsUpdatedEvent, forceSyncOperationsNews);
     };
   }, []);
 
@@ -497,6 +504,9 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
     const cacheKey = `toc.weather.${scope}`;
     const cachedWeather = readJsonCache<WeatherState>(cacheKey);
     setWeather(cachedWeather || fallbackWeather);
+    if (cachedWeather) return () => {
+      isActive = false;
+    };
 
     fetch(`/api/weather?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Weather feed unavailable")))

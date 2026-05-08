@@ -3,6 +3,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 let cachedAuthorizationHeader: string | null = null;
 let cachedAuthorizationUntil = 0;
 const authorizationCacheMs = 30000;
+const inFlightFetches = new Map<string, Promise<Response>>();
 
 export async function getTocRequestHeaders(includeJson = false) {
   const headers: Record<string, string> = includeJson ? { "Content-Type": "application/json" } : {};
@@ -37,4 +38,25 @@ export async function tocFetch(input: RequestInfo | URL, init: RequestInit = {},
       ...(init.headers as Record<string, string> | undefined)
     }
   });
+}
+
+export async function tocJson<T = unknown>(input: RequestInfo | URL, init: RequestInit = {}, options: { includeJson?: boolean; dedupeKey?: string } = {}) {
+  const method = String(init.method || "GET").toUpperCase();
+  const dedupeKey = options.dedupeKey || (method === "GET" ? String(input) : "");
+
+  if (dedupeKey && inFlightFetches.has(dedupeKey)) {
+    const response = await inFlightFetches.get(dedupeKey);
+    return response?.clone().json() as Promise<T>;
+  }
+
+  const request = tocFetch(input, init, options.includeJson);
+  if (dedupeKey) inFlightFetches.set(dedupeKey, request);
+
+  try {
+    const response = await request;
+    if (!response.ok) throw new Error(`TOC request failed: ${response.status}`);
+    return await response.clone().json() as T;
+  } finally {
+    if (dedupeKey) inFlightFetches.delete(dedupeKey);
+  }
 }
