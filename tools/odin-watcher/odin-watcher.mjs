@@ -36,6 +36,8 @@ const briefsOnly = process.argv.includes("--briefs-only");
 const forcedBriefArg = process.argv.find((arg) => arg.startsWith("--brief="));
 const forcedBriefType = forcedBriefArg ? forcedBriefArg.split("=").slice(1).join("=").trim() : "";
 const watcherVersion = "0.312";
+const showHelp = process.argv.includes("--help") || process.argv.includes("-h");
+const showVersion = process.argv.includes("--version") || process.argv.includes("-v");
 
 const severityRank = { blue: 1, green: 1, amber: 2, yellow: 2, red: 3 };
 const validBriefTypes = new Set(["morning", "midday", "end_of_day"]);
@@ -45,10 +47,16 @@ const briefWindows = [
   { type: "end_of_day", label: "End-of-Day Closeout", startHour: 16, endHour: 21 }
 ];
 
-main().catch((error) => {
-  console.error(`[odin-watcher] ${error.message}`);
-  process.exitCode = 1;
-});
+if (showVersion) {
+  console.log(`[odin-watcher] version ${watcherVersion}`);
+} else if (showHelp) {
+  printHelp();
+} else {
+  main().catch((error) => {
+    console.error(`[odin-watcher] ${error.message}`);
+    process.exitCode = 1;
+  });
+}
 
 async function main() {
   if (!odinApiKey) throw new Error("ODIN_API_KEY is missing.");
@@ -309,6 +317,28 @@ function printSnapshotSummary(snapshot) {
     const count = Array.isArray(sections[name]?.rows) ? sections[name].rows.length : 0;
     console.log(`[odin-watcher] ${name}: ${count}`);
   }
+}
+
+function printHelp() {
+  console.log(`Odin Watcher ${watcherVersion}
+
+Usage:
+  node odin-watcher.mjs [options]
+
+Options:
+  --snapshot-only             Read TOC snapshot only; writes no heartbeat or records.
+  --brief=morning             Force a specific daily brief: morning, midday, end_of_day.
+  --briefs-only               Run daily rhythm only; skip OpenClaw recommendation analysis.
+  --version, -v               Print watcher version.
+  --help, -h                  Print this help.
+
+Required .env values for normal runs:
+  TOC_BASE_URL
+  ODIN_API_KEY
+  OPENCLAW_LOCAL_URL
+  OPENCLAW_GATEWAY_TOKEN
+  OPENCLAW_MODEL
+`);
 }
 
 async function askLocalOdin(prompt) {

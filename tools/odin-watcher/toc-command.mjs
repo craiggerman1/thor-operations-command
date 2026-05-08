@@ -8,6 +8,7 @@ const odinApiKey = process.env.ODIN_API_KEY || "";
 const args = parseArgs(process.argv.slice(2));
 const command = args._[0] || "log";
 const text = String(args.text || args._.slice(1).join(" ") || "").trim();
+const commandVersion = "0.312";
 
 const regions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
 const lifecycleCommands = new Set(["update", "close", "complete", "clear", "done", "delete", "delete_duplicates", "delete-duplicates"]);
@@ -18,6 +19,16 @@ main().catch((error) => {
 });
 
 async function main() {
+  if (args.version || args.v) {
+    console.log(`[toc-command] version ${commandVersion}`);
+    return;
+  }
+
+  if (args.help || args.h) {
+    printHelp();
+    return;
+  }
+
   const commandName = String(command || "").trim().toLowerCase().replace(/-/g, "_");
   const isLifecycleCommand = lifecycleCommands.has(commandName);
   if (!isLifecycleCommand && !text && !args.title) throw new Error("Tell me what to log. Example: node toc-command.mjs log \"Critical Melbourne compliance complaint...\"");
@@ -285,7 +296,7 @@ function slug(value) {
 
 function parseArgs(rawArgs) {
   const parsed = { _: [] };
-  const booleanFlags = new Set(["dry-run", "dryRun", "help"]);
+  const booleanFlags = new Set(["dry-run", "dryRun", "help", "h", "version", "v"]);
   for (let index = 0; index < rawArgs.length; index += 1) {
     const arg = rawArgs[index];
     if (!arg.startsWith("--")) {
@@ -310,6 +321,32 @@ function parseArgs(rawArgs) {
     }
   }
   return parsed;
+}
+
+function printHelp() {
+  console.log(`TOC Direct Command ${commandVersion}
+
+Usage:
+  node toc-command.mjs log "Instruction text"
+  node toc-command.mjs compliance --region Melbourne --title "Critical complaint" --severity red
+  node toc-command.mjs todos --region Brisbane --title "Pick up tyre shine bottles"
+  node toc-command.mjs close --id ACTION_ID
+  node toc-command.mjs delete-duplicates --exactTitle "Duplicated title"
+
+Options:
+  --region REGION
+  --title TITLE
+  --detail TEXT
+  --severity blue|amber|red
+  --dueAt YYYY-MM-DD
+  --id ID
+  --ids ID1,ID2
+  --dry-run
+  --version, -v
+  --help, -h
+
+Normal conversation is advisory only. Use this command only when Craig clearly asks Odin to log, create, assign, close, or delete TOC work.
+`);
 }
 
 function loadDotEnv() {

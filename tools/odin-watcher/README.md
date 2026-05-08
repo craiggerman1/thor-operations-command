@@ -23,25 +23,32 @@ OPENCLAW_SESSION_KEY=toc:watcher
 ```
 
 4. Keep `ODIN_DRY_RUN=true` for the first test.
-5. Test TOC access first:
+5. Confirm the copied watcher version:
+
+```powershell
+node odin-watcher.mjs --version
+node toc-command.mjs --version
+```
+
+6. Test TOC access first:
 
 ```powershell
 node odin-watcher.mjs --snapshot-only
 ```
 
-6. Then test Odin analysis in dry-run mode:
+7. Then test Odin analysis in dry-run mode:
 
 ```powershell
 node odin-watcher.mjs
 ```
 
-7. Test the daily operating rhythm write:
+8. Test the daily operating rhythm write:
 
 ```powershell
 node odin-watcher.mjs --brief=morning --briefs-only
 ```
 
-8. Only after the dry-run recommendation looks right, set:
+9. Only after the dry-run recommendation looks right, set:
 
 ```text
 ODIN_DRY_RUN=false
