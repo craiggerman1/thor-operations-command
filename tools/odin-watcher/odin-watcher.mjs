@@ -35,6 +35,7 @@ const snapshotOnly = process.argv.includes("--snapshot-only");
 const briefsOnly = process.argv.includes("--briefs-only");
 const forcedBriefArg = process.argv.find((arg) => arg.startsWith("--brief="));
 const forcedBriefType = forcedBriefArg ? forcedBriefArg.split("=").slice(1).join("=").trim() : "";
+const watcherVersion = "0.312";
 
 const severityRank = { blue: 1, green: 1, amber: 2, yellow: 2, red: 3 };
 const validBriefTypes = new Set(["morning", "midday", "end_of_day"]);
@@ -64,6 +65,7 @@ async function main() {
       console.log("[odin-watcher] Snapshot-only test complete. TOC access is working.");
       return;
     }
+    await writeWatcherHeartbeat(snapshot, "snapshot_read");
 
     const generatedBriefs = await runDailyOperatingRhythm();
     if (generatedBriefs.length) {
@@ -110,8 +112,44 @@ async function main() {
     }, body);
 
     console.log(`[odin-watcher] TOC write complete. Connected: ${Boolean(result.connected)}. Action: ${result.action || body.action}. Count: ${result.count || result.createdCount || result.createdTodoIds?.length || result.createdActionIds?.length || result.createdComplianceIds?.length || 0}.`);
+    await writeWatcherHeartbeat(snapshot, "completed", { lastWriteDestination: target.destination, lastWriteCount: result.count || result.createdCount || 0 });
   } finally {
     releaseLock();
+  }
+}
+
+async function writeWatcherHeartbeat(snapshot, state, extra = {}) {
+  if (dryRun && state !== "snapshot_read") return;
+
+  try {
+    await postJson(`${tocBaseUrl}/api/odin/notes`, {
+      "x-odin-api-key": odinApiKey
+    }, {
+      action: "update",
+      entityType: "odin_watcher",
+      entityId: "status",
+      sessionKey: "toc:odin-watcher:status",
+      region: "National",
+      title: "Odin watcher heartbeat",
+      summary: `Odin watcher ${state} at ${new Date().toISOString()}.`,
+      facts: {
+        watcherVersion,
+        state,
+        dryRun,
+        minimumSeverity,
+        duplicateWindowHours,
+        dailyRhythmEnabled,
+        openClawSessionKey,
+        snapshotGeneratedAt: snapshot?.generatedAt || null,
+        snapshotOpenWork: snapshot?.summary?.totalOpenWork || 0,
+        snapshotRedCount: snapshot?.summary?.redCount || 0,
+        snapshotOverdueCount: snapshot?.summary?.overdueCount || 0,
+        ...extra
+      },
+      prompt: "Odin watcher heartbeat"
+    });
+  } catch (error) {
+    console.warn(`[odin-watcher] Heartbeat write failed: ${error.message}`);
   }
 }
 

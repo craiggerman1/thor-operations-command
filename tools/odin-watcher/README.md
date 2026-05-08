@@ -59,6 +59,7 @@ ODIN_DRY_RUN=false
 - Odin cannot approve, reject, dismiss, reset passwords, change users, change admin settings, or send external messages from TOC.
 - Telegram and Twilio alerts should be handled on the AI PC side after Odin decides an issue is important.
 - Every watcher write uses `ODIN_API_KEY` and is audited server-side by TOC.
+- Each normal watcher run writes a heartbeat to TOC. National Home shows whether the AI PC watcher is healthy, stale, in dry-run, or running an old watcher version.
 
 ## Destination Routing
 
@@ -98,6 +99,16 @@ node odin-watcher.mjs --brief=morning --briefs-only
 node odin-watcher.mjs --brief=midday --briefs-only
 node odin-watcher.mjs --brief=end_of_day --briefs-only
 ```
+
+## Watcher Health
+
+After a normal non-snapshot run, TOC records the watcher heartbeat in Odin memory under:
+
+```text
+toc:odin-watcher:status
+```
+
+National Home reads `/api/odin/watcher-status` and compares the heartbeat version against the current expected watcher version. If TOC shows `version mismatch`, copy the latest files from `tools/odin-watcher` onto the AI PC watcher folder and restart or reschedule the watcher.
 
 ## Mixed Routing Test
 

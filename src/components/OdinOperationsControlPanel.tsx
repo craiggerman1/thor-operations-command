@@ -95,6 +95,31 @@ type OdinSnapshotPayload = {
   };
 };
 
+type WatcherStatusPayload = {
+  connected: boolean;
+  expectedWatcherVersion: string;
+  status: "healthy" | "dry_run" | "version_mismatch" | "stale" | "not_seen";
+  healthy: boolean;
+  lastSeenAt: string | null;
+  lastSeenMinutes: number | null;
+  summary: string;
+  facts: {
+    watcherVersion?: string;
+    dryRun?: boolean;
+    minimumSeverity?: string;
+    state?: string;
+    snapshotOpenWork?: number;
+    snapshotRedCount?: number;
+    snapshotOverdueCount?: number;
+  };
+  checks: {
+    heartbeatSeen: boolean;
+    versionCurrent: boolean;
+    dryRunDisabled: boolean;
+    freshWithin90Minutes: boolean;
+  };
+};
+
 function formatTime(value?: string) {
   if (!value) return "Not checked";
   const date = new Date(value);
@@ -133,16 +158,24 @@ function PriorityRow({ item }: { item: SnapshotLink }) {
 
 export function OdinOperationsControlPanel() {
   const [payload, setPayload] = useState<OdinSnapshotPayload | null>(null);
+  const [watcherStatus, setWatcherStatus] = useState<WatcherStatusPayload | null>(null);
   const [status, setStatus] = useState("Loading Odin control snapshot...");
   const [isLoading, setIsLoading] = useState(false);
 
   async function loadSnapshot() {
     setIsLoading(true);
     try {
-      const response = await tocFetch("/api/odin/snapshot", { cache: "no-store" });
+      const [response, watcherResponse] = await Promise.all([
+        tocFetch("/api/odin/snapshot", { cache: "no-store" }),
+        tocFetch("/api/odin/watcher-status", { cache: "no-store" })
+      ]);
       const nextPayload = await response.json();
       if (!response.ok || nextPayload.connected === false) throw new Error(nextPayload.error || "Odin snapshot unavailable.");
       setPayload(nextPayload as OdinSnapshotPayload);
+      if (watcherResponse.ok) {
+        const watcherPayload = await watcherResponse.json();
+        setWatcherStatus(watcherPayload.connected === false ? null : watcherPayload as WatcherStatusPayload);
+      }
       setStatus(`Odin checked TOC at ${formatTime(nextPayload.generatedAt)}.`);
     } catch (error) {
       setPayload(null);
@@ -183,6 +216,7 @@ export function OdinOperationsControlPanel() {
   const craigPolicy = payload?.summary.craigEscalationPolicy || payload?.focusQueues.craigEscalationPolicy;
   const callCandidate = craigPolicy?.callCandidates?.[0];
   const craigCount = payload?.summary.openByEscalation?.craig || 0;
+  const watcherTone: Severity | "green" = !watcherStatus ? "red" : watcherStatus.healthy ? "green" : watcherStatus.status === "dry_run" || watcherStatus.status === "version_mismatch" ? "amber" : "red";
 
   return (
     <div className="odin-control-console">
@@ -221,6 +255,11 @@ export function OdinOperationsControlPanel() {
               <span>Call Craig</span>
               <strong>{craigPolicy?.callCandidates?.length || 0}</strong>
               <small>{craigPolicy?.suppressedCount || 0} kept off Craig</small>
+            </article>
+            <article className={`closure-metric-card ${watcherTone}`}>
+              <span>Watcher</span>
+              <strong>{watcherStatus?.status?.replace("_", " ") || "unknown"}</strong>
+              <small>{watcherStatus?.lastSeenMinutes === null || watcherStatus?.lastSeenMinutes === undefined ? "No heartbeat" : `${watcherStatus.lastSeenMinutes}m ago`}</small>
             </article>
           </div>
 

@@ -310,3 +310,5 @@ notes -> /api/odin/notes
 If Odin omits `destination`, the watcher infers the route from the returned title, summary and recommended action.
 
 The watcher also uses a local lock file so scheduled runs do not overlap.
+
+Normal watcher runs now write a TOC heartbeat into Odin memory at session key `toc:odin-watcher:status`. National Home reads `/api/odin/watcher-status` to show whether the AI PC watcher is healthy, stale, still in dry-run, or running an old watcher version. Snapshot-only tests do not write this heartbeat.
