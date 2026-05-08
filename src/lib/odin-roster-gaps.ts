@@ -26,6 +26,45 @@ type StaffSuitability = {
   cautions: string[];
 };
 
+type OdinRosterGap = {
+  id: string;
+  jobId: string;
+  title: string;
+  region: string;
+  severity: string;
+  dueAt: string;
+  dedupeKey: string;
+  gapType: string;
+  reason: string;
+  recommendedAction: string;
+  requiredCrew: number;
+  assignedCrewCount: number;
+  staffSuggestions: StaffSuitability[];
+  staffSuggestionNames: string[];
+  entityType: string;
+  entityId: string;
+  alreadyActioned: boolean;
+  linkedActionId: string | null;
+  linkedActionStatus: string | null;
+  linkedActionHref: string | null;
+};
+
+type RosterGapResult = {
+  connected: boolean;
+  generatedAt: string;
+  staffSource: string;
+  errors: string[];
+  gapCount: number;
+  gaps: OdinRosterGap[];
+};
+
+let rosterGapCache: { expiresAt: number; result: RosterGapResult } | null = null;
+const rosterGapCacheMs = 25000;
+
+export function clearOdinRosterGapCache() {
+  rosterGapCache = null;
+}
+
 function dateOnly(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -225,7 +264,11 @@ async function readLinkedRosterActions(dedupeKeys: string[]) {
   return linked;
 }
 
-export async function buildOdinRosterGaps() {
+export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = {}) {
+  if (!options.forceRefresh && rosterGapCache && rosterGapCache.expiresAt > Date.now()) {
+    return rosterGapCache.result;
+  }
+
   const [staffResult, jobsResult] = await Promise.all([
     readOdinStaffEntities({ includeProtected: true }),
     readRosterJobs()
@@ -410,12 +453,15 @@ export async function buildOdinRosterGaps() {
     };
   });
 
-  return {
+  const result = {
     connected: !staffResult.error && !jobsResult.error,
     generatedAt: new Date().toISOString(),
     staffSource: staffResult.source,
-    errors: [staffResult.error, jobsResult.error].filter(Boolean),
+    errors: [staffResult.error, jobsResult.error].filter((error): error is string => Boolean(error)),
     gapCount: gaps.length,
     gaps
   };
+
+  rosterGapCache = { expiresAt: Date.now() + rosterGapCacheMs, result };
+  return result;
 }

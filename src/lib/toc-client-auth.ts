@@ -4,28 +4,44 @@ let cachedAuthorizationHeader: string | null = null;
 let cachedAuthorizationUntil = 0;
 const authorizationCacheMs = 30000;
 const inFlightFetches = new Map<string, Promise<Response>>();
+let inFlightAuthorizationHeader: Promise<string | null> | null = null;
 
-export async function getTocRequestHeaders(includeJson = false) {
-  const headers: Record<string, string> = includeJson ? { "Content-Type": "application/json" } : {};
+async function resolveAuthorizationHeader() {
   const now = Date.now();
 
   if (cachedAuthorizationHeader && cachedAuthorizationUntil > now) {
-    headers.Authorization = cachedAuthorizationHeader;
-    return headers;
+    return cachedAuthorizationHeader;
   }
 
-  const supabase = getSupabaseBrowserClient();
-  const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
-  const token = data.session?.access_token;
+  if (inFlightAuthorizationHeader) return inFlightAuthorizationHeader;
 
-  if (token) {
+  inFlightAuthorizationHeader = (async () => {
+    const supabase = getSupabaseBrowserClient();
+    const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    const token = data.session?.access_token;
+
+    if (!token) {
+      cachedAuthorizationHeader = null;
+      cachedAuthorizationUntil = 0;
+      return null;
+    }
+
     cachedAuthorizationHeader = `Bearer ${token}`;
-    cachedAuthorizationUntil = now + authorizationCacheMs;
-    headers.Authorization = cachedAuthorizationHeader;
-  } else {
-    cachedAuthorizationHeader = null;
-    cachedAuthorizationUntil = 0;
+    cachedAuthorizationUntil = Date.now() + authorizationCacheMs;
+    return cachedAuthorizationHeader;
+  })();
+
+  try {
+    return await inFlightAuthorizationHeader;
+  } finally {
+    inFlightAuthorizationHeader = null;
   }
+}
+
+export async function getTocRequestHeaders(includeJson = false) {
+  const headers: Record<string, string> = includeJson ? { "Content-Type": "application/json" } : {};
+  const authorizationHeader = await resolveAuthorizationHeader();
+  if (authorizationHeader) headers.Authorization = authorizationHeader;
 
   return headers;
 }

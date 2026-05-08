@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { logTocAudit } from "@/lib/audit";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
-import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
+import { buildOdinRosterGaps, clearOdinRosterGapCache } from "@/lib/odin-roster-gaps";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 function actionDetailForGap(gap: Awaited<ReturnType<typeof buildOdinRosterGaps>>["gaps"][number] | null, fallbackDetail: string) {
@@ -56,22 +56,9 @@ export async function GET(request: Request) {
   if (permission.error) return permission.error;
 
   const result = await buildOdinRosterGaps();
-  const linkedActions = await readLinkedRosterActions(result.gaps.map((gap) => gap.dedupeKey));
-  const gaps = result.gaps.map((gap) => {
-    const linkedAction = linkedActions.get(gap.dedupeKey);
-    return {
-      ...gap,
-      alreadyActioned: Boolean(linkedAction),
-      linkedActionId: linkedAction?.id || null,
-      linkedActionStatus: linkedAction?.status || null,
-      linkedActionHref: linkedAction ? `/actions/${linkedAction.id}` : null
-    };
-  });
   return NextResponse.json({
     ...result,
-    gapCount: gaps.length,
-    actionedGapCount: gaps.filter((gap) => gap.alreadyActioned).length,
-    gaps,
+    actionedGapCount: result.gaps.filter((gap) => gap.alreadyActioned).length,
     instructions: {
       purpose: "Roster gap detection for Odin. It recommends manager actions only and does not message staff or change rosters.",
       createManagerAction: "POST /api/odin/roster-gaps with action=create and a gapId or title/detail/region/dueAt."
@@ -88,7 +75,7 @@ export async function POST(request: Request) {
   if (action !== "create") return NextResponse.json({ connected: false, error: "Roster gaps currently support create manager action only." }, { status: 400 });
 
   const actor = permission.kind === "toc" ? permission.user : undefined;
-  const gaps = await buildOdinRosterGaps();
+  const gaps = await buildOdinRosterGaps({ forceRefresh: true });
   const gap = typeof payload.gapId === "string" ? gaps.gaps.find((item) => item.id === payload.gapId) || null : null;
   const linkedActions = await readLinkedRosterActions(gap?.dedupeKey ? [gap.dedupeKey] : []);
   const linkedAction = gap?.dedupeKey ? linkedActions.get(gap.dedupeKey) : undefined;
@@ -140,5 +127,6 @@ export async function POST(request: Request) {
     details: { gapId: payload.gapId || gap?.id || null, dedupeKey: gap?.dedupeKey || null, result, actorType: permission.kind }
   });
 
+  clearOdinRosterGapCache();
   return NextResponse.json({ connected: true, action: "create", ...result });
 }
