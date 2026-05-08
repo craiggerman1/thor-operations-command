@@ -226,18 +226,18 @@ function actionPriorityItem(row: BriefActionRow, reason: string): BriefPriorityI
   const severity = actionEscalationLevel(row) === "craig" || overdue ? "red" : staleHours >= 24 ? "amber" : actionSeverity(row);
 
   return {
-    title: row.title,
+    title: `Chase close-out: ${row.title}`,
     region: actionRegion(row),
     severity,
-    recommendedAction: `${reason}. Review the existing Action Centre item and drive close-out.`,
+    recommendedAction: `${reason}. Manager must update or close the existing Action Centre item: ${row.title}.`,
     href: `/actions/${row.id}`,
     actionHref: `/actions/${row.id}`,
     dueAt: row.due_at || undefined,
-    dedupeKey: `closure:${row.id}`,
+    dedupeKey: `closure-chase:${row.id}`,
     entityType: "action_item",
     entityId: row.id,
-    destination: "actions",
-    autoAction: false,
+    destination: "todos",
+    autoAction: true,
     linkedActionIds: [row.id],
     followThroughStatus: "linked"
   };
@@ -467,6 +467,8 @@ async function createBriefFollowThroughActions(input: {
     actionResults,
     createdCount: actionResults.reduce((total, result) => total + result.createdActionIds.length, 0),
     linkedCount: actionResults.reduce((total, result) => total + result.linkedActionIds.length, 0),
+    createdRecordCount: actionResults.reduce((total, result) => total + (result.skippedDuplicateCount ? 0 : result.destinationIds.length), 0),
+    linkedRecordCount: actionResults.reduce((total, result) => total + (result.skippedDuplicateCount ? result.destinationIds.length : 0), 0),
     failureCount
   };
 }
@@ -826,6 +828,8 @@ export async function POST(request: Request) {
             ...briefData.metrics,
             actionItemsCreated: followThrough.createdCount,
             actionItemsLinked: followThrough.linkedCount,
+            followThroughRecordsCreated: followThrough.createdRecordCount,
+            followThroughRecordsLinked: followThrough.linkedRecordCount,
             followThroughFailures: followThrough.failureCount
           },
           updated_at: new Date().toISOString()
@@ -852,6 +856,8 @@ export async function POST(request: Request) {
       actorType: permission.kind,
       followThroughCreated: followThrough?.createdCount || 0,
       followThroughLinked: followThrough?.linkedCount || 0,
+      followThroughRecordsCreated: followThrough?.createdRecordCount || 0,
+      followThroughRecordsLinked: followThrough?.linkedRecordCount || 0,
       followThroughFailures: followThrough?.failureCount || 0,
       followThroughError: followThroughError || undefined
     }
