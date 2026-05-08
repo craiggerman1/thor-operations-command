@@ -28,6 +28,7 @@ const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", 
 const activeComplianceStatuses = ["open", "in_progress", "blocked", "not_started"];
 const activeEquipmentStatuses = ["watch", "service_due", "overdue"];
 const activeStockStatuses = ["submitted", "awaiting_review", "approved", "ordered", "dispatched", "cancel_requested", "returned"];
+const systemDataPattern = /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/i;
 
 function firstRelated(value: unknown): DataRow | null {
   if (Array.isArray(value)) return (value[0] as DataRow | undefined) || null;
@@ -88,6 +89,11 @@ function countActionsByStatus(actions: DataRow[]) {
   }, {});
 }
 
+function isSystemDataAction(row: DataRow) {
+  return text(row.source_page).toLowerCase() === "admin-settings" ||
+    systemDataPattern.test(`${text(row.title)} ${text(row.detail)} ${text(row.source_page)}`);
+}
+
 async function readRows(table: string, select: string, options: { limit?: number; orderBy?: string; statuses?: { column: string; values: string[] } } = {}): Promise<ReadResult> {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { rows: [], error: "Supabase server key is not configured." };
@@ -122,8 +128,9 @@ function sourceIssues(results: Record<string, ReadResult>) {
 function duplicateActionIssues(actions: DataRow[]) {
   const openActions = actions.filter((row) => activeActionStatuses.includes(text(row.status)));
   const groups = openActions.reduce<Record<string, DataRow[]>>((lookup, row) => {
+    const systemData = isSystemDataAction(row);
     const key = [
-      regionName(row).toLowerCase(),
+      systemData ? "national-system-data" : regionName(row).toLowerCase(),
       text(row.source_page, "action").toLowerCase(),
       text(row.title, "untitled").toLowerCase(),
       String(row.due_at || "no_due")
@@ -138,7 +145,9 @@ function duplicateActionIssues(actions: DataRow[]) {
     .map(([key, rows]) => issue({
       id: `duplicate:action:${key}`,
       title: `${rows.length} similar open Action Centre items`,
-      detail: `${text(rows[0].title, "Untitled action")} appears multiple times for ${regionName(rows[0])}.`,
+      detail: isSystemDataAction(rows[0])
+        ? `${text(rows[0].title, "Untitled action")} appears across multiple regions but is a system/data issue that should stay as one National/Admin action.`
+        : `${text(rows[0].title, "Untitled action")} appears multiple times for ${regionName(rows[0])}.`,
       category: "duplicate",
       severity: rows.length >= 3 ? "red" : "amber",
       page: "Action Centre",
@@ -199,6 +208,19 @@ function actionQualityIssues(actions: DataRow[], now: Date) {
         page: "Action Centre",
         href,
         recommendedAction: "Assign a region or owner so Odin and National know who is accountable."
+      }));
+    }
+
+    if (isSystemDataAction(row) && row.assigned_region_id) {
+      issues.push(issue({
+        id: `action:system-data-region:${row.id}`,
+        title: `${title} is assigned to a region`,
+        detail: "System/data issues should stay with National/Admin instead of being assigned to a regional manager.",
+        category: "ownership",
+        severity: "red",
+        page: "Action Centre",
+        href,
+        recommendedAction: "Move this issue to National/Admin or close/delete the regional duplicate if the National issue already exists."
       }));
     }
 
