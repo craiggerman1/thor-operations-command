@@ -169,8 +169,12 @@ export async function POST(request: Request) {
   if (action === "update") {
     const requestId = payload.id;
     const status = payload.status || "Awaiting national review";
+    const nationalResponse = String(payload.nationalResponse || "").trim();
 
     if (!requestId) return NextResponse.json({ error: "National request id is required." }, { status: 400 });
+    if (status === "Returned to manager" && nationalResponse.length < 5) {
+      return NextResponse.json({ error: "Add a clear return reason before sending this back to the manager." }, { status: 400 });
+    }
 
     const { data: existingRequest, error: readError } = await supabase
       .from("national_requests")
@@ -186,7 +190,7 @@ export async function POST(request: Request) {
       .from("national_requests")
       .update({
         status: dbStatus,
-        national_response: payload.nationalResponse || null,
+        national_response: nationalResponse || null,
         reviewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -202,7 +206,7 @@ export async function POST(request: Request) {
           action: "national.manager_update.acknowledge",
           entityTable: "national_requests",
           entityId: requestId,
-          details: { sourceActionId: existingRequest.source_action_id, status, nationalResponse: payload.nationalResponse || null }
+          details: { sourceActionId: existingRequest.source_action_id, status, nationalResponse: nationalResponse || null }
         });
         return GET(request);
       }
@@ -223,7 +227,7 @@ export async function POST(request: Request) {
       action: "national.request.update",
       entityTable: "national_requests",
       entityId: requestId,
-      details: { status, requestType: existingRequest?.request_type || null, nationalResponse: payload.nationalResponse || null }
+      details: { status, requestType: existingRequest?.request_type || null, nationalResponse: nationalResponse || null }
     });
 
     return GET(request);

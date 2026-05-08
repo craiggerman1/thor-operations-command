@@ -60,6 +60,7 @@ export default function NationalRequestDetailPage() {
   const [actionRequests, setActionRequests] = useState<NationalActionRequest[]>([]);
   const [orders, setOrders] = useState<StockOrderRequest[]>([]);
   const [message, setMessage] = useState("");
+  const [nationalResponse, setNationalResponse] = useState("");
 
   useEffect(() => {
     function syncRequests() {
@@ -84,12 +85,21 @@ export default function NationalRequestDetailPage() {
   const isManagerUpdate = actionRequest?.requestType === "manager_update";
 
   async function saveActionRequest(status: NationalActionRequest["status"]) {
+    if (status === "Returned to manager" && nationalResponse.trim().length < 5) {
+      setMessage("Add a clear return reason before sending this back to the manager.");
+      return;
+    }
+
     const response = await tocFetch("/api/national-requests", {
       method: "POST",
-      body: JSON.stringify({ action: "update", id: requestId, status })
+      body: JSON.stringify({ action: "update", id: requestId, status, nationalResponse: nationalResponse.trim() })
     }, true);
     const payload = await response.json();
-    if (response.ok) setActionRequests(payload.requests || []);
+    if (!response.ok) {
+      setMessage(payload.error || "National request could not be updated.");
+      return;
+    }
+    setActionRequests(payload.requests || []);
     window.dispatchEvent(new Event("toc.actionState.updated"));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
     setMessage(status === "Approved by national" ? "Close-out approved and cleared from the live queue." : "Returned to manager and cleared from the national queue.");
@@ -140,6 +150,10 @@ export default function NationalRequestDetailPage() {
                 <Tag>{actionRequest.directive}</Tag>
                 <Tag tone={actionRequest.status === "Approved by national" ? "green" : actionRequest.status === "Returned to manager" ? "amber" : "blue"}>{actionRequest.status}</Tag>
               </div>
+              <label className="admin-tracking-field">
+                <span>National review note</span>
+                <textarea value={nationalResponse} onChange={(event) => setNationalResponse(event.target.value)} placeholder="Required when returning to manager. Optional for approval/acknowledgement." />
+              </label>
               <div className="stock-actions">
                 <AskOdinButton
                   sourceType="national_request"

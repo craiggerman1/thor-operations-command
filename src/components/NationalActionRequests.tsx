@@ -51,9 +51,14 @@ export function NationalActionRequests() {
   }, []);
 
   async function updateRequest(requestId: string, status: NationalActionRequest["status"]) {
+    const nationalResponse = status === "Returned to manager"
+      ? window.prompt("Why is this being returned to the manager?")?.trim() || ""
+      : "";
+    if (status === "Returned to manager" && nationalResponse.length < 5) return;
+
     const response = await tocFetch("/api/national-requests", {
       method: "POST",
-      body: JSON.stringify({ action: "update", id: requestId, status })
+      body: JSON.stringify({ action: "update", id: requestId, status, nationalResponse })
     }, true);
     const payload = await response.json();
     if (response.ok) setRequests(payload.requests || []);
