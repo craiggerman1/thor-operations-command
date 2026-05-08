@@ -232,6 +232,85 @@ function actionClosureSummary(entityLinks: ReturnType<typeof buildEntityLinks>) 
   };
 }
 
+function buildManagerFollowThroughDigests(entityLinks: ReturnType<typeof buildEntityLinks>) {
+  const accountableItems = entityLinks.filter((item) => {
+    const status = String(item.status || "");
+    return item.severity !== "blue" ||
+      item.isOverdue ||
+      item.isDueSoon ||
+      item.staleHours >= 24 ||
+      item.escalationLevel !== "none" ||
+      ["returned_to_manager", "blocked", "escalated", "reopened"].includes(status);
+  });
+
+  const digests = accountableItems.reduce<Record<string, {
+    owner: string;
+    region: string;
+    totalOpen: number;
+    red: number;
+    overdue: number;
+    dueSoon: number;
+    carryover: number;
+    craigEscalation: number;
+    topItems: typeof accountableItems;
+  }>>((lookup, item) => {
+    const owner = item.owner || `${item.region || "National"} Manager`;
+    const current = lookup[owner] || {
+      owner,
+      region: item.ownerRegion || item.region || "National",
+      totalOpen: 0,
+      red: 0,
+      overdue: 0,
+      dueSoon: 0,
+      carryover: 0,
+      craigEscalation: 0,
+      topItems: []
+    };
+    const carryover = item.isOverdue || item.staleHours >= 24 || ["returned_to_manager", "blocked", "escalated", "reopened"].includes(String(item.status || ""));
+    lookup[owner] = {
+      ...current,
+      totalOpen: current.totalOpen + 1,
+      red: current.red + (item.severity === "red" ? 1 : 0),
+      overdue: current.overdue + (item.isOverdue ? 1 : 0),
+      dueSoon: current.dueSoon + (item.isDueSoon ? 1 : 0),
+      carryover: current.carryover + (carryover ? 1 : 0),
+      craigEscalation: current.craigEscalation + (item.escalationLevel === "craig" ? 1 : 0),
+      topItems: [...current.topItems, item]
+        .sort((a, b) => {
+          const score = (entry: typeof item) =>
+            (entry.escalationLevel === "craig" ? 100 : 0) +
+            (entry.severity === "red" ? 60 : entry.severity === "amber" ? 25 : 0) +
+            (entry.isOverdue ? 40 : 0) +
+            (entry.staleHours >= 24 ? 15 : 0);
+          return score(b) - score(a);
+        })
+        .slice(0, 3)
+    };
+    return lookup;
+  }, {});
+
+  return Object.values(digests)
+    .map((digest) => {
+      const escalationLevel = digest.craigEscalation ? "craig" : digest.overdue || digest.red ? "national" : digest.carryover || digest.dueSoon ? "watch" : "none";
+      const recommendedAction = digest.craigEscalation
+        ? `Review ${digest.owner}'s Craig escalation candidate before the next operating check.`
+        : digest.overdue
+          ? `Ask ${digest.owner} for close-out or blocker detail on ${digest.overdue} overdue item${digest.overdue === 1 ? "" : "s"}.`
+          : digest.carryover
+            ? `Chase ${digest.owner} to update carryover work before it becomes overdue.`
+            : `Keep ${digest.owner}'s queue visible in the next rhythm brief.`;
+
+      return {
+        ...digest,
+        escalationLevel,
+        recommendedAction,
+        nextCheck: digest.craigEscalation || digest.overdue ? "now" : digest.carryover ? "today" : "next_brief"
+      };
+    })
+    .sort((a, b) => b.craigEscalation - a.craigEscalation || b.overdue - a.overdue || b.red - a.red || b.carryover - a.carryover || b.totalOpen - a.totalOpen)
+    .slice(0, 8);
+}
+
 function buildStaffReadiness(staff: Awaited<ReturnType<typeof readOdinStaffEntities>>["staff"]) {
   const regionCounts = staff.reduce<Record<string, number>>((lookup, person) => {
     person.regions.forEach((region) => {
@@ -466,6 +545,7 @@ export async function GET(request: Request) {
   const redItems = entityLinks.filter((item) => item.severity === "red");
   const duplicateIssueGroups = duplicateGroups(entityLinks);
   const actionClosure = actionClosureSummary(entityLinks);
+  const managerFollowThrough = buildManagerFollowThroughDigests(entityLinks);
 
   return NextResponse.json({
     connected: true,
@@ -526,6 +606,7 @@ export async function GET(request: Request) {
       rosterGapCount: rosterGaps.gapCount,
       recentCompletedCount: recentCompleted.rows.length,
       actionClosure,
+      managerFollowThrough,
       dataGaps: {
         staffPhoneNumbers: staffResult.source === "database" ? "protected_staff_profiles" : "staff_profiles_table_pending",
         liveRoster: "calendar_jobs_only",
@@ -544,6 +625,7 @@ export async function GET(request: Request) {
       rosterGaps: rosterGaps.gaps,
       ownerQueue: entityLinks.filter((item) => item.escalationLevel !== "none"),
       actionCarryover: actionClosure.carryoverItems,
+      managerFollowThrough,
       recentlyCompleted: recentCompleted.rows
     },
     staffRoster: {

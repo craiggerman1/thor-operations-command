@@ -32,6 +32,21 @@ type ManagerPressure = {
   craig?: number;
 };
 
+type ManagerDigest = {
+  owner: string;
+  region: string;
+  totalOpen: number;
+  red: number;
+  overdue: number;
+  dueSoon: number;
+  carryover: number;
+  craigEscalation: number;
+  escalationLevel: "none" | "watch" | "national" | "craig";
+  recommendedAction: string;
+  nextCheck: "now" | "today" | "next_brief";
+  topItems: SnapshotLink[];
+};
+
 type OdinSnapshotPayload = {
   connected: boolean;
   generatedAt: string;
@@ -52,6 +67,7 @@ type OdinSnapshotPayload = {
       carryoverItems: SnapshotLink[];
       staleItems: SnapshotLink[];
     };
+    managerFollowThrough: ManagerDigest[];
   };
   focusQueues: {
     redItems: SnapshotLink[];
@@ -60,6 +76,7 @@ type OdinSnapshotPayload = {
     ownerQueue: SnapshotLink[];
     actionCarryover: SnapshotLink[];
     rosterGaps: SnapshotLink[];
+    managerFollowThrough: ManagerDigest[];
   };
 };
 
@@ -147,6 +164,7 @@ export function OdinOperationsControlPanel() {
 
   const closure = payload?.summary.actionClosure;
   const managerPressure = closure?.managerWorkload?.slice(0, 4) || [];
+  const managerDigests = (payload?.summary.managerFollowThrough || payload?.focusQueues.managerFollowThrough || []).slice(0, 3);
   const craigCount = payload?.summary.openByEscalation?.craig || 0;
 
   return (
@@ -217,6 +235,39 @@ export function OdinOperationsControlPanel() {
               </div>
             </section>
           </div>
+
+          <section className="odin-control-section">
+            <div className="odin-control-section-head">
+              <strong>Manager follow-through digest</strong>
+              <small>{managerDigests.length ? "Odin's practical chase plan by owner." : "No manager chase digest needed."}</small>
+            </div>
+            <div className="manager-digest-grid">
+              {managerDigests.map((digest) => (
+                <article className={`manager-digest-card ${digest.escalationLevel}`} key={digest.owner}>
+                  <div>
+                    <span className="eyebrow">{digest.region} | {digest.nextCheck.replace("_", " ")}</span>
+                    <strong>{digest.owner}</strong>
+                    <small>{digest.recommendedAction}</small>
+                  </div>
+                  <div className="manager-digest-metrics">
+                    <Tag tone={digest.craigEscalation ? "red" : digest.overdue ? "amber" : "blue"}>{digest.totalOpen} open</Tag>
+                    <Tag tone={digest.overdue ? "red" : "green"}>{digest.overdue} overdue</Tag>
+                    <Tag tone={digest.carryover ? "amber" : "green"}>{digest.carryover} carryover</Tag>
+                  </div>
+                  {digest.topItems.length ? (
+                    <div className="manager-digest-items">
+                      {digest.topItems.slice(0, 2).map((item) => (
+                        <Link href={normaliseHref(item)} key={`${digest.owner}-${item.id}`}>
+                          {item.title}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+              {!managerDigests.length ? <div className="empty-state">No owner needs follow-through right now.</div> : null}
+            </div>
+          </section>
         </>
       ) : (
         <div className="empty-state">{status}</div>
