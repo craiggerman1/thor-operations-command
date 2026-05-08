@@ -17,7 +17,7 @@ type AdminActionItem = {
 };
 
 const regions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
-const sourcePages = ["Action Centre", "Compliance", "Productivity", "Equipment Servicing", "Stock Orders", "Jobsheets", "Calendar", "Staff Availability", "To Do"];
+const sourcePages = ["Action Centre", "Admin Settings", "Compliance", "Productivity", "Equipment Servicing", "Stock Orders", "Jobsheets", "Calendar", "Staff Availability", "To Do"];
 const directiveTypes = ["National Ops Directive", "Scheduled Directive", "To Do"] as const;
 const priorities = ["urgent", "high", "normal", "low"] as const;
 

@@ -73,7 +73,8 @@ function sourceHref(source: string) {
     Roster: "/staff-availability",
     Calendar: "/calendar",
     "To Do": "/todo",
-    Workshop: "/equipment-servicing"
+    Workshop: "/equipment-servicing",
+    "Admin Settings": "/admin"
   };
 
   return map[source] || "/actions";
@@ -90,7 +91,8 @@ function normaliseSourcePage(value: string) {
     "Thor Portal": "jobsheets",
     Calendar: "calendar",
     "Staff Availability": "staff-availability",
-    "To Do": "to-do"
+    "To Do": "to-do",
+    "Admin Settings": "admin-settings"
   };
 
   return map[value] || value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "action-centre";

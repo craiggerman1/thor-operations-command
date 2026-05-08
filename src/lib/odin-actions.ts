@@ -68,7 +68,8 @@ export function normaliseOdinSourcePage(value: unknown) {
     Jobsheets: "jobsheets",
     Calendar: "calendar",
     "Staff Availability": "staff-availability",
-    "To Do": "to-do"
+    "To Do": "to-do",
+    "Admin Settings": "admin-settings"
   };
 
   return map[source] || source.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "action-centre";

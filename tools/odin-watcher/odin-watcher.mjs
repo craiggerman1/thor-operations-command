@@ -35,7 +35,7 @@ const snapshotOnly = process.argv.includes("--snapshot-only");
 const briefsOnly = process.argv.includes("--briefs-only");
 const forcedBriefArg = process.argv.find((arg) => arg.startsWith("--brief="));
 const forcedBriefType = forcedBriefArg ? forcedBriefArg.split("=").slice(1).join("=").trim() : "";
-const watcherVersion = "0.313";
+const watcherVersion = "0.314";
 const showHelp = process.argv.includes("--help") || process.argv.includes("-h");
 const showVersion = process.argv.includes("--version") || process.argv.includes("-v");
 
@@ -260,13 +260,14 @@ function buildPrompt(snapshot) {
     "You are Odin inside Thor Operations Command.",
     "Analyse this TOC operational snapshot as Thor's AI operations manager.",
     "Return one concise JSON object only. No markdown.",
-    "Allowed JSON fields: destination, title, summary, region, severity, confidence, entityType, entityId, dueAt, noticed, whyItMatters, recommendedAction, targetRegions, assetName, assetType, stockItem, quantity, urgency.",
+    "Allowed JSON fields: destination, title, summary, region, severity, confidence, category, issueType, sourcePage, entityType, entityId, dueAt, noticed, whyItMatters, recommendedAction, targetRegions, assetName, assetType, stockItem, quantity, urgency.",
     "destination must be one of: actions, todos, compliance, equipment, stock_orders, notes.",
     "Route compliance, safety, induction and site readiness risks to destination=compliance.",
     "Route wash vehicle, truck, trailer, ute, unit, wash plant, generator, Honda, Pony, repair or service issues to destination=equipment.",
     "Route chemical, PPE, parts, consumable, supplies or stock order needs to destination=stock_orders.",
     "Route reminders, to-do and checklist items to destination=todos.",
     "Route manager operational tasks and follow-ups to destination=actions.",
+    "Route TOC system, database, source feed, API, mapping, staff profile visibility, watcher, heartbeat or configuration issues to destination=actions with region=National, targetRegions=[\"National\"], category=system-data and sourcePage=Admin Settings.",
     "Route notes, context and memory-only observations to destination=notes.",
     "Severity must be blue, amber, or red.",
     "Obey snapshot.craigEscalationPolicy: do not recommend interrupting Craig unless an item is listed as callCraig or messageCraig there.",
@@ -384,6 +385,8 @@ function parseRecommendation(content) {
       region: safeText(parsed.region, "National"),
       severity: normaliseSeverity(parsed.severity),
       confidence: normaliseConfidence(parsed.confidence),
+      category: safeText(parsed.category || parsed.issueType, ""),
+      sourcePage: safeText(parsed.sourcePage, ""),
       noticed: safeText(parsed.noticed, "").slice(0, 700),
       whyItMatters: safeText(parsed.whyItMatters, "").slice(0, 700),
       recommendedAction: safeText(parsed.recommendedAction, "").slice(0, 700),
@@ -431,7 +434,8 @@ function writeTarget(recommendation) {
 
 function inferDestination(recommendation) {
   if (recommendation.destination) return recommendation.destination;
-  const haystack = `${recommendation.title} ${recommendation.summary} ${recommendation.noticed} ${recommendation.recommendedAction}`.toLowerCase();
+  const haystack = `${recommendation.category || ""} ${recommendation.sourcePage || ""} ${recommendation.title} ${recommendation.summary} ${recommendation.noticed} ${recommendation.recommendedAction}`.toLowerCase();
+  if (/\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/.test(haystack)) return "actions";
   if (/\b(induction|compliance|first aid|safety|ppe register|site readiness)\b/.test(haystack)) return "compliance";
   if (/\b(vehicle|truck|ute|unit|u\d+|pony|generator|honda|wash plant|service|repair|odometer|hours)\b/.test(haystack)) return "equipment";
   if (/\b(stock|chemical|chemicals|consumable|consumables|ppe|gloves|bottle|batteries|hose|parts|order)\b/.test(haystack)) return "stock_orders";
@@ -441,14 +445,15 @@ function inferDestination(recommendation) {
 }
 
 function buildWriteBody(recommendation, destination) {
-  const targetRegions = recommendation.targetRegions?.length ? recommendation.targetRegions : [recommendation.region || "National"];
+  const systemDataIssue = isSystemDataRecommendation(recommendation);
+  const targetRegions = systemDataIssue ? ["National"] : recommendation.targetRegions?.length ? recommendation.targetRegions : [recommendation.region || "National"];
   const detail = recommendation.recommendedAction || recommendation.summary || recommendation.noticed || "Odin raised this item from TOC watcher analysis.";
   const base = {
     action: "create",
     title: recommendation.title,
     detail,
     summary: recommendation.summary,
-    region: recommendation.region || "National",
+    region: systemDataIssue ? "National" : recommendation.region || "National",
     targetRegions,
     priority: recommendation.severity === "red" ? "urgent" : recommendation.severity === "amber" ? "high" : "normal",
     severity: recommendation.severity,
@@ -457,6 +462,8 @@ function buildWriteBody(recommendation, destination) {
     whyItMatters: recommendation.whyItMatters,
     recommendedAction: detail,
     sourceType: "odin_watcher",
+    category: systemDataIssue ? "system-data" : recommendation.category || undefined,
+    sourcePage: systemDataIssue ? "Admin Settings" : recommendation.sourcePage || undefined,
     dueAt: recommendation.dueAt || undefined,
     dueDate: recommendation.dueAt || undefined
   };
@@ -496,9 +503,14 @@ function buildWriteBody(recommendation, destination) {
   return {
     ...base,
     itemType: "action",
-    sourcePage: "Action Centre",
+    sourcePage: systemDataIssue ? "Admin Settings" : recommendation.sourcePage || "Action Centre",
     directiveType: recommendation.severity === "red" ? "National Ops Directive" : "Scheduled Directive"
   };
+}
+
+function isSystemDataRecommendation(recommendation) {
+  const text = `${recommendation.category || ""} ${recommendation.sourcePage || ""} ${recommendation.title || ""} ${recommendation.summary || ""} ${recommendation.noticed || ""} ${recommendation.recommendedAction || ""}`.toLowerCase();
+  return /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/.test(text);
 }
 
 function acquireRunLock() {

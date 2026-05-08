@@ -31,6 +31,7 @@ export default function ActionsPage() {
   const closureSummary = buildClosureSummary(sortedActions);
   const managerWorkload = buildManagerWorkload(sortedActions);
   const repeatGroups = buildRepeatGroups(sortedActions);
+  const systemDataActions = sortedActions.filter(isSystemDataAction);
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -160,7 +161,15 @@ export default function ActionsPage() {
             <ClosureMetric label="Blocked" value={closureSummary.blocked} tone={closureSummary.blocked ? "red" : "green"} />
             <ClosureMetric label="In progress" value={closureSummary.inProgress} tone={closureSummary.inProgress ? "amber" : "green"} />
             <ClosureMetric label="Awaiting review" value={closureSummary.review} tone={closureSummary.review ? "amber" : "green"} />
+            <ClosureMetric label="System/data" value={systemDataActions.length} tone={systemDataActions.length ? "amber" : "green"} />
           </div>
+          {systemDataActions.length ? (
+            <div className="repeat-issue-strip">
+              <span className="eyebrow">System/data queue</span>
+              <Tag tone="amber">{systemDataActions.length} National/Admin item{systemDataActions.length === 1 ? "" : "s"}</Tag>
+              <small>These are TOC source, mapping, watcher or database issues. They stay with National/Admin instead of being pushed to regional managers.</small>
+            </div>
+          ) : null}
           <div className="manager-workload-grid">
             {managerWorkload.map((item) => (
               <article className={`manager-workload-card ${item.tone}`} key={item.region}>
@@ -240,6 +249,12 @@ function buildClosureSummary(actions: EnhancedActionItem[]) {
     inProgress: summary.inProgress + (action.lifecycleStatus === "in_progress" ? 1 : 0),
     review: summary.review + (action.lifecycleStatus === "submitted_for_review" ? 1 : 0)
   }), { overdue: 0, stale: 0, carryover: 0, craigEscalations: 0, blocked: 0, inProgress: 0, review: 0 });
+}
+
+function isSystemDataAction(action: EnhancedActionItem) {
+  const text = `${action.source} ${action.title} ${action.detail}`.toLowerCase();
+  return action.source === "Admin Settings" ||
+    /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/.test(text);
 }
 
 function buildManagerWorkload(actions: EnhancedActionItem[]) {
