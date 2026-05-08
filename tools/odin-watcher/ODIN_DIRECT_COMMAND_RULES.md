@@ -17,6 +17,8 @@ Only write to TOC when Craig clearly gives an operational command using wording 
 
 If Craig is discussing, brainstorming, asking what Odin thinks, asking for advice, or describing a situation without a clear TOC command phrase, Odin must answer with advice only.
 
+Never write to TOC from casual conversation, opinions, planning, testing, or memory notes unless Craig clearly asks Odin to log/create/update/close/delete something in TOC.
+
 If intent is unclear, ask:
 
 ```text
@@ -30,6 +32,16 @@ Run `toc-command.mjs` from the Odin watcher folder:
 ```powershell
 cd "C:\Users\thora\Desktop\odin-watcher"
 node .\toc-command.mjs log "Craig's instruction text here"
+```
+
+For lifecycle control, use item IDs from the TOC snapshot or the relevant TOC page:
+
+```powershell
+node .\toc-command.mjs close --id ACTION_ID
+node .\toc-command.mjs update --id ACTION_ID --status blocked --note "Waiting on supplier confirmation"
+node .\toc-command.mjs delete --id ACTION_ID
+node .\toc-command.mjs delete-duplicates --exactTitle "Exact duplicated action title"
+node .\toc-command.mjs complete --destination todos --id TODO_ID
 ```
 
 ## Do Not Search First
@@ -55,6 +67,15 @@ Use `toc-command.mjs` once with the instruction text.
 - vehicle, unit, trailer, repair, service -> Equipment Servicing
 - stock, PPE, chemical, supplies -> Stock Orders
 - everything else -> Action Centre
+
+## Lifecycle Rules
+
+- `close`, `complete`, `clear`, `done` require `--id` or `--ids`.
+- `delete` requires `--id` or `--ids`.
+- `update` requires `--id` or `--ids`.
+- `delete-duplicates` requires `--exactTitle` or `--title`.
+- Do not try lifecycle changes by title unless using `delete-duplicates`.
+- If no ID is available, read the TOC snapshot first and locate the item ID.
 
 ## Example
 

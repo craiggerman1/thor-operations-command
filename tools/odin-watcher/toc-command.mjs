@@ -10,6 +10,7 @@ const command = args._[0] || "log";
 const text = String(args.text || args._.slice(1).join(" ") || "").trim();
 
 const regions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
+const lifecycleCommands = new Set(["update", "close", "complete", "clear", "done", "delete", "delete_duplicates", "delete-duplicates"]);
 
 main().catch((error) => {
   console.error(`[toc-command] ${error.message}`);
@@ -51,6 +52,9 @@ async function main() {
 }
 
 function buildRequest(inputCommand, inputArgs, inputText) {
+  const commandName = String(inputCommand || "").trim().toLowerCase().replace(/-/g, "_");
+  if (lifecycleCommands.has(commandName)) return buildLifecycleRequest(commandName, inputArgs, inputText);
+
   const destination = normaliseDestination(inputArgs.destination || inputArgs.type || inputCommand, inputText);
   const region = normaliseRegion(inputArgs.region || inputArgs.ownerScope || inferRegion(inputText));
   const severity = normaliseSeverity(inputArgs.severity || inputArgs.priority || inputText);
@@ -144,6 +148,52 @@ function buildRequest(inputCommand, inputArgs, inputText) {
   };
 }
 
+function buildLifecycleRequest(inputCommand, inputArgs, inputText) {
+  const operation = inputCommand === "delete-duplicates" ? "delete_duplicates" : inputCommand;
+  const destination = normaliseDestination(inputArgs.destination || inputArgs.type || inputArgs.itemType || "actions", inputText);
+  const ids = idsFromArgs(inputArgs);
+  const path = destination === "todos" ? "/api/odin/todos" : "/api/odin/actions";
+  const title = String(inputArgs.title || inputArgs.exactTitle || inputText || "").trim();
+
+  if (operation === "delete_duplicates") {
+    if (!title) throw new Error("delete-duplicates requires --exactTitle, --title, or the exact title text.");
+    return {
+      destination: "actions",
+      path: "/api/odin/actions",
+      body: {
+        action: "delete_duplicates",
+        exactTitle: title,
+        keepPerRegion: Number(inputArgs.keepPerRegion || 1)
+      }
+    };
+  }
+
+  if (!ids.length) {
+    throw new Error(`${operation} requires --id or --ids. Use the IDs from the TOC snapshot or Action Centre tile.`);
+  }
+
+  const updates = {};
+  if (inputArgs.title) updates.title = String(inputArgs.title);
+  if (inputArgs.detail || inputArgs.note) updates.detail = String(inputArgs.detail || inputArgs.note);
+  if (inputArgs.dueAt || inputArgs.dueDate) updates.dueAt = inputArgs.dueAt || inputArgs.dueDate;
+  if (inputArgs.status) updates.status = String(inputArgs.status);
+  if (inputArgs.priority) updates.priority = String(inputArgs.priority);
+  if (inputArgs.region) updates.region = String(inputArgs.region);
+  if (inputArgs.important !== undefined) updates.important = booleanArg(inputArgs.important);
+  if (inputArgs.text) updates.text = String(inputArgs.text);
+
+  return {
+    destination,
+    path,
+    body: {
+      action: operation,
+      ids,
+      id: ids[0],
+      updates
+    }
+  };
+}
+
 function normaliseDestination(rawDestination, inputText) {
   const value = String(rawDestination || "").toLowerCase().replace(/[-\s]+/g, "_");
   if (["compliance", "equipment", "stock_orders", "todos", "actions"].includes(value)) return value;
@@ -203,6 +253,17 @@ function structuredDedupeKey(destination, region, title, dueAt) {
     slug(title).slice(0, 80),
     dueAt ? String(dueAt).slice(0, 10) : "no-due"
   ].join(":");
+}
+
+function idsFromArgs(inputArgs) {
+  const raw = inputArgs.ids || inputArgs.id || inputArgs.actionIds || inputArgs.todoIds || "";
+  const values = Array.isArray(raw) ? raw : String(raw).split(",");
+  return values.map((value) => String(value || "").trim()).filter(Boolean);
+}
+
+function booleanArg(value) {
+  if (typeof value === "boolean") return value;
+  return !["false", "0", "no", "off"].includes(String(value || "").trim().toLowerCase());
 }
 
 function labelForDestination(destination) {
