@@ -64,18 +64,19 @@ export function LoginPanel() {
       return;
     }
 
-    localStorage.setItem(
-      "toc.session",
-      JSON.stringify({
-        ...profilePayload.profile,
-        authMode: "supabase",
-        createdAt: new Date().toISOString()
-      })
-    );
+    const signedInSession = {
+      ...profilePayload.profile,
+      authMode: "supabase",
+      createdAt: new Date().toISOString(),
+      restoredAt: new Date().toISOString()
+    };
+
+    localStorage.setItem("toc.session", JSON.stringify(signedInSession));
+    window.dispatchEvent(new CustomEvent("toc.sessionchange", { detail: signedInSession }));
 
     routeTimer.current = window.setTimeout(() => {
       router.push(profilePayload.profile.mustChangePassword ? "/account/password" : "/home");
-    }, 1650);
+    }, 250);
   }
 
   return (
@@ -85,7 +86,7 @@ export function LoginPanel() {
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.312</span>
+            <span>Build 0.313</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>

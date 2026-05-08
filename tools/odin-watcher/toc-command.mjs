@@ -8,7 +8,7 @@ const odinApiKey = process.env.ODIN_API_KEY || "";
 const args = parseArgs(process.argv.slice(2));
 const command = args._[0] || "log";
 const text = String(args.text || args._.slice(1).join(" ") || "").trim();
-const commandVersion = "0.312";
+const commandVersion = "0.313";
 
 const regions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
 const lifecycleCommands = new Set(["update", "close", "complete", "clear", "done", "delete", "delete_duplicates", "delete-duplicates"]);

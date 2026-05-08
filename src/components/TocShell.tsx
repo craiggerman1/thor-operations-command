@@ -316,7 +316,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       visibleNav.forEach((item) => {
         if (item.href !== pathname) router.prefetch(item.href);
       });
-    }, 1200);
+    }, 150);
 
     return () => window.clearTimeout(timeoutId);
   }, [pathname, router, session.role, sessionReady, visibleNav]);
@@ -384,7 +384,7 @@ export function TocShell({ children }: { children: ReactNode }) {
           {visibleNav.map(({ label, href }) => {
             const badge = navBadgeCounts[label];
             return (
-              <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)}>
+              <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
                 {label}
                 {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
               </Link>
@@ -406,7 +406,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.312</em>
+              <em>Build 0.313</em>
             </div>
           </div>
           <div className="topbar-actions">

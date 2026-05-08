@@ -35,7 +35,7 @@ const snapshotOnly = process.argv.includes("--snapshot-only");
 const briefsOnly = process.argv.includes("--briefs-only");
 const forcedBriefArg = process.argv.find((arg) => arg.startsWith("--brief="));
 const forcedBriefType = forcedBriefArg ? forcedBriefArg.split("=").slice(1).join("=").trim() : "";
-const watcherVersion = "0.312";
+const watcherVersion = "0.313";
 const showHelp = process.argv.includes("--help") || process.argv.includes("-h");
 const showVersion = process.argv.includes("--version") || process.argv.includes("-v");
 
