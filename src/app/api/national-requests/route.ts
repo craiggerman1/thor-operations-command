@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { markComplianceForClosedActions, reopenComplianceForReturnedActions } from "@/lib/linked-record-sync";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
+import { logTocAudit } from "@/lib/audit";
 
 type NationalRequestRow = {
   id: string;
@@ -41,7 +42,8 @@ function storageStatus(status: string) {
   return "awaiting_review";
 }
 
-function actionStatusForRequest(status: string) {
+function actionStatusForRequest(status: string, requestType = "action_closeout") {
+  if (requestType === "manager_update" && status === "Approved by national") return null;
   if (status === "Approved by national") return "closed";
   if (status === "Returned to manager") return "returned_to_manager";
   return "submitted_for_review";
@@ -52,6 +54,7 @@ function mapRequest(row: NationalRequestRow) {
 
   return {
     id: row.id,
+    requestType: row.request_type,
     actionId: row.source_action_id || "",
     title: row.title,
     region: region?.name || "National",
@@ -171,7 +174,7 @@ export async function POST(request: Request) {
 
     const { data: existingRequest, error: readError } = await supabase
       .from("national_requests")
-      .select("source_action_id")
+      .select("source_action_id,request_type")
       .eq("id", requestId)
       .maybeSingle();
 
@@ -192,9 +195,20 @@ export async function POST(request: Request) {
     if (requestError) return NextResponse.json({ error: requestError.message }, { status: 500 });
 
     if (existingRequest?.source_action_id) {
+      const nextActionStatus = actionStatusForRequest(status, existingRequest.request_type);
+      if (!nextActionStatus) {
+        await logTocAudit({
+          actor: permission.user,
+          action: "national.manager_update.acknowledge",
+          entityTable: "national_requests",
+          entityId: requestId,
+          details: { sourceActionId: existingRequest.source_action_id, status, nationalResponse: payload.nationalResponse || null }
+        });
+        return GET(request);
+      }
       const { error: actionError } = await supabase
         .from("action_items")
-        .update({ status: actionStatusForRequest(status), updated_at: new Date().toISOString(), closed_at: isApproved ? new Date().toISOString() : null })
+        .update({ status: nextActionStatus, updated_at: new Date().toISOString(), closed_at: isApproved ? new Date().toISOString() : null })
         .eq("id", existingRequest.source_action_id);
 
       if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
@@ -204,6 +218,13 @@ export async function POST(request: Request) {
         await reopenComplianceForReturnedActions([existingRequest.source_action_id]);
       }
     }
+    await logTocAudit({
+      actor: permission.user,
+      action: "national.request.update",
+      entityTable: "national_requests",
+      entityId: requestId,
+      details: { status, requestType: existingRequest?.request_type || null, nationalResponse: payload.nationalResponse || null }
+    });
 
     return GET(request);
   }

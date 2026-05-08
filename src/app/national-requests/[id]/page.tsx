@@ -81,6 +81,7 @@ export default function NationalRequestDetailPage() {
 
   const actionRequest = useMemo(() => actionRequests.find((request) => request.id === requestId), [actionRequests, requestId]);
   const stockOrder = useMemo(() => orders.find((order) => getOrderId(order) === requestId), [orders, requestId]);
+  const isManagerUpdate = actionRequest?.requestType === "manager_update";
 
   async function saveActionRequest(status: NationalActionRequest["status"]) {
     const response = await tocFetch("/api/national-requests", {
@@ -121,7 +122,7 @@ export default function NationalRequestDetailPage() {
   return (
     <TocShell>
       <PageIntro title="National Requests" detail="Review and close out the selected national request." />
-      <FlowHeading eyebrow="National Requests" title="Action the selected request, then close it out or return it to the manager." />
+      <FlowHeading eyebrow="National Requests" title={isManagerUpdate ? "Review the manager update, acknowledge it, or return it if more detail is needed." : "Action the selected request, then close it out or return it to the manager."} />
       <section className="command-grid route-grid">
         {scope !== "National" ? (
           <Panel wide eyebrow="Restricted scope" title="National Requests is only available in National scope">
@@ -129,7 +130,7 @@ export default function NationalRequestDetailPage() {
             <Link className="node-action" href="/home">Return Home</Link>
           </Panel>
         ) : actionRequest ? (
-          <Panel wide eyebrow={`${actionRequest.source} - ${actionRequest.region}`} title={actionRequest.title} pill={actionRequest.status}>
+          <Panel wide eyebrow={`${isManagerUpdate ? "Manager update" : actionRequest.source} - ${actionRequest.region}`} title={actionRequest.title} pill={actionRequest.status}>
             <div className="national-request-detail">
               <div className="national-request-body">
                 <div><span>Manager response</span><p>{actionRequest.managerResponse}</p></div>
@@ -152,7 +153,7 @@ export default function NationalRequestDetailPage() {
                   recommendedAction="Review whether the manager close-out is sufficient, then recommend approve or return with clear reasoning."
                 />
                 <Link className="node-action" href={`/actions/${actionRequest.actionId}`}>Open source action</Link>
-                <button className="review-decision-button approve" type="button" onClick={() => void saveActionRequest("Approved by national")}>Approve Close-Out</button>
+                <button className="review-decision-button approve" type="button" onClick={() => void saveActionRequest("Approved by national")}>{isManagerUpdate ? "Acknowledge Update" : "Approve Close-Out"}</button>
                 <button className="review-decision-button return" type="button" onClick={() => void saveActionRequest("Returned to manager")}>Return To Manager</button>
               </div>
             </div>

@@ -9,6 +9,7 @@ import { tocFetch } from "@/lib/toc-client-auth";
 
 export type NationalActionRequest = {
   id: string;
+  requestType: string;
   actionId: string;
   title: string;
   region: string;
@@ -71,13 +72,14 @@ export function NationalActionRequests() {
   }
 
   const pendingRequests = requests.filter((request) => request.status === "Awaiting national review");
+  const managerUpdates = requests.filter((request) => request.requestType === "manager_update");
 
   return (
     <div className="national-request-stack">
       <div className="national-request-summary">
         <article><span>Manager close-outs</span><strong>{requests.length}</strong></article>
         <article><span>Awaiting review</span><strong>{pendingRequests.length}</strong></article>
-        <article><span>Queue state</span><strong>{requests.length ? "Live" : "Clear"}</strong></article>
+        <article><span>Manager updates</span><strong>{managerUpdates.length}</strong></article>
       </div>
       <div className="request-lifecycle-strip" aria-label="National request lifecycle">
         <span>Submitted</span>
@@ -97,7 +99,7 @@ export function NationalActionRequests() {
           >
             <div className="national-request-head">
               <div>
-                <span className="eyebrow">{request.source} - {request.region}</span>
+                <span className="eyebrow">{request.requestType === "manager_update" ? "Manager update" : request.source} - {request.region}</span>
                 <strong>{request.title}</strong>
                 <small>Submitted {new Date(request.submittedAt).toLocaleString()}</small>
               </div>
@@ -110,7 +112,7 @@ export function NationalActionRequests() {
             <div className="stock-actions">
               <Link className="node-action" href={`/national-requests/${encodeURIComponent(request.id)}`} onClick={(event) => event.stopPropagation()}>Open request</Link>
               <Link className="node-action" href={`/actions/${request.actionId}`} onClick={(event) => event.stopPropagation()}>Open action</Link>
-              <button className="review-decision-button approve" type="button" onClick={(event) => { event.stopPropagation(); void updateRequest(request.id, "Approved by national"); }}>Approve Close-Out</button>
+              <button className="review-decision-button approve" type="button" onClick={(event) => { event.stopPropagation(); void updateRequest(request.id, "Approved by national"); }}>{request.requestType === "manager_update" ? "Acknowledge Update" : "Approve Close-Out"}</button>
               <button className="review-decision-button return" type="button" onClick={(event) => { event.stopPropagation(); void updateRequest(request.id, "Returned to manager"); }}>Return To Manager</button>
             </div>
           </article>
