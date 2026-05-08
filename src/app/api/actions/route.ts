@@ -19,6 +19,7 @@ type ActionRow = {
   due_at: string | null;
   created_at: string;
   updated_at: string;
+  assigned_region_id?: string | null;
   region?: { name: string } | { name: string }[] | null;
 };
 
@@ -264,6 +265,50 @@ async function getRegionId(regionName: string) {
   return (data as RegionRow | null)?.id || null;
 }
 
+async function upsertManagerUpdateRequest(input: {
+  action: ActionRow;
+  status: ActionStatus;
+  note: string;
+  evidence?: string;
+}) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return;
+
+  const statusLabel = displayStatus(input.status);
+  const detail = input.note || `${statusLabel}: manager update requires National visibility.`;
+  const { data: existingRequest } = await supabase
+    .from("national_requests")
+    .select("id")
+    .eq("source_action_id", input.action.id)
+    .eq("request_type", "manager_update")
+    .in("status", ["awaiting_review", "returned"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const requestPayload = {
+    request_type: "manager_update",
+    title: `${statusLabel}: ${input.action.title}`,
+    detail,
+    status: "awaiting_review",
+    source_action_id: input.action.id,
+    assigned_region_id: input.action.assigned_region_id || null,
+    manager_response: detail,
+    evidence: input.evidence || "No evidence or reference supplied.",
+    source_page: input.action.source_page,
+    directive_type: input.action.directive_type,
+    national_response: null,
+    reviewed_at: null,
+    updated_at: new Date().toISOString()
+  };
+
+  if (existingRequest?.id) {
+    await supabase.from("national_requests").update(requestPayload).eq("id", existingRequest.id);
+  } else {
+    await supabase.from("national_requests").insert(requestPayload);
+  }
+}
+
 async function ensureComplianceActions() {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return;
@@ -453,7 +498,7 @@ export async function POST(request: Request) {
 
     const { data: existingAction, error: readError } = await supabase
       .from("action_items")
-      .select("id,status,region:regions(name)")
+      .select("id,title,detail,source_page,directive_type,assigned_region_id,status,region:regions(name)")
       .eq("id", payload.id)
       .maybeSingle();
 
@@ -473,13 +518,21 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await reopenComplianceForReturnedActions([payload.id]);
+    if (nextStatus === "blocked" || nextStatus === "escalated") {
+      await upsertManagerUpdateRequest({
+        action: existingRow,
+        status: nextStatus,
+        note: String(payload.note || payload.blockedReason || payload.reason || "").trim(),
+        evidence: String(payload.evidence || "").trim()
+      });
+    }
     await logTocAudit({
       actor,
       action: "action.lifecycle.update",
       entityTable: "action_items",
       entityId: payload.id,
       scope: region,
-      details: { previousStatus: existingRow.status, nextStatus }
+      details: { previousStatus: existingRow.status, nextStatus, note: payload.note || payload.blockedReason || payload.reason || null, evidence: payload.evidence || null }
     });
     const { data: updatedAction, error: updatedReadError } = await supabase
       .from("action_items")

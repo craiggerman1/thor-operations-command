@@ -29,6 +29,8 @@ export default function ActionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [managerResponse, setManagerResponse] = useState("");
   const [evidence, setEvidence] = useState("");
+  const [lifecycleNote, setLifecycleNote] = useState("");
+  const [lifecycleEvidence, setLifecycleEvidence] = useState("");
   const [message, setMessage] = useState("");
   const [isUpdatingLifecycle, setIsUpdatingLifecycle] = useState(false);
 
@@ -89,6 +91,10 @@ export default function ActionDetailPage() {
 
   async function submitForNationalApproval(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (managerResponse.trim().length < 10) {
+      setMessage("Add a clear manager response before submitting for National approval.");
+      return;
+    }
     const response = await tocFetch("/api/national-requests", {
       method: "POST",
       body: JSON.stringify({
@@ -110,18 +116,25 @@ export default function ActionDetailPage() {
   }
 
   async function updateLifecycle(status: string) {
+    if ((status === "blocked" || status === "escalated") && lifecycleNote.trim().length < 5) {
+      setMessage("Add a short blocker or escalation note before updating this action.");
+      return;
+    }
     setIsUpdatingLifecycle(true);
     setMessage("");
     try {
       const response = await tocFetch("/api/actions", {
         method: "POST",
-        body: JSON.stringify({ action: "lifecycle", id: currentAction.id, status })
+        body: JSON.stringify({ action: "lifecycle", id: currentAction.id, status, note: lifecycleNote.trim(), evidence: lifecycleEvidence.trim() })
       }, true);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Action lifecycle could not be updated.");
       const nextAction = (payload.actions || []).find((item: ActionDetailItem) => item.id === currentAction.id) || null;
       if (nextAction) setAction(nextAction);
+      setLifecycleNote("");
+      setLifecycleEvidence("");
       window.dispatchEvent(new Event("toc.actionState.updated"));
+      window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
       setMessage("Action lifecycle updated.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Action lifecycle could not be updated.");
@@ -150,6 +163,14 @@ export default function ActionDetailPage() {
                 <span>Lifecycle status</span>
                 <strong>{currentAction.lifecycleLabel || currentAction.status}</strong>
                 <small>{currentAction.lifecycleHelp || "Use the buttons below to keep National and Odin clear on where this action sits."}</small>
+                <label className="action-lifecycle-note">
+                  <span>Blocker / escalation note</span>
+                  <textarea value={lifecycleNote} placeholder="Required when marking blocked or escalated." onChange={(event) => setLifecycleNote(event.target.value)} />
+                </label>
+                <label className="action-lifecycle-note">
+                  <span>Evidence / reference</span>
+                  <input value={lifecycleEvidence} placeholder="Optional reference for National." onChange={(event) => setLifecycleEvidence(event.target.value)} />
+                </label>
                 <div className="action-lifecycle-buttons">
                   {lifecycleButtons.map((item) => (
                     <button

@@ -109,13 +109,20 @@ export default function ActionsPage() {
   async function updateActionLifecycle(id: string, status: "acknowledged" | "in_progress" | "blocked") {
     const target = openActions.find((item) => item.id === id);
     if (!target || busyActionId === id) return;
+    const note = status === "blocked"
+      ? window.prompt("What is blocking this action? This will be sent to National for visibility.")?.trim()
+      : "";
+    if (status === "blocked" && !note) {
+      setMessage("Add a blocker reason before marking the action blocked.");
+      return;
+    }
 
     setBusyActionId(id);
     setMessage("");
     try {
       const response = await tocFetch("/api/actions", {
         method: "POST",
-        body: JSON.stringify({ action: "lifecycle", id, status })
+        body: JSON.stringify({ action: "lifecycle", id, status, note })
       }, true);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Action lifecycle could not be updated.");
