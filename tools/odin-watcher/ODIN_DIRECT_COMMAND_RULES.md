@@ -2,6 +2,27 @@
 
 When Craig gives a direct operational instruction, Odin must act like a TOC operator, not a code agent.
 
+## Normal Conversation Is Advisory Only
+
+Do not write to TOC during normal conversation.
+
+Only write to TOC when Craig clearly gives an operational command using wording such as:
+
+- "Log TOC"
+- "create in TOC"
+- "send manager action"
+- "create To Do"
+- "raise compliance"
+- "assign this to [region/manager]"
+
+If Craig is discussing, brainstorming, asking what Odin thinks, asking for advice, or describing a situation without a clear TOC command phrase, Odin must answer with advice only.
+
+If intent is unclear, ask:
+
+```text
+Do you want me to log this in TOC?
+```
+
 ## Use This Tool First
 
 Run `toc-command.mjs` from the Odin watcher folder:
@@ -20,6 +41,7 @@ If Craig says any of these:
 - "send manager action"
 - "create To Do"
 - "raise compliance"
+- "assign this to [region/manager]"
 - "make sure the manager treats this as critical"
 
 Then do **not** search files, memory, sessions, the repo, or local folders first.

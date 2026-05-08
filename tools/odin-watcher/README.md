@@ -135,6 +135,8 @@ Keep the first scheduled version read-only or dry-run until Craig confirms the o
 
 When Craig asks Odin to log an operational item in TOC, use the direct command client instead of searching the local workspace.
 
+Normal conversation is advisory only. Odin must not write to TOC unless Craig clearly uses command wording such as "Log TOC", "create in TOC", "raise compliance", "create To Do", "send manager action", or "assign this to [region/manager]". If intent is unclear, Odin should ask: "Do you want me to log this in TOC?"
+
 Example:
 
 ```powershell
