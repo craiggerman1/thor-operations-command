@@ -27,6 +27,7 @@ export default function ActionsPage() {
   const scopedActions = getScopedActionItems(openActions, scope, role);
   const sortedActions = [...scopedActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
   const canQuickManage = role === "admin" || (role === "manager" && scope === "National");
+  const canQuickProgress = role === "admin" || role === "manager";
   const closureSummary = buildClosureSummary(sortedActions);
   const managerWorkload = buildManagerWorkload(sortedActions);
   const repeatGroups = buildRepeatGroups(sortedActions);
@@ -104,6 +105,33 @@ export default function ActionsPage() {
     }
   }
 
+  async function updateActionLifecycle(id: string, status: "acknowledged" | "in_progress" | "blocked") {
+    const target = openActions.find((item) => item.id === id);
+    if (!target || busyActionId === id) return;
+
+    setBusyActionId(id);
+    setMessage("");
+    try {
+      const response = await tocFetch("/api/actions", {
+        method: "POST",
+        body: JSON.stringify({ action: "lifecycle", id, status })
+      }, true);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Action lifecycle could not be updated.");
+
+      const updatedAction = ((payload.actions || []) as EnhancedActionItem[]).find((item) => item.id === id);
+      if (updatedAction) {
+        setOpenActions((items) => items.map((item) => item.id === id ? updatedAction : item));
+      }
+      setMessage("Action status updated.");
+      window.dispatchEvent(new Event("toc.actionState.updated"));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Action lifecycle could not be updated.");
+    } finally {
+      setBusyActionId(null);
+    }
+  }
+
   function openAction(href: string) {
     router.push(href);
   }
@@ -175,6 +203,13 @@ export default function ActionsPage() {
                 <div className="signal-action-controls">
                   <Tag tone={signal.severity}>{signal.directive}</Tag>
                   <Link className="node-action" href={signal.href} onClick={stopCardOpen}>Open</Link>
+                  {canQuickProgress ? (
+                    <div className="quick-action-controls" onClick={stopCardOpen}>
+                      <button type="button" onClick={(event) => { event.stopPropagation(); void updateActionLifecycle(signal.id, "acknowledged"); }} disabled={busyActionId === signal.id || signal.lifecycleStatus === "acknowledged"}>Acknowledge</button>
+                      <button type="button" onClick={(event) => { event.stopPropagation(); void updateActionLifecycle(signal.id, "in_progress"); }} disabled={busyActionId === signal.id || signal.lifecycleStatus === "in_progress"}>Start</button>
+                      <button type="button" onClick={(event) => { event.stopPropagation(); void updateActionLifecycle(signal.id, "blocked"); }} disabled={busyActionId === signal.id || signal.lifecycleStatus === "blocked"}>Blocked</button>
+                    </div>
+                  ) : null}
                   {canQuickManage ? (
                     <div className="quick-action-controls" onClick={stopCardOpen}>
                       <button type="button" onClick={(event) => { event.stopPropagation(); void mutateActionItem(signal.id, "clear"); }} disabled={busyActionId === signal.id}>Clear</button>
