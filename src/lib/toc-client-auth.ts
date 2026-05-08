@@ -4,7 +4,9 @@ let cachedAuthorizationHeader: string | null = null;
 let cachedAuthorizationUntil = 0;
 const authorizationCacheMs = 30000;
 const inFlightFetches = new Map<string, Promise<Response>>();
+const responseCache = new Map<string, { expiresAt: number; response: Response }>();
 let inFlightAuthorizationHeader: Promise<string | null> | null = null;
+const responseCacheMs = 5000;
 
 async function resolveAuthorizationHeader() {
   const now = Date.now();
@@ -47,13 +49,25 @@ export async function getTocRequestHeaders(includeJson = false) {
 }
 
 export async function tocFetch(input: RequestInfo | URL, init: RequestInit = {}, includeJson = false) {
-  return fetch(input, {
+  const method = String(init.method || "GET").toUpperCase();
+  const canUseResponseCache = method === "GET" && !init.body;
+  const cacheKey = canUseResponseCache ? String(input) : "";
+  const cached = cacheKey ? responseCache.get(cacheKey) : null;
+  if (cached && cached.expiresAt > Date.now()) return cached.response.clone();
+
+  const response = await fetch(input, {
     ...init,
     headers: {
       ...(await getTocRequestHeaders(includeJson)),
       ...(init.headers as Record<string, string> | undefined)
     }
   });
+
+  if (cacheKey && response.ok) {
+    responseCache.set(cacheKey, { response: response.clone(), expiresAt: Date.now() + responseCacheMs });
+  }
+
+  return response;
 }
 
 export async function tocJson<T = unknown>(input: RequestInfo | URL, init: RequestInit = {}, options: { includeJson?: boolean; dedupeKey?: string } = {}) {
@@ -75,4 +89,10 @@ export async function tocJson<T = unknown>(input: RequestInfo | URL, init: Reque
   } finally {
     if (dedupeKey) inFlightFetches.delete(dedupeKey);
   }
+}
+
+export function clearTocClientCache() {
+  responseCache.clear();
+  inFlightFetches.clear();
+  cachedAuthorizationUntil = 0;
 }

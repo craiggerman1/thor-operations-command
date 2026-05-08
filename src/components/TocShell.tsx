@@ -11,7 +11,7 @@ import { DirectorBroadcastBanner, UrgentBroadcastBanner } from "@/components/Urg
 import { defaultOperationsNews, fetchOperationsNewsItems, getStoredOperationsNewsItems, operationsNewsUpdatedEvent } from "@/components/OperationsNewsControls";
 import type { TocWeatherPayload, WeatherIcon } from "@/lib/weather";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { tocJson } from "@/lib/toc-client-auth";
+import { clearTocClientCache, tocJson } from "@/lib/toc-client-auth";
 
 type StoredSession = {
   id?: string;
@@ -352,6 +352,16 @@ export function TocShell({ children }: { children: ReactNode }) {
     }, 1450);
   }
 
+  function manualRefresh() {
+    clearTocClientCache();
+    sessionStorage.removeItem("toc.operationsNews.lastFetchAt");
+    window.dispatchEvent(new Event("toc.actionState.updated"));
+    window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
+    window.dispatchEvent(new Event("toc.stockOrders.updated"));
+    window.dispatchEvent(new Event("toc.odin.updated"));
+    window.dispatchEvent(new Event("toc.manualRefresh"));
+  }
+
   if (!sessionReady) {
     return <div className="auth-loading-screen">Opening secure TOC session...</div>;
   }
@@ -406,7 +416,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.324</em>
+              <em>Build 0.325</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -428,7 +438,7 @@ export function TocShell({ children }: { children: ReactNode }) {
                 {currentRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
               </select>
             </label>
-            <button className="manual-refresh-button" type="button">Manual Refresh</button>
+            <button className="manual-refresh-button" type="button" onClick={manualRefresh}>Manual Refresh</button>
             <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
           </div>
         </header>
