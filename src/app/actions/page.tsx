@@ -157,6 +157,9 @@ export default function ActionsPage() {
             <ClosureMetric label="Overdue" value={closureSummary.overdue} tone={closureSummary.overdue ? "red" : "green"} />
             <ClosureMetric label="Stale >24h" value={closureSummary.stale} tone={closureSummary.stale ? "amber" : "green"} />
             <ClosureMetric label="Craig escalation" value={closureSummary.craigEscalations} tone={closureSummary.craigEscalations ? "red" : "green"} />
+            <ClosureMetric label="Blocked" value={closureSummary.blocked} tone={closureSummary.blocked ? "red" : "green"} />
+            <ClosureMetric label="In progress" value={closureSummary.inProgress} tone={closureSummary.inProgress ? "amber" : "green"} />
+            <ClosureMetric label="Awaiting review" value={closureSummary.review} tone={closureSummary.review ? "amber" : "green"} />
           </div>
           <div className="manager-workload-grid">
             {managerWorkload.map((item) => (
@@ -232,8 +235,11 @@ function buildClosureSummary(actions: EnhancedActionItem[]) {
     overdue: summary.overdue + (action.isOverdue ? 1 : 0),
     stale: summary.stale + (action.isStale ? 1 : 0),
     carryover: summary.carryover + (action.isCarryover ? 1 : 0),
-    craigEscalations: summary.craigEscalations + (action.escalationLevel === "craig" ? 1 : 0)
-  }), { overdue: 0, stale: 0, carryover: 0, craigEscalations: 0 });
+    craigEscalations: summary.craigEscalations + (action.escalationLevel === "craig" ? 1 : 0),
+    blocked: summary.blocked + (action.lifecycleStatus === "blocked" ? 1 : 0),
+    inProgress: summary.inProgress + (action.lifecycleStatus === "in_progress" ? 1 : 0),
+    review: summary.review + (action.lifecycleStatus === "submitted_for_review" ? 1 : 0)
+  }), { overdue: 0, stale: 0, carryover: 0, craigEscalations: 0, blocked: 0, inProgress: 0, review: 0 });
 }
 
 function buildManagerWorkload(actions: EnhancedActionItem[]) {
