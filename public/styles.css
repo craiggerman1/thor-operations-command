@@ -2390,6 +2390,104 @@ body:not([data-access="admin"]) .admin-only-panel {
   font-weight: 800;
 }
 
+.odin-control-console {
+  display: grid;
+  gap: 12px;
+}
+
+.odin-control-toolbar,
+.odin-control-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.odin-control-toolbar strong,
+.odin-control-section-head strong {
+  display: block;
+  color: var(--blue);
+  font-size: 1.02rem;
+}
+
+.odin-control-toolbar small,
+.odin-control-section-head small {
+  display: block;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.odin-control-toolbar button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 1000;
+  white-space: nowrap;
+}
+
+.odin-control-toolbar button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.odin-control-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 12px;
+}
+
+.odin-control-section {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.odin-control-list {
+  display: grid;
+  gap: 8px;
+}
+
+.odin-control-priority {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid rgba(201, 215, 225, 0.86);
+  border-left: 5px solid var(--teal);
+  border-radius: 6px;
+  padding: 10px;
+  background:
+    linear-gradient(135deg, rgba(37, 161, 189, 0.08), transparent 58%),
+    rgba(255, 255, 255, 0.84);
+  color: inherit;
+  text-decoration: none;
+}
+
+.odin-control-priority.red {
+  border-left-color: var(--red);
+}
+
+.odin-control-priority.amber {
+  border-left-color: var(--amber);
+}
+
+.odin-control-priority strong {
+  display: block;
+  color: var(--blue);
+}
+
+.odin-control-priority small {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .repeat-issue-strip,
 .action-closure-meta {
   display: flex;
@@ -8089,6 +8187,7 @@ body:not([data-access="admin"]) .admin-only-panel {
   .chat-layout,
   .odin-rhythm-health,
   .odin-rhythm-console,
+  .odin-control-split,
   .meeting-action-strip,
   .manager-meeting-grid,
   .meeting-note-form,
@@ -8103,6 +8202,8 @@ body:not([data-access="admin"]) .admin-only-panel {
   .odin-confidence-filter,
   .odin-confidence-section-head,
   .odin-confidence-issue-head,
+  .odin-control-toolbar,
+  .odin-control-section-head,
   .odin-command-hero,
   .odin-list-head,
   .odin-item-head,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { OdinDailyRhythmPanel } from "@/components/OdinDailyRhythmPanel";
+import { OdinOperationsControlPanel } from "@/components/OdinOperationsControlPanel";
 import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 import { getThorOperatingWeek } from "@/lib/operating-week";
 import { productivitySites } from "@/lib/toc-data";
@@ -188,6 +189,11 @@ export default function HomePage() {
         {isNationalScope(scope) ? (
           <Panel wide eyebrow="Odin operating rhythm" title="Morning brief, midday check and end-of-day closeout" pill="National">
             <OdinDailyRhythmPanel />
+          </Panel>
+        ) : null}
+        {isNationalScope(scope) ? (
+          <Panel wide eyebrow="Odin control" title="Closure, escalation and manager follow-through" pill="Live snapshot">
+            <OdinOperationsControlPanel />
           </Panel>
         ) : null}
         <Panel wide eyebrow="Command signal" title="Take action on command signals" pill={`${visibleActionItems.length} action-linked`}>

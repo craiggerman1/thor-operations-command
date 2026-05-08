@@ -1,0 +1,226 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { Tag } from "@/components/TocCards";
+import { tocFetch } from "@/lib/toc-client-auth";
+
+type Severity = "red" | "amber" | "blue";
+
+type SnapshotLink = {
+  id: string;
+  title: string;
+  region: string;
+  status?: string;
+  severity: Severity;
+  href?: string;
+  dueAt?: string | null;
+  staleHours?: number;
+  escalationLevel?: "none" | "watch" | "national" | "craig";
+  owner?: string;
+  recommendedAction?: string;
+};
+
+type ManagerPressure = {
+  owner?: string;
+  region?: string;
+  count?: number;
+  total?: number;
+  overdue?: number;
+  stale?: number;
+  carryover?: number;
+  craig?: number;
+};
+
+type OdinSnapshotPayload = {
+  connected: boolean;
+  generatedAt: string;
+  summary: {
+    totalOpenWork: number;
+    overdueCount: number;
+    dueSoonCount: number;
+    redCount: number;
+    rosterGapCount: number;
+    openByEscalation: Record<string, number>;
+    actionClosure: {
+      openActionCount: number;
+      overdueCount: number;
+      stale24Count: number;
+      stale48Count: number;
+      carryoverCount: number;
+      managerWorkload: ManagerPressure[];
+      carryoverItems: SnapshotLink[];
+      staleItems: SnapshotLink[];
+    };
+  };
+  focusQueues: {
+    redItems: SnapshotLink[];
+    overdueItems: SnapshotLink[];
+    dueSoonItems: SnapshotLink[];
+    ownerQueue: SnapshotLink[];
+    actionCarryover: SnapshotLink[];
+    rosterGaps: SnapshotLink[];
+  };
+};
+
+function formatTime(value?: string) {
+  if (!value) return "Not checked";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function dueLabel(value?: string | null) {
+  if (!value) return "No due date";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Due date unclear";
+  return `Due ${date.toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}`;
+}
+
+function metricTone(count: number, redAt = 1): Severity | "green" {
+  if (count >= redAt) return "red";
+  if (count > 0) return "amber";
+  return "green";
+}
+
+function normaliseHref(item: SnapshotLink) {
+  return item.href && item.href.startsWith("/") ? item.href : "/actions";
+}
+
+function PriorityRow({ item }: { item: SnapshotLink }) {
+  return (
+    <Link className={`odin-control-priority ${item.severity || "blue"}`} href={normaliseHref(item)}>
+      <div>
+        <strong>{item.title}</strong>
+        <small>{item.region} | {item.owner || item.escalationLevel || "Owner pending"} | {dueLabel(item.dueAt)}</small>
+      </div>
+      <Tag tone={item.severity || "blue"}>{item.status || item.escalationLevel || "open"}</Tag>
+    </Link>
+  );
+}
+
+export function OdinOperationsControlPanel() {
+  const [payload, setPayload] = useState<OdinSnapshotPayload | null>(null);
+  const [status, setStatus] = useState("Loading Odin control snapshot...");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function loadSnapshot() {
+    setIsLoading(true);
+    try {
+      const response = await tocFetch("/api/odin/snapshot", { cache: "no-store" });
+      const nextPayload = await response.json();
+      if (!response.ok || nextPayload.connected === false) throw new Error(nextPayload.error || "Odin snapshot unavailable.");
+      setPayload(nextPayload as OdinSnapshotPayload);
+      setStatus(`Odin checked TOC at ${formatTime(nextPayload.generatedAt)}.`);
+    } catch (error) {
+      setPayload(null);
+      setStatus(error instanceof Error ? error.message : "Odin control snapshot could not be loaded.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadSnapshot();
+    window.addEventListener("toc.actionState.updated", loadSnapshot);
+    window.addEventListener("toc.odin.updated", loadSnapshot);
+    return () => {
+      window.removeEventListener("toc.actionState.updated", loadSnapshot);
+      window.removeEventListener("toc.odin.updated", loadSnapshot);
+    };
+  }, []);
+
+  const queue = useMemo(() => {
+    const items = [
+      ...(payload?.focusQueues.redItems || []),
+      ...(payload?.focusQueues.overdueItems || []),
+      ...(payload?.focusQueues.actionCarryover || [])
+    ];
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      const key = item.id || `${item.region}:${item.title}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 6);
+  }, [payload]);
+
+  const closure = payload?.summary.actionClosure;
+  const managerPressure = closure?.managerWorkload?.slice(0, 4) || [];
+  const craigCount = payload?.summary.openByEscalation?.craig || 0;
+
+  return (
+    <div className="odin-control-console">
+      <div className="odin-control-toolbar">
+        <div>
+          <strong>Odin operations control</strong>
+          <small>{status}</small>
+        </div>
+        <button type="button" onClick={loadSnapshot} disabled={isLoading}>{isLoading ? "Checking..." : "Refresh Control"}</button>
+      </div>
+
+      {payload ? (
+        <>
+          <div className="closure-control-grid">
+            <article className={`closure-metric-card ${metricTone(payload.summary.redCount)}`}>
+              <span>Red work</span>
+              <strong>{payload.summary.redCount}</strong>
+              <small>Needs immediate control</small>
+            </article>
+            <article className={`closure-metric-card ${metricTone(payload.summary.overdueCount)}`}>
+              <span>Overdue</span>
+              <strong>{payload.summary.overdueCount}</strong>
+              <small>Past due date</small>
+            </article>
+            <article className={`closure-metric-card ${metricTone(closure?.carryoverCount || 0)}`}>
+              <span>Carryover</span>
+              <strong>{closure?.carryoverCount || 0}</strong>
+              <small>Still open from prior cycle</small>
+            </article>
+            <article className={`closure-metric-card ${metricTone(craigCount)}`}>
+              <span>Craig escalation</span>
+              <strong>{craigCount}</strong>
+              <small>Only material exceptions</small>
+            </article>
+          </div>
+
+          <div className="odin-control-split">
+            <section className="odin-control-section">
+              <div className="odin-control-section-head">
+                <strong>Priority chase queue</strong>
+                <small>{queue.length ? "Open the item and drive close-out." : "No urgent chase work detected."}</small>
+              </div>
+              <div className="odin-control-list">
+                {queue.map((item) => <PriorityRow item={item} key={`${item.id}-${item.title}`} />)}
+                {!queue.length ? <div className="empty-state">No red, overdue or carryover action needs immediate chasing.</div> : null}
+              </div>
+            </section>
+
+            <section className="odin-control-section">
+              <div className="odin-control-section-head">
+                <strong>Manager pressure</strong>
+                <small>Where Odin sees the most follow-through pressure.</small>
+              </div>
+              <div className="manager-workload-grid">
+                {managerPressure.map((item) => {
+                  const count = item.count ?? item.total ?? 0;
+                  const carryover = item.carryover || 0;
+                  return (
+                    <article className={`manager-workload-card ${metricTone(item.overdue || item.craig || 0)}`} key={item.owner || item.region}>
+                      <span>{item.owner || item.region || "Owner pending"}</span>
+                      <strong>{count}</strong>
+                      <small>{item.overdue || 0} overdue | {carryover} carryover</small>
+                    </article>
+                  );
+                })}
+                {!managerPressure.length ? <div className="empty-state">No manager pressure detected.</div> : null}
+              </div>
+            </section>
+          </div>
+        </>
+      ) : (
+        <div className="empty-state">{status}</div>
+      )}
+    </div>
+  );
+}
