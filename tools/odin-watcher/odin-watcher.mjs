@@ -290,6 +290,7 @@ function compactSnapshot(snapshot) {
     generatedAt: snapshot?.generatedAt,
     summary: snapshot?.summary || {},
     actionClosure: snapshot?.summary?.actionClosure || {},
+    nationalReview: snapshot?.summary?.nationalReview || snapshot?.focusQueues?.nationalReview || {},
     managerFollowThrough: snapshot?.summary?.managerFollowThrough || [],
     craigEscalationPolicy: snapshot?.summary?.craigEscalationPolicy || snapshot?.focusQueues?.craigEscalationPolicy || {},
     closureFocusQueues: {

@@ -176,6 +176,23 @@ async function existingOpenActionsByTitleAndRegion(input: {
   return linked;
 }
 
+async function existingOpenSystemDataActions(input: { title: string; sourcePage: string }) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return [];
+
+  const activeStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
+  const { data } = await supabase
+    .from("action_items")
+    .select("id,title,source_page,detail")
+    .eq("title", input.title)
+    .eq("source_page", input.sourcePage)
+    .in("status", activeStatuses)
+    .order("created_at", { ascending: false })
+    .limit(12);
+
+  return ((data || []) as Array<{ id: string; detail?: string | null }>).map((row) => row.id);
+}
+
 async function getTargetRegions(targetRegions: string[]) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return [];
@@ -232,10 +249,11 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
   const existingActions = await existingOpenActionsByDedupeKey(previewContexts.map((item) => item.context.dedupeKey));
   const signatureMatches = await existingOpenActionsBySignature({ title, detail, sourcePage, dueAt, targetRegions });
   const titleRegionMatches = await existingOpenActionsByTitleAndRegion({ title, targetRegions });
-  const actionTargets = previewContexts.filter((item) => !existingActions.has(item.context.dedupeKey) && !signatureMatches.has(item.region.name) && !titleRegionMatches.has(item.region.name));
+  const systemDataMatches = systemDataIssue ? await existingOpenSystemDataActions({ title, sourcePage }) : [];
+  const actionTargets = previewContexts.filter((item) => systemDataMatches.length === 0 && !existingActions.has(item.context.dedupeKey) && !signatureMatches.has(item.region.name) && !titleRegionMatches.has(item.region.name));
 
   if (!actionTargets.length) {
-    const linkedActionIds = Array.from(new Set([...Array.from(existingActions.values()), ...Array.from(signatureMatches.values()), ...Array.from(titleRegionMatches.values())]));
+    const linkedActionIds = Array.from(new Set([...systemDataMatches, ...Array.from(existingActions.values()), ...Array.from(signatureMatches.values()), ...Array.from(titleRegionMatches.values())]));
     return {
       createdActionIds: [],
       createdCount: 0,
@@ -269,7 +287,7 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     region: region.name,
     ...context
   }));
-  const skippedDuplicateActionIds = Array.from(new Set([...Array.from(existingActions.values()), ...Array.from(signatureMatches.values()), ...Array.from(titleRegionMatches.values())]));
+  const skippedDuplicateActionIds = Array.from(new Set([...systemDataMatches, ...Array.from(existingActions.values()), ...Array.from(signatureMatches.values()), ...Array.from(titleRegionMatches.values())]));
   const odinItemPayload = {
     targetRegions: actionTargets.map(({ region }) => region.name),
     directiveType,
@@ -343,6 +361,7 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
     odinItemId: odinItem.id,
     linkedActionIds: skippedDuplicateActionIds,
     skippedDuplicateCount: previewContexts.length - actionTargets.length,
+    skippedSystemDataDuplicateActionIds: systemDataMatches,
     skippedSignatureDuplicateActionIds: Array.from(signatureMatches.values()),
     skippedTitleRegionDuplicateActionIds: Array.from(titleRegionMatches.values()),
     targetRegions: targetRegions.map((region) => region.name)
