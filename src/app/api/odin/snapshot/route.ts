@@ -8,7 +8,7 @@ import { readOdinStaffEntities } from "@/lib/odin-staff";
 const snapshotLimit = 80;
 const dueSoonDays = 3;
 const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
-const activeNationalRequestStatuses = ["awaiting_review", "returned_to_manager", "pending"];
+const activeNationalRequestStatuses = ["awaiting_review", "returned", "returned_to_manager", "pending"];
 const activeStockStatuses = ["submitted", "awaiting_review", "cancel_requested", "update_requested"];
 const activeEquipmentStatuses = ["watch", "service_due", "overdue"];
 const activeOdinStatuses = ["pending"];
@@ -104,7 +104,7 @@ function severityForNationalRequest(row: SnapshotRow, generatedAt: Date) {
   const requestType = String(row.request_type || "").toLowerCase();
   const ageHours = hoursSince(row.updated_at || row.created_at, generatedAt);
 
-  if (status === "returned_to_manager" || directiveType.includes("national ops") || requestType.includes("urgent")) return "red";
+  if (status === "returned" || status === "returned_to_manager" || directiveType.includes("national ops") || requestType.includes("urgent")) return "red";
   if (ageHours >= 24 || sourcePage.includes("compliance") || sourcePage.includes("safety")) return "amber";
   return "blue";
 }
@@ -277,7 +277,7 @@ function buildNationalReviewSummary(rows: SnapshotRow[], generatedAt: Date) {
       ageHours,
       staleHours,
       stale: staleHours >= 24,
-      returned: status === "returned_to_manager",
+      returned: status === "returned" || status === "returned_to_manager",
       severity,
       href: "/national-requests",
       dedupeKey: odinDedupeKey(["national-review", region, row.request_type, row.source_action_id || id])

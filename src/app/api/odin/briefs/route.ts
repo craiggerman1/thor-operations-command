@@ -10,7 +10,7 @@ type BriefType = "morning" | "midday" | "end_of_day" | "weekly";
 
 const briefTypes: BriefType[] = ["morning", "midday", "end_of_day", "weekly"];
 const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
-const activeNationalRequestStatuses = ["awaiting_review", "returned_to_manager", "pending"];
+const activeNationalRequestStatuses = ["awaiting_review", "returned", "returned_to_manager", "pending"];
 
 type BriefPriorityItem = {
   title?: string;
@@ -188,7 +188,7 @@ function nationalRequestSeverity(row: BriefNationalRequestRow, now = new Date())
   const requestType = String(row.request_type || "").toLowerCase();
   const staleHours = hoursSince(row.updated_at || row.created_at, now);
 
-  if (status === "returned_to_manager" || directiveType.includes("national ops") || requestType.includes("urgent")) return "red";
+  if (status === "returned" || status === "returned_to_manager" || directiveType.includes("national ops") || requestType.includes("urgent")) return "red";
   if (staleHours >= 24 || sourcePage.includes("compliance") || sourcePage.includes("safety")) return "amber";
   return "blue";
 }
@@ -282,7 +282,7 @@ async function readNationalReviewContext(region: string, now = new Date()) {
   const rows = ((data || []) as BriefNationalRequestRow[])
     .filter((row) => region === "National" || nationalRequestRegion(row) === region);
   const staleRequests = rows.filter((row) => hoursSince(row.updated_at || row.created_at, now) >= 24);
-  const returnedRequests = rows.filter((row) => row.status === "returned_to_manager");
+  const returnedRequests = rows.filter((row) => row.status === "returned" || row.status === "returned_to_manager");
   const reviewPressure = [...returnedRequests, ...staleRequests]
     .filter((item, index, allItems) => allItems.findIndex((match) => match.id === item.id) === index)
     .slice(0, 10);

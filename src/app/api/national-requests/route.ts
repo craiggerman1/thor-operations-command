@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { markComplianceForClosedActions, reopenComplianceForReturnedActions } from "@/lib/linked-record-sync";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
+import { canAccessScope, requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
 import { logTocAudit } from "@/lib/audit";
 
 type NationalRequestRow = {
@@ -61,6 +61,26 @@ function actionStatusForRequest(status: string, requestType = "action_closeout")
   if (status === "Approved by national") return "closed";
   if (status === "Returned to manager") return "returned_to_manager";
   return "submitted_for_review";
+}
+
+function closeoutQualityError(input: {
+  managerResponse: string;
+  evidence: string;
+  directiveType?: string | null;
+  priority?: string | null;
+  sourcePage?: string | null;
+}) {
+  const managerResponse = input.managerResponse.trim();
+  const evidence = input.evidence.trim();
+  const materialAction = input.directiveType === "National Ops Directive" ||
+    input.priority === "urgent" ||
+    input.priority === "high" ||
+    /compliance|equipment|stock|jobsheet|safety/i.test(String(input.sourcePage || ""));
+
+  if (managerResponse.length < 10) return "Add a clear manager response before submitting this action for National review.";
+  if (materialAction && managerResponse.length < 20) return "For urgent, compliance, equipment, stock or jobsheet actions, add a fuller close-out response before National review.";
+  if (materialAction && evidence.length < 8) return "For urgent, compliance, equipment, stock or jobsheet actions, add evidence or a reference before National review.";
+  return "";
 }
 
 function mapRequest(row: NationalRequestRow) {
@@ -129,12 +149,33 @@ export async function POST(request: Request) {
 
     const { data: actionRow, error: actionError } = await supabase
       .from("action_items")
-      .select("id,title,detail,source_page,directive_type,assigned_region_id")
+      .select("id,title,detail,source_page,directive_type,priority,status,assigned_region_id,region:regions(name)")
       .eq("id", actionId)
       .maybeSingle();
 
     if (actionError) return NextResponse.json({ error: actionError.message }, { status: 500 });
     if (!actionRow) return NextResponse.json({ error: "Action item was not found." }, { status: 404 });
+    const actionRegion = firstRelated(actionRow.region)?.name || "National";
+    if (!canAccessScope(permission.user, actionRegion)) {
+      return NextResponse.json({ error: "You do not have permission to submit this action for National review." }, { status: 403 });
+    }
+    if (actionRow.status === "closed") {
+      return NextResponse.json({ error: "This action is already closed." }, { status: 400 });
+    }
+    if (actionRow.status === "submitted_for_review") {
+      return NextResponse.json({ error: "This action is already awaiting National review." }, { status: 400 });
+    }
+
+    const managerResponse = String(payload.managerResponse || "").trim();
+    const evidence = String(payload.evidence || "").trim();
+    const qualityError = closeoutQualityError({
+      managerResponse,
+      evidence,
+      directiveType: actionRow.directive_type,
+      priority: actionRow.priority,
+      sourcePage: actionRow.source_page
+    });
+    if (qualityError) return NextResponse.json({ error: qualityError }, { status: 400 });
 
     const { data: existingRequest, error: existingError } = await supabase
       .from("national_requests")
@@ -150,12 +191,12 @@ export async function POST(request: Request) {
     const requestPayload = {
       request_type: "action_closeout",
       title: actionRow.title,
-      detail: payload.managerResponse || actionRow.detail || "Manager submitted action close-out.",
+      detail: managerResponse || actionRow.detail || "Manager submitted action close-out.",
       status: "awaiting_review",
       source_action_id: actionId,
       assigned_region_id: actionRow.assigned_region_id,
-      manager_response: payload.managerResponse || "Manager submitted close-out with no additional response.",
-      evidence: payload.evidence || "No evidence or reference supplied.",
+      manager_response: managerResponse,
+      evidence,
       source_page: actionRow.source_page,
       directive_type: actionRow.directive_type,
       national_response: null,
