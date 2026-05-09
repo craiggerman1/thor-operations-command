@@ -98,7 +98,7 @@ type OdinSnapshotPayload = {
 type WatcherStatusPayload = {
   connected: boolean;
   expectedWatcherVersion: string;
-  status: "healthy" | "dry_run" | "version_mismatch" | "stale" | "not_seen" | "brief_seen_no_heartbeat";
+  status: "healthy" | "dry_run" | "version_mismatch" | "stale" | "not_seen" | "failed" | "brief_seen_no_heartbeat";
   healthy: boolean;
   lastSeenAt: string | null;
   lastSeenMinutes: number | null;
@@ -118,6 +118,7 @@ type WatcherStatusPayload = {
     recentBriefWithoutHeartbeat?: boolean;
     versionCurrent: boolean;
     dryRunDisabled: boolean;
+    lastState?: string;
     freshWithin90Minutes: boolean;
   };
 };

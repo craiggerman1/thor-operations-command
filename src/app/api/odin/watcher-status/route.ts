@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
-const expectedWatcherVersion = "0.314";
+const expectedWatcherVersion = "0.337";
 const watcherSessionKey = "toc:odin-watcher:status";
 
 function ageMinutes(value: unknown) {
@@ -39,6 +39,7 @@ export async function GET(request: Request) {
   const lastSeenMinutes = ageMinutes(heartbeat?.updated_at);
   const isCurrent = version === expectedWatcherVersion;
   const dryRun = facts.dryRun === true;
+  const lastState = String(facts.state || "");
   const stale = lastSeenMinutes === null || lastSeenMinutes > 90;
   const latestBriefMinutes = ageMinutes(latestBrief?.updated_at);
   const recentBriefWithoutHeartbeat = !heartbeat && latestBriefMinutes !== null && latestBriefMinutes <= 90;
@@ -46,7 +47,9 @@ export async function GET(request: Request) {
     ? recentBriefWithoutHeartbeat ? "brief_seen_no_heartbeat" : "not_seen"
     : stale
       ? "stale"
-      : !isCurrent
+      : lastState === "failed"
+        ? "failed"
+        : !isCurrent
         ? "version_mismatch"
         : dryRun
           ? "dry_run"
@@ -69,6 +72,7 @@ export async function GET(request: Request) {
       recentBriefWithoutHeartbeat,
       versionCurrent: isCurrent,
       dryRunDisabled: !dryRun,
+      lastState,
       freshWithin90Minutes: !stale || recentBriefWithoutHeartbeat
     }
   });
