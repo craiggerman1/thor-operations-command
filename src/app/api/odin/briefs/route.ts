@@ -10,6 +10,7 @@ type BriefType = "morning" | "midday" | "end_of_day" | "weekly";
 
 const briefTypes: BriefType[] = ["morning", "midday", "end_of_day", "weekly"];
 const activeActionStatuses = ["open", "acknowledged", "in_progress", "blocked", "submitted_for_review", "returned_to_manager", "reopened", "escalated"];
+const activeNationalRequestStatuses = ["awaiting_review", "returned_to_manager", "pending"];
 
 type BriefPriorityItem = {
   title?: string;
@@ -47,6 +48,22 @@ type BriefActionRow = {
   priority: string | null;
   status: string;
   due_at: string | null;
+  created_at: string;
+  updated_at: string;
+  region?: { name: string } | { name: string }[] | null;
+};
+
+type BriefNationalRequestRow = {
+  id: string;
+  request_type: string | null;
+  title: string | null;
+  detail: string | null;
+  status: string;
+  source_action_id: string | null;
+  manager_response: string | null;
+  evidence: string | null;
+  source_page: string | null;
+  directive_type: string | null;
   created_at: string;
   updated_at: string;
   region?: { name: string } | { name: string }[] | null;
@@ -160,6 +177,22 @@ function actionDedupeGroup(row: BriefActionRow) {
   return `${actionRegion(row)}:${row.source_page || "action"}:${String(row.title || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}`;
 }
 
+function nationalRequestRegion(row: BriefNationalRequestRow) {
+  return firstRelated(row.region)?.name || "National";
+}
+
+function nationalRequestSeverity(row: BriefNationalRequestRow, now = new Date()) {
+  const status = String(row.status || "").toLowerCase();
+  const sourcePage = String(row.source_page || "").toLowerCase();
+  const directiveType = String(row.directive_type || "").toLowerCase();
+  const requestType = String(row.request_type || "").toLowerCase();
+  const staleHours = hoursSince(row.updated_at || row.created_at, now);
+
+  if (status === "returned_to_manager" || directiveType.includes("national ops") || requestType.includes("urgent")) return "red";
+  if (staleHours >= 24 || sourcePage.includes("compliance") || sourcePage.includes("safety")) return "amber";
+  return "blue";
+}
+
 async function readActionClosureContext(region: string, now = new Date()) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) {
@@ -226,6 +259,44 @@ async function readActionClosureContext(region: string, now = new Date()) {
   };
 }
 
+async function readNationalReviewContext(region: string, now = new Date()) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    return {
+      rows: [] as BriefNationalRequestRow[],
+      staleRequests: [] as BriefNationalRequestRow[],
+      returnedRequests: [] as BriefNationalRequestRow[],
+      reviewPressure: [] as BriefNationalRequestRow[],
+      redCount: 0,
+      amberCount: 0
+    };
+  }
+
+  const { data } = await supabase
+    .from("national_requests")
+    .select("id,request_type,title,detail,status,source_action_id,manager_response,evidence,source_page,directive_type,created_at,updated_at,region:regions(name)")
+    .in("status", activeNationalRequestStatuses)
+    .order("created_at", { ascending: false })
+    .limit(80);
+
+  const rows = ((data || []) as BriefNationalRequestRow[])
+    .filter((row) => region === "National" || nationalRequestRegion(row) === region);
+  const staleRequests = rows.filter((row) => hoursSince(row.updated_at || row.created_at, now) >= 24);
+  const returnedRequests = rows.filter((row) => row.status === "returned_to_manager");
+  const reviewPressure = [...returnedRequests, ...staleRequests]
+    .filter((item, index, allItems) => allItems.findIndex((match) => match.id === item.id) === index)
+    .slice(0, 10);
+
+  return {
+    rows,
+    staleRequests,
+    returnedRequests,
+    reviewPressure,
+    redCount: rows.filter((row) => nationalRequestSeverity(row, now) === "red").length,
+    amberCount: rows.filter((row) => nationalRequestSeverity(row, now) === "amber").length
+  };
+}
+
 function actionPriorityItem(row: BriefActionRow, reason: string): BriefPriorityItem {
   const staleHours = hoursSince(row.updated_at || row.created_at);
   const overdue = isPastDue(row.due_at);
@@ -249,19 +320,39 @@ function actionPriorityItem(row: BriefActionRow, reason: string): BriefPriorityI
   };
 }
 
+function nationalReviewPriorityItem(row: BriefNationalRequestRow, reason: string): BriefPriorityItem {
+  const title = row.title || row.request_type || "National request awaiting review";
+  const staleHours = hoursSince(row.updated_at || row.created_at);
+
+  return {
+    title: `National review needed: ${title}`,
+    region: nationalRequestRegion(row),
+    severity: nationalRequestSeverity(row),
+    recommendedAction: `${reason}. Review the National Requests queue and either close, return, or clarify the request. Stale for ${staleHours}h.`,
+    href: "/national-requests",
+    dedupeKey: `national-review:${row.id}`,
+    entityType: "national_request",
+    entityId: row.id,
+    destination: "actions",
+    autoAction: false,
+    followThroughStatus: "linked"
+  };
+}
+
 async function buildGeneratedBrief(type: BriefType, region: string, briefDate = dateOnly(), generatedBy = "toc", source = "generated") {
-  const [openActions, nationalRequests, stockOrders, complianceItems, rosterGaps, closureContext] = await Promise.all([
+  const [openActions, nationalRequestCount, stockOrders, complianceItems, rosterGaps, closureContext, nationalReviewContext] = await Promise.all([
     countRows({ table: "action_items", statuses: activeActionStatuses }),
-    countRows({ table: "national_requests", statuses: ["awaiting_review", "returned_to_manager", "pending"] }),
+    countRows({ table: "national_requests", statuses: activeNationalRequestStatuses }),
     countRows({ table: "stock_orders", statuses: ["submitted", "awaiting_review", "cancel_requested", "update_requested"] }),
     countRows({ table: "compliance_items", statuses: ["open", "in_progress", "blocked", "not_started"] }),
     buildOdinRosterGaps(),
-    readActionClosureContext(region)
+    readActionClosureContext(region),
+    readNationalReviewContext(region)
   ]);
   const openRosterGaps = rosterGaps.gaps.filter((gap) => !gap.alreadyActioned && (region === "National" || gap.region === region));
   const redRosterGaps = openRosterGaps.filter((gap) => gap.severity === "red").length;
-  const redClosureCount = closureContext.craigEscalationCandidates.length + closureContext.overdueActions.length;
-  const amberCount = openActions + nationalRequests + stockOrders + complianceItems + openRosterGaps.length + closureContext.staleActions.length + closureContext.carryoverActions.length;
+  const redClosureCount = closureContext.craigEscalationCandidates.length + closureContext.overdueActions.length + nationalReviewContext.redCount;
+  const amberCount = openActions + nationalRequestCount + stockOrders + complianceItems + openRosterGaps.length + closureContext.staleActions.length + closureContext.carryoverActions.length + nationalReviewContext.amberCount;
   const severity = severityFromCounts(redRosterGaps + redClosureCount, amberCount);
   const typeLabel = briefTypeLabel(type);
   const priorityItems = [
@@ -270,6 +361,8 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
     ...closureContext.overdueActions.filter((row) => !closureContext.craigEscalationCandidates.some((candidate) => candidate.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Overdue action")),
     ...closureContext.submittedForReviewActions.filter((row) => !closureContext.overdueActions.some((overdue) => overdue.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Manager close-out waiting for National review")),
     ...closureContext.staleActions.filter((row) => !closureContext.overdueActions.some((overdue) => overdue.id === row.id)).slice(0, 3).map((row) => actionPriorityItem(row, "Stale manager action")),
+    ...nationalReviewContext.returnedRequests.slice(0, 2).map((row) => nationalReviewPriorityItem(row, "National request returned to manager")),
+    ...nationalReviewContext.staleRequests.filter((row) => !nationalReviewContext.returnedRequests.some((returned) => returned.id === row.id)).slice(0, 3).map((row) => nationalReviewPriorityItem(row, "National request waiting too long")),
     ...openRosterGaps.slice(0, 4).map((gap) => ({
       title: gap.title,
       region: gap.region,
@@ -295,7 +388,7 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       destination: "actions",
       autoAction: false
     })),
-    ...(nationalRequests ? [{ title: "National requests awaiting review", region: "National", severity: "amber", recommendedAction: "Review National Requests queue.", href: "/national-requests", autoAction: false }] : []),
+    ...(nationalRequestCount ? [{ title: "National requests awaiting review", region: "National", severity: nationalReviewContext.staleRequests.length ? "amber" : "blue", recommendedAction: "Review National Requests queue.", href: "/national-requests", autoAction: false }] : []),
     ...(complianceItems ? [{ title: "Compliance items open", region: "National", severity: "amber", recommendedAction: "Review Compliance and linked Action Centre items.", href: "/compliance", autoAction: false }] : [])
   ].slice(0, 8);
   const topManagerPressure = closureContext.managerPressure[0];
@@ -307,13 +400,16 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
     briefType: type,
     region,
     title: `${typeLabel} - ${region}`,
-    summary: `${typeLabel}: ${openActions} open action items (${closureSummary}), ${nationalRequests} national requests, ${stockOrders} stock orders, ${complianceItems} compliance items and ${openRosterGaps.length} roster gaps need visibility.${pressureSummary}`,
+    summary: `${typeLabel}: ${openActions} open action items (${closureSummary}), ${nationalRequestCount} national requests (${nationalReviewContext.staleRequests.length} stale), ${stockOrders} stock orders, ${complianceItems} compliance items and ${openRosterGaps.length} roster gaps need visibility.${pressureSummary}`,
     severity,
     status: "current",
     priorityItems,
     metrics: {
       openActions,
-      nationalRequests,
+      nationalRequests: nationalRequestCount,
+      staleNationalRequests: nationalReviewContext.staleRequests.length,
+      returnedNationalRequests: nationalReviewContext.returnedRequests.length,
+      nationalReviewPressure: nationalReviewContext.reviewPressure.length,
       stockOrders,
       complianceItems,
       rosterGaps: openRosterGaps.length,
@@ -325,6 +421,18 @@ async function buildGeneratedBrief(type: BriefType, region: string, briefDate = 
       submittedForReviewActions: closureContext.submittedForReviewActions.length,
       repeatedIssueGroups: closureContext.repeatedIssueGroups.length,
       craigEscalationCandidates: closureContext.craigEscalationCandidates.length,
+      nationalReview: {
+        total: nationalReviewContext.rows.length,
+        stale: nationalReviewContext.staleRequests.length,
+        returned: nationalReviewContext.returnedRequests.length,
+        pressure: nationalReviewContext.reviewPressure.map((row) => ({
+          id: row.id,
+          title: row.title || row.request_type,
+          region: nationalRequestRegion(row),
+          status: row.status,
+          staleHours: hoursSince(row.updated_at || row.created_at)
+        }))
+      },
       managerPressure: closureContext.managerPressure
     },
     generatedBy,

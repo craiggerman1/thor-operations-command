@@ -97,6 +97,18 @@ function severityForStock(row: SnapshotRow) {
   return "blue";
 }
 
+function severityForNationalRequest(row: SnapshotRow, generatedAt: Date) {
+  const status = String(row.status || "").toLowerCase();
+  const sourcePage = String(row.source_page || "").toLowerCase();
+  const directiveType = String(row.directive_type || "").toLowerCase();
+  const requestType = String(row.request_type || "").toLowerCase();
+  const ageHours = hoursSince(row.updated_at || row.created_at, generatedAt);
+
+  if (status === "returned_to_manager" || directiveType.includes("national ops") || requestType.includes("urgent")) return "red";
+  if (ageHours >= 24 || sourcePage.includes("compliance") || sourcePage.includes("safety")) return "amber";
+  return "blue";
+}
+
 function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
   const region = regionName(row);
   const id = String(row.id || "");
@@ -239,6 +251,59 @@ function actionClosureSummary(entityLinks: ReturnType<typeof buildEntityLinks>) 
     managerWorkload: Object.values(byOwner).sort((a, b) => b.overdue - a.overdue || b.carryover - a.carryover || b.count - a.count),
     carryoverItems: carryover,
     staleItems: [...new Set([...stale48, ...stale24])].slice(0, 20)
+  };
+}
+
+function buildNationalReviewSummary(rows: SnapshotRow[], generatedAt: Date) {
+  const items = rows.map((row) => {
+    const id = String(row.id || "");
+    const region = regionName(row);
+    const title = String(row.title || row.request_type || "National request awaiting review");
+    const status = String(row.status || "awaiting_review");
+    const ageHours = hoursSince(row.created_at, generatedAt);
+    const staleHours = hoursSince(row.updated_at || row.created_at, generatedAt);
+    const severity = severityForNationalRequest(row, generatedAt);
+
+    return {
+      id,
+      title,
+      region,
+      status,
+      requestType: row.request_type || null,
+      sourcePage: row.source_page || null,
+      sourceActionId: row.source_action_id || null,
+      createdAt: row.created_at || null,
+      updatedAt: row.updated_at || null,
+      ageHours,
+      staleHours,
+      stale: staleHours >= 24,
+      returned: status === "returned_to_manager",
+      severity,
+      href: "/national-requests",
+      dedupeKey: odinDedupeKey(["national-review", region, row.request_type, row.source_action_id || id])
+    };
+  });
+  const staleItems = items.filter((item) => item.stale);
+  const returnedItems = items.filter((item) => item.returned);
+  const redItems = items.filter((item) => item.severity === "red");
+  const byRegion = items.reduce<Record<string, number>>((lookup, item) => {
+    lookup[item.region] = (lookup[item.region] || 0) + 1;
+    return lookup;
+  }, {});
+
+  return {
+    openCount: items.length,
+    staleCount: staleItems.length,
+    returnedCount: returnedItems.length,
+    redCount: redItems.length,
+    amberCount: items.filter((item) => item.severity === "amber").length,
+    byRegion,
+    items,
+    staleItems,
+    returnedItems,
+    reviewPressure: [...returnedItems, ...staleItems]
+      .filter((item, index, allItems) => allItems.findIndex((match) => match.id === item.id) === index)
+      .slice(0, 20)
   };
 }
 
@@ -633,6 +698,7 @@ export async function GET(request: Request) {
   const redItems = entityLinks.filter((item) => item.severity === "red");
   const duplicateIssueGroups = duplicateGroups(entityLinks);
   const actionClosure = actionClosureSummary(entityLinks);
+  const nationalReview = buildNationalReviewSummary(nationalRequests.rows, generatedAt);
   const managerFollowThrough = buildManagerFollowThroughDigests(entityLinks);
   const craigEscalationPolicy = buildCraigEscalationPolicy(entityLinks);
 
@@ -696,6 +762,7 @@ export async function GET(request: Request) {
       rosterGapCount: rosterGaps.gapCount,
       recentCompletedCount: recentCompleted.rows.length,
       actionClosure,
+      nationalReview,
       managerFollowThrough,
       craigEscalationPolicy,
       dataGaps: {
@@ -716,6 +783,7 @@ export async function GET(request: Request) {
       rosterGaps: rosterGaps.gaps,
       ownerQueue: entityLinks.filter((item) => item.escalationLevel !== "none"),
       actionCarryover: actionClosure.carryoverItems,
+      nationalReview,
       managerFollowThrough,
       craigEscalationPolicy,
       recentlyCompleted: recentCompleted.rows
