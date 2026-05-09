@@ -141,7 +141,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [navBadgeCounts, setNavBadgeCounts] = useState<Record<string, NavBadge>>({});
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>(() => getInitialStoredSession());
-  const [sessionReady, setSessionReady] = useState(() => hasUsableStoredSession(shellSessionCache || readStoredSession()));
+  const [sessionReady, setSessionReady] = useState(true);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
   const currentRegionOptions = developmentToolsEnabled && activeProfile.role !== "director"
@@ -362,10 +362,6 @@ export function TocShell({ children }: { children: ReactNode }) {
     window.dispatchEvent(new Event("toc.manualRefresh"));
   }
 
-  if (!sessionReady) {
-    return <div className="auth-loading-screen">Opening secure TOC session...</div>;
-  }
-
   if (!session.role) return null;
 
   return (
@@ -416,7 +412,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.329</em>
+              <em>Build 0.330</em>
             </div>
           </div>
           <div className="topbar-actions">
