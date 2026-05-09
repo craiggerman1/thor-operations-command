@@ -5,6 +5,8 @@ import { resolvePermittedScope, requireTocUser } from "@/lib/toc-auth";
 
 type BadgeTone = "red" | "amber" | "blue";
 type ActionRow = {
+  title: string;
+  detail: string | null;
   source_page: string;
   directive_type: string;
   priority: string;
@@ -39,6 +41,13 @@ function makeBadge(count: number, tone: BadgeTone = "blue") {
 
 function sourceLabel(source: string) {
   return source.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const systemDataPattern = /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/i;
+
+function isSystemDataAction(item: ActionRow) {
+  const source = sourceLabel(item.source_page);
+  return source === "Admin Settings" || systemDataPattern.test(`${source} ${item.title || ""} ${item.detail || ""}`);
 }
 
 function getSharedTargets(role: string, scope: string) {
@@ -86,7 +95,7 @@ export async function GET(request: Request) {
   const [{ data: actionData }, { data: requestData }, { data: stockData }, { data: todoData }, { data: complianceData }, rosterGaps] = await Promise.all([
     supabase
       .from("action_items")
-      .select("source_page,directive_type,priority,status,region:regions(name)")
+      .select("title,detail,source_page,directive_type,priority,status,region:regions(name)")
       .neq("status", "closed"),
     supabase
       .from("national_requests")
@@ -108,6 +117,7 @@ export async function GET(request: Request) {
 
   const scopedActions = ((actionData as ActionRow[] | null) || []).filter((item) => {
     const region = firstRelated(item.region);
+    if (scope !== "National" && isSystemDataAction(item)) return false;
     return scope === "National" || region?.name === scope;
   });
   const scopedStock = ((stockData as StockRow[] | null) || []).filter((item) => {
