@@ -23,6 +23,8 @@ export type NationalActionRequest = {
 
 export const nationalActionRequestsKey = "toc.nationalActionRequests.databaseReady";
 
+type RequestFilter = "all" | "closeout" | "updates" | "urgent";
+
 function readRequests() {
   return tocFetch("/api/national-requests", { cache: "no-store" })
     .then((response) => response.json())
@@ -33,6 +35,7 @@ function readRequests() {
 export function NationalActionRequests() {
   const router = useRouter();
   const [requests, setRequests] = useState<NationalActionRequest[]>([]);
+  const [requestFilter, setRequestFilter] = useState<RequestFilter>("all");
 
   useEffect(() => {
     function syncRequests() {
@@ -78,6 +81,20 @@ export function NationalActionRequests() {
 
   const pendingRequests = requests.filter((request) => request.status === "Awaiting national review");
   const managerUpdates = requests.filter((request) => request.requestType === "manager_update");
+  const closeOuts = requests.filter((request) => request.requestType !== "manager_update");
+  const urgentRequests = requests.filter((request) => request.directive === "National Ops Directive" || /urgent|critical|red|blocked|safety|compliance/i.test(`${request.title} ${request.managerResponse}`));
+  const filteredRequests = requests.filter((request) => {
+    if (requestFilter === "closeout") return request.requestType !== "manager_update";
+    if (requestFilter === "updates") return request.requestType === "manager_update";
+    if (requestFilter === "urgent") return urgentRequests.some((urgent) => urgent.id === request.id);
+    return true;
+  });
+  const filters: { value: RequestFilter; label: string; count: number }[] = [
+    { value: "all", label: "All", count: requests.length },
+    { value: "closeout", label: "Close-Outs", count: closeOuts.length },
+    { value: "updates", label: "Manager Updates", count: managerUpdates.length },
+    { value: "urgent", label: "Urgent", count: urgentRequests.length }
+  ];
 
   return (
     <div className="national-request-stack">
@@ -92,8 +109,21 @@ export function NationalActionRequests() {
         <span>Approved or returned</span>
         <span>Closed</span>
       </div>
+      <div className="action-filter-strip" aria-label="National request filters">
+        {filters.map((filter) => (
+          <button
+            type="button"
+            key={filter.value}
+            className={requestFilter === filter.value ? "active" : ""}
+            onClick={() => setRequestFilter(filter.value)}
+          >
+            <span>{filter.label}</span>
+            <strong>{filter.count}</strong>
+          </button>
+        ))}
+      </div>
       <div className="national-request-list">
-        {requests.length ? requests.map((request) => (
+        {filteredRequests.length ? filteredRequests.map((request) => (
           <article
             className="national-request-card clickable-request-card"
             key={request.id}
@@ -122,7 +152,7 @@ export function NationalActionRequests() {
             </div>
           </article>
         )) : (
-          <div className="empty-state">No manager-submitted action close-outs are awaiting national review.</div>
+          <div className="empty-state">No national request items match this filter.</div>
         )}
       </div>
     </div>
