@@ -53,6 +53,19 @@ type OdinBacklogRow = {
   payload?: Record<string, unknown> | null;
 };
 
+type NationalRequestHistoryRow = {
+  id: string;
+  request_type: string;
+  title: string;
+  status: "awaiting_review" | "approved" | "returned" | "closed";
+  manager_response: string | null;
+  evidence: string | null;
+  national_response: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -119,6 +132,17 @@ function displayStatus(status: ActionStatus) {
   };
 
   return labels[status];
+}
+
+function displayNationalRequestStatus(status: NationalRequestHistoryRow["status"]) {
+  const labels = {
+    awaiting_review: "Awaiting National review",
+    approved: "Approved by National",
+    returned: "Returned to manager",
+    closed: "Closed"
+  };
+
+  return labels[status] || "National review";
 }
 
 function lifecycleTone(status: ActionStatus): Status {
@@ -437,6 +461,23 @@ function mapAction(row: ActionRow) {
   };
 }
 
+function mapReviewHistory(row: NationalRequestHistoryRow) {
+  return {
+    id: row.id,
+    requestType: row.request_type,
+    title: row.title,
+    status: displayNationalRequestStatus(row.status),
+    storageStatus: row.status,
+    managerResponse: row.manager_response || "No manager response supplied.",
+    evidence: row.evidence || "No evidence or reference supplied.",
+    nationalResponse: row.national_response || "",
+    submittedAt: row.created_at,
+    reviewedAt: row.reviewed_at,
+    updatedAt: row.updated_at,
+    href: `/national-requests/${row.id}`
+  };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
@@ -467,9 +508,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ actions: [], connected: false, error: error.message }, { status: 500 });
   }
 
-  const actions = ((data as ActionRow[] | null) || [])
+  let actions = ((data as ActionRow[] | null) || [])
     .map(mapAction)
     .filter((action) => permittedScope === "National" || action.region === permittedScope);
+
+  if (id && actions.length) {
+    const { data: reviewRows } = await supabase
+      .from("national_requests")
+      .select("id,request_type,title,status,manager_response,evidence,national_response,reviewed_at,created_at,updated_at")
+      .eq("source_action_id", id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    actions = actions.map((action) => ({
+      ...action,
+      reviewHistory: ((reviewRows as NationalRequestHistoryRow[] | null) || []).map(mapReviewHistory)
+    }));
+  }
 
   return NextResponse.json({ actions, connected: true });
 }

@@ -21,6 +21,20 @@ type ActionDetailItem = EnhancedActionItem & {
   sourceHref?: string;
   closeFlow: string;
   closeActions: string[];
+  reviewHistory?: {
+    id: string;
+    requestType: string;
+    title: string;
+    status: string;
+    storageStatus: string;
+    managerResponse: string;
+    evidence: string;
+    nationalResponse: string;
+    submittedAt: string;
+    reviewedAt: string | null;
+    updatedAt: string | null;
+    href: string;
+  }[];
 };
 
 export default function ActionDetailPage() {
@@ -89,6 +103,7 @@ export default function ActionDetailPage() {
   const responseReady = managerResponse.trim().length >= (needsEvidence ? 20 : 10);
   const evidenceReady = !needsEvidence || evidence.trim().length >= 8;
   const closeoutReady = responseReady && evidenceReady && !isAwaitingNational && !isClosed;
+  const reviewHistory = currentAction.reviewHistory || [];
 
   function saveDraft() {
     localStorage.setItem(`toc.actionDraft.${currentAction.id}`, JSON.stringify({ managerResponse, evidence, updatedAt: new Date().toISOString() }));
@@ -224,6 +239,26 @@ export default function ActionDetailPage() {
               <ol className="action-closeout-steps">
                 {currentAction.closeActions.map((step) => <li key={step}>{step}</li>)}
               </ol>
+              <div className="action-review-timeline">
+                <div>
+                  <span className="eyebrow">Review history</span>
+                  <strong>{reviewHistory.length ? `${reviewHistory.length} National review event${reviewHistory.length === 1 ? "" : "s"}` : "No National review yet"}</strong>
+                </div>
+                {reviewHistory.length ? reviewHistory.map((event) => (
+                  <article className="action-review-event" key={event.id}>
+                    <div className="action-review-event-head">
+                      <Tag tone={event.storageStatus === "approved" || event.storageStatus === "closed" ? "green" : event.storageStatus === "returned" ? "amber" : "blue"}>{event.status}</Tag>
+                      <small>{new Date(event.submittedAt).toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</small>
+                    </div>
+                    <p>{event.managerResponse}</p>
+                    <small>Evidence: {event.evidence}</small>
+                    {event.nationalResponse ? <small>National: {event.nationalResponse}</small> : null}
+                    <Link className="node-action" href={event.href}>Open review</Link>
+                  </article>
+                )) : (
+                  <small className="admin-hint-message">Submit this item for National review once the manager response and evidence are ready.</small>
+                )}
+              </div>
               <form className="action-closeout-form" onSubmit={(event) => void submitForNationalApproval(event)}>
                 <div className="closeout-quality-panel">
                   <span className="eyebrow">Close-out quality gate</span>
