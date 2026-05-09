@@ -52,6 +52,7 @@ export async function tocFetch(input: RequestInfo | URL, init: RequestInit = {},
   const method = String(init.method || "GET").toUpperCase();
   const canUseResponseCache = method === "GET" && !init.body;
   const cacheKey = canUseResponseCache ? String(input) : "";
+  if (!canUseResponseCache) responseCache.clear();
   const cached = cacheKey ? responseCache.get(cacheKey) : null;
   if (cached && cached.expiresAt > Date.now()) return cached.response.clone();
 
