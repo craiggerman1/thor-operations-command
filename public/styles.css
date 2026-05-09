@@ -2777,6 +2777,48 @@ body:not([data-access="admin"]) .admin-only-panel {
   gap: 8px;
 }
 
+.action-filter-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.action-filter-strip button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid rgba(183, 220, 238, 0.8);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: rgba(242, 249, 252, 0.9);
+  color: var(--blue);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.action-filter-strip button.active {
+  border-color: rgba(10, 49, 82, 0.22);
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.action-filter-strip span {
+  font-size: 12px;
+}
+
+.action-filter-strip strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--blue);
+  font-size: 12px;
+}
+
 .quick-action-controls {
   display: flex;
   flex-wrap: wrap;

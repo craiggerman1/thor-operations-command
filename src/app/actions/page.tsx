@@ -17,6 +17,8 @@ const directivePriority = {
   "To Do": 3
 };
 
+type QueueFilter = "all" | "overdue" | "blocked" | "review" | "carryover" | "system";
+
 export default function ActionsPage() {
   const router = useRouter();
   const [openActions, setOpenActions] = useState<EnhancedActionItem[]>([]);
@@ -24,14 +26,24 @@ export default function ActionsPage() {
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const [scope, setScope] = useState("National");
   const [role, setRole] = useState<AccessRole>("manager");
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const scopedActions = getScopedActionItems(openActions, scope, role);
-  const sortedActions = [...scopedActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
+  const filteredActions = scopedActions.filter((action) => actionMatchesQueueFilter(action, queueFilter));
+  const sortedActions = [...filteredActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
   const canQuickManage = role === "admin" || (role === "manager" && scope === "National");
   const canQuickProgress = role === "admin" || role === "manager";
-  const closureSummary = buildClosureSummary(sortedActions);
-  const managerWorkload = buildManagerWorkload(sortedActions);
-  const repeatGroups = buildRepeatGroups(sortedActions);
-  const systemDataActions = sortedActions.filter(isSystemDataAction);
+  const closureSummary = buildClosureSummary(scopedActions);
+  const managerWorkload = buildManagerWorkload(scopedActions);
+  const repeatGroups = buildRepeatGroups(scopedActions);
+  const systemDataActions = scopedActions.filter(isSystemDataAction);
+  const queueFilters: { value: QueueFilter; label: string; count: number }[] = [
+    { value: "all", label: "All", count: scopedActions.length },
+    { value: "overdue", label: "Overdue", count: closureSummary.overdue },
+    { value: "blocked", label: "Blocked", count: closureSummary.blocked },
+    { value: "review", label: "Review", count: closureSummary.review },
+    { value: "carryover", label: "Carryover", count: closureSummary.carryover },
+    { value: "system", label: "System/Data", count: systemDataActions.length }
+  ];
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -194,8 +206,21 @@ export default function ActionsPage() {
             </div>
           ) : null}
         </Panel>
-        <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} open actions`}>
+        <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} shown / ${scopedActions.length} open`}>
           {message ? <div className="admin-hint-message">{message}</div> : null}
+          <div className="action-filter-strip" aria-label="Action queue filters">
+            {queueFilters.map((filter) => (
+              <button
+                type="button"
+                key={filter.value}
+                className={queueFilter === filter.value ? "active" : ""}
+                onClick={() => setQueueFilter(filter.value)}
+              >
+                <span>{filter.label}</span>
+                <strong>{filter.count}</strong>
+              </button>
+            ))}
+          </div>
           <div className="signal-action-list">
             {sortedActions.map((signal) => (
               <article
@@ -262,6 +287,16 @@ function isSystemDataAction(action: EnhancedActionItem) {
   const text = `${action.source} ${action.title} ${action.detail}`.toLowerCase();
   return action.source === "Admin Settings" ||
     /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/.test(text);
+}
+
+function actionMatchesQueueFilter(action: EnhancedActionItem, filter: QueueFilter) {
+  if (filter === "all") return true;
+  if (filter === "overdue") return action.isOverdue;
+  if (filter === "blocked") return action.lifecycleStatus === "blocked";
+  if (filter === "review") return action.lifecycleStatus === "submitted_for_review";
+  if (filter === "carryover") return action.isCarryover;
+  if (filter === "system") return isSystemDataAction(action);
+  return true;
 }
 
 function buildManagerWorkload(actions: EnhancedActionItem[]) {
