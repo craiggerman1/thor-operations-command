@@ -20,11 +20,23 @@ type DirectorBroadcastMessage = {
   acknowledgedBy?: string[];
 };
 
+type RemoteBroadcastState = {
+  connected?: boolean;
+  urgentBroadcasts?: unknown;
+  acknowledgements?: Record<string, string[]>;
+  directorBroadcast?: unknown;
+  directorAcknowledgements?: Record<string, string[]>;
+};
+
 const broadcastKey = "toc.urgentBroadcast";
 const acknowledgedKey = "toc.urgentBroadcastAcknowledged";
 const directorBroadcastKey = "toc.directorBroadcast";
 const directorAcknowledgedKey = "toc.directorBroadcastAcknowledged";
 const broadcastApi = "/api/broadcasts";
+const remoteBroadcastCacheMs = 12000;
+
+let remoteBroadcastStateCache: { state: RemoteBroadcastState; cachedAt: number } | null = null;
+let remoteBroadcastStatePromise: Promise<RemoteBroadcastState> | null = null;
 
 function createId() {
   return `urgent-${Date.now()}-${Math.round(Math.random() * 100000)}`;
@@ -103,6 +115,33 @@ function readSessionUserKey() {
   }
 }
 
+function clearRemoteBroadcastStateCache() {
+  remoteBroadcastStateCache = null;
+  remoteBroadcastStatePromise = null;
+}
+
+async function readRemoteBroadcastState() {
+  const now = Date.now();
+  if (remoteBroadcastStateCache && now - remoteBroadcastStateCache.cachedAt < remoteBroadcastCacheMs) {
+    return remoteBroadcastStateCache.state;
+  }
+
+  if (remoteBroadcastStatePromise) return remoteBroadcastStatePromise;
+
+  remoteBroadcastStatePromise = tocFetch(broadcastApi, { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) return {} as RemoteBroadcastState;
+      const state = await response.json().catch(() => ({}));
+      remoteBroadcastStateCache = { state, cachedAt: Date.now() };
+      return state as RemoteBroadcastState;
+    })
+    .finally(() => {
+      remoteBroadcastStatePromise = null;
+    });
+
+  return remoteBroadcastStatePromise;
+}
+
 async function writeBroadcasts(nextBroadcasts: UrgentBroadcastMessage[]) {
   localStorage.setItem(broadcastKey, JSON.stringify(nextBroadcasts));
   await syncRemoteBroadcasts("urgent", { broadcasts: nextBroadcasts });
@@ -152,13 +191,17 @@ async function syncRemoteBroadcasts(kind: "urgent" | "director" | "clear-directo
   }, true);
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || "Broadcast database sync failed.");
+  clearRemoteBroadcastStateCache();
 }
 
 function syncBroadcastAcknowledgement(kind: "acknowledge" | "acknowledge-director", version: string) {
+  clearRemoteBroadcastStateCache();
   tocFetch(broadcastApi, {
     method: "POST",
     body: JSON.stringify({ kind, version, userKey: readSessionUserKey() })
-  }, true).catch(() => undefined);
+  }, true).then(() => {
+    clearRemoteBroadcastStateCache();
+  }).catch(() => undefined);
 }
 
 function mergeBroadcasts(localBroadcasts: UrgentBroadcastMessage[], remoteBroadcasts: UrgentBroadcastMessage[]) {
@@ -182,9 +225,7 @@ export function UrgentBroadcastBanner() {
       setSessionScope(readSessionScope());
 
       try {
-        const response = await tocFetch(broadcastApi, { cache: "no-store" });
-        if (!response.ok) return;
-        const remoteState = await response.json();
+        const remoteState = await readRemoteBroadcastState();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
         const acknowledgements = remoteState.acknowledgements || {};
         const remoteWithAcknowledgements = remoteBroadcasts.map((broadcast) => ({ ...broadcast, acknowledgedBy: acknowledgements[broadcast.version] || [] }));
@@ -255,9 +296,7 @@ export function UrgentBroadcastControls() {
       setBroadcasts(localBroadcasts);
 
       try {
-        const response = await tocFetch(broadcastApi, { cache: "no-store" });
-        if (!response.ok) return;
-        const remoteState = await response.json();
+        const remoteState = await readRemoteBroadcastState();
         const remoteBroadcasts = normaliseBroadcast(remoteState.urgentBroadcasts || []);
         const acknowledgements = remoteState.acknowledgements || {};
         const remoteWithAcknowledgements = remoteBroadcasts.map((broadcast) => ({ ...broadcast, acknowledgedBy: acknowledgements[broadcast.version] || [] }));
@@ -434,9 +473,7 @@ export function DirectorBroadcastBanner() {
       setAcknowledgedVersion(localStorage.getItem(directorAcknowledgedKey) || "");
 
       try {
-        const response = await tocFetch(broadcastApi, { cache: "no-store" });
-        if (!response.ok) return;
-        const remoteState = await response.json();
+        const remoteState = await readRemoteBroadcastState();
         const remoteBroadcast = cleanRemoteDirectorBroadcast(remoteState.directorBroadcast);
         const acknowledgedBy = remoteBroadcast ? (remoteState.directorAcknowledgements || {})[remoteBroadcast.version] || [] : [];
         setBroadcast(remoteState.connected ? remoteBroadcast ? { ...remoteBroadcast, acknowledgedBy } : null : remoteBroadcast ? { ...remoteBroadcast, acknowledgedBy } : localBroadcast);
@@ -488,9 +525,7 @@ export function DirectorBroadcastControls() {
       setMessage(current?.message || "");
 
       try {
-        const response = await tocFetch(broadcastApi, { cache: "no-store" });
-        if (!response.ok) return;
-        const remoteState = await response.json();
+        const remoteState = await readRemoteBroadcastState();
         const remoteBroadcast = cleanRemoteDirectorBroadcast(remoteState.directorBroadcast);
         if (remoteState.connected && !remoteBroadcast) {
           setBroadcast(null);
