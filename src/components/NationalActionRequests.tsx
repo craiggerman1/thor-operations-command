@@ -16,6 +16,9 @@ export type NationalActionRequest = {
   source: string;
   directive: string;
   submittedAt: string;
+  ageHours?: number;
+  ageLabel?: string;
+  stale?: boolean;
   managerResponse: string;
   evidence: string;
   status: "Awaiting national review" | "Approved by national" | "Returned to manager";
@@ -23,7 +26,7 @@ export type NationalActionRequest = {
 
 export const nationalActionRequestsKey = "toc.nationalActionRequests.databaseReady";
 
-type RequestFilter = "all" | "closeout" | "updates" | "urgent";
+type RequestFilter = "all" | "closeout" | "updates" | "urgent" | "stale";
 
 function readRequests() {
   return tocFetch("/api/national-requests", { cache: "no-store" })
@@ -82,18 +85,21 @@ export function NationalActionRequests() {
   const pendingRequests = requests.filter((request) => request.status === "Awaiting national review");
   const managerUpdates = requests.filter((request) => request.requestType === "manager_update");
   const closeOuts = requests.filter((request) => request.requestType !== "manager_update");
+  const staleRequests = requests.filter((request) => request.stale);
   const urgentRequests = requests.filter((request) => request.directive === "National Ops Directive" || /urgent|critical|red|blocked|safety|compliance/i.test(`${request.title} ${request.managerResponse}`));
   const filteredRequests = requests.filter((request) => {
     if (requestFilter === "closeout") return request.requestType !== "manager_update";
     if (requestFilter === "updates") return request.requestType === "manager_update";
     if (requestFilter === "urgent") return urgentRequests.some((urgent) => urgent.id === request.id);
+    if (requestFilter === "stale") return request.stale;
     return true;
   });
   const filters: { value: RequestFilter; label: string; count: number }[] = [
     { value: "all", label: "All", count: requests.length },
     { value: "closeout", label: "Close-Outs", count: closeOuts.length },
     { value: "updates", label: "Manager Updates", count: managerUpdates.length },
-    { value: "urgent", label: "Urgent", count: urgentRequests.length }
+    { value: "urgent", label: "Urgent", count: urgentRequests.length },
+    { value: "stale", label: "Stale", count: staleRequests.length }
   ];
 
   return (
@@ -136,9 +142,12 @@ export function NationalActionRequests() {
               <div>
                 <span className="eyebrow">{request.requestType === "manager_update" ? "Manager update" : request.source} - {request.region}</span>
                 <strong>{request.title}</strong>
-                <small>Submitted {new Date(request.submittedAt).toLocaleString()}</small>
+                <small>Submitted {new Date(request.submittedAt).toLocaleString()} - {request.ageLabel || "Review waiting"}</small>
               </div>
-              <Tag tone={request.status === "Approved by national" ? "green" : request.status === "Returned to manager" ? "amber" : "blue"}>{request.status}</Tag>
+              <div className="meta-row">
+                {request.stale ? <Tag tone="amber">Stale review</Tag> : null}
+                <Tag tone={request.status === "Approved by national" ? "green" : request.status === "Returned to manager" ? "amber" : "blue"}>{request.status}</Tag>
+              </div>
             </div>
             <div className="national-request-body">
               <div><span>Manager response</span><p>{request.managerResponse}</p></div>

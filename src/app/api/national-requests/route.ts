@@ -42,6 +42,20 @@ function storageStatus(status: string) {
   return "awaiting_review";
 }
 
+function hoursSince(value: string | null | undefined, now = new Date()) {
+  if (!value) return 0;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / 3600000));
+}
+
+function ageLabel(hours: number) {
+  if (hours < 1) return "Just submitted";
+  if (hours < 24) return `${hours}h waiting`;
+  const days = Math.floor(hours / 24);
+  return `${days}d waiting`;
+}
+
 function actionStatusForRequest(status: string, requestType = "action_closeout") {
   if (requestType === "manager_update" && status === "Approved by national") return null;
   if (status === "Approved by national") return "closed";
@@ -51,6 +65,7 @@ function actionStatusForRequest(status: string, requestType = "action_closeout")
 
 function mapRequest(row: NationalRequestRow) {
   const region = firstRelated(row.region);
+  const ageHours = hoursSince(row.created_at);
 
   return {
     id: row.id,
@@ -61,6 +76,9 @@ function mapRequest(row: NationalRequestRow) {
     source: row.source_page || "Action Centre",
     directive: row.directive_type || "National Ops Directive",
     submittedAt: row.created_at,
+    ageHours,
+    ageLabel: ageLabel(ageHours),
+    stale: ageHours >= 24,
     managerResponse: row.manager_response || row.detail || "No manager response supplied.",
     evidence: row.evidence || "No evidence or reference supplied.",
     status: displayStatus(row.status)
