@@ -492,8 +492,13 @@ export async function POST(request: Request) {
   if (action === "lifecycle") {
     if (!payload.id) return NextResponse.json({ error: "Action id is required." }, { status: 400 });
     const nextStatus = normaliseStatus(String(payload.status || ""));
+    const lifecycleNote = String(payload.note || payload.blockedReason || payload.reason || "").trim();
+    const lifecycleEvidence = String(payload.evidence || "").trim();
     if (nextStatus === "closed" || nextStatus === "submitted_for_review") {
       return NextResponse.json({ error: "Use the close-out or national approval flow for review and closure." }, { status: 400 });
+    }
+    if ((nextStatus === "blocked" || nextStatus === "escalated") && lifecycleNote.length < 5) {
+      return NextResponse.json({ error: "Add a clear blocker or escalation note before updating this action." }, { status: 400 });
     }
 
     const { data: existingAction, error: readError } = await supabase
@@ -522,8 +527,8 @@ export async function POST(request: Request) {
       await upsertManagerUpdateRequest({
         action: existingRow,
         status: nextStatus,
-        note: String(payload.note || payload.blockedReason || payload.reason || "").trim(),
-        evidence: String(payload.evidence || "").trim()
+        note: lifecycleNote,
+        evidence: lifecycleEvidence
       });
     }
     await logTocAudit({
@@ -532,7 +537,7 @@ export async function POST(request: Request) {
       entityTable: "action_items",
       entityId: payload.id,
       scope: region,
-      details: { previousStatus: existingRow.status, nextStatus, note: payload.note || payload.blockedReason || payload.reason || null, evidence: payload.evidence || null }
+      details: { previousStatus: existingRow.status, nextStatus, note: lifecycleNote || null, evidence: lifecycleEvidence || null }
     });
     const { data: updatedAction, error: updatedReadError } = await supabase
       .from("action_items")
