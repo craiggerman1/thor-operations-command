@@ -57,6 +57,20 @@ type StaffPayload = {
   staff: StaffEntity[];
 };
 
+async function readStaffPayload(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new Error(response.ok ? "Staff database returned an empty response." : `Staff database request failed with no response body (${response.status}).`);
+  }
+
+  try {
+    return JSON.parse(text) as StaffPayload;
+  } catch {
+    const preview = text.replace(/\s+/g, " ").slice(0, 140);
+    throw new Error(preview ? `Staff database returned an unreadable response: ${preview}` : "Staff database returned an unreadable response.");
+  }
+}
+
 const staffRegions = allRegions.filter((region) => region !== "National");
 const staffSkillOptions = ["Wash Hand", "Driver", "Team Leader"];
 const staffRoleOptions = ["Wash Hand", "Driver", "Team Leader", "Supervisor", "Manager"];
@@ -133,7 +147,7 @@ function buildStaffPayload(action: "create" | "update", draft: StaffDraft, id?: 
 
 async function fetchStaff() {
   const response = await tocFetch("/api/admin/staff", { cache: "no-store" });
-  const payload = await response.json() as StaffPayload;
+  const payload = await readStaffPayload(response);
   if (!response.ok) throw new Error(payload.error || "Staff database read failed.");
   return payload;
 }
@@ -147,7 +161,7 @@ async function mutateStaff(payload: Record<string, unknown>) {
       body: JSON.stringify(payload),
       signal: controller.signal
     }, true);
-    const result = await response.json() as StaffPayload;
+    const result = await readStaffPayload(response);
     if (!response.ok) throw new Error(result.error || "Staff database update failed.");
     return result;
   } finally {
