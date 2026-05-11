@@ -18,6 +18,9 @@ type CalendarJobRow = {
   recurrence: string | null;
   recurrence_detail: string | null;
   recurrence_interval_weeks: number | null;
+  site_id?: string | null;
+  required_crew_count?: number | null;
+  source_schedule_id?: string | null;
 };
 
 function dateKey(date: Date) {
@@ -40,7 +43,10 @@ function mapRowToJob(row: CalendarJobRow): CalendarJob {
     severity: row.severity,
     recurrence: row.recurrence || "None",
     recurrenceDetail: row.recurrence_detail || undefined,
-    recurrenceIntervalWeeks: row.recurrence_interval_weeks || undefined
+    recurrenceIntervalWeeks: row.recurrence_interval_weeks || undefined,
+    siteId: row.site_id || undefined,
+    requiredCrewCount: row.required_crew_count || undefined,
+    sourceScheduleId: row.source_schedule_id || undefined
   };
 }
 
@@ -58,7 +64,10 @@ function mapRowToAdminJob(row: CalendarJobRow) {
     severity: row.severity,
     recurrence: row.recurrence || "None",
     recurrenceDetail: row.recurrence_detail || "",
-    recurrenceIntervalWeeks: row.recurrence_interval_weeks || 0
+    recurrenceIntervalWeeks: row.recurrence_interval_weeks || 0,
+    siteId: row.site_id || "",
+    requiredCrewCount: row.required_crew_count || 2,
+    sourceScheduleId: row.source_schedule_id || ""
   };
 }
 
@@ -132,7 +141,7 @@ async function readCalendar(request: Request) {
   const scope = scopePermission.scope;
   let query = supabase
     .from("calendar_jobs")
-    .select("id,job_date,job_time,location,site,crew,job_title,status,notes,severity,recurrence,recurrence_detail,recurrence_interval_weeks")
+    .select("id,job_date,job_time,location,site,crew,job_title,status,notes,severity,recurrence,recurrence_detail,recurrence_interval_weeks,site_id,required_crew_count,source_schedule_id")
     .order("job_date", { ascending: true })
     .order("job_time", { ascending: true });
 
@@ -187,7 +196,9 @@ export async function POST(request: Request) {
       severity: payload.severity || "green",
       recurrence,
       recurrence_detail: payload.recurrenceDetail || null,
-      recurrence_interval_weeks: recurrenceIntervalWeeks
+      recurrence_interval_weeks: recurrenceIntervalWeeks,
+      site_id: payload.siteId || null,
+      required_crew_count: Number(payload.requiredCrewCount) || 2
     };
     const { error } = await supabase.from("calendar_jobs").insert(buildRecurringRows(baseRow, jobDate, recurrence, recurrenceIntervalWeeks));
 
@@ -208,7 +219,7 @@ export async function POST(request: Request) {
 
   const { data: existingRow, error: readError } = await supabase
     .from("calendar_jobs")
-    .select("id,job_date,job_time,location,site,crew,job_title,status,notes,severity,recurrence,recurrence_detail,recurrence_interval_weeks")
+    .select("id,job_date,job_time,location,site,crew,job_title,status,notes,severity,recurrence,recurrence_detail,recurrence_interval_weeks,site_id,required_crew_count,source_schedule_id")
     .eq("id", payload.id)
     .maybeSingle();
 
@@ -227,6 +238,7 @@ export async function POST(request: Request) {
     recurrence: job.recurrence || "None",
     recurrence_detail: job.recurrenceDetail || null,
     recurrence_interval_weeks: job.recurrenceIntervalWeeks || null,
+    required_crew_count: Number(job.requiredCrewCount) || 2,
     updated_at: new Date().toISOString()
   };
 

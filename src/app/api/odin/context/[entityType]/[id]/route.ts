@@ -13,8 +13,10 @@ const contextTables: Record<string, { table: string; select: string }> = {
   todo: { table: "todo_items", select: "*" },
   todo_item: { table: "todo_items", select: "*" },
   national_request: { table: "national_requests", select: "*,region:regions(name)" },
-  calendar_job: { table: "calendar_jobs", select: "*" },
-  productivity_site: { table: "productivity_sites", select: "*,region:regions(name)" }
+  calendar_job: { table: "calendar_jobs", select: "*,site_ref:operation_sites(client_name,site_name,required_induction,required_crew_count,site_rules,hazards,notes)" },
+  productivity_site: { table: "productivity_sites", select: "*,region:regions(name)" },
+  operation_site: { table: "operation_sites", select: "*,region:regions(name)" },
+  site_schedule: { table: "site_schedules", select: "*,region:regions(name),site:operation_sites(client_name,site_name,required_induction,required_crew_count,site_rules,hazards,notes)" }
 };
 
 function sessionKey(entityType: string, id: string) {

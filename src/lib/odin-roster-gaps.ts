@@ -12,6 +12,8 @@ type CalendarJobRow = {
   job_title: string | null;
   status: string | null;
   severity: string | null;
+  required_crew_count?: number | null;
+  site_id?: string | null;
 };
 
 type StaffSuitability = {
@@ -106,6 +108,7 @@ function jobRequiresMoreThanOnePerson(job: CalendarJobRow) {
 }
 
 function requiredCrewCount(job: CalendarJobRow) {
+  if (typeof job.required_crew_count === "number" && job.required_crew_count >= 0) return job.required_crew_count;
   return jobRequiresMoreThanOnePerson(job) ? 2 : 1;
 }
 
@@ -217,7 +220,7 @@ async function readRosterJobs() {
   const endDate = dateOnly(addDays(today, 14));
   const { data, error } = await supabase
     .from("calendar_jobs")
-    .select("id,job_date,job_time,location,site,crew,job_title,status,severity")
+    .select("id,job_date,job_time,location,site,crew,job_title,status,severity,required_crew_count,site_id")
     .gte("job_date", startDate)
     .lte("job_date", endDate)
     .not("status", "in", "(Completed,Cancelled,closed,complete)")

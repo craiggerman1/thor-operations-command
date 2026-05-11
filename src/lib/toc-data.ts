@@ -13,6 +13,9 @@ export type CalendarJob = {
   recurrence?: string;
   recurrenceDetail?: string;
   recurrenceIntervalWeeks?: number;
+  siteId?: string;
+  requiredCrewCount?: number;
+  sourceScheduleId?: string;
 };
 
 export type CalendarDay = {

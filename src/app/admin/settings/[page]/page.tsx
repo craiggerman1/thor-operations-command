@@ -21,6 +21,7 @@ const AdminComplianceManager = dynamic(() => import("@/components/AdminComplianc
 const AdminEquipmentManager = dynamic(() => import("@/components/AdminEquipmentManager").then((mod) => mod.AdminEquipmentManager), { loading: SettingManagerLoading });
 const AdminHomeManager = dynamic(() => import("@/components/AdminHomeManager").then((mod) => mod.AdminHomeManager), { loading: SettingManagerLoading });
 const AdminIntegrationSourceManager = dynamic(() => import("@/components/AdminIntegrationSourceManager").then((mod) => mod.AdminIntegrationSourceManager), { loading: SettingManagerLoading });
+const AdminOperationsMasterData = dynamic(() => import("@/components/AdminOperationsMasterData").then((mod) => mod.AdminOperationsMasterData), { loading: SettingManagerLoading });
 const AdminProductivityManager = dynamic(() => import("@/components/AdminProductivityManager").then((mod) => mod.AdminProductivityManager), { loading: SettingManagerLoading });
 const AdminRegionHealthManager = dynamic(() => import("@/components/AdminRegionHealthManager").then((mod) => mod.AdminRegionHealthManager), { loading: SettingManagerLoading });
 const AdminSheetSourceManager = dynamic(() => import("@/components/AdminSheetSourceManager").then((mod) => mod.AdminSheetSourceManager), { loading: SettingManagerLoading });
@@ -64,6 +65,7 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
               <div className="meta-row">
                 <Link className="node-action" href="/admin/settings/user-access">User Access</Link>
                 <Link className="node-action" href="/admin/settings/staff-register">Staff Register</Link>
+                <Link className="node-action" href="/admin/settings/operations-master">Operations Master Data</Link>
                 <Link className="node-action" href="/admin/settings/messages">Messages And Hints</Link>
                 <Link className="node-action" href="/admin/settings/audit-trail">Audit Trail</Link>
               </div>
@@ -78,6 +80,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "staff-register" ? (
           <Panel wide eyebrow="Staff entities" title="Staff register, regions, skills and protected contacts">
             <AdminStaffManager />
+          </Panel>
+        ) : null}
+        {setting.slug === "operations-master" ? (
+          <Panel wide eyebrow="Operations master data" title="Customer/site register and recurring schedules">
+            <AdminOperationsMasterData />
           </Panel>
         ) : null}
         {setting.slug === "messages" ? (

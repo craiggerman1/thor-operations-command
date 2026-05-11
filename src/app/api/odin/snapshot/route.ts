@@ -627,7 +627,9 @@ export async function GET(request: Request) {
     calendarJobs,
     recentCompleted,
     staffResult,
-    rosterGaps
+    rosterGaps,
+    operationSites,
+    siteSchedules
   ] = await Promise.all([
     readRows({
       table: "action_items",
@@ -676,7 +678,19 @@ export async function GET(request: Request) {
     readCalendarJobs(generatedAt),
     readRecentCompleted(),
     readOdinStaffEntities({ includeProtected: false }),
-    buildOdinRosterGaps()
+    buildOdinRosterGaps(),
+    readRows({
+      table: "operation_sites",
+      select: "id,client_name,site_name,address,required_induction,required_crew_count,status,updated_at,region:regions(name)",
+      orderBy: "updated_at",
+      limit: 200
+    }),
+    readRows({
+      table: "site_schedules",
+      select: "id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,status,last_generated_until,updated_at,region:regions(name),site:operation_sites(client_name,site_name)",
+      orderBy: "updated_at",
+      limit: 200
+    })
   ]);
 
   const sections = {
@@ -689,7 +703,9 @@ export async function GET(request: Request) {
     todoItems,
     odinItems,
     calendarJobs,
-    recentCompleted
+    recentCompleted,
+    operationSites,
+    siteSchedules
   };
   const entityLinks = buildEntityLinks(sections, generatedAt);
   const staffReadiness = buildStaffReadiness(staffResult.staff);
@@ -760,6 +776,8 @@ export async function GET(request: Request) {
       calendarJobsNext7Days: calendarJobs.rows.length,
       staffEntities: staffResult.staff.length,
       rosterGapCount: rosterGaps.gapCount,
+      operationSites: operationSites.rows.length,
+      siteSchedules: siteSchedules.rows.length,
       recentCompletedCount: recentCompleted.rows.length,
       actionClosure,
       nationalReview,
@@ -767,7 +785,7 @@ export async function GET(request: Request) {
       craigEscalationPolicy,
       dataGaps: {
         staffPhoneNumbers: staffResult.source === "database" ? "protected_staff_profiles" : "staff_profiles_table_pending",
-        liveRoster: "calendar_jobs_only",
+        liveRoster: siteSchedules.rows.length ? "site_schedules_and_calendar_jobs" : "calendar_jobs_only",
         rosterGapDetection: rosterGaps.connected ? "active" : rosterGaps.errors.join("; ") || "not_loaded",
         jobsheetEvidence: "not_loaded",
         clientComplaintFeed: "not_loaded",
@@ -806,6 +824,12 @@ export async function GET(request: Request) {
         inductionEligibleSites: staff.inductions.eligibleSites
       })),
       rosterGaps
+    },
+    operationsMasterData: {
+      purpose: "Customer/site source of truth and recurring schedule control for calendar and Odin roster reasoning.",
+      sites: operationSites.rows,
+      schedules: siteSchedules.rows,
+      nextStep: "Use Admin Settings > Operations Master Data to maintain customers/sites and generate calendar jobs from recurring schedules."
     },
     entityLinks,
     sections
