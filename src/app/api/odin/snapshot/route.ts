@@ -829,7 +829,7 @@ export async function GET(request: Request) {
       purpose: "Customer/site source of truth and recurring schedule control for calendar and Odin roster reasoning.",
       sites: operationSites.rows,
       schedules: siteSchedules.rows,
-      nextStep: "Use Admin Settings > Operations Master Data to maintain customers/sites and generate calendar jobs from recurring schedules."
+      nextStep: "Use Region Setup for customer/site schedules, or Admin Settings > Operations Master Data for national configuration."
     },
     entityLinks,
     sections

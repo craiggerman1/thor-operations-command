@@ -30,6 +30,7 @@ export const navigationItems: NavItem[] = [
   { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager"] },
   { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
   { label: "Calendar", href: "/calendar", roles: ["admin", "manager"] },
+  { label: "Region Setup", href: "/region-setup", roles: ["admin", "manager"] },
   { label: "Inductions", href: "/inductions", roles: ["admin", "manager"] },
   { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager"] },
   { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "director", "manager"] },
