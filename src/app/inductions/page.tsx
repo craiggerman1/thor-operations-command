@@ -72,6 +72,7 @@ export default function InductionsPage() {
   const [busyWorkerId, setBusyWorkerId] = useState<string | null>(null);
   const sheetRegion = sourceConfig.region;
   const isMappedScope = scope === sheetRegion;
+  const hasConnectedSource = sourceConfig.connected && Boolean(sourceConfig.spreadsheetUrl);
   const visibleSites = useMemo(() => isMappedScope ? feed.sites.filter((site) => site.region === sheetRegion) : [], [feed.sites, isMappedScope, sheetRegion]);
   const inductionCells = visibleSites.length * feed.staff.length;
   const inductedCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => getInduction(feed, staff.name, site.name).status === "Inducted").length, 0);
@@ -126,9 +127,9 @@ export default function InductionsPage() {
     let refreshInterval: number | null = null;
 
     function syncInductionFeed() {
-      if (!isMappedScope || !sourceConfig.connected) {
+      if (!isMappedScope || !hasConnectedSource) {
         setFeed(emptyInductionFeed(scope));
-        setFeedStatus(sourceConfig.connected ? `${sheetRegion} source only` : "Source required");
+        setFeedStatus(hasConnectedSource ? `${sheetRegion} source only` : "Source required");
         return;
       }
 
@@ -147,7 +148,7 @@ export default function InductionsPage() {
     }
 
     syncInductionFeed();
-    if (isMappedScope && sourceConfig.connected) {
+    if (isMappedScope && hasConnectedSource) {
       refreshInterval = window.setInterval(syncInductionFeed, liveRefreshMs);
       window.addEventListener("toc.manualRefresh", syncInductionFeed);
       window.addEventListener("toc.sheetSourceSettings.updated", syncInductionFeed);
@@ -159,7 +160,7 @@ export default function InductionsPage() {
       window.removeEventListener("toc.manualRefresh", syncInductionFeed);
       window.removeEventListener("toc.sheetSourceSettings.updated", syncInductionFeed);
     };
-  }, [isMappedScope, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
+  }, [hasConnectedSource, isMappedScope, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
 
   useEffect(() => {
     let isActive = true;
@@ -248,12 +249,12 @@ export default function InductionsPage() {
             {workerSubmissions.length ? null : <div className="empty-state">No completed company inductions are waiting for manager action in {scope}.</div>}
           </div>
         </Panel>
-        {!isMappedScope ? (
-          <Panel wide eyebrow="Region source" title={`${scope} induction source required`} pill={`${sheetRegion} only`}>
-            <div className="empty-state">The current Google Sheet induction register is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or assign a separate induction source for {scope} in Admin Settings.</div>
+        {!hasConnectedSource || !isMappedScope ? (
+          <Panel wide eyebrow="Region source" title={`${scope} induction source required`} pill={hasConnectedSource ? `${sheetRegion} only` : "Not connected"}>
+            <div className="empty-state">{hasConnectedSource ? `The current Google Sheet induction register is mapped to ${sheetRegion}. Select ${sheetRegion} to view this sheet, or assign a separate induction source for ${scope} in Admin Settings.` : `No Google Sheet induction register is connected for ${scope}. Link this region's induction sheet in the Operations Setup Wizard or Admin Settings.`}</div>
           </Panel>
         ) : null}
-        {isMappedScope ? (
+        {isMappedScope && hasConnectedSource ? (
         <Panel wide eyebrow="Induction source" title={`${scope} induction register`} pill={`${visibleSites.length} sites`}>
           <div className="staff-source-strip">
             <div>
