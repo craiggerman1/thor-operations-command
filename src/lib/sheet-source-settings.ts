@@ -12,19 +12,19 @@ export type SheetSourceConfig = {
 export const sheetSourceDefaults: Record<SheetSourceSlug, SheetSourceConfig> = {
   "staff-availability": {
     slug: "staff-availability",
-    sourceName: "Brisbane Staff Availability",
-    spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1VVMJDzjAm6HrR1SLYIBg0sDcPX9ec14h/edit?usp=sharing&ouid=101366717795368889476&rtpof=true&sd=true",
+    sourceName: "Staff Availability Source Required",
+    spreadsheetUrl: "",
     region: "Brisbane",
-    statusLabel: "Controlled source",
-    connected: true
+    statusLabel: "Source required",
+    connected: false
   },
   inductions: {
     slug: "inductions",
-    sourceName: "Brisbane Staff Inductions",
-    spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1m04wK7aY5UhnMvWvTTCjYUAozoPNlhH1/edit?usp=sharing&ouid=101366717795368889476&rtpof=true&sd=true",
+    sourceName: "Staff Induction Source Required",
+    spreadsheetUrl: "",
     region: "Brisbane",
-    statusLabel: "Controlled source",
-    connected: true
+    statusLabel: "Source required",
+    connected: false
   }
 };
 

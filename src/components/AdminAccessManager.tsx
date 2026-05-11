@@ -10,6 +10,8 @@ type AdminAccessUser = {
   name: string;
   email?: string;
   reference: string;
+  mobile?: string;
+  whatsapp?: string;
   role: AccessRole;
   regions: string[];
   status: "Active" | "Disabled";
@@ -22,6 +24,8 @@ type AdminUserPatch = Partial<AdminAccessUser> & {
 type AdminUserDraft = {
   email: string;
   reference: string;
+  mobile: string;
+  whatsapp: string;
   password: string;
   confirmPassword: string;
 };
@@ -85,6 +89,8 @@ export function AdminAccessManager() {
   const [users, setUsers] = useState<AdminAccessUser[]>(initialAccessUsers);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [reference, setReference] = useState("");
@@ -110,6 +116,8 @@ export function AdminAccessManager() {
           nextDrafts[user.id] = {
             email: user.email || "",
             reference: user.reference,
+            mobile: user.mobile || "",
+            whatsapp: user.whatsapp || "",
             password: "",
             confirmPassword: ""
           };
@@ -158,6 +166,8 @@ export function AdminAccessManager() {
       action: "create",
       name: cleanName,
       email: email.trim(),
+      mobile: mobile.trim(),
+      whatsapp: whatsapp.trim(),
       password,
       reference: reference.trim() || "No reference supplied",
       role,
@@ -166,6 +176,8 @@ export function AdminAccessManager() {
       if (!saved) return;
       setName("");
       setEmail("");
+      setMobile("");
+      setWhatsapp("");
       setPassword("");
       setConfirmPassword("");
       setReference("");
@@ -196,6 +208,8 @@ export function AdminAccessManager() {
     const blankDraft = {
       email: "",
       reference: "",
+      mobile: "",
+      whatsapp: "",
       password: "",
       confirmPassword: ""
     };
@@ -214,6 +228,8 @@ export function AdminAccessManager() {
     return userDrafts[user.id] || {
       email: user.email || "",
       reference: user.reference,
+      mobile: user.mobile || "",
+      whatsapp: user.whatsapp || "",
       password: "",
       confirmPassword: ""
     };
@@ -228,7 +244,9 @@ export function AdminAccessManager() {
 
     updateUser(user.id, {
       email: draft.email.trim(),
-      reference: draft.reference.trim() || "No reference supplied"
+      reference: draft.reference.trim() || "No reference supplied",
+      mobile: draft.mobile.trim(),
+      whatsapp: draft.whatsapp.trim()
     });
   }
 
@@ -333,6 +351,8 @@ export function AdminAccessManager() {
         </div>
         <label><span>Name</span><input value={name} placeholder="User name" onChange={(event) => setName(event.target.value)} /></label>
         <label><span>Email address</span><input type="email" value={email} placeholder="user@thormobile.com.au" onChange={(event) => setEmail(event.target.value)} /></label>
+        <label><span>Mobile phone</span><input inputMode="tel" value={mobile} placeholder="Manager mobile for Odin escalation" onChange={(event) => setMobile(event.target.value)} /></label>
+        <label><span>WhatsApp / Telegram phone</span><input inputMode="tel" value={whatsapp} placeholder="Optional manager contact number" onChange={(event) => setWhatsapp(event.target.value)} /></label>
         <label><span>Temporary password</span><input type="password" value={password} placeholder="Minimum 8 characters" onChange={(event) => setPassword(event.target.value)} /></label>
         <label><span>Confirm password</span><input type="password" value={confirmPassword} placeholder="Retype temporary password" onChange={(event) => setConfirmPassword(event.target.value)} /></label>
         <label><span>User reference</span><input value={reference} placeholder="Employee ID or internal reference" onChange={(event) => setReference(event.target.value)} /></label>
@@ -382,6 +402,14 @@ export function AdminAccessManager() {
               <label>
                 <span>User reference</span>
                 <input value={draft.reference} onChange={(event) => updateDraft(user.id, { reference: event.target.value })} />
+              </label>
+              <label>
+                <span>Mobile phone</span>
+                <input inputMode="tel" value={draft.mobile} placeholder="Manager mobile for Odin escalation" onChange={(event) => updateDraft(user.id, { mobile: event.target.value })} />
+              </label>
+              <label>
+                <span>WhatsApp / Telegram phone</span>
+                <input inputMode="tel" value={draft.whatsapp} placeholder="Optional manager contact number" onChange={(event) => updateDraft(user.id, { whatsapp: event.target.value })} />
               </label>
               <div className="admin-user-security-box">
                 <strong>Password reset</strong>

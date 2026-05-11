@@ -13,6 +13,8 @@ type ProfileRow = {
   display_name: string;
   email: string | null;
   user_reference: string | null;
+  contact_mobile: string | null;
+  contact_whatsapp: string | null;
   access_level: AccessRole | "national";
   is_active: boolean;
   profile_regions?: ProfileRegionRow[] | null;
@@ -53,6 +55,8 @@ function mapUser(row: ProfileRow) {
     name: row.display_name,
     email: row.email || "",
     reference: row.user_reference || "No reference supplied",
+    mobile: row.contact_mobile || "",
+    whatsapp: row.contact_whatsapp || "",
     role,
     regions: normalisedRegions,
     status: row.is_active ? "Active" : "Disabled"
@@ -96,7 +100,7 @@ async function readUsers() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,display_name,email,user_reference,access_level,is_active,profile_regions(region:regions(name))")
+    .select("id,display_name,email,user_reference,contact_mobile,contact_whatsapp,access_level,is_active,profile_regions(region:regions(name))")
     .order("created_at", { ascending: false });
 
   if (error) return { users: [], connected: false, error: error.message };
@@ -156,6 +160,8 @@ export async function POST(request: Request) {
         display_name: displayName,
         email,
         user_reference: payload.reference || "No reference supplied",
+        contact_mobile: typeof payload.mobile === "string" ? payload.mobile.trim() : null,
+        contact_whatsapp: typeof payload.whatsapp === "string" ? payload.whatsapp.trim() : null,
         access_level: role,
         is_active: true
       })
@@ -191,6 +197,8 @@ export async function POST(request: Request) {
     if (typeof payload.name === "string") updates.display_name = payload.name;
     if (typeof payload.email === "string") updates.email = payload.email.trim();
     if (typeof payload.reference === "string") updates.user_reference = payload.reference;
+    if (typeof payload.mobile === "string") updates.contact_mobile = payload.mobile.trim();
+    if (typeof payload.whatsapp === "string") updates.contact_whatsapp = payload.whatsapp.trim();
     if (typeof payload.role === "string") updates.access_level = mapTocRole(payload.role);
     if (typeof payload.status === "string") updates.is_active = payload.status === "Active";
     if (typeof payload.password === "string" && payload.password.length > 0 && payload.password.length < 8) {

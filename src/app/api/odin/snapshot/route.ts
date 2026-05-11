@@ -607,6 +607,34 @@ async function readRecentCompleted() {
   };
 }
 
+async function readManagerContacts() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return { rows: [], error: "Supabase server key is not configured." };
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,display_name,email,access_level,is_active,contact_mobile,contact_whatsapp,profile_regions(region:regions(name))")
+    .in("access_level", ["admin", "manager", "director", "national"])
+    .eq("is_active", true)
+    .order("display_name", { ascending: true });
+
+  if (error) return { rows: [], error: error.message };
+
+  const rows = ((data || []) as SnapshotRow[]).map((profile) => ({
+    id: profile.id,
+    name: profile.display_name,
+    email: profile.email,
+    role: profile.access_level,
+    mobile: profile.contact_mobile || "",
+    whatsapp: profile.contact_whatsapp || profile.contact_mobile || "",
+    regions: Array.isArray(profile.profile_regions)
+      ? profile.profile_regions.map((item) => firstRelated((item as SnapshotRow).region)?.name).filter(Boolean)
+      : []
+  }));
+
+  return { rows, error: null };
+}
+
 export async function GET(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
@@ -629,7 +657,8 @@ export async function GET(request: Request) {
     staffResult,
     rosterGaps,
     operationSites,
-    siteSchedules
+    siteSchedules,
+    managerContacts
   ] = await Promise.all([
     readRows({
       table: "action_items",
@@ -690,7 +719,8 @@ export async function GET(request: Request) {
       select: "id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,status,last_generated_until,updated_at,region:regions(name),site:operation_sites(client_name,site_name)",
       orderBy: "updated_at",
       limit: 200
-    })
+    }),
+    readManagerContacts()
   ]);
 
   const sections = {
@@ -763,6 +793,11 @@ export async function GET(request: Request) {
       note: "Use the specific Odin endpoint for the destination. Non-create lifecycle operations require id/ids. Keep all admin user/password/role changes prohibited.",
       prohibitedActions: ["send_external_message_without_rule", "change_user", "change_password", "change_role", "admin_settings"]
     },
+    managerContacts: {
+      purpose: "Protected manager/admin/director contact mapping for Odin escalation. Odin may use these only for approved escalation rules, never for user/password/admin changes.",
+      error: managerContacts.error,
+      contacts: managerContacts.rows
+    },
     summary: {
       totalOpenWork: entityLinks.length,
       openBySeverity: countBySeverity(entityLinks),
@@ -778,6 +813,7 @@ export async function GET(request: Request) {
       rosterGapCount: rosterGaps.gapCount,
       operationSites: operationSites.rows.length,
       siteSchedules: siteSchedules.rows.length,
+      managerContacts: managerContacts.rows.length,
       recentCompletedCount: recentCompleted.rows.length,
       actionClosure,
       nationalReview,
