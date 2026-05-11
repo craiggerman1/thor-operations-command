@@ -19,7 +19,9 @@ type StoredSession = {
   label?: string;
   scope?: string;
   accountScope?: string;
+  accountRole?: AccessRole;
   developerScope?: string;
+  developerRole?: AccessRole;
   regions?: string[];
   email?: string;
   authMode?: "preview" | "supabase";
@@ -67,7 +69,7 @@ function getStoredScope() {
   }
 }
 
-const accessRoleOptions = Object.values(sessionProfiles);
+const developerRoleOptions = [sessionProfiles.admin, sessionProfiles.manager];
 const developmentToolsEnabled = process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "true";
 const profileRevalidateMs = 5 * 60 * 1000;
 const navBadgeCacheMs = 12000;
@@ -144,12 +146,19 @@ export function TocShell({ children }: { children: ReactNode }) {
   const signOutTimer = useRef<number | null>(null);
   const [session, setSession] = useState<StoredSession>(() => getInitialStoredSession());
   const [sessionReady, setSessionReady] = useState(true);
-  const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
-  const developerRegionOverrideEnabled = developmentToolsEnabled || activeProfile.role === "admin";
-  const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
-  const accountRegionOptions = activeProfile.role === "director"
+  const accountProfile = sessionProfiles[session.accountRole || session.role || defaultSession.role] || defaultSession;
+  const developerToolsAllowed = developmentToolsEnabled || accountProfile.role === "admin";
+  const activeProfile = developerToolsAllowed && session.developerRole && session.developerRole in sessionProfiles
+    ? sessionProfiles[session.developerRole]
+    : accountProfile;
+  const developerRegionOverrideEnabled = developerToolsAllowed;
+  const developerRole = developerToolsAllowed && session.developerRole && session.developerRole in sessionProfiles
+    ? session.developerRole
+    : "";
+  const assignedRegions = session.regions?.length ? session.regions : accountProfile.regions;
+  const accountRegionOptions = accountProfile.role === "director"
     ? ["National"]
-    : activeProfile.role === "admin"
+    : accountProfile.role === "admin"
       ? Array.from(new Set(["National", ...assignedRegions.filter((region) => region !== "National")]))
       : assignedRegions.length ? assignedRegions : ["Brisbane"];
   const accountScope = accountRegionOptions.includes(session.accountScope || "")
@@ -225,11 +234,17 @@ export function TocShell({ children }: { children: ReactNode }) {
         const preservedDeveloperScope = (developmentToolsEnabled || profile.role === "admin") && storedSession?.developerScope && allRegions.includes(storedSession.developerScope)
           ? storedSession.developerScope
           : undefined;
+        const preservedDeveloperRole = (developmentToolsEnabled || profile.role === "admin") && storedSession?.developerRole && (storedSession.developerRole === "admin" || storedSession.developerRole === "manager")
+          ? storedSession.developerRole
+          : undefined;
         const restoredSession = {
           ...profile,
+          accountRole: profile.role,
+          role: preservedDeveloperRole || profile.role,
           scope: preservedDeveloperScope || preservedAccountScope,
           accountScope: preservedAccountScope,
           developerScope: preservedDeveloperScope,
+          developerRole: preservedDeveloperRole,
           authMode: "supabase" as const,
           restoredAt: new Date().toISOString()
         };
@@ -338,7 +353,7 @@ export function TocShell({ children }: { children: ReactNode }) {
 
   function updateScope(scope: string) {
     const nextEffectiveScope = developerScope || scope;
-    const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope: nextEffectiveScope, accountScope: scope, regions: accountRegionOptions };
+    const nextSession = { ...session, accountRole: accountProfile.role, role: activeProfile.role, label: activeProfile.label, scope: nextEffectiveScope, accountScope: scope, regions: accountRegionOptions };
     setSession(nextSession);
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextEffectiveScope } }));
@@ -349,6 +364,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     const nextEffectiveScope = nextDeveloperScope || accountScope;
     const nextSession = {
       ...session,
+      accountRole: accountProfile.role,
       role: activeProfile.role,
       label: activeProfile.label,
       scope: nextEffectiveScope,
@@ -361,19 +377,24 @@ export function TocShell({ children }: { children: ReactNode }) {
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextEffectiveScope } }));
   }
 
-  function updateRole(role: AccessRole) {
-    const nextProfile = sessionProfiles[role] || defaultSession;
-    const nextRegions = developmentToolsEnabled && nextProfile.role !== "director" ? allRegions : nextProfile.regions;
-    const nextAccountScope = nextRegions.includes(session.accountScope || "")
-      ? session.accountScope || nextRegions[0]
-      : nextRegions.includes(session.scope || "")
-        ? session.scope || nextRegions[0]
-        : nextRegions[0] || "National";
-    const nextDeveloperScope = developerRegionOverrideEnabled && session.developerScope && allRegions.includes(session.developerScope)
+  function updateDeveloperRole(role: string) {
+    const nextDeveloperRole = role === "admin" || role === "manager" ? role as AccessRole : undefined;
+    const nextProfile = nextDeveloperRole ? sessionProfiles[nextDeveloperRole] : accountProfile;
+    const nextDeveloperScope = developerToolsAllowed && session.developerScope && allRegions.includes(session.developerScope)
       ? session.developerScope
       : undefined;
-    const nextScope = nextDeveloperScope || nextAccountScope;
-    const nextSession = { ...session, role: nextProfile.role, label: nextProfile.label, scope: nextScope, accountScope: nextAccountScope, developerScope: nextDeveloperScope, regions: nextRegions };
+    const nextScope = nextDeveloperScope || accountScope;
+    const nextSession = {
+      ...session,
+      accountRole: accountProfile.role,
+      role: nextProfile.role,
+      label: nextProfile.label,
+      scope: nextScope,
+      accountScope,
+      developerScope: nextDeveloperScope,
+      developerRole: nextDeveloperRole,
+      regions: accountRegionOptions
+    };
     setSession(nextSession);
     document.body.dataset.access = nextProfile.role;
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
@@ -453,22 +474,15 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.350</em>
+              <em>Build 0.351</em>
             </div>
           </div>
           <div className="topbar-actions">
             <div className="session-chip">
               <span>Signed in</span>
-              <strong>{session.label || activeProfile.label}</strong>
+              <strong>{accountProfile.label}</strong>
+              {developerRole ? <small>Testing as {activeProfile.label}</small> : null}
             </div>
-            {developmentToolsEnabled ? (
-              <label className="select-wrap access-control">
-                <span>View as</span>
-                <select value={activeProfile.role} onChange={(event) => updateRole(event.target.value as AccessRole)}>
-                  {accessRoleOptions.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
-                </select>
-              </label>
-            ) : null}
             <label className="select-wrap region-control">
               <span>Account Region</span>
               <select value={accountScope} onChange={(event) => updateScope(event.target.value)}>
@@ -476,13 +490,22 @@ export function TocShell({ children }: { children: ReactNode }) {
               </select>
             </label>
             {developerRegionOverrideEnabled ? (
-              <label className="select-wrap developer-region-control">
-                <span>Developer View As</span>
-                <select value={developerScope} onChange={(event) => updateDeveloperScope(event.target.value)}>
-                  <option value="">Off</option>
-                  {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
-                </select>
-              </label>
+              <>
+                <label className="select-wrap developer-region-control">
+                  <span>Developer Role</span>
+                  <select value={developerRole} onChange={(event) => updateDeveloperRole(event.target.value)}>
+                    <option value="">Real account</option>
+                    {developerRoleOptions.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
+                  </select>
+                </label>
+                <label className="select-wrap developer-region-control">
+                  <span>Developer Region</span>
+                  <select value={developerScope} onChange={(event) => updateDeveloperScope(event.target.value)}>
+                    <option value="">Off</option>
+                    {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
+                  </select>
+                </label>
+              </>
             ) : null}
             <button className="manual-refresh-button" type="button" onClick={manualRefresh}>Manual Refresh</button>
             <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
