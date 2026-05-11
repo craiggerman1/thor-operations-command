@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { FlowHeading, Panel } from "@/components/TocCards";
+import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { staffInductionsSheet } from "@/lib/toc-data";
 import type { InductionFeed, InductionStatus } from "@/lib/toc-data";
 import { sheetSourceDefaults } from "@/lib/sheet-source-settings";
@@ -35,11 +35,30 @@ function getInduction(feed: InductionFeed, staffName: string, siteName: string) 
   };
 }
 
+type WorkerInductionSubmission = {
+  id: string;
+  completedAt: string;
+  status: "ready_for_documents" | "documents_issued" | "manager_contacted" | "archived";
+  statusLabel: string;
+  region: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  availabilityNotes: string;
+  licenceType: string;
+  hasTransport: boolean;
+  managerNotes: string;
+};
+
 export default function InductionsPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<InductionFeed>(staffInductionsSheet);
   const [sourceConfig, setSourceConfig] = useState<SheetSourceConfig>(sheetSourceDefaults.inductions);
   const [feedStatus, setFeedStatus] = useState("Source loading");
+  const [workerSubmissions, setWorkerSubmissions] = useState<WorkerInductionSubmission[]>([]);
+  const [workerMessage, setWorkerMessage] = useState("");
+  const [busyWorkerId, setBusyWorkerId] = useState<string | null>(null);
   const sheetRegion = sourceConfig.region;
   const isMappedScope = scope === sheetRegion;
   const visibleSites = useMemo(() => isMappedScope ? feed.sites.filter((site) => site.region === sheetRegion) : [], [feed.sites, isMappedScope, sheetRegion]);
@@ -119,11 +138,93 @@ export default function InductionsPage() {
     };
   }, [isMappedScope, scope, sheetRegion, sourceConfig.connected]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    function syncWorkerSubmissions() {
+      tocFetch(`/api/worker-inductions?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Worker induction queue unavailable")))
+        .then((payload) => {
+          if (!isActive) return;
+          setWorkerSubmissions((payload.submissions || []) as WorkerInductionSubmission[]);
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setWorkerSubmissions([]);
+        });
+    }
+
+    syncWorkerSubmissions();
+    const refreshInterval = window.setInterval(syncWorkerSubmissions, 30000);
+    window.addEventListener("toc.workerInductions.updated", syncWorkerSubmissions);
+    return () => {
+      isActive = false;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("toc.workerInductions.updated", syncWorkerSubmissions);
+    };
+  }, [scope]);
+
+  async function updateWorkerSubmission(id: string, status: WorkerInductionSubmission["status"], message: string) {
+    setBusyWorkerId(id);
+    setWorkerMessage("");
+    try {
+      const response = await tocFetch("/api/worker-inductions", {
+        method: "PATCH",
+        body: JSON.stringify({ id, status })
+      }, true);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Worker induction could not be updated.");
+
+      setWorkerSubmissions((items) => status === "archived" ? items.filter((item) => item.id !== id) : items.map((item) => item.id === id ? { ...item, status, statusLabel: status === "documents_issued" ? "Documents issued" : "Manager contacted" } : item));
+      setWorkerMessage(message);
+      window.dispatchEvent(new Event("toc.workerInductions.updated"));
+    } catch (error) {
+      setWorkerMessage(error instanceof Error ? error.message : "Worker induction could not be updated.");
+    } finally {
+      setBusyWorkerId(null);
+    }
+  }
+
   return (
     <TocShell>
       <PageIntro title="Inductions" detail="Staff induction status by site, filtered to the signed-in region." />
       <FlowHeading eyebrow="Inductions" title="Confirm the right staff are inducted for the right customer sites before work is assigned." />
       <section className="command-grid route-grid">
+        <Panel wide eyebrow="Company induction alerts" title="New workers ready for onboarding documents" pill={workerSubmissions.length ? `${workerSubmissions.length} open` : "Clear"}>
+          <div className="staff-source-strip">
+            <div>
+              <span className="eyebrow">Prospective worker link</span>
+              <strong>/worker-induction</strong>
+              <small>Completed company inductions appear here for the relevant regional manager.</small>
+            </div>
+            <a href="/worker-induction" target="_blank" rel="noreferrer">Open induction link</a>
+          </div>
+          {workerMessage ? <div className="admin-hint-message">{workerMessage}</div> : null}
+          <div className="worker-induction-alert-list">
+            {workerSubmissions.map((worker) => (
+              <article className="worker-induction-alert" key={worker.id}>
+                <div>
+                  <div className="worker-induction-alert-head">
+                    <strong>{worker.name}</strong>
+                    <Tag tone={worker.status === "ready_for_documents" ? "amber" : "blue"}>{worker.statusLabel}</Tag>
+                    <Tag tone="blue">{worker.region}</Tag>
+                  </div>
+                  <small>Completed {new Date(worker.completedAt).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}</small>
+                  <p>{worker.email} | {worker.phone}</p>
+                  <p>{worker.address || "Address not supplied"}</p>
+                  <p>{worker.licenceType || "Licence not supplied"} | {worker.hasTransport ? "Has transport" : "Transport not confirmed"}</p>
+                  {worker.availabilityNotes ? <p>{worker.availabilityNotes}</p> : null}
+                </div>
+                <div className="worker-induction-alert-actions">
+                  <button type="button" disabled={busyWorkerId === worker.id || worker.status === "documents_issued"} onClick={() => void updateWorkerSubmission(worker.id, "documents_issued", "Worker marked as documents issued.")}>Documents issued</button>
+                  <button type="button" disabled={busyWorkerId === worker.id || worker.status === "manager_contacted"} onClick={() => void updateWorkerSubmission(worker.id, "manager_contacted", "Worker marked as manager contacted.")}>Manager contacted</button>
+                  <button type="button" disabled={busyWorkerId === worker.id} onClick={() => void updateWorkerSubmission(worker.id, "archived", "Worker induction alert archived.")}>Archive</button>
+                </div>
+              </article>
+            ))}
+            {workerSubmissions.length ? null : <div className="empty-state">No completed company inductions are waiting for manager action in {scope}.</div>}
+          </div>
+        </Panel>
         {!isMappedScope ? (
           <Panel wide eyebrow="Region source" title={`${scope} induction source required`} pill={`${sheetRegion} only`}>
             <div className="empty-state">The current Google Sheet induction register is mapped to {sheetRegion}. Select {sheetRegion} to view this sheet, or assign a separate induction source for {scope} in Admin Settings.</div>

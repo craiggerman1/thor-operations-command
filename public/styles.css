@@ -6257,6 +6257,203 @@ body:not([data-access="admin"]) .admin-only-panel {
   margin-bottom: 12px;
 }
 
+.worker-induction-alert-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.worker-induction-alert {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid rgba(5, 43, 73, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.worker-induction-alert-head,
+.worker-induction-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.worker-induction-alert p,
+.worker-induction-alert small {
+  display: block;
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.worker-induction-alert-actions {
+  justify-content: flex-end;
+  max-width: 320px;
+}
+
+.worker-induction-alert-actions button,
+.worker-induction-form button,
+.worker-induction-complete button {
+  border: 1px solid rgba(5, 43, 73, 0.18);
+  border-radius: 6px;
+  background: var(--navy);
+  color: white;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.worker-induction-alert-actions button:disabled,
+.worker-induction-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.worker-induction-screen {
+  min-height: 100vh;
+  padding: clamp(18px, 4vw, 54px);
+  background:
+    linear-gradient(135deg, rgba(247, 251, 253, 0.94), rgba(227, 241, 247, 0.86)),
+    url("/assets/thor-hero-bg.png");
+  background-size: cover;
+  color: var(--ink);
+}
+
+.worker-induction-card {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 34px);
+  border: 1px solid rgba(5, 43, 73, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 22px 70px rgba(5, 43, 73, 0.14);
+}
+
+.worker-induction-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--navy);
+  letter-spacing: 0.08em;
+}
+
+.worker-induction-brand img {
+  width: 58px;
+  height: auto;
+}
+
+.worker-induction-heading {
+  margin-top: 24px;
+  max-width: 760px;
+}
+
+.worker-induction-heading h1 {
+  margin: 6px 0;
+  font-size: clamp(30px, 5vw, 58px);
+  letter-spacing: 0;
+}
+
+.worker-induction-heading p {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.worker-induction-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.worker-induction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.worker-induction-form label,
+.worker-induction-wide {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.worker-induction-form label span,
+.worker-induction-wide span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.worker-induction-form input,
+.worker-induction-form select,
+.worker-induction-form textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(5, 43, 73, 0.18);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--ink);
+  background: white;
+}
+
+.worker-induction-form textarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.worker-induction-checks {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(5, 43, 73, 0.12);
+  border-radius: 8px;
+  background: rgba(238, 248, 251, 0.72);
+}
+
+.worker-induction-checks label {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.worker-induction-checks input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 2px;
+}
+
+.worker-induction-message,
+.worker-induction-complete {
+  padding: 14px;
+  border: 1px solid rgba(45, 145, 86, 0.28);
+  border-radius: 8px;
+  background: rgba(227, 248, 235, 0.82);
+  color: #165c35;
+  font-weight: 800;
+}
+
+.worker-induction-complete {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.worker-induction-honeypot {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+}
+
 .induction-board {
   width: 100%;
   max-width: 100%;
