@@ -51,6 +51,18 @@ function readSessionScope() {
   }
 }
 
+function readSessionRegions() {
+  if (typeof window === "undefined") return ["Brisbane"];
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    const regions = Array.isArray(session?.regions) ? session.regions.filter((region: string) => region && region !== "National") : [];
+    const scope = session?.scope && session.scope !== "National" ? session.scope : "";
+    return Array.from(new Set([scope, ...regions].filter(Boolean))).length ? Array.from(new Set([scope, ...regions].filter(Boolean))) : ["Brisbane"];
+  } catch {
+    return ["Brisbane"];
+  }
+}
+
 function skillToggle(selected: string[] = [], skill: string) {
   return selected.includes(skill) ? selected.filter((item) => item !== skill) : [...selected, skill];
 }
@@ -74,7 +86,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const regionOptions = useMemo(() => allRegions.filter((item) => item !== "National"), []);
+  const regionOptions = useMemo(() => adminMode ? allRegions.filter((item) => item !== "National") : readSessionRegions(), [adminMode]);
   const staff = payload?.staff || [];
   const sites = payload?.sites || [];
   const schedules = payload?.schedules || [];
@@ -200,10 +212,11 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             </select>
             <div className="setup-checks">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div>
             <input placeholder="Notes for Odin / manager" value={staffDraft.notes || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, notes: event.target.value }))} />
-            <button disabled={saving} type="submit">Add Staff</button>
+            <button disabled={saving} type="submit">{staffDraft.id ? "Save Staff" : "Add Staff"}</button>
+            {staffDraft.id ? <button type="button" onClick={() => setStaffDraft(blankStaff())}>Cancel Edit</button> : null}
           </form>
           <CollapsibleTable title="Current Staff" count={staff.length}>
-            <tbody>{staff.map((person) => <tr key={person.id}><td>{person.name}</td><td>{person.mobile || "No phone"}</td><td>{person.skills.join(", ") || person.role}</td><td>{person.status}</td></tr>)}</tbody>
+            <tbody>{staff.map((person) => <tr key={person.id}><td>{person.name}</td><td>{person.mobile || "No phone"}</td><td>{person.skills.join(", ") || person.role}</td><td><button type="button" onClick={() => setStaffDraft(person)}>Edit</button></td></tr>)}</tbody>
           </CollapsibleTable>
         </section>
       ) : null}
@@ -218,7 +231,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <input type="number" min={0} max={20} value={siteDraft.requiredCrewCount || 2} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} />
             <label><input type="checkbox" checked={siteDraft.requiredInduction !== false} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Site induction required</label>
             <input placeholder="Site notes" value={siteDraft.notes || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, notes: event.target.value }))} />
-            <button disabled={saving} type="submit">Add Client Site</button>
+            <button disabled={saving} type="submit">{siteDraft.id ? "Save Client Site" : "Add Client Site"}</button>
+            {siteDraft.id ? <button type="button" onClick={() => setSiteDraft(blankSite())}>Cancel Edit</button> : null}
           </form>
           <form className="setup-grid-form" onSubmit={saveSchedule}>
             <select value={scheduleDraft.siteId || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, siteId: event.target.value }))}>
@@ -233,10 +247,14 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <select multiple value={scheduleDraft.staffIds || []} onChange={(event) => setScheduleDraft((current) => ({ ...current, staffIds: Array.from(event.target.selectedOptions).map((option) => option.value) }))}>
               {staff.map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}
             </select>
-            <button disabled={saving} type="submit">Save Job And Generate Calendar</button>
+            <button disabled={saving} type="submit">{scheduleDraft.id ? "Save Job And Regenerate Calendar" : "Save Job And Generate Calendar"}</button>
+            {scheduleDraft.id ? <button type="button" onClick={() => setScheduleDraft(blankSchedule())}>Cancel Edit</button> : null}
           </form>
+          <CollapsibleTable title="Client Sites" count={sites.length}>
+            <tbody>{sites.map((site) => <tr key={site.id}><td>{site.clientName}</td><td>{site.siteName}</td><td>{site.requiredCrewCount} crew</td><td><button type="button" onClick={() => setSiteDraft(site)}>Edit</button></td></tr>)}</tbody>
+          </CollapsibleTable>
           <CollapsibleTable title="Jobs Source" count={schedules.length}>
-            <tbody>{schedules.map((schedule) => <tr key={schedule.id}><td>{schedule.siteLabel}</td><td>{schedule.jobTitle}</td><td>{schedule.recurrence}</td><td>{schedule.washAsset || "No asset"}</td></tr>)}</tbody>
+            <tbody>{schedules.map((schedule) => <tr key={schedule.id}><td>{schedule.siteLabel}</td><td>{schedule.jobTitle}</td><td>{schedule.recurrence}</td><td><button type="button" onClick={() => setScheduleDraft(schedule)}>Edit</button></td></tr>)}</tbody>
           </CollapsibleTable>
         </section>
       ) : null}

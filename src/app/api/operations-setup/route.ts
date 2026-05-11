@@ -51,6 +51,7 @@ type ScheduleRow = {
   site?: Related<{ client_name: string; site_name: string; region?: Related<{ name: string }> }>;
 };
 type ScheduleStaffRow = { site_schedule_id: string; staff_profile_id: string };
+type ExistingCalendarJobRow = { id: string; job_date: string };
 type InductionRow = {
   id: string;
   staff_profile_id: string | null;
@@ -145,6 +146,42 @@ async function saveStaffRegions(staffId: string, regionIds: string[]) {
     const { error } = await supabase.from("staff_profile_regions").insert(rows);
     if (error) throw error;
   }
+}
+
+async function ensureSiteBelongsToRegion(siteId: string, regionId: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+  const { data, error } = await supabase.from("operation_sites").select("id,region_id").eq("id", siteId).maybeSingle();
+  if (error) throw error;
+  if (!data || (data as { region_id: string | null }).region_id !== regionId) throw new Error("Selected client/site is not mapped to this region.");
+}
+
+async function ensureScheduleBelongsToRegion(scheduleId: string, regionId: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+  const { data, error } = await supabase.from("site_schedules").select("id,region_id").eq("id", scheduleId).maybeSingle();
+  if (error) throw error;
+  if (!data || (data as { region_id: string | null }).region_id !== regionId) throw new Error("Selected schedule is not mapped to this region.");
+}
+
+async function ensureStaffBelongToRegion(staffIds: string[], regionId: string) {
+  if (!staffIds.length) return;
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+  const [profilesResult, linksResult] = await Promise.all([
+    supabase.from("staff_profiles").select("id,primary_region_id").in("id", staffIds),
+    supabase.from("staff_profile_regions").select("staff_profile_id,region_id").in("staff_profile_id", staffIds)
+  ]);
+  if (profilesResult.error) throw profilesResult.error;
+  if (linksResult.error) throw linksResult.error;
+  const profileRows = (profilesResult.data || []) as Array<{ id: string; primary_region_id: string | null }>;
+  const linkRows = (linksResult.data || []) as StaffRegionRow[];
+  const validIds = new Set<string>();
+  profileRows.forEach((profile) => {
+    if (profile.primary_region_id === regionId || linkRows.some((link) => link.staff_profile_id === profile.id && link.region_id === regionId)) validIds.add(profile.id);
+  });
+  const invalidIds = staffIds.filter((staffId) => !validIds.has(staffId));
+  if (invalidIds.length) throw new Error("One or more selected staff are not mapped to this region.");
 }
 
 async function readSetup(regionName: string, profileId: string) {
@@ -258,8 +295,32 @@ async function generateScheduleJobs(scheduleId: string) {
   const startDate = schedule.start_date < dateOnly(new Date()) ? dateOnly(new Date()) : schedule.start_date;
   const dates = Array.from({ length: stepDays ? 12 : 1 }, (_, index) => stepDays ? addDays(startDate, index * stepDays) : startDate)
     .filter((jobDate) => !schedule.end_date || jobDate <= schedule.end_date);
-  const { data: existing } = await supabase.from("calendar_jobs").select("job_date").eq("source_schedule_id", schedule.id).in("job_date", dates);
-  const existingDates = new Set(((existing || []) as Array<{ job_date: string }>).map((row) => row.job_date));
+  const { data: existing } = await supabase.from("calendar_jobs").select("id,job_date").eq("source_schedule_id", schedule.id).in("job_date", dates);
+  const existingRows = (existing || []) as ExistingCalendarJobRow[];
+  const existingDates = new Set(existingRows.map((row) => row.job_date));
+  const existingIds = existingRows.map((row) => row.id);
+  if (existingIds.length) {
+    const { error: updateError } = await supabase.from("calendar_jobs").update({
+      location: regionName,
+      site: `${site.client_name} - ${site.site_name}`,
+      crew,
+      job_title: schedule.job_title || "Scheduled wash",
+      notes: [schedule.notes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n"),
+      recurrence: schedule.recurrence,
+      recurrence_detail: schedule.schedule_name || null,
+      recurrence_interval_weeks: schedule.recurrence === "Custom" ? schedule.recurrence_interval_weeks : null,
+      site_id: schedule.site_id,
+      required_crew_count: schedule.required_crew_count,
+      updated_at: new Date().toISOString()
+    }).in("id", existingIds);
+    if (updateError) throw updateError;
+    await supabase.from("calendar_job_staff").delete().in("calendar_job_id", existingIds);
+    if (staffIds.length) {
+      const staffAssignments = existingIds.flatMap((jobId) => staffIds.map((staffId) => ({ calendar_job_id: jobId, staff_profile_id: staffId })));
+      const { error: assignmentError } = await supabase.from("calendar_job_staff").insert(staffAssignments);
+      if (assignmentError) throw assignmentError;
+    }
+  }
   const rows = dates.filter((jobDate) => !existingDates.has(jobDate)).map((jobDate) => ({
     job_date: jobDate,
     job_time: schedule.job_time?.slice(0, 5) || "07:00",
@@ -278,8 +339,14 @@ async function generateScheduleJobs(scheduleId: string) {
     source_schedule_id: schedule.id
   }));
   if (!rows.length) return { created: 0 };
-  const { error: insertError } = await supabase.from("calendar_jobs").insert(rows);
+  const { data: insertedRows, error: insertError } = await supabase.from("calendar_jobs").insert(rows).select("id");
   if (insertError) throw insertError;
+  const insertedIds = ((insertedRows || []) as Array<{ id: string }>).map((row) => row.id);
+  if (insertedIds.length && staffIds.length) {
+    const staffAssignments = insertedIds.flatMap((jobId) => staffIds.map((staffId) => ({ calendar_job_id: jobId, staff_profile_id: staffId })));
+    const { error: assignmentError } = await supabase.from("calendar_job_staff").insert(staffAssignments);
+    if (assignmentError) throw assignmentError;
+  }
   await supabase.from("site_schedules").update({ last_generated_until: rows[rows.length - 1].job_date, updated_at: new Date().toISOString() }).eq("id", schedule.id);
   return { created: rows.length };
 }
@@ -332,6 +399,7 @@ export async function POST(request: Request) {
     if (action === "upsertStaff") {
       const name = cleanString(payload.name);
       if (!name) return NextResponse.json({ error: "Staff name is required." }, { status: 400 });
+      if (isUuid(payload.id) && !hasNationalAccess(user)) await ensureStaffBelongToRegion([payload.id], regionId);
       const row = {
         display_name: name,
         preferred_name: cleanString(payload.preferredName) || null,
@@ -362,6 +430,7 @@ export async function POST(request: Request) {
       const clientName = cleanString(payload.clientName);
       const siteName = cleanString(payload.siteName);
       if (!clientName || !siteName) return NextResponse.json({ error: "Client and site name are required." }, { status: 400 });
+      if (isUuid(payload.id) && !hasNationalAccess(user)) await ensureSiteBelongsToRegion(payload.id, regionId);
       const row = {
         client_name: clientName,
         site_name: siteName,
@@ -385,6 +454,10 @@ export async function POST(request: Request) {
 
     if (action === "upsertSchedule") {
       if (!isUuid(payload.siteId)) return NextResponse.json({ error: "Client/site is required." }, { status: 400 });
+      if (isUuid(payload.id) && !hasNationalAccess(user)) await ensureScheduleBelongsToRegion(payload.id, regionId);
+      await ensureSiteBelongsToRegion(payload.siteId, regionId);
+      const staffIds = cleanArray(payload.staffIds).filter(isUuid);
+      await ensureStaffBelongToRegion(staffIds, regionId);
       const recurrence = allowedRecurrences.includes(cleanString(payload.recurrence)) ? cleanString(payload.recurrence) : "Weekly";
       const row = {
         site_id: payload.siteId,
@@ -409,7 +482,7 @@ export async function POST(request: Request) {
       if (error) throw error;
       if (!data) return NextResponse.json({ error: "Schedule record was not found." }, { status: 404 });
       await supabase.from("site_schedule_staff").delete().eq("site_schedule_id", data.id);
-      const staffRows = cleanArray(payload.staffIds).filter(isUuid).map((staffId) => ({ site_schedule_id: data.id, staff_profile_id: staffId }));
+      const staffRows = staffIds.map((staffId) => ({ site_schedule_id: data.id, staff_profile_id: staffId }));
       if (staffRows.length) {
         const { error: staffError } = await supabase.from("site_schedule_staff").insert(staffRows);
         if (staffError) throw staffError;
@@ -425,6 +498,8 @@ export async function POST(request: Request) {
       const staffName = cleanString(payload.staffName);
       const siteName = cleanString(payload.siteName);
       if (!staffName || !siteName) return NextResponse.json({ error: "Staff and site are required." }, { status: 400 });
+      if (staffId) await ensureStaffBelongToRegion([staffId], regionId);
+      if (siteId) await ensureSiteBelongsToRegion(siteId, regionId);
       const row = {
         staff_profile_id: staffId,
         site_id: siteId,
