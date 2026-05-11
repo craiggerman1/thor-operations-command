@@ -340,6 +340,26 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, [activeProfile.role, currentScope, pathname, router, session.mustChangePassword, session.role, sessionReady]);
 
   useEffect(() => {
+    if (!sessionReady || activeProfile.role !== "manager" || !session.id || session.authMode !== "supabase") return;
+    if (pathname === "/operations-setup" || pathname.startsWith("/account/password")) return;
+    if (sessionStorage.getItem(`toc.setup.dismissed.${currentScope}`) === "true") return;
+
+    let cancelled = false;
+    tocJson<{ setup?: { completed_at?: string | null; force_run_next_login?: boolean | null } }>(`/api/operations-setup?region=${encodeURIComponent(currentScope)}`, { cache: "no-store" })
+      .then((payload) => {
+        if (cancelled) return;
+        if (!payload.setup?.completed_at || payload.setup?.force_run_next_login) router.replace("/operations-setup");
+      })
+      .catch(() => {
+        // Setup status should never block TOC if the health check is temporarily unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProfile.role, currentScope, pathname, router, session.authMode, session.id, sessionReady]);
+
+  useEffect(() => {
     if (!sessionReady || !session.role) return;
 
     const timeoutId = window.setTimeout(() => {
@@ -474,7 +494,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.359</em>
+              <em>Build 0.360</em>
             </div>
           </div>
           <div className="topbar-actions">

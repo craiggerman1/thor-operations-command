@@ -31,6 +31,7 @@ const AdminTodoManager = dynamic(() => import("@/components/AdminTodoManager").t
 const DirectorBroadcastControls = dynamic(() => import("@/components/UrgentBroadcast").then((mod) => mod.DirectorBroadcastControls), { loading: SettingManagerLoading });
 const UrgentBroadcastControls = dynamic(() => import("@/components/UrgentBroadcast").then((mod) => mod.UrgentBroadcastControls), { loading: SettingManagerLoading });
 const OperationsNewsControls = dynamic(() => import("@/components/OperationsNewsControls").then((mod) => mod.OperationsNewsControls), { loading: SettingManagerLoading });
+const OperationsSetupWizard = dynamic(() => import("@/components/OperationsSetupWizard").then((mod) => mod.OperationsSetupWizard), { loading: SettingManagerLoading });
 const AdminAuditTrail = dynamic(() => import("@/components/AdminAuditTrail").then((mod) => mod.AdminAuditTrail), { loading: SettingManagerLoading });
 const OdinConfidenceCentre = dynamic(() => import("@/components/OdinConfidenceCentre").then((mod) => mod.OdinConfidenceCentre), { loading: SettingManagerLoading });
 const NationalActionRequests = dynamic(() => import("@/components/NationalActionRequests").then((mod) => mod.NationalActionRequests), { loading: SettingManagerLoading });
@@ -85,6 +86,11 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "operations-master" ? (
           <Panel wide eyebrow="Operations master data" title="Customer/site register and recurring schedules">
             <AdminOperationsMasterData />
+          </Panel>
+        ) : null}
+        {setting.slug === "operations-setup" ? (
+          <Panel wide eyebrow="Operations Setup Wizard" title="Run guided setup for any region">
+            <OperationsSetupWizard adminMode />
           </Panel>
         ) : null}
         {setting.slug === "messages" ? (

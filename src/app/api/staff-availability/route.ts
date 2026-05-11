@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const scopePermission = await requireTocScope(request, requestedScope);
   if (scopePermission.error) return scopePermission.error;
 
-  const config = await readSheetSourceConfig("staff-availability");
+  const config = await readSheetSourceConfig("staff-availability", scopePermission.scope);
 
   if (!config.connected || scopePermission.scope !== config.region) {
     return NextResponse.json(scopedEmptyAvailabilityFeed(scopePermission.scope));

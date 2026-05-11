@@ -9,7 +9,7 @@ const groups: Array<{ title: string; detail: string; slugs: string[] }> = [
   {
     title: "Access And System",
     detail: "Security, users, staff records, global messages, audit history and Odin confidence.",
-    slugs: ["user-access", "staff-register", "messages", "audit-trail", "odin-confidence"]
+    slugs: ["user-access", "staff-register", "operations-setup", "messages", "audit-trail", "odin-confidence"]
   },
   {
     title: "Operations Flow",

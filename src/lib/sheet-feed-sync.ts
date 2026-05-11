@@ -22,8 +22,8 @@ type OperationSiteLink = {
   site_name: string;
 };
 
-function settingsKey(slug: SheetSourceSlug) {
-  return `sheet_source_settings_${slug}`;
+function settingsKey(slug: SheetSourceSlug, region?: string) {
+  return region ? `sheet_source_settings_${slug}_${region.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : `sheet_source_settings_${slug}`;
 }
 
 function lowerKey(value: string) {
@@ -106,18 +106,32 @@ export function scopedEmptyInductionFeed(region: string): InductionFeed {
   };
 }
 
-export async function readSheetSourceConfig(slug: SheetSourceSlug): Promise<SheetSourceConfig> {
+export async function readSheetSourceConfig(slug: SheetSourceSlug, region?: string): Promise<SheetSourceConfig> {
   const supabase = getSupabaseAdminClient();
-  if (!supabase) return sheetSourceDefaults[slug];
+  if (!supabase) return region ? { ...sheetSourceDefaults[slug], region } : sheetSourceDefaults[slug];
 
+  const regionKey = region ? settingsKey(slug, region) : settingsKey(slug);
   const { data, error } = await supabase
     .from("app_settings")
     .select("value")
-    .eq("key", settingsKey(slug))
+    .eq("key", regionKey)
     .maybeSingle();
 
-  if (error || !data?.value) return sheetSourceDefaults[slug];
-  return normaliseSheetSourceConfig(slug, data.value as Record<string, unknown>);
+  if (!error && data?.value) return normaliseSheetSourceConfig(slug, data.value as Record<string, unknown>);
+
+  if (region) {
+    const { data: globalData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", settingsKey(slug))
+      .maybeSingle();
+    if (globalData?.value) {
+      const globalConfig = normaliseSheetSourceConfig(slug, globalData.value as Record<string, unknown>);
+      if (globalConfig.region === region) return globalConfig;
+    }
+  }
+
+  return region ? { ...sheetSourceDefaults[slug], region } : sheetSourceDefaults[slug];
 }
 
 async function readSheetCsv(config: SheetSourceConfig) {

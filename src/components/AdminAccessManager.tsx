@@ -317,6 +317,22 @@ export function AdminAccessManager() {
     setStatus(`Previewing ${user.name} as ${roleLabel(user.role)} - ${scope}.`);
   }
 
+  async function forceSetupWizard(user: AdminAccessUser) {
+    const targetRegion = user.regions.find((region) => region !== "National") || "Brisbane";
+    try {
+      const response = await fetch("/api/operations-setup", {
+        method: "POST",
+        headers: await getTocRequestHeaders(true),
+        body: JSON.stringify({ action: "forceForUser", profileId: user.id, region: targetRegion })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Setup wizard could not be scheduled.");
+      setStatus(`Operations Setup Wizard will run for ${user.name} on next login for ${targetRegion}.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Setup wizard could not be scheduled.");
+    }
+  }
+
   async function saveUserMutation(payload: Record<string, unknown>) {
     try {
       const response = await fetch("/api/admin/users", {
@@ -452,6 +468,7 @@ export function AdminAccessManager() {
             </div>
             <div className="admin-user-actions">
               {previewToolsEnabled ? <button type="button" onClick={() => previewUser(user)}>Preview User View</button> : null}
+              {user.role === "manager" ? <button type="button" onClick={() => forceSetupWizard(user)}>Run Setup Next Login</button> : null}
               <button type="button" onClick={() => toggleStatus(user)}>{user.status === "Active" ? "Disable User" : "Reactivate User"}</button>
               <button className="danger-button" type="button" onClick={() => deregisterUser(user.id)}>Deregister User</button>
             </div>
