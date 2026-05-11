@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
-const expectedWatcherVersion = "0.337";
+const expectedWatcherVersion = "0.339";
 const watcherSessionKey = "toc:odin-watcher:status";
 
 function ageMinutes(value: unknown) {

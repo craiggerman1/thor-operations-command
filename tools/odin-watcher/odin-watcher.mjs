@@ -35,7 +35,7 @@ const snapshotOnly = process.argv.includes("--snapshot-only");
 const briefsOnly = process.argv.includes("--briefs-only");
 const forcedBriefArg = process.argv.find((arg) => arg.startsWith("--brief="));
 const forcedBriefType = forcedBriefArg ? forcedBriefArg.split("=").slice(1).join("=").trim() : "";
-const watcherVersion = "0.337";
+const watcherVersion = "0.339";
 const showHelp = process.argv.includes("--help") || process.argv.includes("-h");
 const showVersion = process.argv.includes("--version") || process.argv.includes("-v");
 
@@ -276,7 +276,7 @@ function buildPrompt(snapshot) {
     "Route chemical, PPE, parts, consumable, supplies or stock order needs to destination=stock_orders.",
     "Route reminders, to-do and checklist items to destination=todos.",
     "Route manager operational tasks and follow-ups to destination=actions.",
-    "Route TOC system, database, source feed, API, mapping, staff profile visibility, watcher, heartbeat or configuration issues to destination=actions with region=National, targetRegions=[\"National\"], category=system-data and sourcePage=Admin Settings.",
+    "Route TOC system, database, source feed, API, mapping, staff profile visibility, watcher, heartbeat or configuration issues to destination=notes with region=National, targetRegions=[\"National\"], category=system-data and sourcePage=Admin Settings. Do not create Action Centre work for system/data health observations unless Craig explicitly requests an Action Centre task.",
     "Route notes, context and memory-only observations to destination=notes.",
     "Severity must be blue, amber, or red.",
     "Obey snapshot.craigEscalationPolicy: do not recommend interrupting Craig unless an item is listed as callCraig or messageCraig there.",
@@ -428,7 +428,9 @@ function normaliseDestination(value) {
 }
 
 function writeTarget(recommendation) {
-  const destination = normaliseDestination(inferDestination(recommendation));
+  const destination = isSystemDataRecommendation(recommendation)
+    ? "notes"
+    : normaliseDestination(inferDestination(recommendation));
   const paths = {
     actions: "/api/odin/actions",
     todos: "/api/odin/todos",
@@ -445,7 +447,7 @@ function writeTarget(recommendation) {
 function inferDestination(recommendation) {
   if (recommendation.destination) return recommendation.destination;
   const haystack = `${recommendation.category || ""} ${recommendation.sourcePage || ""} ${recommendation.title} ${recommendation.summary} ${recommendation.noticed} ${recommendation.recommendedAction}`.toLowerCase();
-  if (/\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/.test(haystack)) return "actions";
+  if (/\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/.test(haystack)) return "notes";
   if (/\b(induction|compliance|first aid|safety|ppe register|site readiness)\b/.test(haystack)) return "compliance";
   if (/\b(vehicle|truck|ute|unit|u\d+|pony|generator|honda|wash plant|service|repair|odometer|hours)\b/.test(haystack)) return "equipment";
   if (/\b(stock|chemical|chemicals|consumable|consumables|ppe|gloves|bottle|batteries|hose|parts|order)\b/.test(haystack)) return "stock_orders";

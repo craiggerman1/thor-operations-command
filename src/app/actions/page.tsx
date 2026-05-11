@@ -17,7 +17,7 @@ const directivePriority = {
   "To Do": 3
 };
 
-type QueueFilter = "all" | "overdue" | "blocked" | "review" | "carryover" | "system";
+type QueueFilter = "operational" | "all" | "overdue" | "blocked" | "review" | "carryover" | "system";
 
 export default function ActionsPage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function ActionsPage() {
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const [scope, setScope] = useState("National");
   const [role, setRole] = useState<AccessRole>("manager");
-  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("operational");
   const scopedActions = getScopedActionItems(openActions, scope, role);
   const filteredActions = scopedActions.filter((action) => actionMatchesQueueFilter(action, queueFilter));
   const sortedActions = [...filteredActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
@@ -36,7 +36,9 @@ export default function ActionsPage() {
   const managerWorkload = buildManagerWorkload(scopedActions);
   const repeatGroups = buildRepeatGroups(scopedActions);
   const systemDataActions = scopedActions.filter(isSystemDataAction);
+  const operationalActions = scopedActions.filter((action) => !isSystemDataAction(action));
   const queueFilters: { value: QueueFilter; label: string; count: number }[] = [
+    { value: "operational", label: "Operational", count: operationalActions.length },
     { value: "all", label: "All", count: scopedActions.length },
     { value: "overdue", label: "Overdue", count: closureSummary.overdue },
     { value: "blocked", label: "Blocked", count: closureSummary.blocked },
@@ -290,6 +292,7 @@ function isSystemDataAction(action: EnhancedActionItem) {
 }
 
 function actionMatchesQueueFilter(action: EnhancedActionItem, filter: QueueFilter) {
+  if (filter === "operational") return !isSystemDataAction(action);
   if (filter === "all") return true;
   if (filter === "overdue") return action.isOverdue;
   if (filter === "blocked") return action.lifecycleStatus === "blocked";

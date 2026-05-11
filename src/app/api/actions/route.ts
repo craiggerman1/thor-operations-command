@@ -66,6 +66,17 @@ type NationalRequestHistoryRow = {
   updated_at: string | null;
 };
 
+const systemDataPromotionPattern = /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/i;
+
+function isSystemDataOdinBacklogItem(item: OdinBacklogRow, payload: Record<string, unknown>) {
+  const explicitCategory = String(payload.category || payload.issueType || payload.entityType || payload.sourceType || payload.sourcePage || "").toLowerCase();
+  const text = `${item.title} ${item.summary || ""} ${item.noticed || ""} ${item.why_it_matters || ""} ${item.recommended_action || ""} ${explicitCategory}`;
+  return explicitCategory.includes("system") ||
+    explicitCategory.includes("data") ||
+    explicitCategory.includes("admin settings") ||
+    systemDataPromotionPattern.test(text);
+}
+
 function firstRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -386,6 +397,23 @@ async function promoteActionableOdinItems() {
   for (const item of backlog) {
     const existingPayload = item.payload || {};
     if (Array.isArray(existingPayload.createdActionIds) && existingPayload.createdActionIds.length) continue;
+    if (isSystemDataOdinBacklogItem(item, existingPayload)) {
+      await supabase
+        .from("odin_items")
+        .update({
+          approval_required: false,
+          status: "approved",
+          updated_at: new Date().toISOString(),
+          payload: {
+            ...existingPayload,
+            promotedToActionCentre: false,
+            skippedActionCentrePromotion: true,
+            skipReason: "system_data_note_only"
+          }
+        })
+        .eq("id", item.id);
+      continue;
+    }
 
     try {
       const result = await createOdinDirectActionItems({
