@@ -18,7 +18,6 @@ type StaffRow = {
   availability_sheet_name: string | null;
   induction_sheet_name: string | null;
   reliability_notes: string | null;
-  region?: Related<{ name: string }>;
 };
 type StaffRegionRow = { staff_profile_id: string; region_id: string };
 type SiteRow = {
@@ -196,7 +195,7 @@ async function readSetup(regionName: string, profileId: string) {
 
   const [statusResult, staffResult, linkResult, sitesResult, schedulesResult, scheduleStaffResult, inductionsResult, sourceResult] = await Promise.all([
     supabase.from("operations_setup_status").select("current_step,completed_at,force_run_next_login,last_opened_at").eq("profile_id", profileId).eq("region_id", regionId).maybeSingle(),
-    supabase.from("staff_profiles").select("id,display_name,role,status,primary_region_id,skills,contact_mobile,contact_whatsapp,availability_sheet_name,induction_sheet_name,reliability_notes,region:regions(name)").order("display_name", { ascending: true }),
+    supabase.from("staff_profiles").select("id,display_name,role,status,primary_region_id,skills,contact_mobile,contact_whatsapp,availability_sheet_name,induction_sheet_name,reliability_notes").order("display_name", { ascending: true }),
     supabase.from("staff_profile_regions").select("staff_profile_id,region_id"),
     supabase.from("operation_sites").select("id,client_name,site_name,region_id,address,required_induction,required_crew_count,notes,status,region:regions(name)").eq("region_id", regionId).order("client_name", { ascending: true }),
     supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,wash_asset,site:operation_sites(client_name,site_name)").eq("region_id", regionId).order("start_date", { ascending: true }),
