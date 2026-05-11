@@ -11,6 +11,8 @@ type RegionRow = {
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const allowedStatuses = ["active", "inactive", "watch"];
+const allowedStaffRegions = ["Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
+const allowedSkills = ["Wash Hand", "Driver", "Team Leader"];
 
 function isUuid(value: unknown) {
   return typeof value === "string" && uuidPattern.test(value);
@@ -24,6 +26,17 @@ function cleanArray(value: unknown) {
   if (Array.isArray(value)) return value.map((item) => cleanString(item)).filter(Boolean);
   if (typeof value === "string") return value.split(",").map((item) => item.trim()).filter(Boolean);
   return [];
+}
+
+function cleanStaffRegions(value: unknown, primaryRegion: string) {
+  const regions = cleanArray(value).filter((region) => allowedStaffRegions.includes(region));
+  const primary = allowedStaffRegions.includes(primaryRegion) ? primaryRegion : regions[0] || "Brisbane";
+  return Array.from(new Set([primary, ...regions]));
+}
+
+function cleanStaffSkills(value: unknown) {
+  const skills = cleanArray(value);
+  return allowedSkills.filter((skill) => skills.includes(skill));
 }
 
 function cleanJsonObject(value: unknown) {
@@ -65,6 +78,11 @@ async function saveStaffRegions(staffId: string, regions: string[]) {
   }
 }
 
+async function resolveRegionId(regionName: string) {
+  const lookup = await regionLookup();
+  return lookup.get(regionName) || null;
+}
+
 async function readStaff() {
   const result = await readOdinStaffEntities({ includeProtected: true });
   return {
@@ -98,16 +116,17 @@ export async function POST(request: Request) {
       const displayName = cleanString(payload.name || payload.displayName);
       if (!displayName) return NextResponse.json({ error: "Staff name is required." }, { status: 400 });
 
-      const regions = cleanArray(payload.regions).filter((region) => region !== "National");
-      const lookup = await regionLookup();
-      const primaryRegionId = lookup.get(cleanString(payload.primaryRegion) || regions[0] || "Brisbane") || null;
+      const regions = cleanStaffRegions(payload.regions, cleanString(payload.primaryRegion));
+      const primaryRegion = regions[0] || "Brisbane";
+      const primaryRegionId = await resolveRegionId(primaryRegion);
+      if (!primaryRegionId) return NextResponse.json({ error: `Primary region ${primaryRegion} is not mapped in the TOC regions table.` }, { status: 400 });
       const { data, error } = await supabase.from("staff_profiles").insert({
         display_name: displayName,
         preferred_name: cleanString(payload.preferredName) || null,
         role: cleanString(payload.role) || "Wash Hand",
         status: allowedStatuses.includes(cleanString(payload.status)) ? cleanString(payload.status) : "active",
         primary_region_id: primaryRegionId,
-        skills: cleanArray(payload.skills),
+        skills: cleanStaffSkills(payload.skills),
         preferred_windows: cleanJsonObject(payload.preferredWindows),
         reliability_notes: cleanString(payload.reliabilityNotes),
         availability_sheet_name: cleanString(payload.availabilitySheetName || displayName.toUpperCase()),
@@ -119,8 +138,8 @@ export async function POST(request: Request) {
       }).select("id").single();
 
       if (error) throw error;
-      await saveStaffRegions(data.id, regions.length ? regions : ["Brisbane"]);
-      await logTocAudit({ actor: permission.user, action: "admin.staff.create", entityTable: "staff_profiles", entityId: data.id, scope: regions.join(", ") || "Brisbane", details: { displayName, regions } });
+      await saveStaffRegions(data.id, regions);
+      await logTocAudit({ actor: permission.user, action: "admin.staff.create", entityTable: "staff_profiles", entityId: data.id, scope: regions.join(", "), details: { displayName, regions } });
       return readStaff().then((result) => NextResponse.json(result));
     }
 
@@ -131,7 +150,7 @@ export async function POST(request: Request) {
       if (typeof payload.preferredName === "string") updates.preferred_name = cleanString(payload.preferredName) || null;
       if (typeof payload.role === "string") updates.role = cleanString(payload.role) || "Wash Hand";
       if (typeof payload.status === "string" && allowedStatuses.includes(cleanString(payload.status))) updates.status = cleanString(payload.status);
-      if (Array.isArray(payload.skills) || typeof payload.skills === "string") updates.skills = cleanArray(payload.skills);
+      if (Array.isArray(payload.skills) || typeof payload.skills === "string") updates.skills = cleanStaffSkills(payload.skills);
       if (typeof payload.reliabilityNotes === "string") updates.reliability_notes = cleanString(payload.reliabilityNotes);
       if (typeof payload.availabilitySheetName === "string") updates.availability_sheet_name = cleanString(payload.availabilitySheetName) || null;
       if (typeof payload.inductionSheetName === "string") updates.induction_sheet_name = cleanString(payload.inductionSheetName) || null;
@@ -142,13 +161,18 @@ export async function POST(request: Request) {
       if (typeof payload.contactVisibleToOdin === "boolean") updates.contact_visible_to_odin = payload.contactVisibleToOdin;
 
       if (typeof payload.primaryRegion === "string") {
-        updates.primary_region_id = (await regionLookup()).get(cleanString(payload.primaryRegion)) || null;
+        const primaryRegion = cleanString(payload.primaryRegion);
+        const primaryRegionId = await resolveRegionId(primaryRegion);
+        if (!primaryRegionId) return NextResponse.json({ error: `Primary region ${primaryRegion} is not mapped in the TOC regions table.` }, { status: 400 });
+        updates.primary_region_id = primaryRegionId;
       }
 
-      const { error } = await supabase.from("staff_profiles").update(updates).eq("id", payload.id);
+      const { data, error } = await supabase.from("staff_profiles").update(updates).eq("id", payload.id).select("id").maybeSingle();
       if (error) throw error;
-      if (Array.isArray(payload.regions)) await saveStaffRegions(payload.id, payload.regions);
-      await logTocAudit({ actor: permission.user, action: "admin.staff.update", entityTable: "staff_profiles", entityId: payload.id, scope: Array.isArray(payload.regions) ? payload.regions.join(", ") : undefined, details: { changedFields: Object.keys(updates).filter((field) => field !== "updated_at") } });
+      if (!data) return NextResponse.json({ error: "Staff entity was not found in the database." }, { status: 404 });
+      const regions = cleanStaffRegions(payload.regions, cleanString(payload.primaryRegion));
+      if (Array.isArray(payload.regions)) await saveStaffRegions(payload.id, regions);
+      await logTocAudit({ actor: permission.user, action: "admin.staff.update", entityTable: "staff_profiles", entityId: payload.id, scope: regions.join(", "), details: { changedFields: Object.keys(updates).filter((field) => field !== "updated_at") } });
       return readStaff().then((result) => NextResponse.json(result));
     }
 

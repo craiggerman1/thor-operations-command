@@ -84,6 +84,7 @@ export type OdinStaffEntity = {
     whatsapp: string | null;
     emergencyContact: Record<string, unknown>;
   };
+  contactVisibleToOdin: boolean;
   source: "database" | "availability_sheet";
   updatedAt: string | null;
 };
@@ -300,6 +301,7 @@ function fallbackStaffEntities(includeProtected: boolean, feeds: LiveStaffFeeds)
     availability: availabilitySummary(name, feeds),
     inductions: inductionSummary(name, feeds),
     contact: includeProtected ? { mobile: null, whatsapp: null, emergencyContact: {} } : undefined,
+    contactVisibleToOdin: true,
     source: "availability_sheet",
     updatedAt: null
   }));
@@ -393,6 +395,7 @@ export async function readOdinStaffEntities(options: { includeProtected: boolean
             whatsapp: profile.contact_whatsapp,
             emergencyContact: profile.emergency_contact || {}
           } : undefined,
+          contactVisibleToOdin: profile.contact_visible_to_odin !== false,
           source: "database",
           updatedAt: profile.updated_at
         };

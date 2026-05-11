@@ -40,6 +40,122 @@ body.next-app .developer-region-control {
   text-decoration: none;
 }
 
+.staff-register-console {
+  align-items: start;
+}
+
+.staff-register-header,
+.staff-entity-card .admin-action-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.staff-register-header small,
+.staff-editor-section > strong + .admin-action-grid,
+.staff-editor-section > strong + .staff-check-group {
+  margin-top: 8px;
+}
+
+.staff-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.staff-editor-section {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.staff-editor-section > strong {
+  color: #0b3551;
+}
+
+.staff-editor-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+
+.staff-check-group {
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid rgba(12, 57, 84, 0.14);
+  border-radius: 8px;
+}
+
+.staff-check-group legend {
+  padding: 0 6px;
+  color: #617486;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.staff-check-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.staff-check-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-radius: 8px;
+  background: rgba(239, 247, 250, 0.85);
+  color: #0b3551;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.staff-check-option input,
+.admin-checkbox-row input {
+  accent-color: #0b7590;
+}
+
+.staff-card-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.staff-card-summary span {
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(239, 247, 250, 0.85);
+  color: #526778;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.admin-staff-details {
+  margin-top: 12px;
+}
+
+.admin-staff-details summary {
+  cursor: pointer;
+  color: #0b3551;
+  font-weight: 900;
+}
+
+.admin-staff-details[open] summary {
+  margin-bottom: 12px;
+}
+
+.staff-editor-actions {
+  justify-content: flex-start;
+}
+
 @media (max-width: 760px) {
   body.next-app .mobile-app-bar {
     display: grid;

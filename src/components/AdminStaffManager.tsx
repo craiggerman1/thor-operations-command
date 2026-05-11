@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
 import { tocFetch } from "@/lib/toc-client-auth";
 import { allRegions } from "@/lib/access";
@@ -18,6 +18,7 @@ type StaffEntity = {
   preferredWindows: Record<string, unknown>;
   availabilitySheetName: string;
   inductionSheetName: string;
+  contactVisibleToOdin?: boolean;
   contact?: {
     mobile: string | null;
     whatsapp: string | null;
@@ -30,6 +31,7 @@ type StaffEntity = {
   inductions: {
     eligibleSites: string[];
   };
+  source?: "database" | "availability_sheet";
 };
 
 type StaffDraft = {
@@ -48,8 +50,16 @@ type StaffDraft = {
   contactVisibleToOdin: boolean;
 };
 
+type StaffPayload = {
+  connected: boolean;
+  source: "database" | "availability_sheet";
+  error: string | null;
+  staff: StaffEntity[];
+};
+
 const staffRegions = allRegions.filter((region) => region !== "National");
 const staffSkillOptions = ["Wash Hand", "Driver", "Team Leader"];
+const staffRoleOptions = ["Wash Hand", "Driver", "Team Leader", "Supervisor", "Manager"];
 
 function blankDraft(): StaffDraft {
   return {
@@ -69,29 +79,63 @@ function blankDraft(): StaffDraft {
   };
 }
 
+function normaliseRegions(regions: string[], primaryRegion: string) {
+  const cleanRegions = Array.from(new Set(regions.filter((region) => staffRegions.includes(region))));
+  const cleanPrimary = staffRegions.includes(primaryRegion) ? primaryRegion : cleanRegions[0] || "Brisbane";
+  return Array.from(new Set([cleanPrimary, ...cleanRegions]));
+}
+
+function normaliseSkills(skills: string[]) {
+  return staffSkillOptions.filter((skill) => skills.includes(skill));
+}
+
 function draftFromStaff(staff: StaffEntity): StaffDraft {
+  const primaryRegion = staffRegions.includes(staff.primaryRegion) ? staff.primaryRegion : "Brisbane";
   return {
     name: staff.name,
     preferredName: staff.preferredName || "",
-    role: staff.role,
+    role: staff.role || "Wash Hand",
     status: staff.status,
-    regions: staff.regions.filter((region) => region !== "National"),
-    primaryRegion: staff.primaryRegion === "National" ? "Brisbane" : staff.primaryRegion,
-    skills: staff.skills.filter((skill) => staffSkillOptions.includes(skill)),
+    regions: normaliseRegions(staff.regions, primaryRegion),
+    primaryRegion,
+    skills: normaliseSkills(staff.skills),
     reliabilityNotes: staff.reliabilityNotes,
     availabilitySheetName: staff.availabilitySheetName,
     inductionSheetName: staff.inductionSheetName,
     mobile: staff.contact?.mobile || "",
     whatsapp: staff.contact?.whatsapp || "",
-    contactVisibleToOdin: true
+    contactVisibleToOdin: staff.contactVisibleToOdin !== false
+  };
+}
+
+function buildStaffPayload(action: "create" | "update", draft: StaffDraft, id?: string) {
+  const regions = normaliseRegions(draft.regions, draft.primaryRegion);
+  const primaryRegion = regions.includes(draft.primaryRegion) ? draft.primaryRegion : regions[0];
+
+  return {
+    action,
+    id,
+    name: draft.name.trim(),
+    preferredName: draft.preferredName.trim(),
+    role: draft.role.trim() || "Wash Hand",
+    status: draft.status,
+    regions,
+    primaryRegion,
+    skills: normaliseSkills(draft.skills),
+    reliabilityNotes: draft.reliabilityNotes.trim(),
+    availabilitySheetName: draft.availabilitySheetName.trim(),
+    inductionSheetName: draft.inductionSheetName.trim(),
+    mobile: draft.mobile.trim(),
+    whatsapp: draft.whatsapp.trim(),
+    contactVisibleToOdin: draft.contactVisibleToOdin
   };
 }
 
 async function fetchStaff() {
   const response = await tocFetch("/api/admin/staff", { cache: "no-store" });
-  const payload = await response.json();
+  const payload = await response.json() as StaffPayload;
   if (!response.ok) throw new Error(payload.error || "Staff database read failed.");
-  return (payload.staff || []) as StaffEntity[];
+  return payload;
 }
 
 async function mutateStaff(payload: Record<string, unknown>) {
@@ -99,9 +143,139 @@ async function mutateStaff(payload: Record<string, unknown>) {
     method: "POST",
     body: JSON.stringify(payload)
   }, true);
-  const result = await response.json();
+  const result = await response.json() as StaffPayload;
   if (!response.ok) throw new Error(result.error || "Staff database update failed.");
-  return (result.staff || []) as StaffEntity[];
+  return result;
+}
+
+function toggleValue(values: string[], value: string) {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+function StaffCheckGroup({
+  legend,
+  options,
+  selected,
+  onChange
+}: {
+  legend: string;
+  options: string[];
+  selected: string[];
+  onChange: (nextValues: string[]) => void;
+}) {
+  return (
+    <fieldset className="staff-check-group">
+      <legend>{legend}</legend>
+      <div className="staff-check-options">
+        {options.map((option) => (
+          <label className="staff-check-option" key={option}>
+            <input
+              checked={selected.includes(option)}
+              type="checkbox"
+              onChange={() => onChange(toggleValue(selected, option))}
+            />
+            <span>{option}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function StaffEditor({
+  draft,
+  mode,
+  disabled,
+  onPatch,
+  onSave,
+  onDelete
+}: {
+  draft: StaffDraft;
+  mode: "create" | "edit";
+  disabled: boolean;
+  onPatch: (patch: Partial<StaffDraft>) => void;
+  onSave: () => void;
+  onDelete?: () => void;
+}) {
+  const regions = normaliseRegions(draft.regions, draft.primaryRegion);
+
+  function patchPrimaryRegion(primaryRegion: string) {
+    onPatch({ primaryRegion, regions: normaliseRegions(draft.regions, primaryRegion) });
+  }
+
+  return (
+    <div className="staff-editor">
+      <div className="staff-editor-section">
+        <strong>Identity</strong>
+        <div className="admin-action-grid staff-editor-grid">
+          <label><span>Full name</span><input value={draft.name} onChange={(event) => onPatch({ name: event.target.value })} placeholder="Staff name" /></label>
+          <label><span>Preferred name</span><input value={draft.preferredName} onChange={(event) => onPatch({ preferredName: event.target.value })} placeholder="Optional" /></label>
+          <label>
+            <span>Role</span>
+            <select value={draft.role} onChange={(event) => onPatch({ role: event.target.value })}>
+              {staffRoleOptions.map((role) => <option key={role}>{role}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Status</span>
+            <select value={draft.status} onChange={(event) => onPatch({ status: event.target.value as StaffDraft["status"] })}>
+              <option value="active">Active</option>
+              <option value="watch">Watch</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="staff-editor-section">
+        <strong>Region and capability</strong>
+        <div className="admin-action-grid staff-editor-grid">
+          <label>
+            <span>Primary region</span>
+            <select value={draft.primaryRegion} onChange={(event) => patchPrimaryRegion(event.target.value)}>
+              {staffRegions.map((region) => <option key={region}>{region}</option>)}
+            </select>
+          </label>
+          <label><span>Availability sheet name</span><input value={draft.availabilitySheetName} onChange={(event) => onPatch({ availabilitySheetName: event.target.value })} placeholder="Exact row name if different" /></label>
+          <label><span>Induction sheet name</span><input value={draft.inductionSheetName} onChange={(event) => onPatch({ inductionSheetName: event.target.value })} placeholder="Exact row name if different" /></label>
+        </div>
+        <StaffCheckGroup
+          legend="Skills"
+          options={staffSkillOptions}
+          selected={draft.skills}
+          onChange={(skills) => onPatch({ skills: normaliseSkills(skills) })}
+        />
+        <StaffCheckGroup
+          legend="Assigned regions"
+          options={staffRegions}
+          selected={regions}
+          onChange={(nextRegions) => onPatch({ regions: normaliseRegions(nextRegions, draft.primaryRegion) })}
+        />
+      </div>
+
+      <div className="staff-editor-section">
+        <strong>Protected contact and notes</strong>
+        <div className="admin-action-grid staff-editor-grid">
+          <label><span>Mobile</span><input value={draft.mobile} onChange={(event) => onPatch({ mobile: event.target.value })} placeholder="Protected" /></label>
+          <label><span>WhatsApp</span><input value={draft.whatsapp} onChange={(event) => onPatch({ whatsapp: event.target.value })} placeholder="Protected" /></label>
+        </div>
+        <label><span>Reliability/status notes</span><textarea value={draft.reliabilityNotes} onChange={(event) => onPatch({ reliabilityNotes: event.target.value })} placeholder="Internal manager/Odin notes" /></label>
+        <label className="admin-checkbox-row">
+          <input type="checkbox" checked={draft.contactVisibleToOdin} onChange={(event) => onPatch({ contactVisibleToOdin: event.target.checked })} />
+          <span>Allow Odin service to read protected contact fields</span>
+        </label>
+      </div>
+
+      <div className="admin-action-controls staff-editor-actions">
+        <button type={mode === "create" ? "submit" : "button"} onClick={mode === "edit" ? onSave : undefined} disabled={disabled}>
+          {disabled ? "Saving..." : mode === "create" ? "Add Staff Entity" : "Save Staff Entity"}
+        </button>
+        {onDelete ? <button className="danger-button" type="button" onClick={onDelete} disabled={disabled}>Delete Staff Entity</button> : null}
+      </div>
+    </div>
+  );
 }
 
 export function AdminStaffManager() {
@@ -109,15 +283,26 @@ export function AdminStaffManager() {
   const [draft, setDraft] = useState<StaffDraft>(blankDraft);
   const [editDrafts, setEditDrafts] = useState<Record<string, StaffDraft>>({});
   const [message, setMessage] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [source, setSource] = useState<StaffPayload["source"]>("database");
+  const [isLoading, setIsLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const statusCounts = useMemo(() => ({
+    active: staff.filter((person) => person.status === "active").length,
+    watch: staff.filter((person) => person.status === "watch").length,
+    inactive: staff.filter((person) => person.status === "inactive").length
+  }), [staff]);
 
   useEffect(() => {
     fetchStaff()
-      .then((nextStaff) => {
-        setStaff(nextStaff);
-        setEditDrafts(Object.fromEntries(nextStaff.map((person) => [person.id, draftFromStaff(person)])));
+      .then((payload) => {
+        setStaff(payload.staff || []);
+        setSource(payload.source || "database");
+        setEditDrafts(Object.fromEntries((payload.staff || []).map((person) => [person.id, draftFromStaff(person)])));
+        setMessage(payload.source === "database" ? "" : "Staff table is unavailable, showing sheet fallback records only.");
       })
-      .catch((error: Error) => setMessage(error.message));
+      .catch((error: Error) => setMessage(error.message))
+      .finally(() => setIsLoading(false));
   }, []);
 
   function updateDraft(patch: Partial<StaffDraft>) {
@@ -134,26 +319,14 @@ export function AdminStaffManager() {
     }));
   }
 
-  function toggleRegion(currentRegions: string[], region: string) {
-    const nextRegions = currentRegions.includes(region)
-      ? currentRegions.filter((item) => item !== region)
-      : [...currentRegions, region];
-    return nextRegions.length ? nextRegions : [region];
-  }
-
-  function toggleSkill(currentSkills: string[], skill: string) {
-    return currentSkills.includes(skill)
-      ? currentSkills.filter((item) => item !== skill)
-      : [...currentSkills, skill];
-  }
-
-  async function saveMutation(payload: Record<string, unknown>, successMessage: string) {
-    setIsSaving(true);
+  async function saveMutation(payload: Record<string, unknown>, successMessage: string, id: string) {
+    setSavingId(id);
     setMessage("");
     try {
-      const nextStaff = await mutateStaff(payload);
-      setStaff(nextStaff);
-      setEditDrafts(Object.fromEntries(nextStaff.map((person) => [person.id, draftFromStaff(person)])));
+      const result = await mutateStaff(payload);
+      setStaff(result.staff || []);
+      setSource(result.source || "database");
+      setEditDrafts(Object.fromEntries((result.staff || []).map((person) => [person.id, draftFromStaff(person)])));
       setMessage(successMessage);
       window.dispatchEvent(new Event("toc.staff.updated"));
       return true;
@@ -161,7 +334,7 @@ export function AdminStaffManager() {
       setMessage(error instanceof Error ? error.message : "Staff update failed.");
       return false;
     } finally {
-      setIsSaving(false);
+      setSavingId(null);
     }
   }
 
@@ -171,93 +344,60 @@ export function AdminStaffManager() {
       setMessage("Staff name is required.");
       return;
     }
-    const saved = await saveMutation({
-      action: "create",
-      ...draft,
-      skills: draft.skills
-    }, `${draft.name} added to staff control.`);
+    const payload = buildStaffPayload("create", draft);
+    const saved = await saveMutation(payload, `${payload.name} added to staff control.`, "new");
     if (saved) setDraft(blankDraft());
   }
 
   function saveStaff(person: StaffEntity) {
     const nextDraft = editDrafts[person.id] || draftFromStaff(person);
-    void saveMutation({
-      action: "update",
-      id: person.id,
-      ...nextDraft,
-      skills: nextDraft.skills
-    }, `${nextDraft.name} updated.`);
+    if (!nextDraft.name.trim()) {
+      setMessage("Staff name is required before saving.");
+      return;
+    }
+    const payload = buildStaffPayload("update", nextDraft, person.id);
+    void saveMutation(payload, `${payload.name} updated in staff control.`, person.id);
   }
 
   function deleteStaff(person: StaffEntity) {
     if (!window.confirm(`Delete ${person.name} from staff entities? This does not edit the Google Sheets.`)) return;
-    void saveMutation({ action: "delete", id: person.id, name: person.name }, `${person.name} removed from staff entities.`);
+    void saveMutation({ action: "delete", id: person.id, name: person.name }, `${person.name} removed from staff entities.`, person.id);
   }
 
   return (
-    <div className="admin-action-console">
-      <form className="admin-action-form" onSubmit={registerStaff}>
-        <div>
-          <strong>Register staff entity</strong>
-          <small>Creates the TOC/Odin staff record and links it to sheet names. TOC does not edit Google Sheets.</small>
+    <div className="admin-action-console staff-register-console">
+      <form className="admin-action-form staff-register-form" onSubmit={registerStaff}>
+        <div className="staff-register-header">
+          <div>
+            <strong>Register staff entity</strong>
+            <small>Creates the database-backed TOC/Odin staff record. Sheet fields link to row names; TOC does not edit Google Sheets.</small>
+          </div>
+          <Tag tone={source === "database" ? "green" : "amber"}>{source === "database" ? "Database linked" : "Sheet fallback"}</Tag>
         </div>
-        <div className="admin-action-grid">
-          <label><span>Name</span><input value={draft.name} onChange={(event) => updateDraft({ name: event.target.value })} placeholder="Staff name" /></label>
-          <label><span>Preferred name</span><input value={draft.preferredName} onChange={(event) => updateDraft({ preferredName: event.target.value })} placeholder="Optional" /></label>
-          <label><span>Role</span><input value={draft.role} onChange={(event) => updateDraft({ role: event.target.value })} /></label>
-          <label>
-            <span>Status</span>
-            <select value={draft.status} onChange={(event) => updateDraft({ status: event.target.value as StaffDraft["status"] })}>
-              <option value="active">Active</option>
-              <option value="watch">Watch</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-          <label>
-            <span>Primary region</span>
-            <select value={draft.primaryRegion} onChange={(event) => updateDraft({ primaryRegion: event.target.value })}>
-              {staffRegions.map((region) => <option key={region}>{region}</option>)}
-            </select>
-          </label>
-          <label><span>Availability sheet name</span><input value={draft.availabilitySheetName} onChange={(event) => updateDraft({ availabilitySheetName: event.target.value })} placeholder="Sheet row name" /></label>
-          <label><span>Induction sheet name</span><input value={draft.inductionSheetName} onChange={(event) => updateDraft({ inductionSheetName: event.target.value })} placeholder="Sheet row name" /></label>
-          <label><span>Mobile</span><input value={draft.mobile} onChange={(event) => updateDraft({ mobile: event.target.value })} placeholder="Protected" /></label>
-          <label><span>WhatsApp</span><input value={draft.whatsapp} onChange={(event) => updateDraft({ whatsapp: event.target.value })} placeholder="Protected" /></label>
-        </div>
-        <fieldset>
-          <legend>Skills</legend>
-          {staffSkillOptions.map((skill) => (
-            <label key={skill}>
-              <input checked={draft.skills.includes(skill)} type="checkbox" onChange={() => updateDraft({ skills: toggleSkill(draft.skills, skill) })} /> {skill}
-            </label>
-          ))}
-        </fieldset>
-        <fieldset>
-          <legend>Assigned regions</legend>
-          {staffRegions.map((region) => (
-            <label key={region}>
-              <input checked={draft.regions.includes(region)} type="checkbox" onChange={() => updateDraft({ regions: toggleRegion(draft.regions, region) })} /> {region}
-            </label>
-          ))}
-        </fieldset>
-        <label><span>Reliability/status notes</span><textarea value={draft.reliabilityNotes} onChange={(event) => updateDraft({ reliabilityNotes: event.target.value })} placeholder="Internal manager/Odin notes" /></label>
-        <label className="admin-checkbox-row">
-          <input type="checkbox" checked={draft.contactVisibleToOdin} onChange={(event) => updateDraft({ contactVisibleToOdin: event.target.checked })} />
-          <span>Allow Odin service to read protected contact fields</span>
-        </label>
-        <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Add Staff Entity"}</button>
+        <StaffEditor
+          draft={draft}
+          mode="create"
+          disabled={savingId === "new"}
+          onPatch={updateDraft}
+          onSave={() => undefined}
+        />
       </form>
 
-      <div className="admin-action-list">
+      <div className="admin-action-list staff-register-list">
         <div className="admin-access-summary">
           <article><span>Staff entities</span><strong>{staff.length}</strong></article>
-          <article><span>Active</span><strong>{staff.filter((person) => person.status === "active").length}</strong></article>
-          <article><span>Watch</span><strong>{staff.filter((person) => person.status === "watch").length}</strong></article>
+          <article><span>Active</span><strong>{statusCounts.active}</strong></article>
+          <article><span>Watch</span><strong>{statusCounts.watch}</strong></article>
+          <article><span>Inactive</span><strong>{statusCounts.inactive}</strong></article>
         </div>
+
+        {isLoading ? <small className="admin-hint-message">Loading staff entities from TOC database...</small> : null}
+
         {staff.map((person) => {
           const personDraft = editDrafts[person.id] || draftFromStaff(person);
+          const canSave = person.source !== "availability_sheet";
           return (
-            <article className={`admin-action-card ${person.status === "inactive" ? "disabled" : ""}`} key={person.id}>
+            <article className={`admin-action-card staff-entity-card ${person.status === "inactive" ? "disabled" : ""}`} key={person.id}>
               <div className="admin-action-card-head">
                 <div>
                   <strong>{person.name}</strong>
@@ -267,62 +407,31 @@ export function AdminStaffManager() {
                   <Tag tone={person.status === "active" ? "green" : person.status === "watch" ? "amber" : "blue"}>{person.status}</Tag>
                   <Tag>{person.availability.availableWindows}/{person.availability.totalWindows || 0} windows</Tag>
                   <Tag tone={person.inductions.eligibleSites.length ? "green" : "amber"}>{person.inductions.eligibleSites.length} inductions</Tag>
+                  <Tag tone={canSave ? "green" : "amber"}>{canSave ? "DB record" : "Sheet only"}</Tag>
                 </div>
+              </div>
+              <div className="staff-card-summary">
+                <span>{person.regions.join(", ") || "No region mapped"}</span>
+                <span>{person.skills.length ? person.skills.join(", ") : "No skills mapped"}</span>
+                <span>{person.availabilitySheetName || "No availability link"}</span>
+                <span>{person.inductionSheetName || "No induction link"}</span>
               </div>
               <details className="admin-staff-details">
                 <summary>Edit staff details</summary>
-                <div className="admin-action-grid">
-                  <label><span>Name</span><input value={personDraft.name} onChange={(event) => updateEditDraft(person.id, { name: event.target.value })} /></label>
-                  <label><span>Preferred name</span><input value={personDraft.preferredName} onChange={(event) => updateEditDraft(person.id, { preferredName: event.target.value })} /></label>
-                  <label><span>Role</span><input value={personDraft.role} onChange={(event) => updateEditDraft(person.id, { role: event.target.value })} /></label>
-                  <label>
-                    <span>Status</span>
-                    <select value={personDraft.status} onChange={(event) => updateEditDraft(person.id, { status: event.target.value as StaffDraft["status"] })}>
-                      <option value="active">Active</option>
-                      <option value="watch">Watch</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Primary region</span>
-                    <select value={personDraft.primaryRegion} onChange={(event) => updateEditDraft(person.id, { primaryRegion: event.target.value })}>
-                      {staffRegions.map((region) => <option key={region}>{region}</option>)}
-                    </select>
-                  </label>
-                  <label><span>Availability sheet name</span><input value={personDraft.availabilitySheetName} onChange={(event) => updateEditDraft(person.id, { availabilitySheetName: event.target.value })} /></label>
-                  <label><span>Induction sheet name</span><input value={personDraft.inductionSheetName} onChange={(event) => updateEditDraft(person.id, { inductionSheetName: event.target.value })} /></label>
-                  <label><span>Mobile</span><input value={personDraft.mobile} onChange={(event) => updateEditDraft(person.id, { mobile: event.target.value })} /></label>
-                  <label><span>WhatsApp</span><input value={personDraft.whatsapp} onChange={(event) => updateEditDraft(person.id, { whatsapp: event.target.value })} /></label>
-                </div>
-                <fieldset>
-                  <legend>Skills</legend>
-                  {staffSkillOptions.map((skill) => (
-                    <label key={skill}>
-                      <input checked={personDraft.skills.includes(skill)} type="checkbox" onChange={() => updateEditDraft(person.id, { skills: toggleSkill(personDraft.skills, skill) })} /> {skill}
-                    </label>
-                  ))}
-                </fieldset>
-                <fieldset>
-                  <legend>Assigned regions</legend>
-                  {staffRegions.map((region) => (
-                    <label key={region}>
-                      <input checked={personDraft.regions.includes(region)} type="checkbox" onChange={() => updateEditDraft(person.id, { regions: toggleRegion(personDraft.regions, region) })} /> {region}
-                    </label>
-                  ))}
-                </fieldset>
-                <label><span>Reliability/status notes</span><textarea value={personDraft.reliabilityNotes} onChange={(event) => updateEditDraft(person.id, { reliabilityNotes: event.target.value })} /></label>
-                <label className="admin-checkbox-row">
-                  <input type="checkbox" checked={personDraft.contactVisibleToOdin} onChange={(event) => updateEditDraft(person.id, { contactVisibleToOdin: event.target.checked })} />
-                  <span>Allow Odin service to read protected contact fields</span>
-                </label>
-                <div className="admin-action-controls">
-                  <button type="button" onClick={() => saveStaff(person)} disabled={isSaving}>Save Staff Entity</button>
-                  <button className="danger-button" type="button" onClick={() => deleteStaff(person)} disabled={isSaving}>Delete Staff Entity</button>
-                </div>
+                {!canSave ? <small className="admin-hint-message">This is a sheet fallback record. Add it as a staff entity before editing protected details.</small> : null}
+                <StaffEditor
+                  draft={personDraft}
+                  mode="edit"
+                  disabled={!canSave || savingId === person.id}
+                  onPatch={(patch) => updateEditDraft(person.id, patch)}
+                  onSave={() => saveStaff(person)}
+                  onDelete={canSave ? () => deleteStaff(person) : undefined}
+                />
               </details>
             </article>
           );
         })}
+
         {message ? <small className="admin-hint-message">{message}</small> : null}
       </div>
     </div>
