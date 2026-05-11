@@ -28,6 +28,7 @@ type AdminUserDraft = {
   whatsapp: string;
   password: string;
   confirmPassword: string;
+  setupRegion: string;
 };
 
 const accessUsersKey = "toc.adminAccessUsers";
@@ -119,7 +120,8 @@ export function AdminAccessManager() {
             mobile: user.mobile || "",
             whatsapp: user.whatsapp || "",
             password: "",
-            confirmPassword: ""
+            confirmPassword: "",
+            setupRegion: user.regions.find((region) => region !== "National") || "Brisbane"
           };
         }
       });
@@ -211,7 +213,8 @@ export function AdminAccessManager() {
       mobile: "",
       whatsapp: "",
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
+      setupRegion: "Brisbane"
     };
 
     setUserDrafts((currentDrafts) => ({
@@ -231,7 +234,8 @@ export function AdminAccessManager() {
       mobile: user.mobile || "",
       whatsapp: user.whatsapp || "",
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
+      setupRegion: user.regions.find((region) => region !== "National") || "Brisbane"
     };
   }
 
@@ -317,8 +321,7 @@ export function AdminAccessManager() {
     setStatus(`Previewing ${user.name} as ${roleLabel(user.role)} - ${scope}.`);
   }
 
-  async function forceSetupWizard(user: AdminAccessUser) {
-    const targetRegion = user.regions.find((region) => region !== "National") || "Brisbane";
+  async function forceSetupWizard(user: AdminAccessUser, targetRegion: string) {
     try {
       const response = await fetch("/api/operations-setup", {
         method: "POST",
@@ -434,6 +437,16 @@ export function AdminAccessManager() {
                 <input type="password" value={draft.confirmPassword} placeholder="Confirm temporary password" onChange={(event) => updateDraft(user.id, { confirmPassword: event.target.value })} />
                 <button type="button" onClick={() => resetUserPassword(user)}>Issue Password Reset</button>
               </div>
+              {user.role === "manager" ? (
+                <div className="admin-user-security-box">
+                  <strong>Operations Setup Wizard</strong>
+                  <small>Require this manager to run the guided region setup wizard on their next login.</small>
+                  <select value={draft.setupRegion} onChange={(event) => updateDraft(user.id, { setupRegion: event.target.value })}>
+                    {(user.regions.filter((region) => region !== "National").length ? user.regions.filter((region) => region !== "National") : ["Brisbane"]).map((region) => <option value={region} key={region}>{region}</option>)}
+                  </select>
+                  <button type="button" onClick={() => forceSetupWizard(user, draft.setupRegion || user.regions.find((region) => region !== "National") || "Brisbane")}>Require Setup Wizard Next Login</button>
+                </div>
+              ) : null}
               <label>
                 <span>Access level</span>
                 <select value={user.role} onChange={(event) => updateUserRole(user, event.target.value as AccessRole)}>
@@ -468,7 +481,6 @@ export function AdminAccessManager() {
             </div>
             <div className="admin-user-actions">
               {previewToolsEnabled ? <button type="button" onClick={() => previewUser(user)}>Preview User View</button> : null}
-              {user.role === "manager" ? <button type="button" onClick={() => forceSetupWizard(user)}>Run Setup Next Login</button> : null}
               <button type="button" onClick={() => toggleStatus(user)}>{user.status === "Active" ? "Disable User" : "Reactivate User"}</button>
               <button className="danger-button" type="button" onClick={() => deregisterUser(user.id)}>Deregister User</button>
             </div>

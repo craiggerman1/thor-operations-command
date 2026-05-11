@@ -67,6 +67,12 @@ function skillToggle(selected: string[] = [], skill: string) {
   return selected.includes(skill) ? selected.filter((item) => item !== skill) : [...selected, skill];
 }
 
+function roleFromSkills(selected: string[] = []) {
+  if (selected.includes("Team Leader")) return "Team Leader";
+  if (selected.includes("Driver")) return "Driver";
+  return "Wash Hand";
+}
+
 async function readPayload(response: Response) {
   const text = await response.text();
   if (!text.trim()) throw new Error("TOC setup returned no response.");
@@ -129,7 +135,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
   async function saveStaff(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const ok = await mutate({ action: "upsertStaff", ...staffDraft }, "Staff member saved to the region database.");
+    const selectedSkills = staffDraft.skills?.length ? staffDraft.skills : ["Wash Hand"];
+    const ok = await mutate({ action: "upsertStaff", ...staffDraft, role: roleFromSkills(selectedSkills), skills: selectedSkills }, "Staff member saved to the region database.");
     if (ok) setStaffDraft(blankStaff());
   }
 
@@ -202,15 +209,12 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 1 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 1. Staff</strong><p>Add every person who works in this region. Odin uses this for roster suggestions, escalation context and induction matching.</p></div>
+          <div className="setup-copy"><strong>Step 1. Staff</strong><p>Add every person who works in this region. Tick every skill that applies so Odin can match staff to roster needs without guessing.</p></div>
           <form className="setup-grid-form" onSubmit={saveStaff}>
             <input placeholder="Staff name" value={staffDraft.name || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, name: event.target.value }))} />
             <input placeholder="Mobile phone" value={staffDraft.mobile || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, mobile: event.target.value }))} />
             <input placeholder="WhatsApp / Telegram phone" value={staffDraft.whatsapp || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} />
-            <select value={staffDraft.role || "Wash Hand"} onChange={(event) => setStaffDraft((current) => ({ ...current, role: event.target.value }))}>
-              {skills.map((skill) => <option key={skill}>{skill}</option>)}
-            </select>
-            <div className="setup-checks">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div>
+            <div className="setup-checks setup-checks-wide">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div>
             <input placeholder="Notes for Odin / manager" value={staffDraft.notes || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, notes: event.target.value }))} />
             <button disabled={saving} type="submit">{staffDraft.id ? "Save Staff" : "Add Staff"}</button>
             {staffDraft.id ? <button type="button" onClick={() => setStaffDraft(blankStaff())}>Cancel Edit</button> : null}
@@ -263,6 +267,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         <section className="setup-panel">
           <div className="setup-copy"><strong>Step 3. Site inductions</strong><p>Walk through each client site and confirm who is inducted, not inducted, expired or expiring.</p></div>
           <div className="setup-induction-grid">
+            {!staff.length || !sites.some((site) => site.requiredInduction) ? <div className="setup-empty">Add staff and client sites with required inductions first, then this step becomes the site-by-site induction checklist.</div> : null}
             {sites.filter((site) => site.requiredInduction).flatMap((site) => staff.map((person) => {
               const existing = findInduction(person, site);
               return <InductionEditor key={`${person.id}-${site.id}`} person={person} site={site} existing={existing} onSave={saveInduction} />;
@@ -293,6 +298,16 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
           <button disabled={saving} type="button" onClick={completeSetup}>Complete Setup And Open TOC</button>
         </section>
       ) : null}
+
+      <div className="setup-guide-footer">
+        <button type="button" disabled={step <= 1} onClick={() => setStep((current) => Math.max(1, current - 1))}>Back</button>
+        <div>
+          <strong>Step {step} of 5</strong>
+          <span>{["Staff setup", "Client jobs", "Site inductions", "Availability link", "TOC walkthrough"][step - 1]}</span>
+          <i><em style={{ width: `${(step / 5) * 100}%` }} /></i>
+        </div>
+        {step < 5 ? <button type="button" onClick={() => setStep((current) => Math.min(5, current + 1))}>Next Step</button> : <button type="button" disabled={saving} onClick={completeSetup}>Complete Setup</button>}
+      </div>
 
       {message ? <div className="setup-message">{message}</div> : null}
     </div>
