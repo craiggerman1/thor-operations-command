@@ -18,6 +18,8 @@ type StoredSession = {
   role?: AccessRole;
   label?: string;
   scope?: string;
+  accountScope?: string;
+  developerScope?: string;
   regions?: string[];
   email?: string;
   authMode?: "preview" | "supabase";
@@ -144,14 +146,20 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [sessionReady, setSessionReady] = useState(true);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
   const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
-  const currentRegionOptions = developmentToolsEnabled && activeProfile.role !== "director"
-    ? allRegions
-    : activeProfile.role === "director"
+  const accountRegionOptions = activeProfile.role === "director"
     ? ["National"]
     : activeProfile.role === "admin"
       ? Array.from(new Set(["National", ...assignedRegions.filter((region) => region !== "National")]))
       : assignedRegions.length ? assignedRegions : ["Brisbane"];
-  const currentScope = currentRegionOptions.includes(session.scope || "") ? session.scope || currentRegionOptions[0] : currentRegionOptions[0];
+  const accountScope = accountRegionOptions.includes(session.accountScope || "")
+    ? session.accountScope || accountRegionOptions[0]
+    : accountRegionOptions.includes(session.scope || "")
+      ? session.scope || accountRegionOptions[0]
+      : accountRegionOptions[0];
+  const developerScope = developmentToolsEnabled && session.developerScope && allRegions.includes(session.developerScope)
+    ? session.developerScope
+    : "";
+  const currentScope = developerScope || accountScope;
   const visibleNav = useMemo(
     () => navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National")),
     [activeProfile.role, currentScope]
@@ -209,12 +217,18 @@ export function TocShell({ children }: { children: ReactNode }) {
         const storedSession = readStoredSession();
         const profile = profilePayload.profile as StoredSession;
         const profileRegions = profile.regions?.length ? profile.regions : [];
-        const preservedScope = storedSession?.scope && profileRegions.includes(storedSession.scope)
-          ? storedSession.scope
+        const storedAccountScope = storedSession?.accountScope || storedSession?.scope;
+        const preservedAccountScope = storedAccountScope && profileRegions.includes(storedAccountScope)
+          ? storedAccountScope
           : profile.scope;
+        const preservedDeveloperScope = developmentToolsEnabled && storedSession?.developerScope && allRegions.includes(storedSession.developerScope)
+          ? storedSession.developerScope
+          : undefined;
         const restoredSession = {
           ...profile,
-          scope: preservedScope,
+          scope: preservedDeveloperScope || preservedAccountScope,
+          accountScope: preservedAccountScope,
+          developerScope: preservedDeveloperScope,
           authMode: "supabase" as const,
           restoredAt: new Date().toISOString()
         };
@@ -322,17 +336,43 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, [pathname, router, session.role, sessionReady, visibleNav]);
 
   function updateScope(scope: string) {
-    const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope, regions: currentRegionOptions };
+    const nextEffectiveScope = developerScope || scope;
+    const nextSession = { ...session, role: activeProfile.role, label: activeProfile.label, scope: nextEffectiveScope, accountScope: scope, regions: accountRegionOptions };
     setSession(nextSession);
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
-    window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope } }));
+    window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextEffectiveScope } }));
+  }
+
+  function updateDeveloperScope(scope: string) {
+    const nextDeveloperScope = allRegions.includes(scope) ? scope : undefined;
+    const nextEffectiveScope = nextDeveloperScope || accountScope;
+    const nextSession = {
+      ...session,
+      role: activeProfile.role,
+      label: activeProfile.label,
+      scope: nextEffectiveScope,
+      accountScope,
+      developerScope: nextDeveloperScope,
+      regions: accountRegionOptions
+    };
+    setSession(nextSession);
+    localStorage.setItem("toc.session", JSON.stringify(nextSession));
+    window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextEffectiveScope } }));
   }
 
   function updateRole(role: AccessRole) {
     const nextProfile = sessionProfiles[role] || defaultSession;
     const nextRegions = developmentToolsEnabled && nextProfile.role !== "director" ? allRegions : nextProfile.regions;
-    const nextScope = nextRegions.includes(session.scope || "") ? session.scope || nextRegions[0] : nextRegions[0] || "National";
-    const nextSession = { ...session, role: nextProfile.role, label: nextProfile.label, scope: nextScope, regions: nextRegions };
+    const nextAccountScope = nextRegions.includes(session.accountScope || "")
+      ? session.accountScope || nextRegions[0]
+      : nextRegions.includes(session.scope || "")
+        ? session.scope || nextRegions[0]
+        : nextRegions[0] || "National";
+    const nextDeveloperScope = developmentToolsEnabled && session.developerScope && allRegions.includes(session.developerScope)
+      ? session.developerScope
+      : undefined;
+    const nextScope = nextDeveloperScope || nextAccountScope;
+    const nextSession = { ...session, role: nextProfile.role, label: nextProfile.label, scope: nextScope, accountScope: nextAccountScope, developerScope: nextDeveloperScope, regions: nextRegions };
     setSession(nextSession);
     document.body.dataset.access = nextProfile.role;
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
@@ -412,7 +452,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.343</em>
+              <em>Build 0.344</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -429,11 +469,20 @@ export function TocShell({ children }: { children: ReactNode }) {
               </label>
             ) : null}
             <label className="select-wrap region-control">
-              <span>Region</span>
-              <select value={currentScope} onChange={(event) => updateScope(event.target.value)}>
-                {currentRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
+              <span>Account Region</span>
+              <select value={accountScope} onChange={(event) => updateScope(event.target.value)}>
+                {accountRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
               </select>
             </label>
+            {developmentToolsEnabled ? (
+              <label className="select-wrap developer-region-control">
+                <span>Developer View As</span>
+                <select value={developerScope} onChange={(event) => updateDeveloperScope(event.target.value)}>
+                  <option value="">Off</option>
+                  {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
+                </select>
+              </label>
+            ) : null}
             <button className="manual-refresh-button" type="button" onClick={manualRefresh}>Manual Refresh</button>
             <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
           </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { allRegions } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
 
 type AuthProfileRow = {
@@ -112,6 +113,10 @@ export function canAccessScope(user: TocAuthenticatedUser, scope: string) {
   return user.regions.includes(scope);
 }
 
+function canUseDeveloperScopeOverride(user: TocAuthenticatedUser, scope: string) {
+  return process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "true" && user.role === "admin" && allRegions.includes(scope);
+}
+
 export function getDefaultScopeForUser(user: TocAuthenticatedUser) {
   if (user.role === "admin" || user.role === "director") return "National";
   return user.regions[0] || "Brisbane";
@@ -143,7 +148,7 @@ export async function requireTocScope(request: Request, requestedScope: string |
 
   const user = permission.user;
   const scope = requestedScope || getDefaultScopeForUser(user);
-  if (canAccessScope(user, scope)) {
+  if (canAccessScope(user, scope) || canUseDeveloperScopeOverride(user, scope)) {
     return {
       user,
       scope,
