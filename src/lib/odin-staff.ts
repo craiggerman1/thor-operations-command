@@ -1,8 +1,9 @@
 import { staffAvailabilitySheet, staffInductionsSheet, type StaffSheetStatus } from "@/lib/toc-data";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { normaliseSheetSourceConfig, sheetSourceDefaults, toGoogleSheetCsvUrl } from "@/lib/sheet-source-settings";
 
 const availabilityCsvUrl = "https://docs.google.com/spreadsheets/d/1dFwTlBmOUPeq21LQdv6AzHFztuLDRC-j7io-B_1zWx0/gviz/tq?tqx=out:csv&gid=0";
-const inductionsCsvUrl = "https://docs.google.com/spreadsheets/d/1MFFxCPAhPzTzB9Q7zPOBLJyNyz04S23NoJ1GZ6-VRlM/gviz/tq?tqx=out:csv&gid=0";
+const inductionSettingsKey = "sheet_source_settings_inductions";
 
 type StaffProfileRow = {
   id: string;
@@ -153,9 +154,10 @@ function normalizeInductionStatus(value: string) {
 }
 
 async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
+  const inductionsConfig = await readInductionsSourceConfig();
   const [availabilityResponse, inductionsResponse] = await Promise.allSettled([
     fetch(availabilityCsvUrl, { cache: "no-store" }),
-    fetch(inductionsCsvUrl, { cache: "no-store" })
+    fetch(toGoogleSheetCsvUrl(inductionsConfig.spreadsheetUrl), { cache: "no-store" })
   ]);
 
   let availabilityStaff: LiveAvailabilityStaff[] = staffAvailabilitySheet.staff;
@@ -204,8 +206,22 @@ async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
     inductionSites,
     inductionStaff,
     availabilitySource: staffAvailabilitySheet.sourceName,
-    inductionsSource: staffInductionsSheet.sourceName
+    inductionsSource: inductionsConfig.sourceName || staffInductionsSheet.sourceName
   };
+}
+
+async function readInductionsSourceConfig() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return sheetSourceDefaults.inductions;
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", inductionSettingsKey)
+    .maybeSingle();
+
+  if (error || !data?.value) return sheetSourceDefaults.inductions;
+  return normaliseSheetSourceConfig("inductions", data.value as Record<string, unknown>);
 }
 
 function availabilityForName(name: string, feeds: LiveStaffFeeds) {

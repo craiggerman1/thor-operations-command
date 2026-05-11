@@ -20,8 +20,8 @@ export const sheetSourceDefaults: Record<SheetSourceSlug, SheetSourceConfig> = {
   },
   inductions: {
     slug: "inductions",
-    sourceName: "Staff Inductions - Sheet1",
-    spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1MFFxCPAhPzTzB9Q7zPOBLJyNyz04S23NoJ1GZ6-VRlM/edit?gid=0#gid=0",
+    sourceName: "Brisbane Staff Inductions",
+    spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1m04wK7aY5UhnMvWvTTCjYUAozoPNlhH1/edit?usp=sharing&ouid=101366717795368889476&rtpof=true&sd=true",
     region: "Brisbane",
     statusLabel: "Controlled source",
     connected: true
@@ -43,4 +43,13 @@ export function normaliseSheetSourceConfig(slug: SheetSourceSlug, value: Partial
     statusLabel: typeof value?.statusLabel === "string" && value.statusLabel.trim() ? value.statusLabel.trim() : fallback.statusLabel,
     connected: typeof value?.connected === "boolean" ? value.connected : fallback.connected
   };
+}
+
+export function toGoogleSheetCsvUrl(spreadsheetUrl: string) {
+  const spreadsheetId = spreadsheetUrl.match(/\/spreadsheets\/d\/([^/]+)/)?.[1];
+  if (!spreadsheetId) return spreadsheetUrl;
+
+  const gidMatch = spreadsheetUrl.match(/[?&#]gid=(\d+)/);
+  const gid = gidMatch?.[1] || "0";
+  return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
 }

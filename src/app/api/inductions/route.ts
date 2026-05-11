@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
+import { normaliseSheetSourceConfig, sheetSourceDefaults, toGoogleSheetCsvUrl } from "@/lib/sheet-source-settings";
 import { staffInductionsSheet } from "@/lib/toc-data";
 import type { InductionFeed, InductionStatus } from "@/lib/toc-data";
 import { requireTocScope } from "@/lib/toc-auth";
 
 export const dynamic = "force-dynamic";
 
-const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/1MFFxCPAhPzTzB9Q7zPOBLJyNyz04S23NoJ1GZ6-VRlM/gviz/tq?tqx=out:csv&gid=0";
 const settingsKey = "sheet_source_settings_inductions";
 
 async function readSourceConfig() {
@@ -91,7 +90,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(sheetCsvUrl, { cache: "no-store" });
+    const response = await fetch(toGoogleSheetCsvUrl(config.spreadsheetUrl), { cache: "no-store" });
     if (!response.ok) throw new Error(`Sheet fetch failed: ${response.status}`);
 
     const csv = await response.text();

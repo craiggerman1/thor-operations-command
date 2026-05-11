@@ -214,8 +214,8 @@ export type InductionFeed = {
 };
 
 export const staffInductionsSheet: InductionFeed = {
-  spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1MFFxCPAhPzTzB9Q7zPOBLJyNyz04S23NoJ1GZ6-VRlM/edit?gid=0#gid=0",
-  sourceName: "Staff Inductions - Sheet1",
+  spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1m04wK7aY5UhnMvWvTTCjYUAozoPNlhH1/edit?usp=sharing&ouid=101366717795368889476&rtpof=true&sd=true",
+  sourceName: "Brisbane Staff Inductions",
   lastRead: "3 May 2026",
   sites: [
     { name: "Woolworths", region: "Brisbane" },
