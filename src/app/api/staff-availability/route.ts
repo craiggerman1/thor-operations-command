@@ -86,7 +86,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(toGoogleSheetCsvUrl(config.spreadsheetUrl), { cache: "no-store" });
+    const response = await fetch(toGoogleSheetCsvUrl(config.spreadsheetUrl, Date.now()), { cache: "no-store" });
     if (!response.ok) throw new Error(`Sheet fetch failed: ${response.status}`);
 
     const csv = await response.text();
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
       ...staffAvailabilitySheet,
       sourceName: config.sourceName || staffAvailabilitySheet.sourceName,
       spreadsheetUrl: config.spreadsheetUrl || staffAvailabilitySheet.spreadsheetUrl,
-      lastRead: new Date().toLocaleDateString("en-AU", { timeZone: "Australia/Brisbane" }),
+      lastRead: new Date().toLocaleString("en-AU", { timeZone: "Australia/Brisbane", dateStyle: "medium", timeStyle: "short" }),
       staff
     };
 

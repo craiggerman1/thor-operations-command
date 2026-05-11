@@ -60,6 +60,7 @@ export default function StaffAvailabilityPage() {
   const scopedRosterGaps = rosterGaps.filter((gap) => scope === "National" || gap.region === scope);
   const redRosterGaps = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
   const actionedRosterGaps = scopedRosterGaps.filter((gap) => gap.alreadyActioned).length;
+  const liveRefreshMs = 15000;
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -101,32 +102,43 @@ export default function StaffAvailabilityPage() {
 
   useEffect(() => {
     let isActive = true;
+    let refreshInterval: number | null = null;
 
-    if (!isMappedScope || !sourceConfig.connected) {
-      setFeed(staffAvailabilitySheet);
-      setFeedStatus(`${sheetRegion} source only`);
-      return () => {
-        isActive = false;
-      };
+    function syncAvailabilityFeed() {
+      if (!isMappedScope || !sourceConfig.connected) {
+        setFeed(staffAvailabilitySheet);
+        setFeedStatus(`${sheetRegion} source only`);
+        return;
+      }
+
+      tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}&refresh=${Date.now()}`, { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
+        .then((nextFeed: StaffAvailabilityFeed) => {
+          if (!isActive) return;
+          setFeed(nextFeed);
+          setFeedStatus(nextFeed.lastRead ? `Source connected. Last read ${nextFeed.lastRead}` : "Source connected");
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setFeed(staffAvailabilitySheet);
+          setFeedStatus("Using last confirmed sheet read");
+        });
     }
 
-    tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
-      .then((nextFeed: StaffAvailabilityFeed) => {
-        if (!isActive) return;
-        setFeed(nextFeed);
-        setFeedStatus("Source connected");
-      })
-      .catch(() => {
-        if (!isActive) return;
-        setFeed(staffAvailabilitySheet);
-        setFeedStatus("Using last confirmed sheet read");
-      });
+    syncAvailabilityFeed();
+    if (isMappedScope && sourceConfig.connected) {
+      refreshInterval = window.setInterval(syncAvailabilityFeed, liveRefreshMs);
+      window.addEventListener("toc.manualRefresh", syncAvailabilityFeed);
+      window.addEventListener("toc.sheetSourceSettings.updated", syncAvailabilityFeed);
+    }
 
     return () => {
       isActive = false;
+      if (refreshInterval) window.clearInterval(refreshInterval);
+      window.removeEventListener("toc.manualRefresh", syncAvailabilityFeed);
+      window.removeEventListener("toc.sheetSourceSettings.updated", syncAvailabilityFeed);
     };
-  }, [isMappedScope, scope, sheetRegion, sourceConfig.connected]);
+  }, [isMappedScope, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
 
   useEffect(() => {
     let isActive = true;

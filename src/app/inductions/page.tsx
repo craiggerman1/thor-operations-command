@@ -70,6 +70,7 @@ export default function InductionsPage() {
   }).length, 0);
   const notInductedCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => getInduction(feed, staff.name, site.name).status === "Not Inducted").length, 0);
   const readiness = inductionCells ? Math.round((inductedCount / inductionCells) * 100) : 0;
+  const liveRefreshMs = 15000;
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -111,32 +112,43 @@ export default function InductionsPage() {
 
   useEffect(() => {
     let isActive = true;
+    let refreshInterval: number | null = null;
 
-    if (!isMappedScope || !sourceConfig.connected) {
-      setFeed(staffInductionsSheet);
-      setFeedStatus(`${sheetRegion} source only`);
-      return () => {
-        isActive = false;
-      };
+    function syncInductionFeed() {
+      if (!isMappedScope || !sourceConfig.connected) {
+        setFeed(staffInductionsSheet);
+        setFeedStatus(`${sheetRegion} source only`);
+        return;
+      }
+
+      tocFetch(`/api/inductions?scope=${encodeURIComponent(scope)}&refresh=${Date.now()}`, { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
+        .then((nextFeed: InductionFeed) => {
+          if (!isActive) return;
+          setFeed(nextFeed);
+          setFeedStatus(nextFeed.lastRead ? `Source connected. Last read ${nextFeed.lastRead}` : "Source connected");
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setFeed(staffInductionsSheet);
+          setFeedStatus("Using last confirmed sheet read");
+        });
     }
 
-    tocFetch(`/api/inductions?scope=${encodeURIComponent(scope)}`, { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
-      .then((nextFeed: InductionFeed) => {
-        if (!isActive) return;
-        setFeed(nextFeed);
-        setFeedStatus("Source connected");
-      })
-      .catch(() => {
-        if (!isActive) return;
-        setFeed(staffInductionsSheet);
-        setFeedStatus("Using last confirmed sheet read");
-      });
+    syncInductionFeed();
+    if (isMappedScope && sourceConfig.connected) {
+      refreshInterval = window.setInterval(syncInductionFeed, liveRefreshMs);
+      window.addEventListener("toc.manualRefresh", syncInductionFeed);
+      window.addEventListener("toc.sheetSourceSettings.updated", syncInductionFeed);
+    }
 
     return () => {
       isActive = false;
+      if (refreshInterval) window.clearInterval(refreshInterval);
+      window.removeEventListener("toc.manualRefresh", syncInductionFeed);
+      window.removeEventListener("toc.sheetSourceSettings.updated", syncInductionFeed);
     };
-  }, [isMappedScope, scope, sheetRegion, sourceConfig.connected]);
+  }, [isMappedScope, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
 
   useEffect(() => {
     let isActive = true;

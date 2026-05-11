@@ -45,11 +45,12 @@ export function normaliseSheetSourceConfig(slug: SheetSourceSlug, value: Partial
   };
 }
 
-export function toGoogleSheetCsvUrl(spreadsheetUrl: string) {
+export function toGoogleSheetCsvUrl(spreadsheetUrl: string, cacheBust?: string | number) {
   const spreadsheetId = spreadsheetUrl.match(/\/spreadsheets\/d\/([^/]+)/)?.[1];
   if (!spreadsheetId) return spreadsheetUrl;
 
   const gidMatch = spreadsheetUrl.match(/[?&#]gid=(\d+)/);
   const gid = gidMatch?.[1] || "0";
-  return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  const cacheSuffix = cacheBust ? `&tocBust=${encodeURIComponent(String(cacheBust))}` : "";
+  return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}${cacheSuffix}`;
 }

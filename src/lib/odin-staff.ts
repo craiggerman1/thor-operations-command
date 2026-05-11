@@ -157,8 +157,8 @@ async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
   const availabilityConfig = await readAvailabilitySourceConfig();
   const inductionsConfig = await readInductionsSourceConfig();
   const [availabilityResponse, inductionsResponse] = await Promise.allSettled([
-    fetch(toGoogleSheetCsvUrl(availabilityConfig.spreadsheetUrl), { cache: "no-store" }),
-    fetch(toGoogleSheetCsvUrl(inductionsConfig.spreadsheetUrl), { cache: "no-store" })
+    fetch(toGoogleSheetCsvUrl(availabilityConfig.spreadsheetUrl, Date.now()), { cache: "no-store" }),
+    fetch(toGoogleSheetCsvUrl(inductionsConfig.spreadsheetUrl, Date.now()), { cache: "no-store" })
   ]);
 
   let availabilityStaff: LiveAvailabilityStaff[] = staffAvailabilitySheet.staff;
