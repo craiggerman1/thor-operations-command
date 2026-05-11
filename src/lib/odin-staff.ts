@@ -2,7 +2,7 @@ import { staffAvailabilitySheet, staffInductionsSheet, type StaffSheetStatus } f
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { normaliseSheetSourceConfig, sheetSourceDefaults, toGoogleSheetCsvUrl } from "@/lib/sheet-source-settings";
 
-const availabilityCsvUrl = "https://docs.google.com/spreadsheets/d/1dFwTlBmOUPeq21LQdv6AzHFztuLDRC-j7io-B_1zWx0/gviz/tq?tqx=out:csv&gid=0";
+const availabilitySettingsKey = "sheet_source_settings_staff-availability";
 const inductionSettingsKey = "sheet_source_settings_inductions";
 
 type StaffProfileRow = {
@@ -154,9 +154,10 @@ function normalizeInductionStatus(value: string) {
 }
 
 async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
+  const availabilityConfig = await readAvailabilitySourceConfig();
   const inductionsConfig = await readInductionsSourceConfig();
   const [availabilityResponse, inductionsResponse] = await Promise.allSettled([
-    fetch(availabilityCsvUrl, { cache: "no-store" }),
+    fetch(toGoogleSheetCsvUrl(availabilityConfig.spreadsheetUrl), { cache: "no-store" }),
     fetch(toGoogleSheetCsvUrl(inductionsConfig.spreadsheetUrl), { cache: "no-store" })
   ]);
 
@@ -205,9 +206,23 @@ async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
     availabilityStaff,
     inductionSites,
     inductionStaff,
-    availabilitySource: staffAvailabilitySheet.sourceName,
+    availabilitySource: availabilityConfig.sourceName || staffAvailabilitySheet.sourceName,
     inductionsSource: inductionsConfig.sourceName || staffInductionsSheet.sourceName
   };
+}
+
+async function readAvailabilitySourceConfig() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return sheetSourceDefaults["staff-availability"];
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", availabilitySettingsKey)
+    .maybeSingle();
+
+  if (error || !data?.value) return sheetSourceDefaults["staff-availability"];
+  return normaliseSheetSourceConfig("staff-availability", data.value as Record<string, unknown>);
 }
 
 async function readInductionsSourceConfig() {

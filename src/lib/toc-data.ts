@@ -173,8 +173,8 @@ export type StaffAvailabilityFeed = {
 };
 
 export const staffAvailabilitySheet: StaffAvailabilityFeed = {
-  spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1dFwTlBmOUPeq21LQdv6AzHFztuLDRC-j7io-B_1zWx0/edit?gid=0#gid=0",
-  sourceName: "Staff Availability - Sheet1",
+  spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1VVMJDzjAm6HrR1SLYIBg0sDcPX9ec14h/edit?usp=sharing&ouid=101366717795368889476&rtpof=true&sd=true",
+  sourceName: "Brisbane Staff Availability",
   lastRead: "3 May 2026",
   days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
   windows: ["6am-12pm", "12pm-6pm", "6pm-12am", "12am-6am"],

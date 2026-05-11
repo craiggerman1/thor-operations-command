@@ -12,8 +12,8 @@ export type SheetSourceConfig = {
 export const sheetSourceDefaults: Record<SheetSourceSlug, SheetSourceConfig> = {
   "staff-availability": {
     slug: "staff-availability",
-    sourceName: "Staff Availability - Sheet1",
-    spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1dFwTlBmOUPeq21LQdv6AzHFztuLDRC-j7io-B_1zWx0/edit?gid=0#gid=0",
+    sourceName: "Brisbane Staff Availability",
+    spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1VVMJDzjAm6HrR1SLYIBg0sDcPX9ec14h/edit?usp=sharing&ouid=101366717795368889476&rtpof=true&sd=true",
     region: "Brisbane",
     statusLabel: "Controlled source",
     connected: true

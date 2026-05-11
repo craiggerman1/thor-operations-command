@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
+import { normaliseSheetSourceConfig, sheetSourceDefaults, toGoogleSheetCsvUrl } from "@/lib/sheet-source-settings";
 import { staffAvailabilitySheet } from "@/lib/toc-data";
 import type { StaffAvailabilityFeed, StaffSheetStatus } from "@/lib/toc-data";
 import { requireTocScope } from "@/lib/toc-auth";
 
 export const dynamic = "force-dynamic";
 
-const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/1dFwTlBmOUPeq21LQdv6AzHFztuLDRC-j7io-B_1zWx0/gviz/tq?tqx=out:csv&gid=0";
 const settingsKey = "sheet_source_settings_staff-availability";
 
 async function readSourceConfig() {
@@ -87,7 +86,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(sheetCsvUrl, { cache: "no-store" });
+    const response = await fetch(toGoogleSheetCsvUrl(config.spreadsheetUrl), { cache: "no-store" });
     if (!response.ok) throw new Error(`Sheet fetch failed: ${response.status}`);
 
     const csv = await response.text();
