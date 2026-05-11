@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
 import { allRegions } from "@/lib/access";
 import { tocFetch } from "@/lib/toc-client-auth";
 
-type StaffRow = { id: string; name: string; role: string; status: string; skills: string[]; mobile: string; whatsapp: string; availabilitySheetName: string; inductionSheetName: string; notes: string };
-type SiteRow = { id: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; requiredCrewCount: number; notes: string; status: string };
-type ScheduleRow = { id: string; siteId: string; siteLabel: string; scheduleName: string; startDate: string; endDate: string; jobTime: string; recurrence: string; recurrenceIntervalWeeks: number; requiredCrewCount: number; jobTitle: string; washAsset: string; notes: string; status: string; staffIds: string[] };
+type StaffRow = { id: string; name: string; role: string; status: string; skills: string[]; mobile: string; whatsapp: string; availabilitySheetName: string; inductionSheetName: string; notes: string; regions?: string[] };
+type SiteRow = { id: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; requiredCrewCount: number; notes: string; status: string; regions?: string[] };
+type ScheduleRow = { id: string; siteId: string; siteLabel: string; scheduleName: string; startDate: string; endDate: string; jobTime: string; recurrence: string; recurrenceIntervalWeeks: number; requiredCrewCount: number; jobTitle: string; washAsset: string; notes: string; status: string; staffIds: string[]; regions?: string[] };
 type InductionRow = { id: string; staffId: string; siteId: string; staffName: string; siteName: string; status: string; expiry: string };
 type SetupPayload = {
   connected: boolean;
@@ -24,6 +24,7 @@ type SetupPayload = {
 const skills = ["Wash Hand", "Driver", "Team Leader"];
 const recurrences = ["None", "Daily", "Weekly", "Fortnightly", "4 weekly", "Custom"];
 const inductionStatuses = ["", "Inducted", "Not Inducted", "Expired", "Expiring Soon", "Expiring This Month"];
+const allRegionsLabel = "All regions";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -81,6 +82,16 @@ async function readPayload(response: Response) {
   return payload;
 }
 
+function rowRegions(row: { regions?: string[] }, fallback: string) {
+  return row.regions?.length ? row.regions : [fallback];
+}
+
+function matchesSearch(parts: Array<unknown>, search: string) {
+  const needle = search.trim().toLowerCase();
+  if (!needle) return true;
+  return parts.filter(Boolean).join(" ").toLowerCase().includes(needle);
+}
+
 export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { adminMode?: boolean; initialStep?: number }) {
   const [region, setRegion] = useState(readSessionScope);
   const [step, setStep] = useState(initialStep);
@@ -91,21 +102,66 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [availabilityUrl, setAvailabilityUrl] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [staffSearch, setStaffSearch] = useState("");
+  const [siteSearch, setSiteSearch] = useState("");
+  const [scheduleSearch, setScheduleSearch] = useState("");
+  const [tableRegionFilter, setTableRegionFilter] = useState(allRegionsLabel);
+  const [editingStaffId, setEditingStaffId] = useState("");
+  const [editingStaffDraft, setEditingStaffDraft] = useState<Partial<StaffRow>>(blankStaff);
 
-  const regionOptions = useMemo(() => adminMode ? allRegions.filter((item) => item !== "National") : readSessionRegions(), [adminMode]);
+  const regionOptions = useMemo(() => adminMode ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(), [adminMode]);
+  const specificRegionOptions = useMemo(() => regionOptions.filter((item) => item !== allRegionsLabel), [regionOptions]);
+  const allRegionMode = adminMode && region === allRegionsLabel;
   const staff = payload?.staff || [];
   const sites = payload?.sites || [];
   const schedules = payload?.schedules || [];
   const inductions = payload?.inductions || [];
   const selectedSite = sites.find((site) => site.id === scheduleDraft.siteId);
+  const filteredStaff = useMemo(() => staff.filter((person) => {
+    const regions = rowRegions(person, region);
+    const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
+    return regionMatch && matchesSearch([person.name, person.mobile, person.whatsapp, person.role, person.skills.join(" "), regions.join(" "), person.notes], staffSearch);
+  }), [staff, staffSearch, tableRegionFilter, region]);
+  const filteredSites = useMemo(() => sites.filter((site) => {
+    const regions = rowRegions(site, region);
+    const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
+    return regionMatch && matchesSearch([site.clientName, site.siteName, site.address, site.requiredCrewCount, regions.join(" "), site.notes], siteSearch);
+  }), [sites, siteSearch, tableRegionFilter, region]);
+  const filteredSchedules = useMemo(() => schedules.filter((schedule) => {
+    const regions = rowRegions(schedule, region);
+    const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(" ");
+    const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
+    return regionMatch && matchesSearch([schedule.siteLabel, schedule.jobTitle, schedule.washAsset, schedule.recurrence, rosteredNames, regions.join(" "), schedule.notes], scheduleSearch);
+  }), [schedules, staff, scheduleSearch, tableRegionFilter, region]);
 
   async function load(nextRegion = region) {
     setMessage("");
     try {
+      if (adminMode && nextRegion === allRegionsLabel) {
+        const responses = await Promise.all(specificRegionOptions.map(async (item) => {
+          const response = await tocFetch(`/api/operations-setup?region=${encodeURIComponent(item)}`, { cache: "no-store" });
+          return readPayload(response);
+        }));
+        const combined: SetupPayload = {
+          connected: responses.every((item) => item.connected),
+          region: allRegionsLabel,
+          setup: {},
+          availabilitySource: null,
+          staff: responses.flatMap((item) => item.staff.map((person) => ({ ...person, regions: rowRegions(person, item.region) }))),
+          sites: responses.flatMap((item) => item.sites.map((site) => ({ ...site, regions: rowRegions(site, item.region) }))),
+          schedules: responses.flatMap((item) => item.schedules.map((schedule) => ({ ...schedule, regions: rowRegions(schedule, item.region) }))),
+          inductions: responses.flatMap((item) => item.inductions)
+        };
+        setPayload(combined);
+        setAvailabilityUrl("");
+        setTableRegionFilter(allRegionsLabel);
+        return;
+      }
       const response = await tocFetch(`/api/operations-setup?region=${encodeURIComponent(nextRegion)}`, { cache: "no-store" });
       const nextPayload = await readPayload(response);
       setPayload(nextPayload);
       setAvailabilityUrl(nextPayload.availabilitySource?.spreadsheetUrl || "");
+      setTableRegionFilter(nextRegion);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Setup data could not be loaded.");
     }
@@ -116,6 +172,10 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   }, [region]);
 
   async function mutate(body: Record<string, unknown>, success: string) {
+    if (allRegionMode) {
+      setMessage("Select a specific region before adding or editing setup data.");
+      return false;
+    }
     setSaving(true);
     setMessage("");
     try {
@@ -138,6 +198,24 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     const selectedSkills = staffDraft.skills?.length ? staffDraft.skills : ["Wash Hand"];
     const ok = await mutate({ action: "upsertStaff", ...staffDraft, role: roleFromSkills(selectedSkills), skills: selectedSkills }, "Staff member saved to the region database.");
     if (ok) setStaffDraft(blankStaff());
+  }
+
+  function startStaffRowEdit(person: StaffRow) {
+    if (allRegionMode) {
+      setMessage("Select a specific region before editing staff rows.");
+      return;
+    }
+    setEditingStaffId(person.id);
+    setEditingStaffDraft({ ...person, skills: person.skills?.length ? person.skills : ["Wash Hand"] });
+  }
+
+  async function saveStaffRowEdit() {
+    const selectedSkills = editingStaffDraft.skills?.length ? editingStaffDraft.skills : ["Wash Hand"];
+    const ok = await mutate({ action: "upsertStaff", ...editingStaffDraft, role: roleFromSkills(selectedSkills), skills: selectedSkills }, "Staff row saved to the region database.");
+    if (ok) {
+      setEditingStaffId("");
+      setEditingStaffDraft(blankStaff());
+    }
   }
 
   async function saveSite(event: FormEvent<HTMLFormElement>) {
@@ -216,11 +294,47 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <input placeholder="WhatsApp / Telegram phone" value={staffDraft.whatsapp || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} />
             <div className="setup-checks setup-checks-wide">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div>
             <input placeholder="Notes for Odin / manager" value={staffDraft.notes || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, notes: event.target.value }))} />
-            <button disabled={saving} type="submit">{staffDraft.id ? "Save Staff" : "Add Staff"}</button>
+            <button disabled={saving || allRegionMode} type="submit">{staffDraft.id ? "Save Staff" : "Add Staff"}</button>
             {staffDraft.id ? <button type="button" onClick={() => setStaffDraft(blankStaff())}>Cancel Edit</button> : null}
           </form>
-          <CollapsibleTable title="Current Staff" count={staff.length}>
-            <tbody>{staff.map((person) => <tr key={person.id}><td>{person.name}</td><td>{person.mobile || "No phone"}</td><td>{person.skills.join(", ") || person.role}</td><td><button type="button" onClick={() => setStaffDraft(person)}>Edit</button></td></tr>)}</tbody>
+          {allRegionMode ? <div className="setup-empty">All regions is a filterable overview. Select a specific region above before adding or editing staff.</div> : null}
+          <CollapsibleTable
+            title="Current Staff"
+            count={filteredStaff.length}
+            total={staff.length}
+            headers={["Staff name", "Phone", "Skills", "Region", "Action"]}
+            search={staffSearch}
+            onSearchChange={setStaffSearch}
+            regionFilter={tableRegionFilter}
+            onRegionFilterChange={setTableRegionFilter}
+            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
+          >
+            <tbody>{filteredStaff.map((person, index) => {
+              const isEditing = editingStaffId === person.id;
+              const rowKey = `${person.id}-${rowRegions(person, region).join("-")}-${index}`;
+              return (
+                <tr key={rowKey} className={isEditing ? "setup-editing-row" : ""}>
+                  <td>{isEditing ? <input value={editingStaffDraft.name || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, name: event.target.value }))} /> : person.name}</td>
+                  <td>{isEditing ? <input value={editingStaffDraft.mobile || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, mobile: event.target.value }))} /> : person.mobile || "No phone"}</td>
+                  <td>
+                    {isEditing ? (
+                      <div className="setup-checks setup-row-checks">
+                        {skills.map((skill) => <label key={skill}><input type="checkbox" checked={(editingStaffDraft.skills || []).includes(skill)} onChange={() => setEditingStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}
+                      </div>
+                    ) : person.skills.join(", ") || person.role}
+                  </td>
+                  <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
+                  <td className="setup-row-actions">
+                    {isEditing ? (
+                      <>
+                        <button type="button" disabled={saving} onClick={saveStaffRowEdit}>Save</button>
+                        <button type="button" onClick={() => { setEditingStaffId(""); setEditingStaffDraft(blankStaff()); }}>Cancel</button>
+                      </>
+                    ) : <button type="button" onClick={() => startStaffRowEdit(person)}>Edit</button>}
+                  </td>
+                </tr>
+              );
+            })}</tbody>
           </CollapsibleTable>
         </section>
       ) : null}
@@ -235,7 +349,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <input type="number" min={0} max={20} value={siteDraft.requiredCrewCount || 2} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} />
             <label><input type="checkbox" checked={siteDraft.requiredInduction !== false} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Site induction required</label>
             <input placeholder="Site notes" value={siteDraft.notes || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, notes: event.target.value }))} />
-            <button disabled={saving} type="submit">{siteDraft.id ? "Save Client Site" : "Add Client Site"}</button>
+            <button disabled={saving || allRegionMode} type="submit">{siteDraft.id ? "Save Client Site" : "Add Client Site"}</button>
             {siteDraft.id ? <button type="button" onClick={() => setSiteDraft(blankSite())}>Cancel Edit</button> : null}
           </form>
           <form className="setup-grid-form" onSubmit={saveSchedule}>
@@ -249,16 +363,36 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <input type="time" value={scheduleDraft.jobTime || "07:00"} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} />
             <select value={scheduleDraft.recurrence || "Weekly"} onChange={(event) => setScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select>
             <select multiple value={scheduleDraft.staffIds || []} onChange={(event) => setScheduleDraft((current) => ({ ...current, staffIds: Array.from(event.target.selectedOptions).map((option) => option.value) }))}>
-              {staff.map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}
+              {staff.map((person, index) => <option value={person.id} key={`${person.id}-${index}`}>{person.name}</option>)}
             </select>
-            <button disabled={saving} type="submit">{scheduleDraft.id ? "Save Job And Regenerate Calendar" : "Save Job And Generate Calendar"}</button>
+            <button disabled={saving || allRegionMode} type="submit">{scheduleDraft.id ? "Save Job And Regenerate Calendar" : "Save Job And Generate Calendar"}</button>
             {scheduleDraft.id ? <button type="button" onClick={() => setScheduleDraft(blankSchedule())}>Cancel Edit</button> : null}
           </form>
-          <CollapsibleTable title="Client Sites" count={sites.length}>
-            <tbody>{sites.map((site) => <tr key={site.id}><td>{site.clientName}</td><td>{site.siteName}</td><td>{site.requiredCrewCount} crew</td><td><button type="button" onClick={() => setSiteDraft(site)}>Edit</button></td></tr>)}</tbody>
+          <CollapsibleTable
+            title="Client Sites"
+            count={filteredSites.length}
+            total={sites.length}
+            headers={["Client", "Site", "Crew", "Region", "Action"]}
+            search={siteSearch}
+            onSearchChange={setSiteSearch}
+            regionFilter={tableRegionFilter}
+            onRegionFilterChange={setTableRegionFilter}
+            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
+          >
+            <tbody>{filteredSites.map((site, index) => <tr key={`${site.id}-${index}`}><td>{site.clientName}</td><td>{site.siteName}</td><td>{site.requiredCrewCount} crew</td><td><span className="setup-region-chip">{rowRegions(site, region).join(", ")}</span></td><td><button type="button" disabled={allRegionMode} onClick={() => setSiteDraft(site)}>Edit</button></td></tr>)}</tbody>
           </CollapsibleTable>
-          <CollapsibleTable title="Jobs Source" count={schedules.length}>
-            <tbody>{schedules.map((schedule) => <tr key={schedule.id}><td>{schedule.siteLabel}</td><td>{schedule.jobTitle}</td><td>{schedule.recurrence}</td><td><button type="button" onClick={() => setScheduleDraft(schedule)}>Edit</button></td></tr>)}</tbody>
+          <CollapsibleTable
+            title="Jobs Source"
+            count={filteredSchedules.length}
+            total={schedules.length}
+            headers={["Site", "Job", "Schedule", "Region", "Action"]}
+            search={scheduleSearch}
+            onSearchChange={setScheduleSearch}
+            regionFilter={tableRegionFilter}
+            onRegionFilterChange={setTableRegionFilter}
+            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
+          >
+            <tbody>{filteredSchedules.map((schedule, index) => <tr key={`${schedule.id}-${index}`}><td>{schedule.siteLabel}</td><td>{schedule.jobTitle}</td><td>{schedule.recurrence}</td><td><span className="setup-region-chip">{rowRegions(schedule, region).join(", ")}</span></td><td><button type="button" disabled={allRegionMode} onClick={() => setScheduleDraft(schedule)}>Edit</button></td></tr>)}</tbody>
           </CollapsibleTable>
         </section>
       ) : null}
@@ -281,7 +415,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
           <div className="setup-copy"><strong>Step 4. Staff availability</strong><p>Paste the editable Google Sheet link for this region. Staff can keep using the sheet, while TOC reads it live into the region view.</p></div>
           <form className="setup-grid-form" onSubmit={saveAvailability}>
             <input className="wide-input" placeholder="Google Sheet URL" value={availabilityUrl} onChange={(event) => setAvailabilityUrl(event.target.value)} />
-            <button disabled={saving} type="submit">Link Availability Sheet</button>
+            <button disabled={saving || allRegionMode} type="submit">Link Availability Sheet</button>
           </form>
         </section>
       ) : null}
@@ -295,7 +429,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <article><span>2</span><strong>Maintain Jobs</strong><small>Change customer schedules here, not directly in Calendar.</small></article>
             <article><span>3</span><strong>Close actions</strong><small>Managers should use Action Centre as the work close-out hub.</small></article>
           </div>
-          <button disabled={saving} type="button" onClick={completeSetup}>Complete Setup And Open TOC</button>
+          <button disabled={saving || allRegionMode} type="button" onClick={completeSetup}>Complete Setup And Open TOC</button>
         </section>
       ) : null}
 
@@ -306,7 +440,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
           <span>{["Staff setup", "Client jobs", "Site inductions", "Availability link", "TOC walkthrough"][step - 1]}</span>
           <i><em style={{ width: `${(step / 5) * 100}%` }} /></i>
         </div>
-        {step < 5 ? <button type="button" onClick={() => setStep((current) => Math.min(5, current + 1))}>Next Step</button> : <button type="button" disabled={saving} onClick={completeSetup}>Complete Setup</button>}
+        {step < 5 ? <button type="button" onClick={() => setStep((current) => Math.min(5, current + 1))}>Next Step</button> : <button type="button" disabled={saving || allRegionMode} onClick={completeSetup}>Complete Setup</button>}
       </div>
 
       {message ? <div className="setup-message">{message}</div> : null}
@@ -314,11 +448,41 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   );
 }
 
-function CollapsibleTable({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+function CollapsibleTable({
+  title,
+  count,
+  total,
+  headers,
+  search,
+  onSearchChange,
+  regionFilter,
+  onRegionFilterChange,
+  regionOptions,
+  children
+}: {
+  title: string;
+  count: number;
+  total?: number;
+  headers: string[];
+  search: string;
+  onSearchChange: (value: string) => void;
+  regionFilter: string;
+  onRegionFilterChange: (value: string) => void;
+  regionOptions: string[];
+  children: ReactNode;
+}) {
   return (
     <details className="setup-table" open>
-      <summary><strong>{title}</strong><span>{count} rows</span></summary>
-      <table><thead><tr><th>Name</th><th>Detail</th><th>Type</th><th>Status</th></tr></thead>{children}</table>
+      <summary><strong>{title}</strong><span>{count}{typeof total === "number" && total !== count ? ` of ${total}` : ""} rows</span></summary>
+      <div className="setup-table-tools">
+        <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder={`Filter ${title.toLowerCase()}`} />
+        <select value={regionFilter} onChange={(event) => onRegionFilterChange(event.target.value)}>
+          {regionOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+        </select>
+      </div>
+      <div className="setup-table-scroll">
+        <table><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>{children}</table>
+      </div>
     </details>
   );
 }

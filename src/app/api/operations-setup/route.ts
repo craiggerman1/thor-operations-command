@@ -125,6 +125,11 @@ async function regionLookup() {
   return new Map(((data || []) as RegionRow[]).map((region) => [region.name, region.id]));
 }
 
+async function regionNameLookup() {
+  const lookup = await regionLookup();
+  return new Map(Array.from(lookup.entries()).map(([name, id]) => [id, name]));
+}
+
 async function resolveRegion(regionName: string) {
   const lookup = await regionLookup();
   return lookup.get(regionName) || null;
@@ -188,6 +193,7 @@ async function readSetup(regionName: string, profileId: string) {
   if (!supabase) return { connected: false, error: "Supabase server key is not configured." };
   const regionId = await resolveRegion(regionName);
   if (!regionId) return { connected: false, error: "Region is not mapped in TOC.", region: regionName };
+  const regionNames = await regionNameLookup();
 
   await supabase
     .from("operations_setup_status")
@@ -208,10 +214,18 @@ async function readSetup(regionName: string, profileId: string) {
   if (firstError) return { connected: false, error: firstError.message, region: regionName };
 
   const regionStaffLinks = ((linkResult.data || []) as StaffRegionRow[]).filter((link) => link.region_id === regionId);
+  const staffLinks = (linkResult.data || []) as StaffRegionRow[];
   const regionStaffIds = new Set(regionStaffLinks.map((link) => link.staff_profile_id));
   const staff = ((staffResult.data || []) as StaffRow[])
     .filter((staffRow) => staffRow.primary_region_id === regionId || regionStaffIds.has(staffRow.id))
-    .map((staffRow) => ({
+    .map((staffRow) => {
+      const linkedRegions = staffLinks
+        .filter((link) => link.staff_profile_id === staffRow.id)
+        .map((link) => regionNames.get(link.region_id))
+        .filter(Boolean) as string[];
+      const primaryRegion = staffRow.primary_region_id ? regionNames.get(staffRow.primary_region_id) : "";
+      const regions = Array.from(new Set([primaryRegion, ...linkedRegions, regionName].filter(Boolean)));
+      return ({
       id: staffRow.id,
       name: staffRow.display_name,
       role: staffRow.role || "Wash Hand",
@@ -221,8 +235,10 @@ async function readSetup(regionName: string, profileId: string) {
       whatsapp: staffRow.contact_whatsapp || "",
       availabilitySheetName: staffRow.availability_sheet_name || staffRow.display_name,
       inductionSheetName: staffRow.induction_sheet_name || staffRow.display_name,
-      notes: staffRow.reliability_notes || ""
-    }));
+      notes: staffRow.reliability_notes || "",
+      regions
+    });
+    });
   const scheduleStaff = (scheduleStaffResult.data || []) as ScheduleStaffRow[];
 
   return {
@@ -239,7 +255,8 @@ async function readSetup(regionName: string, profileId: string) {
       requiredInduction: site.required_induction,
       requiredCrewCount: site.required_crew_count,
       notes: site.notes || "",
-      status: site.status
+      status: site.status,
+      regions: [regionNames.get(site.region_id || "") || regionName]
     })),
     schedules: ((schedulesResult.data || []) as ScheduleRow[]).map((schedule) => ({
       id: schedule.id,
@@ -256,6 +273,7 @@ async function readSetup(regionName: string, profileId: string) {
       washAsset: schedule.wash_asset || "",
       notes: schedule.notes || "",
       status: schedule.status,
+      regions: [regionNames.get(schedule.region_id || "") || regionName],
       staffIds: scheduleStaff.filter((link) => link.site_schedule_id === schedule.id).map((link) => link.staff_profile_id)
     })),
     inductions: ((inductionsResult.data || []) as InductionRow[]).map((induction) => ({
