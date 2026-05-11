@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { staffInductionsSheet } from "@/lib/toc-data";
 import { readSheetSourceConfig, scopedEmptyInductionFeed, syncInductionSheetToDatabase } from "@/lib/sheet-feed-sync";
 import { requireTocScope } from "@/lib/toc-auth";
 
@@ -20,6 +19,11 @@ export async function GET(request: Request) {
     const result = await syncInductionSheetToDatabase(config);
     return NextResponse.json(result.feed);
   } catch {
-    return NextResponse.json(staffInductionsSheet);
+    return NextResponse.json({
+      ...scopedEmptyInductionFeed(scopePermission.scope),
+      sourceName: config.sourceName || `${scopePermission.scope} induction source unavailable`,
+      spreadsheetUrl: config.spreadsheetUrl,
+      lastRead: "Source unavailable"
+    });
   }
 }

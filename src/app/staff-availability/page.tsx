@@ -47,9 +47,19 @@ function getStaffTotal(staff: StaffAvailabilityFeed["staff"][number]) {
   return staff.availability.flat().filter((status) => status === "Available").length;
 }
 
+function emptyAvailabilityFeed(scope: string): StaffAvailabilityFeed {
+  return {
+    ...staffAvailabilitySheet,
+    sourceName: `${scope} availability source required`,
+    spreadsheetUrl: "",
+    lastRead: "Source required",
+    staff: []
+  };
+}
+
 export default function StaffAvailabilityPage() {
   const [scope, setScope] = useState("National");
-  const [feed, setFeed] = useState<StaffAvailabilityFeed>(staffAvailabilitySheet);
+  const [feed, setFeed] = useState<StaffAvailabilityFeed>(() => emptyAvailabilityFeed("National"));
   const [sourceConfig, setSourceConfig] = useState<SheetSourceConfig>(sheetSourceDefaults["staff-availability"]);
   const [feedStatus, setFeedStatus] = useState("Source loading");
   const [rosterGaps, setRosterGaps] = useState<RosterGap[]>([]);
@@ -106,8 +116,8 @@ export default function StaffAvailabilityPage() {
 
     function syncAvailabilityFeed() {
       if (!isMappedScope || !sourceConfig.connected) {
-        setFeed(staffAvailabilitySheet);
-        setFeedStatus(`${sheetRegion} source only`);
+        setFeed(emptyAvailabilityFeed(scope));
+        setFeedStatus(sourceConfig.connected ? `${sheetRegion} source only` : "Source required");
         return;
       }
 
@@ -120,8 +130,8 @@ export default function StaffAvailabilityPage() {
         })
         .catch(() => {
           if (!isActive) return;
-          setFeed(staffAvailabilitySheet);
-          setFeedStatus("Using last confirmed sheet read");
+          setFeed(emptyAvailabilityFeed(scope));
+          setFeedStatus("Source unavailable");
         });
     }
 

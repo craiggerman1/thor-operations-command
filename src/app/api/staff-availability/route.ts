@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { staffAvailabilitySheet } from "@/lib/toc-data";
 import { readSheetSourceConfig, scopedEmptyAvailabilityFeed, syncAvailabilitySheetToDatabase } from "@/lib/sheet-feed-sync";
 import { requireTocScope } from "@/lib/toc-auth";
 
@@ -20,6 +19,11 @@ export async function GET(request: Request) {
     const result = await syncAvailabilitySheetToDatabase(config);
     return NextResponse.json(result.feed);
   } catch {
-    return NextResponse.json(staffAvailabilitySheet);
+    return NextResponse.json({
+      ...scopedEmptyAvailabilityFeed(scopePermission.scope),
+      sourceName: config.sourceName || `${scopePermission.scope} availability source unavailable`,
+      spreadsheetUrl: config.spreadsheetUrl,
+      lastRead: "Source unavailable"
+    });
   }
 }

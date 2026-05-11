@@ -35,6 +35,17 @@ function getInduction(feed: InductionFeed, staffName: string, siteName: string) 
   };
 }
 
+function emptyInductionFeed(scope: string): InductionFeed {
+  return {
+    ...staffInductionsSheet,
+    sourceName: `${scope} induction source required`,
+    spreadsheetUrl: "",
+    lastRead: "Source required",
+    sites: [],
+    staff: []
+  };
+}
+
 type WorkerInductionSubmission = {
   id: string;
   completedAt: string;
@@ -53,7 +64,7 @@ type WorkerInductionSubmission = {
 
 export default function InductionsPage() {
   const [scope, setScope] = useState("National");
-  const [feed, setFeed] = useState<InductionFeed>(staffInductionsSheet);
+  const [feed, setFeed] = useState<InductionFeed>(() => emptyInductionFeed("National"));
   const [sourceConfig, setSourceConfig] = useState<SheetSourceConfig>(sheetSourceDefaults.inductions);
   const [feedStatus, setFeedStatus] = useState("Source loading");
   const [workerSubmissions, setWorkerSubmissions] = useState<WorkerInductionSubmission[]>([]);
@@ -116,8 +127,8 @@ export default function InductionsPage() {
 
     function syncInductionFeed() {
       if (!isMappedScope || !sourceConfig.connected) {
-        setFeed(staffInductionsSheet);
-        setFeedStatus(`${sheetRegion} source only`);
+        setFeed(emptyInductionFeed(scope));
+        setFeedStatus(sourceConfig.connected ? `${sheetRegion} source only` : "Source required");
         return;
       }
 
@@ -130,8 +141,8 @@ export default function InductionsPage() {
         })
         .catch(() => {
           if (!isActive) return;
-          setFeed(staffInductionsSheet);
-          setFeedStatus("Using last confirmed sheet read");
+          setFeed(emptyInductionFeed(scope));
+          setFeedStatus("Source unavailable");
         });
     }
 

@@ -1,4 +1,4 @@
-import { staffAvailabilitySheet, staffInductionsSheet, type StaffSheetStatus } from "@/lib/toc-data";
+import { staffAvailabilitySheet, type StaffSheetStatus } from "@/lib/toc-data";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { normaliseSheetSourceConfig, sheetSourceDefaults, toGoogleSheetCsvUrl } from "@/lib/sheet-source-settings";
 
@@ -158,15 +158,15 @@ async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
   const availabilityConfig = await readAvailabilitySourceConfig();
   const inductionsConfig = await readInductionsSourceConfig();
   const [availabilityResponse, inductionsResponse] = await Promise.allSettled([
-    fetch(toGoogleSheetCsvUrl(availabilityConfig.spreadsheetUrl, Date.now()), { cache: "no-store" }),
-    fetch(toGoogleSheetCsvUrl(inductionsConfig.spreadsheetUrl, Date.now()), { cache: "no-store" })
+    availabilityConfig.connected && availabilityConfig.spreadsheetUrl ? fetch(toGoogleSheetCsvUrl(availabilityConfig.spreadsheetUrl, Date.now()), { cache: "no-store" }) : Promise.resolve(null),
+    inductionsConfig.connected && inductionsConfig.spreadsheetUrl ? fetch(toGoogleSheetCsvUrl(inductionsConfig.spreadsheetUrl, Date.now()), { cache: "no-store" }) : Promise.resolve(null)
   ]);
 
-  let availabilityStaff: LiveAvailabilityStaff[] = staffAvailabilitySheet.staff;
-  let inductionSites = staffInductionsSheet.sites;
-  let inductionStaff: LiveInductionStaff[] = staffInductionsSheet.staff;
+  let availabilityStaff: LiveAvailabilityStaff[] = [];
+  let inductionSites: LiveStaffFeeds["inductionSites"] = [];
+  let inductionStaff: LiveInductionStaff[] = [];
 
-  if (availabilityResponse.status === "fulfilled" && availabilityResponse.value.ok) {
+  if (availabilityResponse.status === "fulfilled" && availabilityResponse.value?.ok) {
     const rows = parseCsv(await availabilityResponse.value.text());
     const staffRows = rows.slice(2).filter((row) => row[0]?.trim());
     availabilityStaff = staffRows.map((row) => ({
@@ -178,13 +178,13 @@ async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
     }));
   }
 
-  if (inductionsResponse.status === "fulfilled" && inductionsResponse.value.ok) {
+  if (inductionsResponse.status === "fulfilled" && inductionsResponse.value?.ok) {
     const rows = parseCsv(await inductionsResponse.value.text());
     const siteRow = rows[0] || [];
     inductionSites = siteRow
       .slice(1)
       .filter((_, index) => index % 2 === 0)
-      .map((name) => ({ name: name.trim().replace(/\s+Status$/i, ""), region: "Brisbane" }))
+        .map((name) => ({ name: name.trim().replace(/\s+Status$/i, ""), region: inductionsConfig.region }))
       .filter((site) => site.name);
     const staffRows = rows.slice(1).filter((row) => {
       const staffName = row[0]?.trim() || "";
@@ -207,8 +207,8 @@ async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
     availabilityStaff,
     inductionSites,
     inductionStaff,
-    availabilitySource: availabilityConfig.sourceName || staffAvailabilitySheet.sourceName,
-    inductionsSource: inductionsConfig.sourceName || staffInductionsSheet.sourceName
+    availabilitySource: availabilityConfig.sourceName || "Staff Availability Source Required",
+    inductionsSource: inductionsConfig.sourceName || "Staff Induction Source Required"
   };
 }
 
