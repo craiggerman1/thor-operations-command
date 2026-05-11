@@ -3,8 +3,19 @@ body.next-app .app-shell {
 }
 
 body.next-app .access-control,
-body.next-app .region-control {
+body.next-app .region-control,
+body.next-app .developer-region-control {
   display: grid;
+}
+
+body.next-app .topbar-actions {
+  max-width: min(1120px, 72%);
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+body.next-app .developer-region-control {
+  min-width: 164px;
 }
 
 .metric-card {

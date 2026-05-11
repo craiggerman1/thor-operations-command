@@ -145,6 +145,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession>(() => getInitialStoredSession());
   const [sessionReady, setSessionReady] = useState(true);
   const activeProfile = sessionProfiles[session.role || defaultSession.role] || defaultSession;
+  const developerRegionOverrideEnabled = developmentToolsEnabled || activeProfile.role === "admin";
   const assignedRegions = session.regions?.length ? session.regions : activeProfile.regions;
   const accountRegionOptions = activeProfile.role === "director"
     ? ["National"]
@@ -156,7 +157,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     : accountRegionOptions.includes(session.scope || "")
       ? session.scope || accountRegionOptions[0]
       : accountRegionOptions[0];
-  const developerScope = developmentToolsEnabled && session.developerScope && allRegions.includes(session.developerScope)
+  const developerScope = developerRegionOverrideEnabled && session.developerScope && allRegions.includes(session.developerScope)
     ? session.developerScope
     : "";
   const currentScope = developerScope || accountScope;
@@ -221,7 +222,7 @@ export function TocShell({ children }: { children: ReactNode }) {
         const preservedAccountScope = storedAccountScope && profileRegions.includes(storedAccountScope)
           ? storedAccountScope
           : profile.scope;
-        const preservedDeveloperScope = developmentToolsEnabled && storedSession?.developerScope && allRegions.includes(storedSession.developerScope)
+        const preservedDeveloperScope = (developmentToolsEnabled || profile.role === "admin") && storedSession?.developerScope && allRegions.includes(storedSession.developerScope)
           ? storedSession.developerScope
           : undefined;
         const restoredSession = {
@@ -368,7 +369,7 @@ export function TocShell({ children }: { children: ReactNode }) {
       : nextRegions.includes(session.scope || "")
         ? session.scope || nextRegions[0]
         : nextRegions[0] || "National";
-    const nextDeveloperScope = developmentToolsEnabled && session.developerScope && allRegions.includes(session.developerScope)
+    const nextDeveloperScope = developerRegionOverrideEnabled && session.developerScope && allRegions.includes(session.developerScope)
       ? session.developerScope
       : undefined;
     const nextScope = nextDeveloperScope || nextAccountScope;
@@ -452,7 +453,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.344</em>
+              <em>Build 0.345</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -474,7 +475,7 @@ export function TocShell({ children }: { children: ReactNode }) {
                 {accountRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
               </select>
             </label>
-            {developmentToolsEnabled ? (
+            {developerRegionOverrideEnabled ? (
               <label className="select-wrap developer-region-control">
                 <span>Developer View As</span>
                 <select value={developerScope} onChange={(event) => updateDeveloperScope(event.target.value)}>
