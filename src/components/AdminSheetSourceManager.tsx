@@ -24,6 +24,16 @@ async function mutateSheetSourceConfig(body: Record<string, unknown>) {
   return (payload.config || sheetSourceDefaults[body.slug as SheetSourceSlug]) as SheetSourceConfig;
 }
 
+async function refreshSheetCache(slug: SheetSourceSlug) {
+  const response = await tocFetch("/api/odin/sheet-sync", {
+    method: "POST",
+    body: JSON.stringify({ slug })
+  }, true);
+  const payload = await response.json();
+  if (!response.ok && response.status !== 207) throw new Error(payload.error || "Sheet cache refresh failed.");
+  return payload as { results?: { slug: string; cachedRows: number; staffCount?: number; siteCount?: number; error?: string }[] };
+}
+
 export function AdminSheetSourceManager({ slug, label }: { slug: SheetSourceSlug; label: string }) {
   const [config, setConfig] = useState<SheetSourceConfig>(sheetSourceDefaults[slug]);
   const [message, setMessage] = useState("");
@@ -54,6 +64,22 @@ export function AdminSheetSourceManager({ slug, label }: { slug: SheetSourceSlug
     }
   }
 
+  async function refreshCache() {
+    setIsSaving(true);
+    setMessage("");
+    try {
+      const payload = await refreshSheetCache(slug);
+      const result = payload.results?.find((item) => item.slug === slug);
+      if (result?.error) throw new Error(result.error);
+      setMessage(`${label} cache refreshed: ${result?.cachedRows || 0} database rows from ${result?.staffCount || 0} staff records.`);
+      window.dispatchEvent(new Event("toc.sheetCache.updated"));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : `Could not refresh ${label} cache.`);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div className="admin-action-console">
       <div className="admin-action-form">
@@ -78,6 +104,7 @@ export function AdminSheetSourceManager({ slug, label }: { slug: SheetSourceSlug
         </label>
         <div className="admin-action-controls">
           <button type="button" onClick={() => void saveConfig()} disabled={isSaving}>{isSaving ? "Saving..." : "Save Sheet Source"}</button>
+          <button type="button" onClick={() => void refreshCache()} disabled={isSaving}>Refresh Database Cache</button>
           <button type="button" className="danger-button" onClick={() => void saveConfig("resetConfig")} disabled={isSaving}>Reset Defaults</button>
         </div>
         {message ? <small className="admin-hint-message">{message}</small> : null}
