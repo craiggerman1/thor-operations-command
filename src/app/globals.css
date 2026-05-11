@@ -245,7 +245,6 @@ body.next-app .developer-region-control {
 }
 
 .master-table-row {
-  grid-template-columns: 82px minmax(180px, 1.2fr) 110px minmax(220px, 1.4fr) minmax(220px, auto);
   align-items: center;
   padding: 7px 8px;
   border-bottom: 1px solid rgba(12, 57, 84, 0.08);
@@ -254,12 +253,33 @@ body.next-app .developer-region-control {
   font-size: 0.8rem;
 }
 
+.master-table-sites .master-table-row {
+  grid-template-columns: 58px minmax(130px, 1fr) minmax(140px, 1fr) 110px 62px minmax(120px, 0.8fr) 96px minmax(190px, auto);
+}
+
+.master-table-schedules .master-table-row {
+  grid-template-columns: 74px minmax(140px, 0.9fr) minmax(190px, 1.2fr) 124px 78px 112px 62px 92px minmax(260px, auto);
+}
+
 .master-table-row:last-child {
   border-bottom: 0;
 }
 
 .master-table-row strong {
   color: #12283a;
+}
+
+.master-table-row input,
+.master-table-row select {
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid rgba(12, 57, 84, 0.14);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #12283a;
+  font-size: 0.78rem;
+  font-weight: 750;
 }
 
 .master-row-actions {

@@ -132,6 +132,7 @@ export function AdminOperationsMasterData() {
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [savingRowId, setSavingRowId] = useState<string | null>(null);
 
   const activeSites = useMemo(() => sites.filter((site) => site.status !== "inactive"), [sites]);
   const activeSchedules = useMemo(() => schedules.filter((schedule) => schedule.status !== "inactive"), [schedules]);
@@ -187,6 +188,62 @@ export function AdminOperationsMasterData() {
       status: schedule.status,
       lastGeneratedUntil: schedule.lastGeneratedUntil
     });
+  }
+
+  function patchSiteRow(id: string, patch: Partial<SiteRow>) {
+    setSites((current) => current.map((site) => site.id === id ? { ...site, ...patch } : site));
+  }
+
+  function patchScheduleRow(id: string, patch: Partial<ScheduleRow>) {
+    setSchedules((current) => current.map((schedule) => schedule.id === id ? { ...schedule, ...patch } : schedule));
+  }
+
+  function chooseScheduleRowSite(scheduleId: string, siteId: string) {
+    const site = sites.find((item) => item.id === siteId);
+    patchScheduleRow(scheduleId, {
+      siteId,
+      siteLabel: site ? `${site.clientName} - ${site.siteName}` : "Unassigned site",
+      region: site?.region || schedules.find((schedule) => schedule.id === scheduleId)?.region || "Brisbane",
+      requiredCrewCount: site?.requiredCrewCount || schedules.find((schedule) => schedule.id === scheduleId)?.requiredCrewCount || 2
+    });
+  }
+
+  async function saveSiteRow(site: SiteRow) {
+    if (!site.clientName.trim() || !site.siteName.trim()) {
+      setMessage("Client name and site name are required.");
+      return;
+    }
+    setSavingRowId(site.id);
+    setMessage("");
+    try {
+      const payload = await mutateMasterData({ action: "upsertSite", ...site, id: site.id });
+      applyPayload(payload);
+      setMessage(`${site.clientName} - ${site.siteName} saved.`);
+      window.dispatchEvent(new Event("toc.operationsMaster.updated"));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Customer/site row could not be saved.");
+    } finally {
+      setSavingRowId(null);
+    }
+  }
+
+  async function saveScheduleRow(schedule: ScheduleRow) {
+    if (!schedule.siteId) {
+      setMessage("Choose a customer/site before saving a schedule.");
+      return;
+    }
+    setSavingRowId(schedule.id);
+    setMessage("");
+    try {
+      const payload = await mutateMasterData({ action: "upsertSchedule", ...schedule, id: schedule.id });
+      applyPayload(payload);
+      setMessage(`${schedule.scheduleName || schedule.jobTitle} saved.`);
+      window.dispatchEvent(new Event("toc.operationsMaster.updated"));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Schedule row could not be saved.");
+    } finally {
+      setSavingRowId(null);
+    }
   }
 
   async function saveSite(event: FormEvent<HTMLFormElement>) {
@@ -371,28 +428,56 @@ export function AdminOperationsMasterData() {
       <section className="master-data-list">
         <div className="master-data-head">
           <div>
-            <strong>Live master rows</strong>
-            <small>Edit rows like a compact spreadsheet. Archived rows stop being operational defaults.</small>
+            <strong>Live editable database rows</strong>
+            <small>Edit the table directly, then save the changed row. Staff availability stays Google Sheets-fed and is cached into the database.</small>
           </div>
         </div>
-        <div className="master-table">
-          <div className="master-table-row master-table-head"><span>Type</span><span>Name</span><span>Region</span><span>Key detail</span><span>Actions</span></div>
+        <div className="master-table master-table-sites">
+          <div className="master-table-row master-table-head"><span>Type</span><span>Client</span><span>Site</span><span>Region</span><span>Crew</span><span>Contact</span><span>Status</span><span>Actions</span></div>
           {sites.map((site) => (
             <div className="master-table-row" key={`site-${site.id}`}>
               <span>Site</span>
-              <strong>{site.clientName} - {site.siteName}</strong>
-              <span>{site.region}</span>
-              <span>{site.requiredCrewCount} crew - {site.requiredInduction ? "Induction required" : "No induction flag"}</span>
-              <span className="master-row-actions"><button type="button" onClick={() => editSite(site)}>Edit</button><button type="button" className="danger-button" onClick={() => void archiveSite(site.id)}>Archive</button></span>
+              <input value={site.clientName} onChange={(event) => patchSiteRow(site.id, { clientName: event.target.value })} aria-label="Client name" />
+              <input value={site.siteName} onChange={(event) => patchSiteRow(site.id, { siteName: event.target.value })} aria-label="Site name" />
+              <select value={site.region} onChange={(event) => patchSiteRow(site.id, { region: event.target.value })} aria-label="Site region">{regionOptions.map((region) => <option key={region}>{region}</option>)}</select>
+              <input type="number" min="0" max="20" value={site.requiredCrewCount} onChange={(event) => patchSiteRow(site.id, { requiredCrewCount: Number(event.target.value) })} aria-label="Required crew" />
+              <input value={site.siteContactName} onChange={(event) => patchSiteRow(site.id, { siteContactName: event.target.value })} aria-label="Site contact" />
+              <select value={site.status} onChange={(event) => patchSiteRow(site.id, { status: event.target.value as SiteRow["status"] })} aria-label="Site status">
+                <option value="active">Active</option>
+                <option value="watch">Watch</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <span className="master-row-actions">
+                <button type="button" onClick={() => void saveSiteRow(site)} disabled={savingRowId === site.id}>{savingRowId === site.id ? "Saving..." : "Save"}</button>
+                <button type="button" onClick={() => editSite(site)}>Details</button>
+                <button type="button" className="danger-button" onClick={() => void archiveSite(site.id)}>Archive</button>
+              </span>
             </div>
           ))}
+        </div>
+        <div className="master-table master-table-schedules">
+          <div className="master-table-row master-table-head"><span>Type</span><span>Schedule</span><span>Site</span><span>Start</span><span>Time</span><span>Repeat</span><span>Crew</span><span>Status</span><span>Actions</span></div>
           {schedules.map((schedule) => (
             <div className="master-table-row" key={`schedule-${schedule.id}`}>
               <span>Schedule</span>
-              <strong>{schedule.scheduleName || schedule.jobTitle}</strong>
-              <span>{schedule.region}</span>
-              <span>{schedule.siteLabel} - {schedule.recurrence} - {schedule.jobTime}</span>
-              <span className="master-row-actions"><button type="button" onClick={() => editSchedule(schedule)}>Edit</button><button type="button" onClick={() => void generateJobs(schedule.id)}>Generate Jobs</button><button type="button" className="danger-button" onClick={() => void archiveSchedule(schedule.id)}>Archive</button></span>
+              <input value={schedule.scheduleName} onChange={(event) => patchScheduleRow(schedule.id, { scheduleName: event.target.value })} aria-label="Schedule name" />
+              <select value={schedule.siteId} onChange={(event) => chooseScheduleRowSite(schedule.id, event.target.value)} aria-label="Linked site">
+                {activeSites.map((site) => <option value={site.id} key={site.id}>{site.clientName} - {site.siteName}</option>)}
+              </select>
+              <input type="date" value={schedule.startDate} onChange={(event) => patchScheduleRow(schedule.id, { startDate: event.target.value })} aria-label="Start date" />
+              <input value={schedule.jobTime} onChange={(event) => patchScheduleRow(schedule.id, { jobTime: event.target.value })} aria-label="Job time" />
+              <select value={schedule.recurrence} onChange={(event) => patchScheduleRow(schedule.id, { recurrence: event.target.value })} aria-label="Repeat">{recurrenceOptions.map((item) => <option key={item}>{item}</option>)}</select>
+              <input type="number" min="0" max="20" value={schedule.requiredCrewCount} onChange={(event) => patchScheduleRow(schedule.id, { requiredCrewCount: Number(event.target.value) })} aria-label="Required crew" />
+              <select value={schedule.status} onChange={(event) => patchScheduleRow(schedule.id, { status: event.target.value as ScheduleRow["status"] })} aria-label="Schedule status">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <span className="master-row-actions">
+                <button type="button" onClick={() => void saveScheduleRow(schedule)} disabled={savingRowId === schedule.id}>{savingRowId === schedule.id ? "Saving..." : "Save"}</button>
+                <button type="button" onClick={() => editSchedule(schedule)}>Details</button>
+                <button type="button" onClick={() => void generateJobs(schedule.id)}>Generate Jobs</button>
+                <button type="button" className="danger-button" onClick={() => void archiveSchedule(schedule.id)}>Archive</button>
+              </span>
             </div>
           ))}
         </div>
