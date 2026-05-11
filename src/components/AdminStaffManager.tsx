@@ -39,7 +39,7 @@ type StaffDraft = {
   status: "active" | "inactive" | "watch";
   regions: string[];
   primaryRegion: string;
-  skills: string;
+  skills: string[];
   reliabilityNotes: string;
   availabilitySheetName: string;
   inductionSheetName: string;
@@ -49,6 +49,7 @@ type StaffDraft = {
 };
 
 const staffRegions = allRegions.filter((region) => region !== "National");
+const staffSkillOptions = ["Wash Hand", "Driver", "Team Leader"];
 
 function blankDraft(): StaffDraft {
   return {
@@ -58,7 +59,7 @@ function blankDraft(): StaffDraft {
     status: "active",
     regions: ["Brisbane"],
     primaryRegion: "Brisbane",
-    skills: "",
+    skills: [],
     reliabilityNotes: "",
     availabilitySheetName: "",
     inductionSheetName: "",
@@ -76,7 +77,7 @@ function draftFromStaff(staff: StaffEntity): StaffDraft {
     status: staff.status,
     regions: staff.regions.filter((region) => region !== "National"),
     primaryRegion: staff.primaryRegion === "National" ? "Brisbane" : staff.primaryRegion,
-    skills: staff.skills.join(", "),
+    skills: staff.skills.filter((skill) => staffSkillOptions.includes(skill)),
     reliabilityNotes: staff.reliabilityNotes,
     availabilitySheetName: staff.availabilitySheetName,
     inductionSheetName: staff.inductionSheetName,
@@ -138,6 +139,12 @@ export function AdminStaffManager() {
       ? currentRegions.filter((item) => item !== region)
       : [...currentRegions, region];
     return nextRegions.length ? nextRegions : [region];
+  }
+
+  function toggleSkill(currentSkills: string[], skill: string) {
+    return currentSkills.includes(skill)
+      ? currentSkills.filter((item) => item !== skill)
+      : [...currentSkills, skill];
   }
 
   async function saveMutation(payload: Record<string, unknown>, successMessage: string) {
@@ -212,12 +219,19 @@ export function AdminStaffManager() {
               {staffRegions.map((region) => <option key={region}>{region}</option>)}
             </select>
           </label>
-          <label><span>Skills</span><input value={draft.skills} onChange={(event) => updateDraft({ skills: event.target.value })} placeholder="Team leader, pressure washing" /></label>
           <label><span>Availability sheet name</span><input value={draft.availabilitySheetName} onChange={(event) => updateDraft({ availabilitySheetName: event.target.value })} placeholder="Sheet row name" /></label>
           <label><span>Induction sheet name</span><input value={draft.inductionSheetName} onChange={(event) => updateDraft({ inductionSheetName: event.target.value })} placeholder="Sheet row name" /></label>
           <label><span>Mobile</span><input value={draft.mobile} onChange={(event) => updateDraft({ mobile: event.target.value })} placeholder="Protected" /></label>
           <label><span>WhatsApp</span><input value={draft.whatsapp} onChange={(event) => updateDraft({ whatsapp: event.target.value })} placeholder="Protected" /></label>
         </div>
+        <fieldset>
+          <legend>Skills</legend>
+          {staffSkillOptions.map((skill) => (
+            <label key={skill}>
+              <input checked={draft.skills.includes(skill)} type="checkbox" onChange={() => updateDraft({ skills: toggleSkill(draft.skills, skill) })} /> {skill}
+            </label>
+          ))}
+        </fieldset>
         <fieldset>
           <legend>Assigned regions</legend>
           {staffRegions.map((region) => (
@@ -275,12 +289,19 @@ export function AdminStaffManager() {
                       {staffRegions.map((region) => <option key={region}>{region}</option>)}
                     </select>
                   </label>
-                  <label><span>Skills</span><input value={personDraft.skills} onChange={(event) => updateEditDraft(person.id, { skills: event.target.value })} /></label>
                   <label><span>Availability sheet name</span><input value={personDraft.availabilitySheetName} onChange={(event) => updateEditDraft(person.id, { availabilitySheetName: event.target.value })} /></label>
                   <label><span>Induction sheet name</span><input value={personDraft.inductionSheetName} onChange={(event) => updateEditDraft(person.id, { inductionSheetName: event.target.value })} /></label>
                   <label><span>Mobile</span><input value={personDraft.mobile} onChange={(event) => updateEditDraft(person.id, { mobile: event.target.value })} /></label>
                   <label><span>WhatsApp</span><input value={personDraft.whatsapp} onChange={(event) => updateEditDraft(person.id, { whatsapp: event.target.value })} /></label>
                 </div>
+                <fieldset>
+                  <legend>Skills</legend>
+                  {staffSkillOptions.map((skill) => (
+                    <label key={skill}>
+                      <input checked={personDraft.skills.includes(skill)} type="checkbox" onChange={() => updateEditDraft(person.id, { skills: toggleSkill(personDraft.skills, skill) })} /> {skill}
+                    </label>
+                  ))}
+                </fieldset>
                 <fieldset>
                   <legend>Assigned regions</legend>
                   {staffRegions.map((region) => (
