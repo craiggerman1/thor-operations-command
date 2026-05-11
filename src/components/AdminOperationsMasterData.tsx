@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
-import { allRegions } from "@/lib/access";
 import { tocFetch } from "@/lib/toc-client-auth";
 
 type SiteRow = {
@@ -51,6 +50,7 @@ type StaffSummary = {
 type MasterPayload = {
   connected: boolean;
   error: string | null;
+  regions?: { id: string; name: string }[];
   sites: SiteRow[];
   schedules: ScheduleRow[];
   staff: StaffSummary[];
@@ -59,7 +59,6 @@ type MasterPayload = {
 type SiteDraft = Omit<SiteRow, "id"> & { id?: string };
 type ScheduleDraft = Omit<ScheduleRow, "id" | "siteLabel" | "lastGeneratedUntil"> & { id?: string; lastGeneratedUntil?: string };
 
-const regions = allRegions.filter((region) => region !== "National");
 const recurrenceOptions = ["None", "Daily", "Weekly", "Fortnightly", "4 weekly", "Custom"];
 
 function todayInput() {
@@ -126,6 +125,7 @@ export function AdminOperationsMasterData() {
   const [sites, setSites] = useState<SiteRow[]>([]);
   const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
   const [staff, setStaff] = useState<StaffSummary[]>([]);
+  const [regionOptions, setRegionOptions] = useState<string[]>(["Brisbane"]);
   const [siteDraft, setSiteDraft] = useState<SiteDraft>(blankSite);
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(blankSchedule);
   const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
@@ -140,6 +140,8 @@ export function AdminOperationsMasterData() {
     setSites(payload.sites || []);
     setSchedules(payload.schedules || []);
     setStaff(payload.staff || []);
+    const regions = (payload.regions || []).map((region) => region.name).filter((region) => region !== "National");
+    if (regions.length) setRegionOptions(regions);
   }
 
   useEffect(() => {
@@ -147,6 +149,12 @@ export function AdminOperationsMasterData() {
       .then(applyPayload)
       .catch((error: Error) => setMessage(error.message));
   }, []);
+
+  useEffect(() => {
+    if (!regionOptions.length) return;
+    if (!regionOptions.includes(siteDraft.region)) patchSite({ region: regionOptions[0] });
+    if (!regionOptions.includes(scheduleDraft.region)) patchSchedule({ region: regionOptions[0] });
+  }, [regionOptions, scheduleDraft.region, siteDraft.region]);
 
   function patchSite(patch: Partial<SiteDraft>) {
     setSiteDraft((current) => ({ ...current, ...patch }));
@@ -294,7 +302,7 @@ export function AdminOperationsMasterData() {
           <div className="master-row">
             <input value={siteDraft.clientName} onChange={(event) => patchSite({ clientName: event.target.value })} placeholder="Linfox" />
             <input value={siteDraft.siteName} onChange={(event) => patchSite({ siteName: event.target.value })} placeholder="Brisbane DC" />
-            <select value={siteDraft.region} onChange={(event) => patchSite({ region: event.target.value })}>{regions.map((region) => <option key={region}>{region}</option>)}</select>
+            <select value={siteDraft.region} onChange={(event) => patchSite({ region: event.target.value })}>{regionOptions.map((region) => <option key={region}>{region}</option>)}</select>
             <input type="number" min="0" max="20" value={siteDraft.requiredCrewCount} onChange={(event) => patchSite({ requiredCrewCount: Number(event.target.value) })} />
             <input value={siteDraft.siteContactName} onChange={(event) => patchSite({ siteContactName: event.target.value })} placeholder="Site contact" />
             <select value={siteDraft.status} onChange={(event) => patchSite({ status: event.target.value as SiteDraft["status"] })}>
@@ -349,7 +357,7 @@ export function AdminOperationsMasterData() {
           <div className="admin-action-grid">
             <label><span>Schedule name</span><input value={scheduleDraft.scheduleName} onChange={(event) => patchSchedule({ scheduleName: event.target.value })} placeholder="Friday night wash" /></label>
             <label><span>Job title</span><input value={scheduleDraft.jobTitle} onChange={(event) => patchSchedule({ jobTitle: event.target.value })} /></label>
-            <label><span>Region</span><select value={scheduleDraft.region} onChange={(event) => patchSchedule({ region: event.target.value })}>{regions.map((region) => <option key={region}>{region}</option>)}</select></label>
+            <label><span>Region</span><select value={scheduleDraft.region} onChange={(event) => patchSchedule({ region: event.target.value })}>{regionOptions.map((region) => <option key={region}>{region}</option>)}</select></label>
             {scheduleDraft.recurrence === "Custom" ? <label><span>Every weeks</span><input type="number" min="1" max="52" value={scheduleDraft.recurrenceIntervalWeeks} onChange={(event) => patchSchedule({ recurrenceIntervalWeeks: Number(event.target.value) })} /></label> : null}
           </div>
           <label><span>Schedule notes</span><textarea value={scheduleDraft.notes} onChange={(event) => patchSchedule({ notes: event.target.value })} /></label>

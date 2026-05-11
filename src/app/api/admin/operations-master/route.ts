@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { requireTocRole } from "@/lib/toc-auth";
+import { canAccessScope, hasNationalAccess, requireTocUser, type TocAuthenticatedUser } from "@/lib/toc-auth";
 
 type RegionRow = {
   id: string;
@@ -151,35 +151,67 @@ function mapSchedule(row: SiteScheduleRow) {
   };
 }
 
-async function readMasterData() {
+function regionIsWritable(user: TocAuthenticatedUser, regionName: string) {
+  return hasNationalAccess(user) || canAccessScope(user, regionName);
+}
+
+async function getRowRegionName(table: "operation_sites" | "site_schedules", id: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from(table)
+    .select("region:regions(name)")
+    .eq("id", id)
+    .maybeSingle();
+  const row = data as { region?: { name: string } | { name: string }[] | null } | null;
+  return firstRelated(row?.region)?.name || null;
+}
+
+async function readMasterData(user: TocAuthenticatedUser) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { connected: false, error: "Supabase server key is not configured.", sites: [], schedules: [], staff: [], regions: [] };
 
-  const [regionsResult, sitesResult, schedulesResult, staffResult] = await Promise.all([
-    supabase.from("regions").select("id,name").eq("is_active", true).order("name", { ascending: true }),
-    supabase
-      .from("operation_sites")
-      .select("id,client_name,site_name,region_id,address,site_contact_name,site_contact_phone,site_contact_email,required_induction,required_crew_count,site_rules,hazards,notes,status,updated_at,region:regions(name)")
-      .order("client_name", { ascending: true })
-      .order("site_name", { ascending: true }),
-    supabase
-      .from("site_schedules")
-      .select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,last_generated_until,updated_at,region:regions(name),site:operation_sites(id,client_name,site_name,region:regions(name))")
-      .order("start_date", { ascending: true })
-      .order("job_time", { ascending: true }),
-    supabase
-      .from("staff_profiles")
-      .select("id,display_name,role,status,contact_mobile")
-      .order("display_name", { ascending: true })
+  const regionsResult = await supabase.from("regions").select("id,name").eq("is_active", true).order("name", { ascending: true });
+  if (regionsResult.error) return { connected: false, error: regionsResult.error.message, sites: [], schedules: [], staff: [], regions: [] };
+
+  const activeRegions = ((regionsResult.data || []) as RegionRow[]).map((region) => ({ id: region.id, name: region.name }));
+  const allowedRegions = hasNationalAccess(user)
+    ? activeRegions
+    : activeRegions.filter((region) => user.regions.includes(region.name) && region.name !== "National");
+  const allowedRegionIds = allowedRegions.map((region) => region.id);
+
+  let sitesQuery = supabase
+    .from("operation_sites")
+    .select("id,client_name,site_name,region_id,address,site_contact_name,site_contact_phone,site_contact_email,required_induction,required_crew_count,site_rules,hazards,notes,status,updated_at,region:regions(name)")
+    .order("client_name", { ascending: true })
+    .order("site_name", { ascending: true });
+
+  let schedulesQuery = supabase
+    .from("site_schedules")
+    .select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,last_generated_until,updated_at,region:regions(name),site:operation_sites(id,client_name,site_name,region:regions(name))")
+    .order("start_date", { ascending: true })
+    .order("job_time", { ascending: true });
+
+  if (!hasNationalAccess(user)) {
+    sitesQuery = sitesQuery.in("region_id", allowedRegionIds.length ? allowedRegionIds : ["00000000-0000-0000-0000-000000000000"]);
+    schedulesQuery = schedulesQuery.in("region_id", allowedRegionIds.length ? allowedRegionIds : ["00000000-0000-0000-0000-000000000000"]);
+  }
+
+  const [sitesResult, schedulesResult, staffResult] = await Promise.all([
+    sitesQuery,
+    schedulesQuery,
+    hasNationalAccess(user)
+      ? supabase.from("staff_profiles").select("id,display_name,role,status,contact_mobile").order("display_name", { ascending: true })
+      : Promise.resolve({ data: [], error: null })
   ]);
 
-  const firstError = regionsResult.error || sitesResult.error || schedulesResult.error || staffResult.error;
+  const firstError = sitesResult.error || schedulesResult.error || staffResult.error;
   if (firstError) return { connected: false, error: firstError.message, sites: [], schedules: [], staff: [], regions: [] };
 
   return {
     connected: true,
     error: null,
-    regions: ((regionsResult.data || []) as RegionRow[]).map((region) => ({ id: region.id, name: region.name })),
+    regions: allowedRegions,
     sites: ((sitesResult.data || []) as OperationSiteRow[]).map(mapSite),
     schedules: ((schedulesResult.data || []) as SiteScheduleRow[]).map(mapSchedule),
     staff: ((staffResult.data || []) as Array<{ id: string; display_name: string; role: string; status: string; contact_mobile: string | null }>).map((staff) => ({
@@ -260,16 +292,17 @@ async function generateScheduleJobs(scheduleId: string) {
 }
 
 export async function GET(request: Request) {
-  const permission = await requireTocRole(request, ["admin"]);
+  const permission = await requireTocUser(request);
   if (permission.error) return permission.error;
 
-  const result = await readMasterData();
+  const result = await readMasterData(permission.user);
   return NextResponse.json(result, { status: result.connected ? 200 : 503 });
 }
 
 export async function POST(request: Request) {
-  const permission = await requireTocRole(request, ["admin"]);
+  const permission = await requireTocUser(request);
   if (permission.error) return permission.error;
+  const user = permission.user;
 
   const supabase = getSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ error: "Supabase server key is not configured." }, { status: 503 });
@@ -284,6 +317,7 @@ export async function POST(request: Request) {
       if (!clientName || !siteName) return NextResponse.json({ error: "Client and site name are required." }, { status: 400 });
       const regionId = await resolveRegionId(cleanString(payload.region));
       if (!regionId) return NextResponse.json({ error: "A mapped region is required." }, { status: 400 });
+      if (!regionIsWritable(user, cleanString(payload.region))) return NextResponse.json({ error: "You can only manage operations master rows for your assigned region." }, { status: 403 });
 
       const row = {
         client_name: clientName,
@@ -309,21 +343,24 @@ export async function POST(request: Request) {
       if (error) throw error;
       if (!data) return NextResponse.json({ error: "Site was not found." }, { status: 404 });
       await logTocAudit({ actor: permission.user, action: isUuid(payload.id) ? "admin.operation_site.update" : "admin.operation_site.create", entityTable: "operation_sites", entityId: data.id, scope: cleanString(payload.region), details: { clientName, siteName } });
-      return readMasterData().then((result) => NextResponse.json(result));
+      return readMasterData(user).then((result) => NextResponse.json(result));
     }
 
     if (action === "archiveSite") {
       if (!isUuid(payload.id)) return NextResponse.json({ error: "Site id is required." }, { status: 400 });
+      const regionName = await getRowRegionName("operation_sites", payload.id);
+      if (!regionName || !regionIsWritable(user, regionName)) return NextResponse.json({ error: "You can only archive rows for your assigned region." }, { status: 403 });
       const { error } = await supabase.from("operation_sites").update({ status: "inactive", updated_at: new Date().toISOString() }).eq("id", payload.id);
       if (error) throw error;
       await logTocAudit({ actor: permission.user, action: "admin.operation_site.archive", entityTable: "operation_sites", entityId: payload.id });
-      return readMasterData().then((result) => NextResponse.json(result));
+      return readMasterData(user).then((result) => NextResponse.json(result));
     }
 
     if (action === "upsertSchedule") {
       if (!isUuid(payload.siteId)) return NextResponse.json({ error: "Linked customer/site is required." }, { status: 400 });
       const regionId = await resolveRegionId(cleanString(payload.region));
       if (!regionId) return NextResponse.json({ error: "A mapped region is required." }, { status: 400 });
+      if (!regionIsWritable(user, cleanString(payload.region))) return NextResponse.json({ error: "You can only manage schedules for your assigned region." }, { status: 403 });
       const recurrence = allowedRecurrences.includes(cleanString(payload.recurrence)) ? cleanString(payload.recurrence) : "Weekly";
       const row = {
         site_id: payload.siteId,
@@ -347,22 +384,26 @@ export async function POST(request: Request) {
       if (error) throw error;
       if (!data) return NextResponse.json({ error: "Schedule was not found." }, { status: 404 });
       await logTocAudit({ actor: permission.user, action: isUuid(payload.id) ? "admin.site_schedule.update" : "admin.site_schedule.create", entityTable: "site_schedules", entityId: data.id, scope: cleanString(payload.region), details: { scheduleName: row.schedule_name, recurrence } });
-      return readMasterData().then((result) => NextResponse.json(result));
+      return readMasterData(user).then((result) => NextResponse.json(result));
     }
 
     if (action === "archiveSchedule") {
       if (!isUuid(payload.id)) return NextResponse.json({ error: "Schedule id is required." }, { status: 400 });
+      const regionName = await getRowRegionName("site_schedules", payload.id);
+      if (!regionName || !regionIsWritable(user, regionName)) return NextResponse.json({ error: "You can only archive schedules for your assigned region." }, { status: 403 });
       const { error } = await supabase.from("site_schedules").update({ status: "inactive", updated_at: new Date().toISOString() }).eq("id", payload.id);
       if (error) throw error;
       await logTocAudit({ actor: permission.user, action: "admin.site_schedule.archive", entityTable: "site_schedules", entityId: payload.id });
-      return readMasterData().then((result) => NextResponse.json(result));
+      return readMasterData(user).then((result) => NextResponse.json(result));
     }
 
     if (action === "generateScheduleJobs") {
       if (!isUuid(payload.id)) return NextResponse.json({ error: "Schedule id is required." }, { status: 400 });
+      const regionName = await getRowRegionName("site_schedules", payload.id);
+      if (!regionName || !regionIsWritable(user, regionName)) return NextResponse.json({ error: "You can only generate jobs for your assigned region." }, { status: 403 });
       const generation = await generateScheduleJobs(payload.id);
       await logTocAudit({ actor: permission.user, action: "admin.site_schedule.generate_calendar_jobs", entityTable: "site_schedules", entityId: payload.id, details: generation });
-      const result = await readMasterData();
+      const result = await readMasterData(user);
       return NextResponse.json({ ...result, generation });
     }
 
