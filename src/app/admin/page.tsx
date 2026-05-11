@@ -1,15 +1,22 @@
 import Link from "next/link";
+import dynamicImport from "next/dynamic";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { adminSettingStateLabels, pageSettings, type AdminPageSetting } from "@/lib/admin-settings";
 
 export const dynamic = "force-dynamic";
 
+function SettingManagerLoading() {
+  return <div className="settings-loading">Loading settings controls...</div>;
+}
+
+const OdinConfidenceCentre = dynamicImport(() => import("@/components/OdinConfidenceCentre").then((mod) => mod.OdinConfidenceCentre), { loading: SettingManagerLoading });
+
 const groups: Array<{ title: string; detail: string; slugs: string[] }> = [
   {
     title: "Access And System",
-    detail: "Security, users, staff records, global messages, audit history and Odin data confidence.",
-    slugs: ["user-access", "staff-register", "messages", "audit-trail", "odin-confidence"]
+    detail: "Security, users, staff records, global messages and audit history.",
+    slugs: ["user-access", "staff-register", "messages", "audit-trail"]
   },
   {
     title: "Operations Flow",
@@ -58,6 +65,13 @@ export default function AdminPage() {
       <FlowHeading eyebrow="Admin Settings" title="Open the exact settings area you need, then change the live TOC control from that page." />
 
       <section className="admin-settings-hub">
+        <Panel wide eyebrow="Odin Confidence" title="Data quality and automation trust centre" pill="Live">
+          <div className="admin-settings-group-head">
+            <p>Review source gaps, weak mappings, duplicate risks and routing confidence before Odin automates follow-through.</p>
+          </div>
+          <OdinConfidenceCentre />
+        </Panel>
+
         {groups.map((group) => (
           <Panel wide eyebrow="Settings group" title={group.title} pill={`${group.slugs.length} controls`} key={group.title}>
             <div className="admin-settings-group-head">
