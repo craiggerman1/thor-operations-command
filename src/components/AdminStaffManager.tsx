@@ -139,13 +139,20 @@ async function fetchStaff() {
 }
 
 async function mutateStaff(payload: Record<string, unknown>) {
-  const response = await tocFetch("/api/admin/staff", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  }, true);
-  const result = await response.json() as StaffPayload;
-  if (!response.ok) throw new Error(result.error || "Staff database update failed.");
-  return result;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 18000);
+  try {
+    const response = await tocFetch("/api/admin/staff", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    }, true);
+    const result = await response.json() as StaffPayload;
+    if (!response.ok) throw new Error(result.error || "Staff database update failed.");
+    return result;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 function toggleValue(values: string[], value: string) {
@@ -207,66 +214,58 @@ function StaffEditor({
 
   return (
     <div className="staff-editor">
-      <div className="staff-editor-section">
-        <strong>Identity</strong>
-        <div className="admin-action-grid staff-editor-grid">
-          <label><span>Full name</span><input value={draft.name} onChange={(event) => onPatch({ name: event.target.value })} placeholder="Staff name" /></label>
-          <label><span>Preferred name</span><input value={draft.preferredName} onChange={(event) => onPatch({ preferredName: event.target.value })} placeholder="Optional" /></label>
-          <label>
-            <span>Role</span>
-            <select value={draft.role} onChange={(event) => onPatch({ role: event.target.value })}>
-              {staffRoleOptions.map((role) => <option key={role}>{role}</option>)}
-            </select>
-          </label>
-          <label>
-            <span>Status</span>
-            <select value={draft.status} onChange={(event) => onPatch({ status: event.target.value as StaffDraft["status"] })}>
-              <option value="active">Active</option>
-              <option value="watch">Watch</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-        </div>
+      <div className="staff-editor-main">
+        <label><span>Name</span><input value={draft.name} onChange={(event) => onPatch({ name: event.target.value })} placeholder="Staff name" /></label>
+        <label><span>Mobile</span><input value={draft.mobile} onChange={(event) => onPatch({ mobile: event.target.value })} placeholder="Phone number" /></label>
+        <label>
+          <span>Region</span>
+          <select value={draft.primaryRegion} onChange={(event) => patchPrimaryRegion(event.target.value)}>
+            {staffRegions.map((region) => <option key={region}>{region}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Role</span>
+          <select value={draft.role} onChange={(event) => onPatch({ role: event.target.value })}>
+            {staffRoleOptions.map((role) => <option key={role}>{role}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Status</span>
+          <select value={draft.status} onChange={(event) => onPatch({ status: event.target.value as StaffDraft["status"] })}>
+            <option value="active">Active</option>
+            <option value="watch">Watch</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </label>
       </div>
 
-      <div className="staff-editor-section">
-        <strong>Region and capability</strong>
-        <div className="admin-action-grid staff-editor-grid">
-          <label>
-            <span>Primary region</span>
-            <select value={draft.primaryRegion} onChange={(event) => patchPrimaryRegion(event.target.value)}>
-              {staffRegions.map((region) => <option key={region}>{region}</option>)}
-            </select>
-          </label>
-          <label><span>Availability sheet name</span><input value={draft.availabilitySheetName} onChange={(event) => onPatch({ availabilitySheetName: event.target.value })} placeholder="Exact row name if different" /></label>
-          <label><span>Induction sheet name</span><input value={draft.inductionSheetName} onChange={(event) => onPatch({ inductionSheetName: event.target.value })} placeholder="Exact row name if different" /></label>
+      <StaffCheckGroup
+        legend="Skills"
+        options={staffSkillOptions}
+        selected={draft.skills}
+        onChange={(skills) => onPatch({ skills: normaliseSkills(skills) })}
+      />
+
+      <details className="staff-advanced-details">
+        <summary>Advanced mapping</summary>
+        <div className="staff-editor-main">
+          <label><span>Preferred name</span><input value={draft.preferredName} onChange={(event) => onPatch({ preferredName: event.target.value })} placeholder="Optional" /></label>
+          <label><span>WhatsApp</span><input value={draft.whatsapp} onChange={(event) => onPatch({ whatsapp: event.target.value })} placeholder="If different" /></label>
+          <label><span>Availability row</span><input value={draft.availabilitySheetName} onChange={(event) => onPatch({ availabilitySheetName: event.target.value })} placeholder="Exact sheet row name" /></label>
+          <label><span>Induction row</span><input value={draft.inductionSheetName} onChange={(event) => onPatch({ inductionSheetName: event.target.value })} placeholder="Exact sheet row name" /></label>
         </div>
         <StaffCheckGroup
-          legend="Skills"
-          options={staffSkillOptions}
-          selected={draft.skills}
-          onChange={(skills) => onPatch({ skills: normaliseSkills(skills) })}
-        />
-        <StaffCheckGroup
-          legend="Assigned regions"
+          legend="Extra regions"
           options={staffRegions}
           selected={regions}
           onChange={(nextRegions) => onPatch({ regions: normaliseRegions(nextRegions, draft.primaryRegion) })}
         />
-      </div>
-
-      <div className="staff-editor-section">
-        <strong>Protected contact and notes</strong>
-        <div className="admin-action-grid staff-editor-grid">
-          <label><span>Mobile</span><input value={draft.mobile} onChange={(event) => onPatch({ mobile: event.target.value })} placeholder="Protected" /></label>
-          <label><span>WhatsApp</span><input value={draft.whatsapp} onChange={(event) => onPatch({ whatsapp: event.target.value })} placeholder="Protected" /></label>
-        </div>
-        <label><span>Reliability/status notes</span><textarea value={draft.reliabilityNotes} onChange={(event) => onPatch({ reliabilityNotes: event.target.value })} placeholder="Internal manager/Odin notes" /></label>
+        <label><span>Odin notes</span><textarea value={draft.reliabilityNotes} onChange={(event) => onPatch({ reliabilityNotes: event.target.value })} placeholder="Internal manager/Odin notes" /></label>
         <label className="admin-checkbox-row">
           <input type="checkbox" checked={draft.contactVisibleToOdin} onChange={(event) => onPatch({ contactVisibleToOdin: event.target.checked })} />
-          <span>Allow Odin service to read protected contact fields</span>
+          <span>Allow Odin to read protected contact fields</span>
         </label>
-      </div>
+      </details>
 
       <div className="admin-action-controls staff-editor-actions">
         <button type={mode === "create" ? "submit" : "button"} onClick={mode === "edit" ? onSave : undefined} disabled={disabled}>
@@ -331,7 +330,7 @@ export function AdminStaffManager() {
       window.dispatchEvent(new Event("toc.staff.updated"));
       return true;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Staff update failed.");
+      setMessage(error instanceof DOMException && error.name === "AbortError" ? "Staff save timed out before TOC responded. Please retry." : error instanceof Error ? error.message : "Staff update failed.");
       return false;
     } finally {
       setSavingId(null);
@@ -369,8 +368,8 @@ export function AdminStaffManager() {
       <form className="admin-action-form staff-register-form" onSubmit={registerStaff}>
         <div className="staff-register-header">
           <div>
-            <strong>Register staff entity</strong>
-            <small>Creates the database-backed TOC/Odin staff record. Sheet fields link to row names; TOC does not edit Google Sheets.</small>
+            <strong>Staff Register</strong>
+            <small>Fast TOC/Odin staff records: name, phone, region, role and skills.</small>
           </div>
           <Tag tone={source === "database" ? "green" : "amber"}>{source === "database" ? "Database linked" : "Sheet fallback"}</Tag>
         </div>
@@ -405,16 +404,13 @@ export function AdminStaffManager() {
                 </div>
                 <div className="meta-row">
                   <Tag tone={person.status === "active" ? "green" : person.status === "watch" ? "amber" : "blue"}>{person.status}</Tag>
-                  <Tag>{person.availability.availableWindows}/{person.availability.totalWindows || 0} windows</Tag>
-                  <Tag tone={person.inductions.eligibleSites.length ? "green" : "amber"}>{person.inductions.eligibleSites.length} inductions</Tag>
+                  <Tag>{person.contact?.mobile || "No phone"}</Tag>
                   <Tag tone={canSave ? "green" : "amber"}>{canSave ? "DB record" : "Sheet only"}</Tag>
                 </div>
               </div>
               <div className="staff-card-summary">
                 <span>{person.regions.join(", ") || "No region mapped"}</span>
                 <span>{person.skills.length ? person.skills.join(", ") : "No skills mapped"}</span>
-                <span>{person.availabilitySheetName || "No availability link"}</span>
-                <span>{person.inductionSheetName || "No induction link"}</span>
               </div>
               <details className="admin-staff-details">
                 <summary>Edit staff details</summary>

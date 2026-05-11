@@ -1,12 +1,34 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
-import { readOdinStaffEntities } from "@/lib/odin-staff";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocRole } from "@/lib/toc-auth";
 
 type RegionRow = {
   id: string;
   name: string;
+};
+
+type StaffProfileRow = {
+  id: string;
+  display_name: string;
+  preferred_name: string | null;
+  role: string;
+  status: "active" | "inactive" | "watch";
+  primary_region_id: string | null;
+  skills: string[] | null;
+  reliability_notes: string | null;
+  availability_sheet_name: string | null;
+  induction_sheet_name: string | null;
+  contact_mobile: string | null;
+  contact_whatsapp: string | null;
+  emergency_contact: Record<string, unknown> | null;
+  contact_visible_to_odin: boolean | null;
+  updated_at: string | null;
+};
+
+type StaffRegionLinkRow = {
+  staff_profile_id: string;
+  region_id: string;
 };
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -84,13 +106,69 @@ async function resolveRegionId(regionName: string) {
 }
 
 async function readStaff() {
-  const result = await readOdinStaffEntities({ includeProtected: true });
-  return {
-    connected: result.connected,
-    source: result.source,
-    error: result.error,
-    staff: result.staff
-  };
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    return { connected: false, source: "database", error: "Supabase server key is not configured.", staff: [] };
+  }
+
+  const [profilesResult, regionsResult, linksResult] = await Promise.all([
+    supabase
+      .from("staff_profiles")
+      .select("id,display_name,preferred_name,role,status,primary_region_id,skills,reliability_notes,availability_sheet_name,induction_sheet_name,contact_mobile,contact_whatsapp,emergency_contact,contact_visible_to_odin,updated_at")
+      .order("display_name", { ascending: true }),
+    supabase
+      .from("regions")
+      .select("id,name")
+      .eq("is_active", true),
+    supabase
+      .from("staff_profile_regions")
+      .select("staff_profile_id,region_id")
+  ]);
+
+  if (profilesResult.error) throw profilesResult.error;
+  if (regionsResult.error) throw regionsResult.error;
+  if (linksResult.error) throw linksResult.error;
+
+  const regionsById = ((regionsResult.data || []) as RegionRow[]).reduce<Record<string, string>>((lookup, region) => {
+    lookup[region.id] = region.name;
+    return lookup;
+  }, {});
+  const linksByStaff = ((linksResult.data || []) as StaffRegionLinkRow[]).reduce<Record<string, string[]>>((lookup, link) => {
+    const regionName = regionsById[link.region_id];
+    if (regionName) lookup[link.staff_profile_id] = [...(lookup[link.staff_profile_id] || []), regionName];
+    return lookup;
+  }, {});
+
+  const staff = ((profilesResult.data || []) as StaffProfileRow[]).map((profile) => {
+    const primaryRegion = profile.primary_region_id ? regionsById[profile.primary_region_id] : null;
+    const regions = Array.from(new Set([...(linksByStaff[profile.id] || []), ...(primaryRegion ? [primaryRegion] : [])]));
+    return {
+      id: profile.id,
+      name: profile.display_name,
+      preferredName: profile.preferred_name,
+      regions: regions.length ? regions : ["Unassigned"],
+      primaryRegion: primaryRegion || regions[0] || "Unassigned",
+      role: profile.role,
+      status: profile.status,
+      skills: profile.skills || [],
+      reliabilityNotes: profile.reliability_notes || "",
+      preferredWindows: {},
+      availabilitySheetName: profile.availability_sheet_name || profile.display_name,
+      inductionSheetName: profile.induction_sheet_name || profile.display_name,
+      availability: { availableWindows: 0, totalWindows: 0 },
+      inductions: { eligibleSites: [] },
+      contact: {
+        mobile: profile.contact_mobile,
+        whatsapp: profile.contact_whatsapp,
+        emergencyContact: profile.emergency_contact || {}
+      },
+      contactVisibleToOdin: profile.contact_visible_to_odin !== false,
+      source: "database" as const,
+      updatedAt: profile.updated_at
+    };
+  });
+
+  return { connected: true, source: "database" as const, error: null, staff };
 }
 
 export async function GET(request: Request) {
