@@ -683,12 +683,14 @@ body.next-app .rail-nav {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px;
-  border: 1px solid rgba(12, 57, 84, 0.12);
-  border-left: 5px solid #2c9f73;
-  border-radius: 8px;
-  background: white;
-  box-shadow: 0 10px 24px rgba(12, 57, 84, 0.06);
+  padding: 14px;
+  border: 1px solid rgba(183, 220, 238, 0.54);
+  border-left: 4px solid #2c9f73;
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(242, 248, 251, 0.64)),
+    var(--glass);
+  box-shadow: 0 10px 24px rgba(6, 7, 9, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.88);
 }
 
 .odin-simple-status.amber {
@@ -784,9 +786,12 @@ body.next-app .rail-nav {
   gap: 5px;
   min-height: 118px;
   padding: 13px;
-  border: 1px solid rgba(12, 57, 84, 0.12);
-  border-radius: 8px;
-  background: white;
+  border: 1px solid rgba(183, 220, 238, 0.54);
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(242, 248, 251, 0.64)),
+    var(--glass);
+  box-shadow: 0 10px 24px rgba(6, 7, 9, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.88);
 }
 
 .odin-simple-metric span {
@@ -817,10 +822,13 @@ body.next-app .rail-nav {
 .odin-control-switchboard {
   display: grid;
   gap: 10px;
-  padding: 15px;
-  border: 1px solid rgba(12, 57, 84, 0.12);
-  border-radius: 8px;
-  background: white;
+  padding: 14px;
+  border: 1px solid rgba(183, 220, 238, 0.54);
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(242, 248, 251, 0.64)),
+    var(--glass);
+  box-shadow: 0 10px 24px rgba(6, 7, 9, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.88);
 }
 
 .odin-switchboard-head {
