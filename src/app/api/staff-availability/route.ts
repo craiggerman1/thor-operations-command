@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
   const requestedScope = searchParams.get("scope") || "National";
-  const forceRefresh = searchParams.get("refresh") === "true";
+  const forceRefresh = searchParams.has("refresh") && searchParams.get("refresh") !== "false";
   const scopePermission = await requireTocScope(request, requestedScope);
   if (scopePermission.error) return scopePermission.error;
 

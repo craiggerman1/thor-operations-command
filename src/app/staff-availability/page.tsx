@@ -129,7 +129,7 @@ export default function StaffAvailabilityPage() {
         setFeedStatus(cachedFeed.lastRead ? `${cachedFeed.lastRead}. Refreshing quietly.` : "Cached source loaded. Refreshing quietly.");
       }
 
-      tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}${forceRefresh ? "&refresh=true" : ""}`, { cache: "no-store" })
+      tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}&refresh=${forceRefresh ? "manual" : "live"}&t=${Date.now()}`, { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
         .then((nextFeed: StaffAvailabilityFeed) => {
           if (!isActive) return;
