@@ -46,6 +46,28 @@ function emptyAvailabilityFeed(scope: string): StaffAvailabilityFeed {
   };
 }
 
+const pageCacheMs = 2 * 60 * 1000;
+
+function readCachedFeed(scope: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(`toc.staffAvailability.${scope}`) || "null") as { expiresAt?: number; feed?: StaffAvailabilityFeed } | null;
+    if (!cached?.feed || !cached.expiresAt || cached.expiresAt < Date.now()) return null;
+    return cached.feed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedFeed(scope: string, feed: StaffAvailabilityFeed) {
+  if (typeof window === "undefined" || !feed.staff?.length) return;
+  try {
+    sessionStorage.setItem(`toc.staffAvailability.${scope}`, JSON.stringify({ feed, expiresAt: Date.now() + pageCacheMs }));
+  } catch {
+    // Cache is only used to make page switching feel instant.
+  }
+}
+
 export default function StaffAvailabilityPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<StaffAvailabilityFeed>(() => emptyAvailabilityFeed("National"));
@@ -56,7 +78,7 @@ export default function StaffAvailabilityPage() {
   const hasConnectedSource = (sourceConfig.connected && Boolean(sourceConfig.spreadsheetUrl)) || Boolean(feed.spreadsheetUrl);
   const hasAvailabilityRows = feed.staff.length > 0;
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
-  const liveRefreshMs = 15000;
+  const liveRefreshMs = 60000;
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -100,12 +122,19 @@ export default function StaffAvailabilityPage() {
     let isActive = true;
     let refreshInterval: number | null = null;
 
-    function syncAvailabilityFeed() {
-      tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}&refresh=${Date.now()}`, { cache: "no-store" })
+    function syncAvailabilityFeed(forceRefresh = false) {
+      const cachedFeed = forceRefresh ? null : readCachedFeed(scope);
+      if (cachedFeed && isActive) {
+        setFeed(cachedFeed);
+        setFeedStatus(cachedFeed.lastRead ? `${cachedFeed.lastRead}. Refreshing quietly.` : "Cached source loaded. Refreshing quietly.");
+      }
+
+      tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}${forceRefresh ? "&refresh=true" : ""}`, { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
         .then((nextFeed: StaffAvailabilityFeed) => {
           if (!isActive) return;
           setFeed(nextFeed);
+          writeCachedFeed(scope, nextFeed);
           if (nextFeed.staff?.length) {
             setFeedStatus(nextFeed.lastRead ? `Source connected. Last read ${nextFeed.lastRead}` : "Source connected");
           } else {
@@ -122,15 +151,20 @@ export default function StaffAvailabilityPage() {
     syncAvailabilityFeed();
     if (hasConnectedSource || hasAvailabilityRows) {
       refreshInterval = window.setInterval(syncAvailabilityFeed, liveRefreshMs);
-      window.addEventListener("toc.manualRefresh", syncAvailabilityFeed);
-      window.addEventListener("toc.sheetSourceSettings.updated", syncAvailabilityFeed);
+      const forceSync = () => syncAvailabilityFeed(true);
+      window.addEventListener("toc.manualRefresh", forceSync);
+      window.addEventListener("toc.sheetSourceSettings.updated", forceSync);
+      return () => {
+        isActive = false;
+        if (refreshInterval) window.clearInterval(refreshInterval);
+        window.removeEventListener("toc.manualRefresh", forceSync);
+        window.removeEventListener("toc.sheetSourceSettings.updated", forceSync);
+      };
     }
 
     return () => {
       isActive = false;
       if (refreshInterval) window.clearInterval(refreshInterval);
-      window.removeEventListener("toc.manualRefresh", syncAvailabilityFeed);
-      window.removeEventListener("toc.sheetSourceSettings.updated", syncAvailabilityFeed);
     };
   }, [hasAvailabilityRows, hasConnectedSource, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
 

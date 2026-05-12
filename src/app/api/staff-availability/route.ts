@@ -5,11 +5,17 @@ import { requireTocScope } from "@/lib/toc-auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const requestedScope = new URL(request.url).searchParams.get("scope") || "National";
+  const searchParams = new URL(request.url).searchParams;
+  const requestedScope = searchParams.get("scope") || "National";
+  const forceRefresh = searchParams.get("refresh") === "true";
   const scopePermission = await requireTocScope(request, requestedScope);
   if (scopePermission.error) return scopePermission.error;
 
   const config = await readSheetSourceConfig("staff-availability", scopePermission.scope);
+  if (!forceRefresh) {
+    const cachedFeed = await readCachedAvailabilityFeed(scopePermission.scope, config);
+    if (cachedFeed?.staff.length) return NextResponse.json(cachedFeed);
+  }
 
   if (!config.connected || scopePermission.scope !== config.region) {
     const cachedFeed = await readCachedAvailabilityFeed(scopePermission.scope, config);

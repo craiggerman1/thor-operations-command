@@ -194,6 +194,61 @@ export async function readCachedAvailabilityFeed(regionName: string, config?: Sh
   };
 }
 
+export async function readCachedInductionFeed(regionName: string, config?: SheetSourceConfig): Promise<InductionFeed | null> {
+  const supabase = getSupabaseAdminClient();
+  const region = await resolveRegion(regionName);
+  if (!supabase || !region) return null;
+
+  const { data, error } = await supabase
+    .from("staff_induction_cache")
+    .select("staff_name,site_name,status,expiry,source_name,source_updated_at,updated_at")
+    .eq("region_id", region.id)
+    .eq("source_slug", "inductions")
+    .order("staff_name", { ascending: true });
+
+  if (error || !data?.length) return null;
+
+  const rows = data as Array<{
+    staff_name: string;
+    site_name: string;
+    status: string;
+    expiry: string | null;
+    source_name: string | null;
+    source_updated_at: string | null;
+    updated_at: string | null;
+  }>;
+  const siteNames = Array.from(new Set(rows.map((row) => row.site_name?.trim()).filter(Boolean)));
+  const staffMap = new Map<string, { site: string; status: InductionStatus; expiry: string }[]>();
+
+  rows.forEach((row) => {
+    const staffName = row.staff_name?.trim();
+    const siteName = row.site_name?.trim();
+    if (!staffName || !siteName) return;
+    const inductions = staffMap.get(staffName) || [];
+    inductions.push({
+      site: siteName,
+      status: normalizeInductionStatus(row.status || ""),
+      expiry: row.expiry || ""
+    });
+    staffMap.set(staffName, inductions);
+  });
+
+  const latestUpdate = rows
+    .map((row) => row.source_updated_at || row.updated_at || "")
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
+  return {
+    ...staffInductionsSheet,
+    sourceName: config?.sourceName || rows[0]?.source_name || `${regionName} cached inductions`,
+    spreadsheetUrl: config?.spreadsheetUrl || staffInductionsSheet.spreadsheetUrl,
+    lastRead: latestUpdate ? `Cached ${brisbaneDateTimeLabel(latestUpdate)}` : "Cached inductions",
+    sites: siteNames.map((name) => ({ name, region: regionName })),
+    staff: Array.from(staffMap.entries()).map(([name, inductions]) => ({ name, inductions }))
+  };
+}
+
 async function readSheetCsv(config: SheetSourceConfig) {
   const response = await fetch(toGoogleSheetCsvUrl(config.spreadsheetUrl, Date.now()), { cache: "no-store" });
   if (!response.ok) throw new Error(`Sheet fetch failed: ${response.status}`);

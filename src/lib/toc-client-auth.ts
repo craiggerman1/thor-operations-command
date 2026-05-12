@@ -6,7 +6,7 @@ const authorizationCacheMs = 30000;
 const inFlightFetches = new Map<string, Promise<Response>>();
 const responseCache = new Map<string, { expiresAt: number; response: Response }>();
 let inFlightAuthorizationHeader: Promise<string | null> | null = null;
-const responseCacheMs = 5000;
+const responseCacheMs = 30000;
 
 async function resolveAuthorizationHeader() {
   const now = Date.now();

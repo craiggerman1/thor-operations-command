@@ -62,6 +62,28 @@ type WorkerInductionSubmission = {
   managerNotes: string;
 };
 
+const pageCacheMs = 2 * 60 * 1000;
+
+function readCachedFeed(scope: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(`toc.inductions.${scope}`) || "null") as { expiresAt?: number; feed?: InductionFeed } | null;
+    if (!cached?.feed || !cached.expiresAt || cached.expiresAt < Date.now()) return null;
+    return cached.feed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedFeed(scope: string, feed: InductionFeed) {
+  if (typeof window === "undefined" || !feed.staff?.length) return;
+  try {
+    sessionStorage.setItem(`toc.inductions.${scope}`, JSON.stringify({ feed, expiresAt: Date.now() + pageCacheMs }));
+  } catch {
+    // Cache is only used to make page switching feel instant.
+  }
+}
+
 export default function InductionsPage() {
   const [scope, setScope] = useState("National");
   const [feed, setFeed] = useState<InductionFeed>(() => emptyInductionFeed("National"));
@@ -82,7 +104,7 @@ export default function InductionsPage() {
   }).length, 0);
   const notInductedCount = feed.staff.reduce((total, staff) => total + visibleSites.filter((site) => getInduction(feed, staff.name, site.name).status === "Not Inducted").length, 0);
   const readiness = inductionCells ? Math.round((inductedCount / inductionCells) * 100) : 0;
-  const liveRefreshMs = 15000;
+  const liveRefreshMs = 60000;
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -126,18 +148,25 @@ export default function InductionsPage() {
     let isActive = true;
     let refreshInterval: number | null = null;
 
-    function syncInductionFeed() {
+    function syncInductionFeed(forceRefresh = false) {
       if (!isMappedScope || !hasConnectedSource) {
         setFeed(emptyInductionFeed(scope));
         setFeedStatus(hasConnectedSource ? `${sheetRegion} source only` : "Source required");
         return;
       }
 
-      tocFetch(`/api/inductions?scope=${encodeURIComponent(scope)}&refresh=${Date.now()}`, { cache: "no-store" })
+      const cachedFeed = forceRefresh ? null : readCachedFeed(scope);
+      if (cachedFeed && isActive) {
+        setFeed(cachedFeed);
+        setFeedStatus(cachedFeed.lastRead ? `${cachedFeed.lastRead}. Refreshing quietly.` : "Cached source loaded. Refreshing quietly.");
+      }
+
+      tocFetch(`/api/inductions?scope=${encodeURIComponent(scope)}${forceRefresh ? "&refresh=true" : ""}`, { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
         .then((nextFeed: InductionFeed) => {
           if (!isActive) return;
           setFeed(nextFeed);
+          writeCachedFeed(scope, nextFeed);
           setFeedStatus(nextFeed.lastRead ? `Source connected. Last read ${nextFeed.lastRead}` : "Source connected");
         })
         .catch(() => {
@@ -150,15 +179,20 @@ export default function InductionsPage() {
     syncInductionFeed();
     if (isMappedScope && hasConnectedSource) {
       refreshInterval = window.setInterval(syncInductionFeed, liveRefreshMs);
-      window.addEventListener("toc.manualRefresh", syncInductionFeed);
-      window.addEventListener("toc.sheetSourceSettings.updated", syncInductionFeed);
+      const forceSync = () => syncInductionFeed(true);
+      window.addEventListener("toc.manualRefresh", forceSync);
+      window.addEventListener("toc.sheetSourceSettings.updated", forceSync);
+      return () => {
+        isActive = false;
+        if (refreshInterval) window.clearInterval(refreshInterval);
+        window.removeEventListener("toc.manualRefresh", forceSync);
+        window.removeEventListener("toc.sheetSourceSettings.updated", forceSync);
+      };
     }
 
     return () => {
       isActive = false;
       if (refreshInterval) window.clearInterval(refreshInterval);
-      window.removeEventListener("toc.manualRefresh", syncInductionFeed);
-      window.removeEventListener("toc.sheetSourceSettings.updated", syncInductionFeed);
     };
   }, [hasConnectedSource, isMappedScope, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
 
