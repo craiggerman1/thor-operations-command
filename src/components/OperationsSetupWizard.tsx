@@ -427,7 +427,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             title="Current Staff"
             count={filteredStaff.length}
             total={staff.length}
-            headers={["Staff name", "Phone", "Skills", "Availability row", "Sheet match", "Region", "Action"]}
+            headers={["Staff name", "Phone", "Skills", "Region", "Action"]}
             search={staffSearch}
             onSearchChange={setStaffSearch}
             regionFilter={tableRegionFilter}
@@ -437,7 +437,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <tbody>{filteredStaff.map((person, index) => {
               const isEditing = editingStaffId === person.id;
               const rowKey = `${person.id}-${rowRegions(person, region).join("-")}-${index}`;
-              const match = sheetMatchForStaff(person);
               return (
                 <tr key={rowKey} className={isEditing ? "setup-editing-row" : ""}>
                   <td>{isEditing ? <input value={editingStaffDraft.name || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, name: event.target.value }))} /> : person.name}</td>
@@ -449,8 +448,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                       </div>
                     ) : person.skills.join(", ") || person.role}
                   </td>
-                  <td>{isEditing ? <input value={editingStaffDraft.availabilitySheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /> : person.availabilitySheetName || person.name}</td>
-                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
                   <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
                   <td className="setup-row-actions">
                     {isEditing ? (
@@ -464,6 +461,38 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                         <button className="setup-danger-button" type="button" disabled={saving || allRegionMode} onClick={() => removeStaffRow(person)}>Remove</button>
                       </>
                     )}
+                  </td>
+                </tr>
+              );
+            })}</tbody>
+          </CollapsibleTable>
+          <CollapsibleTable
+            title="Availability Name Sync"
+            count={filteredStaff.length}
+            total={staff.length}
+            headers={["Staff name", "Availability row", "Sheet match", "Region", "Action"]}
+            search={staffSearch}
+            onSearchChange={setStaffSearch}
+            regionFilter={tableRegionFilter}
+            onRegionFilterChange={setTableRegionFilter}
+            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
+          >
+            <tbody>{filteredStaff.map((person, index) => {
+              const isEditing = editingStaffId === person.id;
+              const match = sheetMatchForStaff(person);
+              return (
+                <tr key={`${person.id}-availability-${index}`} className={isEditing ? "setup-editing-row" : ""}>
+                  <td>{person.name}</td>
+                  <td>{isEditing ? <input value={editingStaffDraft.availabilitySheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /> : person.availabilitySheetName || person.name}</td>
+                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
+                  <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
+                  <td className="setup-row-actions">
+                    {isEditing ? (
+                      <>
+                        <button type="button" disabled={saving} onClick={saveStaffRowEdit}>Save</button>
+                        <button type="button" onClick={() => { setEditingStaffId(""); setEditingStaffDraft(blankStaff()); }}>Cancel</button>
+                      </>
+                    ) : <button type="button" disabled={allRegionMode} onClick={() => startStaffRowEdit(person)}>Edit Row Name</button>}
                   </td>
                 </tr>
               );
