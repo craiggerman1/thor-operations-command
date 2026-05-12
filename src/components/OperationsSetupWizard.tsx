@@ -15,7 +15,7 @@ type RosterImportRow = {
   region: string;
   clientName: string;
   siteName: string;
-  jobTitle: string;
+  jobDay: string;
   startTime: string;
   resolvedStartDate: string;
   frequency: string;
@@ -53,11 +53,41 @@ type AvailabilityFeed = { staff?: Array<{ name: string }> };
 type InductionFeed = { staff?: Array<{ name: string }> };
 
 const skills = ["Wash Hand", "Driver", "Team Leader"];
-const recurrences = ["None", "Daily", "Weekly", "Fortnightly", "4 weekly", "Custom"];
 const allRegionsLabel = "All regions";
+const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return formatLocalDate(new Date());
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function localDateFromIso(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+}
+
+function dayFromDate(dateString?: string) {
+  const date = dateString ? localDateFromIso(dateString) : null;
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return weekDays[(date.getDay() + 6) % 7] || "";
+}
+
+function nextDateForDay(dayName: string) {
+  const dayIndex = weekDays.findIndex((day) => day === dayName);
+  if (dayIndex < 0) return today();
+  const targetNativeDay = (dayIndex + 1) % 7;
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  const offset = (targetNativeDay - date.getDay() + 7) % 7;
+  date.setDate(date.getDate() + offset);
+  return formatLocalDate(date);
 }
 
 function blankStaff(): Partial<StaffRow> {
@@ -335,7 +365,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   }
 
   async function addScheduleRow() {
-    const ok = await mutate({ action: "upsertClientJob", ...scheduleDraft, requiredCrewCount: scheduleDraft.requiredCrewCount || 2 }, "Client job saved and pushed to Calendar.");
+    const ok = await mutate({ action: "upsertClientJob", ...scheduleDraft, recurrence: "Weekly", recurrenceIntervalWeeks: 1, requiredCrewCount: scheduleDraft.requiredCrewCount || 2 }, "Client job saved and pushed to Calendar.");
     if (ok) setScheduleDraft(blankSchedule());
   }
 
@@ -384,6 +414,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     const ok = await mutate({
       action: "upsertClientJob",
       ...editingScheduleDraft,
+      recurrence: "Weekly",
+      recurrenceIntervalWeeks: 1,
       requiredCrewCount: editingScheduleDraft.requiredCrewCount || 2
     }, "Recurring job row saved and Calendar regenerated.");
     if (ok) {
@@ -550,7 +582,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 2 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 2. Clients and recurring jobs</strong><p>This table is the region jobs source. Add the client, site, normal rostered staff, asset and recurring pattern in one row. TOC saves the client/site, links the normal staff roster, and regenerates the Calendar from this source table.</p></div>
+          <div className="setup-copy"><strong>Step 2. Clients and recurring jobs</strong><p>This table is the region jobs source. Add the client, site, day, time, ABCD cycle, normal rostered staff and unit in one row. TOC saves the client/site, links the normal staff roster, and regenerates the Calendar from this source table.</p></div>
           <div className="setup-import-panel">
             <div>
               <span className="eyebrow">Bulk roster import</span>
@@ -577,7 +609,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                 </div>
                 <div className="setup-table-scroll compact">
                   <table>
-                    <thead><tr><th>Row</th><th>Status</th><th>Region</th><th>Client</th><th>Site</th><th>Job</th><th>Start</th><th>ABCD</th><th>Staff</th><th>Messages</th></tr></thead>
+                    <thead><tr><th>Row</th><th>Status</th><th>Region</th><th>Client</th><th>Site</th><th>Day</th><th>Time</th><th>ABCD</th><th>Staff</th><th>Messages</th></tr></thead>
                     <tbody>
                       {rosterImportResult.rows.slice(0, 20).map((row) => (
                         <tr key={`import-${row.rowNumber}`} className={row.status === "error" ? "setup-import-error" : row.status === "warning" ? "setup-import-warning" : ""}>
@@ -586,8 +618,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                           <td>{row.region}</td>
                           <td>{row.clientName}</td>
                           <td>{row.siteName}</td>
-                          <td>{row.jobTitle}</td>
-                          <td>{row.resolvedStartDate} {row.startTime}</td>
+                          <td>{row.jobDay || dayFromDate(row.resolvedStartDate)}</td>
+                          <td>{row.startTime}</td>
                           <td>{formatAbcdWeeks(row.abcdWeeks || [])}</td>
                           <td>{row.matchedStaff.length}/{row.rosteredStaff.length || 0}</td>
                           <td>{[...row.messages, row.duplicateHint].filter(Boolean).join(" ")}</td>
@@ -604,7 +636,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             title="Recurring Client Jobs"
             count={filteredSchedules.length}
             total={schedules.length}
-            headers={["Client", "Site", "Address", "Job", "Asset", "Start", "Time", "Repeat", "ABCD", "Crew", "Normal staff", "Induction", "Notes", "Region", "Action"]}
+            headers={["Client", "Site", "Address", "Unit", "Day", "Time", "ABCD", "Crew", "Normal staff", "Induction", "Notes", "Region", "Action"]}
             search={scheduleSearch}
             onSearchChange={setScheduleSearch}
             regionFilter={tableRegionFilter}
@@ -616,11 +648,9 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                 <td><input placeholder="Client" value={scheduleDraft.clientName || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, clientName: event.target.value, scheduleName: current.scheduleName || `${event.target.value} - ${current.siteName || ""}`.trim() }))} /></td>
                 <td><input placeholder="Site / depot" value={scheduleDraft.siteName || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, siteName: event.target.value, scheduleName: current.scheduleName || `${current.clientName || ""} - ${event.target.value}`.trim() }))} /></td>
                 <td><input placeholder="Address" value={scheduleDraft.address || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, address: event.target.value }))} /></td>
-                <td><input placeholder="Job title" value={scheduleDraft.jobTitle || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTitle: event.target.value }))} /></td>
-                <td><input placeholder="Unit / asset" value={scheduleDraft.washAsset || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /></td>
-                <td><input type="date" value={scheduleDraft.startDate || today()} onChange={(event) => setScheduleDraft((current) => ({ ...current, startDate: event.target.value }))} /></td>
+                <td><input placeholder="Unit" value={scheduleDraft.washAsset || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /></td>
+                <td><DayPicker value={dayFromDate(scheduleDraft.startDate || today())} onChange={(day) => setScheduleDraft((current) => ({ ...current, startDate: nextDateForDay(day) }))} /></td>
                 <td><input type="time" value={scheduleDraft.jobTime || "07:00"} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /></td>
-                <td><select value={scheduleDraft.recurrence || "Weekly"} onChange={(event) => setScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select></td>
                 <td><AbcdWeekPicker value={scheduleDraft.abcdWeeks || []} onChange={(abcdWeeks) => setScheduleDraft((current) => ({ ...current, abcdWeeks }))} /></td>
                 <td><input type="number" min={0} max={20} value={scheduleDraft.requiredCrewCount || 2} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></td>
                 <td><StaffPicker staff={staff} value={scheduleDraft.staffIds || []} onChange={(staffIds) => setScheduleDraft((current) => ({ ...current, staffIds }))} /></td>
@@ -638,11 +668,9 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                     <td>{isEditing ? <input value={draft.clientName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, clientName: event.target.value }))} /> : schedule.clientName || schedule.siteLabel.split(" - ")[0]}</td>
                     <td>{isEditing ? <input value={draft.siteName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, siteName: event.target.value }))} /> : schedule.siteName || schedule.siteLabel.split(" - ").slice(1).join(" - ")}</td>
                     <td>{isEditing ? <input value={draft.address || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, address: event.target.value }))} /> : schedule.address || "-"}</td>
-                    <td>{isEditing ? <input value={draft.jobTitle || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, jobTitle: event.target.value }))} /> : schedule.jobTitle}</td>
                     <td>{isEditing ? <input value={draft.washAsset || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /> : schedule.washAsset || "-"}</td>
-                    <td>{isEditing ? <input type="date" value={draft.startDate || today()} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, startDate: event.target.value }))} /> : schedule.startDate}</td>
+                    <td>{isEditing ? <DayPicker value={dayFromDate(draft.startDate || today())} onChange={(day) => setEditingScheduleDraft((current) => ({ ...current, startDate: nextDateForDay(day) }))} /> : dayFromDate(schedule.startDate) || schedule.startDate}</td>
                     <td>{isEditing ? <input type="time" value={draft.jobTime || "07:00"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /> : schedule.jobTime}</td>
-                    <td>{isEditing ? <select value={draft.recurrence || "Weekly"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select> : schedule.recurrence}</td>
                     <td>{isEditing ? <AbcdWeekPicker value={draft.abcdWeeks || []} onChange={(abcdWeeks) => setEditingScheduleDraft((current) => ({ ...current, abcdWeeks }))} /> : <span className="setup-abcd-summary">{formatAbcdWeeks(schedule.abcdWeeks || [])}</span>}</td>
                     <td>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || 2} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : `${schedule.requiredCrewCount} crew`}</td>
                     <td>{isEditing ? <StaffPicker staff={staff} value={draft.staffIds || []} onChange={(staffIds) => setEditingScheduleDraft((current) => ({ ...current, staffIds }))} /> : rosteredNames || "Unassigned"}</td>
@@ -852,6 +880,22 @@ function StaffPicker({ staff, value, onChange }: { staff: StaffRow[]; value: str
             <input type="checkbox" checked={selected} onChange={() => toggleStaff(person.id)} />
             <span>{displayName}</span>
             <small>{skillsLabel}</small>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function DayPicker({ value, onChange }: { value: string; onChange: (day: string) => void }) {
+  return (
+    <div className="setup-day-picker" title="Choose the weekday for this recurring job. TOC stores the next matching date and generates Calendar jobs from it.">
+      {weekDays.map((day) => {
+        const selected = value === day;
+        return (
+          <label key={`setup-day-${day}`} className={selected ? "selected" : ""}>
+            <input type="checkbox" checked={selected} onChange={() => onChange(day)} />
+            <span>{day.slice(0, 3)}</span>
           </label>
         );
       })}

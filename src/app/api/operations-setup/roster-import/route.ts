@@ -346,7 +346,7 @@ async function buildPreview(rows: ImportRow[], allowedScope: string, userHasNati
     if (!row.siteName) messages.push("Site Name is required.");
 
     const resolvedStartDate = row.startDate || nextDateForDay(row.jobDay);
-    if (!resolvedStartDate) messages.push("Start Date or Job Day is required.");
+    if (!resolvedStartDate) messages.push("Job Day is required.");
     if (!row.startTime) messages.push("Start Time is required.");
 
     const staffMap = region ? lookups.staffByRegion.get(region.id) : undefined;
@@ -422,7 +422,7 @@ async function generateScheduleJobs(scheduleId: string) {
   const existingRows = futureRows.filter((row) => selectedDateSet.has(row.job_date));
   const existingDates = new Set(existingRows.map((row) => row.job_date));
   const existingIds = existingRows.map((row) => row.id);
-  const notes = [visibleNotes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n");
+  const notes = [visibleNotes, schedule.wash_asset ? `Unit: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n");
 
   if (existingIds.length) {
     const { error: updateError } = await supabase.from("calendar_jobs").update({
