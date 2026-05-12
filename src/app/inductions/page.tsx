@@ -102,7 +102,7 @@ export default function InductionsPage() {
   useEffect(() => {
     let isActive = true;
     function syncSourceSettings() {
-      tocFetch("/api/sheet-source-settings?slug=inductions", { cache: "no-store" })
+      tocFetch(`/api/sheet-source-settings?slug=inductions&region=${encodeURIComponent(scope)}`, { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Source settings unavailable")))
         .then((payload) => {
           if (!isActive) return;
@@ -120,7 +120,7 @@ export default function InductionsPage() {
       isActive = false;
       window.removeEventListener("toc.sheetSourceSettings.updated", syncSourceSettings);
     };
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     let isActive = true;

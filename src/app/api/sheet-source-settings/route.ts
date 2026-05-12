@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocRole, requireTocUser } from "@/lib/toc-auth";
 import { isSheetSourceSlug, normaliseSheetSourceConfig, sheetSourceDefaults } from "@/lib/sheet-source-settings";
+import { readSheetSourceConfig } from "@/lib/sheet-feed-sync";
 import type { SheetSourceConfig, SheetSourceSlug } from "@/lib/sheet-source-settings";
 
 function getSettingsKey(slug: SheetSourceSlug) {
@@ -44,6 +45,7 @@ export async function GET(request: Request) {
   if (permission.error) return permission.error;
 
   const slug = getSlugFromRequest(request);
+  const region = new URL(request.url).searchParams.get("region")?.trim() || "";
   const supabase = getSupabaseAdminClient();
 
   if (!slug) return NextResponse.json({ error: "Supported sheet source slug is required." }, { status: 400 });
@@ -51,7 +53,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ config: sheetSourceDefaults[slug], connected: false, error: "Supabase server key is not configured." }, { status: 503 });
   }
 
-  return NextResponse.json({ config: await readConfig(slug), connected: true });
+  return NextResponse.json({ config: region ? await readSheetSourceConfig(slug, region) : await readConfig(slug), connected: true });
 }
 
 export async function POST(request: Request) {

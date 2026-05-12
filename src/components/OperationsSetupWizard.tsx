@@ -233,6 +233,9 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       setPayload(nextPayload);
       setMessage(success);
       window.dispatchEvent(new Event("toc.operationsSetup.updated"));
+      if (body.action === "saveAvailabilitySource" || body.action === "saveInductionSource") {
+        window.dispatchEvent(new Event("toc.sheetSourceSettings.updated"));
+      }
       return true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Setup update failed.");
