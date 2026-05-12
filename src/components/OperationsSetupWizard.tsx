@@ -113,6 +113,10 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [tableRegionFilter, setTableRegionFilter] = useState(allRegionsLabel);
   const [editingStaffId, setEditingStaffId] = useState("");
   const [editingStaffDraft, setEditingStaffDraft] = useState<Partial<StaffRow>>(blankStaff);
+  const [editingSiteId, setEditingSiteId] = useState("");
+  const [editingSiteDraft, setEditingSiteDraft] = useState<Partial<SiteRow>>(blankSite);
+  const [editingScheduleId, setEditingScheduleId] = useState("");
+  const [editingScheduleDraft, setEditingScheduleDraft] = useState<Partial<ScheduleRow>>(blankSchedule);
   const [availabilityRowsByRegion, setAvailabilityRowsByRegion] = useState<Record<string, string[]>>({});
 
   const regionOptions = useMemo(() => adminMode ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(), [adminMode]);
@@ -123,6 +127,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const schedules = payload?.schedules || [];
   const inductions = payload?.inductions || [];
   const selectedSite = sites.find((site) => site.id === scheduleDraft.siteId);
+  const selectedEditingSite = sites.find((site) => site.id === editingScheduleDraft.siteId);
   const filteredStaff = useMemo(() => staff.filter((person) => {
     const regions = rowRegions(person, region);
     const sheetRows = regions.flatMap((item) => availabilityRowsByRegion[item] || []);
@@ -252,16 +257,53 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     }
   }
 
-  async function saveSite(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function addSiteRow() {
     const ok = await mutate({ action: "upsertSite", ...siteDraft }, "Client site saved.");
     if (ok) setSiteDraft(blankSite());
   }
 
-  async function saveSchedule(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function startSiteRowEdit(site: SiteRow) {
+    if (allRegionMode) {
+      setMessage("Select a specific region before editing client rows.");
+      return;
+    }
+    setEditingSiteId(site.id);
+    setEditingSiteDraft(site);
+  }
+
+  async function saveSiteRowEdit() {
+    const ok = await mutate({ action: "upsertSite", ...editingSiteDraft }, "Client site row saved.");
+    if (ok) {
+      setEditingSiteId("");
+      setEditingSiteDraft(blankSite());
+    }
+  }
+
+  async function addScheduleRow() {
     const ok = await mutate({ action: "upsertSchedule", ...scheduleDraft, requiredCrewCount: scheduleDraft.requiredCrewCount || selectedSite?.requiredCrewCount || 2, generateCalendarJobs: true }, "Recurring job saved and pushed to Calendar.");
     if (ok) setScheduleDraft(blankSchedule());
+  }
+
+  function startScheduleRowEdit(schedule: ScheduleRow) {
+    if (allRegionMode) {
+      setMessage("Select a specific region before editing job rows.");
+      return;
+    }
+    setEditingScheduleId(schedule.id);
+    setEditingScheduleDraft(schedule);
+  }
+
+  async function saveScheduleRowEdit() {
+    const ok = await mutate({
+      action: "upsertSchedule",
+      ...editingScheduleDraft,
+      requiredCrewCount: editingScheduleDraft.requiredCrewCount || selectedEditingSite?.requiredCrewCount || 2,
+      generateCalendarJobs: true
+    }, "Recurring job row saved and Calendar regenerated.");
+    if (ok) {
+      setEditingScheduleId("");
+      setEditingScheduleDraft(blankSchedule());
+    }
   }
 
   async function saveInduction(staffRow: StaffRow, site: SiteRow, existing?: InductionRow, status = existing?.status || "", expiry = existing?.expiry || "") {
@@ -393,58 +435,125 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 2 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 2. Clients and recurring jobs</strong><p>Create the client/site first, then add its recurring job schedule, rostered staff and wash asset. Calendar is generated from these jobs.</p></div>
-          <form className="setup-grid-form" onSubmit={saveSite}>
-            <input placeholder="Client name" value={siteDraft.clientName || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, clientName: event.target.value }))} />
-            <input placeholder="Site location / site name" value={siteDraft.siteName || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, siteName: event.target.value }))} />
-            <input placeholder="Address" value={siteDraft.address || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, address: event.target.value }))} />
-            <input type="number" min={0} max={20} value={siteDraft.requiredCrewCount || 2} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} />
-            <label><input type="checkbox" checked={siteDraft.requiredInduction !== false} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Site induction required</label>
-            <input placeholder="Site notes" value={siteDraft.notes || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, notes: event.target.value }))} />
-            <button disabled={saving || allRegionMode} type="submit">{siteDraft.id ? "Save Client Site" : "Add Client Site"}</button>
-            {siteDraft.id ? <button type="button" onClick={() => setSiteDraft(blankSite())}>Cancel Edit</button> : null}
-          </form>
-          <form className="setup-grid-form" onSubmit={saveSchedule}>
-            <select value={scheduleDraft.siteId || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, siteId: event.target.value }))}>
-              <option value="">Choose client site</option>
-              {sites.map((site) => <option value={site.id} key={site.id}>{site.clientName} - {site.siteName}</option>)}
-            </select>
-            <input placeholder="Job title" value={scheduleDraft.jobTitle || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTitle: event.target.value }))} />
-            <input placeholder="Wash asset / unit" value={scheduleDraft.washAsset || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} />
-            <input type="date" value={scheduleDraft.startDate || today()} onChange={(event) => setScheduleDraft((current) => ({ ...current, startDate: event.target.value }))} />
-            <input type="time" value={scheduleDraft.jobTime || "07:00"} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} />
-            <select value={scheduleDraft.recurrence || "Weekly"} onChange={(event) => setScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select>
-            <select multiple value={scheduleDraft.staffIds || []} onChange={(event) => setScheduleDraft((current) => ({ ...current, staffIds: Array.from(event.target.selectedOptions).map((option) => option.value) }))}>
-              {staff.map((person, index) => <option value={person.id} key={`${person.id}-${index}`}>{person.name}</option>)}
-            </select>
-            <button disabled={saving || allRegionMode} type="submit">{scheduleDraft.id ? "Save Job And Regenerate Calendar" : "Save Job And Generate Calendar"}</button>
-            {scheduleDraft.id ? <button type="button" onClick={() => setScheduleDraft(blankSchedule())}>Cancel Edit</button> : null}
-          </form>
+          <div className="setup-copy"><strong>Step 2. Clients and recurring jobs</strong><p>Type directly into the spreadsheet rows. Save client sites first, then create recurring jobs from those saved sites. Calendar is generated from the jobs table.</p></div>
           <CollapsibleTable
             title="Client Sites"
             count={filteredSites.length}
             total={sites.length}
-            headers={["Client", "Site", "Crew", "Region", "Action"]}
+            headers={["Client", "Site", "Address", "Crew", "Induction", "Notes", "Region", "Action"]}
             search={siteSearch}
             onSearchChange={setSiteSearch}
             regionFilter={tableRegionFilter}
             onRegionFilterChange={setTableRegionFilter}
             regionOptions={[allRegionsLabel, ...specificRegionOptions]}
           >
-            <tbody>{filteredSites.map((site, index) => <tr key={`${site.id}-${index}`}><td>{site.clientName}</td><td>{site.siteName}</td><td>{site.requiredCrewCount} crew</td><td><span className="setup-region-chip">{rowRegions(site, region).join(", ")}</span></td><td><button type="button" disabled={allRegionMode} onClick={() => setSiteDraft(site)}>Edit</button></td></tr>)}</tbody>
+            <tbody>
+              <tr className="setup-new-row">
+                <td><input placeholder="Client name" value={siteDraft.clientName || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, clientName: event.target.value }))} /></td>
+                <td><input placeholder="Site name" value={siteDraft.siteName || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, siteName: event.target.value }))} /></td>
+                <td><input placeholder="Address" value={siteDraft.address || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, address: event.target.value }))} /></td>
+                <td><input type="number" min={0} max={20} value={siteDraft.requiredCrewCount || 2} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></td>
+                <td><label className="setup-cell-check"><input type="checkbox" checked={siteDraft.requiredInduction !== false} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label></td>
+                <td><input placeholder="Notes" value={siteDraft.notes || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, notes: event.target.value }))} /></td>
+                <td><span className="setup-region-chip">{region}</span></td>
+                <td><button disabled={saving || allRegionMode} type="button" onClick={addSiteRow}>Add Site</button></td>
+              </tr>
+              {filteredSites.map((site, index) => {
+                const isEditing = editingSiteId === site.id;
+                const draft = isEditing ? editingSiteDraft : site;
+                return (
+                  <tr key={`${site.id}-${index}`} className={isEditing ? "setup-editing-row" : ""}>
+                    <td>{isEditing ? <input value={draft.clientName || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, clientName: event.target.value }))} /> : site.clientName}</td>
+                    <td>{isEditing ? <input value={draft.siteName || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, siteName: event.target.value }))} /> : site.siteName}</td>
+                    <td>{isEditing ? <input value={draft.address || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, address: event.target.value }))} /> : site.address || "-"}</td>
+                    <td>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || 2} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : `${site.requiredCrewCount} crew`}</td>
+                    <td>{isEditing ? <label className="setup-cell-check"><input type="checkbox" checked={draft.requiredInduction !== false} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label> : site.requiredInduction ? "Required" : "Not required"}</td>
+                    <td>{isEditing ? <input value={draft.notes || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, notes: event.target.value }))} /> : site.notes || "-"}</td>
+                    <td><span className="setup-region-chip">{rowRegions(site, region).join(", ")}</span></td>
+                    <td className="setup-row-actions">
+                      {isEditing ? (
+                        <>
+                          <button type="button" disabled={saving} onClick={saveSiteRowEdit}>Save</button>
+                          <button type="button" onClick={() => { setEditingSiteId(""); setEditingSiteDraft(blankSite()); }}>Cancel</button>
+                        </>
+                      ) : <button type="button" disabled={allRegionMode} onClick={() => startSiteRowEdit(site)}>Edit</button>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
           </CollapsibleTable>
           <CollapsibleTable
             title="Jobs Source"
             count={filteredSchedules.length}
             total={schedules.length}
-            headers={["Site", "Job", "Schedule", "Region", "Action"]}
+            headers={["Site", "Job", "Asset", "Start", "Time", "Repeat", "Crew", "Staff", "Notes", "Region", "Action"]}
             search={scheduleSearch}
             onSearchChange={setScheduleSearch}
             regionFilter={tableRegionFilter}
             onRegionFilterChange={setTableRegionFilter}
             regionOptions={[allRegionsLabel, ...specificRegionOptions]}
           >
-            <tbody>{filteredSchedules.map((schedule, index) => <tr key={`${schedule.id}-${index}`}><td>{schedule.siteLabel}</td><td>{schedule.jobTitle}</td><td>{schedule.recurrence}</td><td><span className="setup-region-chip">{rowRegions(schedule, region).join(", ")}</span></td><td><button type="button" disabled={allRegionMode} onClick={() => setScheduleDraft(schedule)}>Edit</button></td></tr>)}</tbody>
+            <tbody>
+              <tr className="setup-new-row">
+                <td>
+                  <select value={scheduleDraft.siteId || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, siteId: event.target.value }))}>
+                    <option value="">Choose site</option>
+                    {sites.map((site) => <option value={site.id} key={site.id}>{site.clientName} - {site.siteName}</option>)}
+                  </select>
+                </td>
+                <td><input placeholder="Job title" value={scheduleDraft.jobTitle || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTitle: event.target.value }))} /></td>
+                <td><input placeholder="Unit / asset" value={scheduleDraft.washAsset || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /></td>
+                <td><input type="date" value={scheduleDraft.startDate || today()} onChange={(event) => setScheduleDraft((current) => ({ ...current, startDate: event.target.value }))} /></td>
+                <td><input type="time" value={scheduleDraft.jobTime || "07:00"} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /></td>
+                <td><select value={scheduleDraft.recurrence || "Weekly"} onChange={(event) => setScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select></td>
+                <td><input type="number" min={0} max={20} value={scheduleDraft.requiredCrewCount || selectedSite?.requiredCrewCount || 2} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></td>
+                <td>
+                  <select multiple value={scheduleDraft.staffIds || []} onChange={(event) => setScheduleDraft((current) => ({ ...current, staffIds: Array.from(event.target.selectedOptions).map((option) => option.value) }))}>
+                    {staff.map((person, index) => <option value={person.id} key={`${person.id}-${index}`}>{person.name}</option>)}
+                  </select>
+                </td>
+                <td><input placeholder="Notes" value={scheduleDraft.notes || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /></td>
+                <td><span className="setup-region-chip">{region}</span></td>
+                <td><button disabled={saving || allRegionMode || !scheduleDraft.siteId} type="button" onClick={addScheduleRow}>Add Job</button></td>
+              </tr>
+              {filteredSchedules.map((schedule, index) => {
+                const isEditing = editingScheduleId === schedule.id;
+                const draft = isEditing ? editingScheduleDraft : schedule;
+                const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(", ");
+                return (
+                  <tr key={`${schedule.id}-${index}`} className={isEditing ? "setup-editing-row" : ""}>
+                    <td>{isEditing ? (
+                      <select value={draft.siteId || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, siteId: event.target.value }))}>
+                        <option value="">Choose site</option>
+                        {sites.map((site) => <option value={site.id} key={site.id}>{site.clientName} - {site.siteName}</option>)}
+                      </select>
+                    ) : schedule.siteLabel}</td>
+                    <td>{isEditing ? <input value={draft.jobTitle || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, jobTitle: event.target.value }))} /> : schedule.jobTitle}</td>
+                    <td>{isEditing ? <input value={draft.washAsset || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /> : schedule.washAsset || "-"}</td>
+                    <td>{isEditing ? <input type="date" value={draft.startDate || today()} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, startDate: event.target.value }))} /> : schedule.startDate}</td>
+                    <td>{isEditing ? <input type="time" value={draft.jobTime || "07:00"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /> : schedule.jobTime}</td>
+                    <td>{isEditing ? <select value={draft.recurrence || "Weekly"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select> : schedule.recurrence}</td>
+                    <td>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || selectedEditingSite?.requiredCrewCount || 2} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : `${schedule.requiredCrewCount} crew`}</td>
+                    <td>{isEditing ? (
+                      <select multiple value={draft.staffIds || []} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, staffIds: Array.from(event.target.selectedOptions).map((option) => option.value) }))}>
+                        {staff.map((person, staffIndex) => <option value={person.id} key={`${person.id}-${staffIndex}`}>{person.name}</option>)}
+                      </select>
+                    ) : rosteredNames || "Unassigned"}</td>
+                    <td>{isEditing ? <input value={draft.notes || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /> : schedule.notes || "-"}</td>
+                    <td><span className="setup-region-chip">{rowRegions(schedule, region).join(", ")}</span></td>
+                    <td className="setup-row-actions">
+                      {isEditing ? (
+                        <>
+                          <button type="button" disabled={saving || !editingScheduleDraft.siteId} onClick={saveScheduleRowEdit}>Save</button>
+                          <button type="button" onClick={() => { setEditingScheduleId(""); setEditingScheduleDraft(blankSchedule()); }}>Cancel</button>
+                        </>
+                      ) : <button type="button" disabled={allRegionMode} onClick={() => startScheduleRowEdit(schedule)}>Edit</button>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
           </CollapsibleTable>
         </section>
       ) : null}

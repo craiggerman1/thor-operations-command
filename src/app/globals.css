@@ -599,8 +599,11 @@ body.next-app .developer-region-control {
 
 .setup-table-tools input,
 .setup-table-tools select,
-.setup-table td input {
+.setup-table td input,
+.setup-table td select {
   min-height: 30px;
+  width: 100%;
+  min-width: 112px;
   border: 1px solid rgba(12, 57, 84, 0.14);
   border-radius: 5px;
   background: white;
@@ -608,6 +611,11 @@ body.next-app .developer-region-control {
   font-size: 0.86rem;
   font-weight: 750;
   padding: 5px 7px;
+}
+
+.setup-table td select[multiple] {
+  min-height: 68px;
+  min-width: 150px;
 }
 
 .setup-table-scroll {
@@ -647,6 +655,30 @@ body.next-app .developer-region-control {
 
 .setup-editing-row {
   background: rgba(255, 249, 226, 0.75);
+}
+
+.setup-new-row {
+  background: rgba(238, 250, 252, 0.68);
+}
+
+.setup-new-row td {
+  vertical-align: top;
+}
+
+.setup-cell-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  white-space: nowrap;
+  color: #0c3954;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.setup-cell-check input {
+  width: auto;
+  min-width: auto;
 }
 
 .setup-row-actions {
