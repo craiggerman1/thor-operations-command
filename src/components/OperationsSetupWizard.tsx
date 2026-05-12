@@ -9,6 +9,32 @@ type StaffRow = { id: string; name: string; role: string; status: string; skills
 type SiteRow = { id: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; requiredCrewCount: number; notes: string; status: string; regions?: string[] };
 type ScheduleRow = { id: string; siteId: string; siteLabel: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; scheduleName: string; startDate: string; endDate: string; jobTime: string; recurrence: string; recurrenceIntervalWeeks: number; requiredCrewCount: number; jobTitle: string; washAsset: string; notes: string; status: string; staffIds: string[]; regions?: string[] };
 type InductionRow = { id: string; staffId: string; siteId: string; staffName: string; siteName: string; status: string; expiry: string };
+type RosterImportRow = {
+  rowNumber: number;
+  region: string;
+  clientName: string;
+  siteName: string;
+  jobTitle: string;
+  startTime: string;
+  resolvedStartDate: string;
+  frequency: string;
+  staffRequired: number;
+  rosteredStaff: string[];
+  matchedStaff: Array<{ name: string; id: string }>;
+  unmatchedStaff: string[];
+  washAsset: string;
+  status: "valid" | "warning" | "error";
+  messages: string[];
+  duplicateHint: string;
+};
+type RosterImportResult = {
+  connected: boolean;
+  mode: "preview" | "import";
+  error?: string;
+  summary: { totalRows: number; validRows: number; warningRows: number; errorRows: number };
+  rows: RosterImportRow[];
+  imported?: Array<{ rowNumber: number; siteId: string; scheduleId: string; calendarJobsCreated: number; calendarJobsUpdated: number }>;
+};
 type SetupPayload = {
   connected: boolean;
   error?: string;
@@ -121,6 +147,9 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [editingScheduleDraft, setEditingScheduleDraft] = useState<Partial<ScheduleRow>>(blankSchedule);
   const [availabilityRowsByRegion, setAvailabilityRowsByRegion] = useState<Record<string, string[]>>({});
   const [inductionRowsByRegion, setInductionRowsByRegion] = useState<Record<string, string[]>>({});
+  const [rosterImportFile, setRosterImportFile] = useState<File | null>(null);
+  const [rosterImportResult, setRosterImportResult] = useState<RosterImportResult | null>(null);
+  const [rosterImportBusy, setRosterImportBusy] = useState(false);
 
   const regionOptions = useMemo(() => adminMode ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(), [adminMode]);
   const specificRegionOptions = useMemo(() => regionOptions.filter((item) => item !== allRegionsLabel), [regionOptions]);
@@ -304,6 +333,38 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     if (ok) setScheduleDraft(blankSchedule());
   }
 
+  async function submitRosterImport(mode: "preview" | "import") {
+    if (!rosterImportFile) {
+      setMessage("Choose a roster import file first.");
+      return;
+    }
+    setRosterImportBusy(true);
+    setMessage("");
+    try {
+      const formData = new FormData();
+      formData.append("file", rosterImportFile);
+      formData.append("mode", mode);
+      formData.append("region", allRegionMode ? "National" : region);
+      const response = await tocFetch("/api/operations-setup/roster-import", { method: "POST", body: formData });
+      const payload = await response.json() as RosterImportResult;
+      setRosterImportResult(payload);
+      if (!response.ok) throw new Error(payload.error || "Roster import failed.");
+      if (mode === "import") {
+        clearTocClientCache();
+        await load(region);
+        window.dispatchEvent(new Event("toc.operationsSetup.updated"));
+        window.dispatchEvent(new Event("toc.calendar.updated"));
+        setMessage(`Roster import complete. ${payload.imported?.length || 0} jobs imported and pushed to Calendar.`);
+      } else {
+        setMessage(payload.summary.errorRows ? "Roster preview found issues to fix before import." : "Roster preview is ready to import.");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Roster import failed.");
+    } finally {
+      setRosterImportBusy(false);
+    }
+  }
+
   function startScheduleRowEdit(schedule: ScheduleRow) {
     if (allRegionMode) {
       setMessage("Select a specific region before editing job rows.");
@@ -473,6 +534,54 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       {step === 2 ? (
         <section className="setup-panel">
           <div className="setup-copy"><strong>Step 2. Clients and recurring jobs</strong><p>This table is the region jobs source. Add the client, site, normal rostered staff, asset and recurring pattern in one row. TOC saves the client/site, links the normal staff roster, and regenerates the Calendar from this source table.</p></div>
+          <div className="setup-import-panel">
+            <div>
+              <span className="eyebrow">Bulk roster import</span>
+              <strong>Upload a TOC roster workbook</strong>
+              <p>Download the Excel-compatible CSV template, fill one row per recurring client job, preview matches, then confirm import. TOC will create client sites, recurring jobs, staff links and Calendar entries.</p>
+            </div>
+            <div className="setup-import-actions">
+              <a href="/api/operations-setup/roster-template">Download Template</a>
+              <input type="file" accept=".csv" onChange={(event) => {
+                setRosterImportFile(event.target.files?.[0] || null);
+                setRosterImportResult(null);
+              }} />
+              <button type="button" disabled={rosterImportBusy || !rosterImportFile} onClick={() => submitRosterImport("preview")}>Preview Upload</button>
+              <button type="button" disabled={rosterImportBusy || !rosterImportResult || rosterImportResult.summary.errorRows > 0} onClick={() => submitRosterImport("import")}>Confirm Import</button>
+            </div>
+            {rosterImportResult ? (
+              <div className="setup-import-preview">
+                <div className="setup-import-summary">
+                  <span>{rosterImportResult.summary.totalRows} rows</span>
+                  <span>{rosterImportResult.summary.validRows} valid</span>
+                  <span>{rosterImportResult.summary.warningRows} update warnings</span>
+                  <span>{rosterImportResult.summary.errorRows} errors</span>
+                  {rosterImportResult.imported ? <span>{rosterImportResult.imported.length} imported</span> : null}
+                </div>
+                <div className="setup-table-scroll compact">
+                  <table>
+                    <thead><tr><th>Row</th><th>Status</th><th>Region</th><th>Client</th><th>Site</th><th>Job</th><th>Start</th><th>Staff</th><th>Messages</th></tr></thead>
+                    <tbody>
+                      {rosterImportResult.rows.slice(0, 20).map((row) => (
+                        <tr key={`import-${row.rowNumber}`} className={row.status === "error" ? "setup-import-error" : row.status === "warning" ? "setup-import-warning" : ""}>
+                          <td>{row.rowNumber}</td>
+                          <td>{row.status}</td>
+                          <td>{row.region}</td>
+                          <td>{row.clientName}</td>
+                          <td>{row.siteName}</td>
+                          <td>{row.jobTitle}</td>
+                          <td>{row.resolvedStartDate} {row.startTime}</td>
+                          <td>{row.matchedStaff.length}/{row.rosteredStaff.length || 0}</td>
+                          <td>{[...row.messages, row.duplicateHint].filter(Boolean).join(" ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {rosterImportResult.rows.length > 20 ? <small>Showing first 20 rows. Fix any errors in the workbook, then preview again.</small> : null}
+              </div>
+            ) : null}
+          </div>
           <CollapsibleTable
             title="Recurring Client Jobs"
             count={filteredSchedules.length}
