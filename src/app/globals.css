@@ -624,6 +624,12 @@ body.next-app .developer-region-control {
   color: #0c3954;
 }
 
+.setup-row-actions .setup-danger-button {
+  border-color: rgba(196, 45, 38, 0.28);
+  background: rgba(196, 45, 38, 0.08);
+  color: #b42a24;
+}
+
 .setup-row-checks {
   gap: 6px;
 }

@@ -443,6 +443,86 @@ export async function POST(request: Request) {
       return NextResponse.json(await readSetup(scope, user.id));
     }
 
+    if (action === "removeStaffFromRegion") {
+      if (!isUuid(payload.id)) return NextResponse.json({ error: "Staff id is required." }, { status: 400 });
+      if (!hasNationalAccess(user)) await ensureStaffBelongToRegion([payload.id], regionId);
+      const { data: profile, error: profileError } = await supabase
+        .from("staff_profiles")
+        .select("id,display_name,primary_region_id")
+        .eq("id", payload.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+      if (!profile) return NextResponse.json({ error: "Staff record was not found." }, { status: 404 });
+
+      const { error: regionDeleteError } = await supabase
+        .from("staff_profile_regions")
+        .delete()
+        .eq("staff_profile_id", payload.id)
+        .eq("region_id", regionId);
+      if (regionDeleteError) throw regionDeleteError;
+
+      const { data: remainingRegions, error: remainingError } = await supabase
+        .from("staff_profile_regions")
+        .select("region_id")
+        .eq("staff_profile_id", payload.id);
+      if (remainingError) throw remainingError;
+      const remainingRegionIds = ((remainingRegions || []) as Array<{ region_id: string }>).map((row) => row.region_id);
+      const profileRow = profile as { id: string; display_name: string; primary_region_id: string | null };
+      if (profileRow.primary_region_id === regionId || (!profileRow.primary_region_id && !remainingRegionIds.length)) {
+        const nextPrimaryRegionId = remainingRegionIds[0] || null;
+        const { error: profileUpdateError } = await supabase
+          .from("staff_profiles")
+          .update({
+            primary_region_id: nextPrimaryRegionId,
+            status: nextPrimaryRegionId ? "active" : "inactive",
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", payload.id);
+        if (profileUpdateError) throw profileUpdateError;
+      }
+
+      const { data: regionSchedules, error: schedulesError } = await supabase
+        .from("site_schedules")
+        .select("id")
+        .eq("region_id", regionId);
+      if (schedulesError) throw schedulesError;
+      const scheduleIds = ((regionSchedules || []) as Array<{ id: string }>).map((row) => row.id);
+      if (scheduleIds.length) {
+        const { error: scheduleStaffError } = await supabase
+          .from("site_schedule_staff")
+          .delete()
+          .eq("staff_profile_id", payload.id)
+          .in("site_schedule_id", scheduleIds);
+        if (scheduleStaffError) throw scheduleStaffError;
+
+        const { data: futureJobs, error: jobsError } = await supabase
+          .from("calendar_jobs")
+          .select("id")
+          .in("source_schedule_id", scheduleIds)
+          .gte("job_date", dateOnly(new Date()));
+        if (jobsError) throw jobsError;
+        const futureJobIds = ((futureJobs || []) as Array<{ id: string }>).map((row) => row.id);
+        if (futureJobIds.length) {
+          const { error: calendarStaffError } = await supabase
+            .from("calendar_job_staff")
+            .delete()
+            .eq("staff_profile_id", payload.id)
+            .in("calendar_job_id", futureJobIds);
+          if (calendarStaffError) throw calendarStaffError;
+        }
+      }
+
+      await logTocAudit({
+        actor: user,
+        action: "operations_setup.staff.remove_from_region",
+        entityTable: "staff_profiles",
+        entityId: payload.id,
+        scope,
+        details: { staffName: profileRow.display_name, remainingRegionCount: remainingRegionIds.length }
+      });
+      return NextResponse.json(await readSetup(scope, user.id));
+    }
+
     if (action === "upsertSite") {
       const clientName = cleanString(payload.clientName);
       const siteName = cleanString(payload.siteName);

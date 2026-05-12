@@ -241,6 +241,17 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     }
   }
 
+  async function removeStaffRow(person: StaffRow) {
+    if (allRegionMode) return;
+    const confirmed = window.confirm(`Remove ${person.name} from ${region}? Historical records stay in TOC, but this person will be removed from this region's setup, future schedules and future calendar assignments.`);
+    if (!confirmed) return;
+    const ok = await mutate({ action: "removeStaffFromRegion", id: person.id }, `${person.name} removed from ${region}.`);
+    if (ok && editingStaffId === person.id) {
+      setEditingStaffId("");
+      setEditingStaffDraft(blankStaff());
+    }
+  }
+
   async function saveSite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const ok = await mutate({ action: "upsertSite", ...siteDraft }, "Client site saved.");
@@ -366,7 +377,12 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                         <button type="button" disabled={saving} onClick={saveStaffRowEdit}>Save</button>
                         <button type="button" onClick={() => { setEditingStaffId(""); setEditingStaffDraft(blankStaff()); }}>Cancel</button>
                       </>
-                    ) : <button type="button" onClick={() => startStaffRowEdit(person)}>Edit</button>}
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => startStaffRowEdit(person)}>Edit</button>
+                        <button className="setup-danger-button" type="button" disabled={saving || allRegionMode} onClick={() => removeStaffRow(person)}>Remove</button>
+                      </>
+                    )}
                   </td>
                 </tr>
               );
