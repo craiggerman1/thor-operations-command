@@ -5,6 +5,8 @@ import { readOdinControlSettings } from "@/lib/odin-control";
 import { buildOdinOperationalContext, odinDedupeKey } from "@/lib/odin-operational-context";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { readOdinStaffEntities } from "@/lib/odin-staff";
+import { getFleetCompleteAssets } from "@/lib/fleet-complete";
+import type { TocTrackedAsset } from "@/lib/fleet-complete";
 
 const snapshotLimit = 80;
 const dueSoonDays = 3;
@@ -215,6 +217,28 @@ function countByEscalation(entityLinks: ReturnType<typeof buildEntityLinks>) {
     lookup[link.escalationLevel] = (lookup[link.escalationLevel] || 0) + 1;
     return lookup;
   }, { none: 0, watch: 0, national: 0, craig: 0 });
+}
+
+function buildAssetTrackingFocus(assets: TocTrackedAsset[]) {
+  const staleAssets = assets.filter((asset) => asset.severity === "amber");
+  const offlineAssets = assets.filter((asset) => asset.severity === "red");
+  const movingAssets = assets.filter((asset) => asset.status === "Moving");
+  const noLocationAssets = assets.filter((asset) => !asset.latestAt || asset.location === "Location not supplied");
+  const riskAssets = [...offlineAssets, ...staleAssets]
+    .sort((a, b) => (b.staleMinutes || 0) - (a.staleMinutes || 0))
+    .slice(0, 20);
+
+  return {
+    movingCount: movingAssets.length,
+    staleCount: staleAssets.length,
+    offlineCount: offlineAssets.length,
+    noLocationCount: noLocationAssets.length,
+    riskAssets,
+    byRegion: assets.reduce<Record<string, number>>((lookup, asset) => {
+      lookup[asset.region] = (lookup[asset.region] || 0) + 1;
+      return lookup;
+    }, {})
+  };
 }
 
 function actionClosureSummary(entityLinks: ReturnType<typeof buildEntityLinks>) {
@@ -661,7 +685,8 @@ export async function GET(request: Request) {
     operationSites,
     siteSchedules,
     managerContacts,
-    odinControl
+    odinControl,
+    assetTracking
   ] = await Promise.all([
     readRows({
       table: "action_items",
@@ -724,7 +749,10 @@ export async function GET(request: Request) {
       limit: 200
     }),
     readManagerContacts(),
-    readOdinControlSettings()
+    readOdinControlSettings(),
+    getFleetCompleteAssets("National")
+      .then((snapshot) => ({ snapshot, error: null }))
+      .catch((error) => ({ snapshot: null, error: error instanceof Error ? error.message : "Fleet Complete asset tracking unavailable." }))
   ]);
 
   const sections = {
@@ -751,6 +779,7 @@ export async function GET(request: Request) {
   const nationalReview = buildNationalReviewSummary(nationalRequests.rows, generatedAt);
   const managerFollowThrough = buildManagerFollowThroughDigests(entityLinks);
   const craigEscalationPolicy = buildCraigEscalationPolicy(entityLinks);
+  const assetTrackingFocus = buildAssetTrackingFocus(assetTracking.snapshot?.assets || []);
 
   return NextResponse.json({
     connected: true,
@@ -782,6 +811,7 @@ export async function GET(request: Request) {
       equipmentWriteEndpoint: "/api/odin/equipment",
       stockOrderWriteEndpoint: "/api/odin/stock-orders",
       jobsEndpoint: "/api/odin/jobs",
+      assetTrackingEndpoint: "/api/asset-tracking",
       rosterEndpoint: "/api/odin/roster",
       staffEndpoint: "/api/odin/staff",
       rosterGapEndpoint: "/api/odin/roster-gaps",
@@ -831,6 +861,8 @@ export async function GET(request: Request) {
       operationSites: operationSites.rows.length,
       siteSchedules: siteSchedules.rows.length,
       managerContacts: managerContacts.rows.length,
+      trackedAssets: assetTracking.snapshot?.assets.length || 0,
+      trackedAssetRisks: assetTrackingFocus.staleCount + assetTrackingFocus.offlineCount,
       recentCompletedCount: recentCompleted.rows.length,
       actionClosure,
       nationalReview,
@@ -839,6 +871,7 @@ export async function GET(request: Request) {
       dataGaps: {
         staffPhoneNumbers: staffResult.source === "database" ? "protected_staff_profiles" : "staff_profiles_table_pending",
         liveRoster: siteSchedules.rows.length ? "site_schedules_and_calendar_jobs" : "calendar_jobs_only",
+        assetTracking: assetTracking.snapshot?.connected ? "fleet_complete_live" : assetTracking.error || "not_loaded",
         rosterGapDetection: rosterGaps.connected ? "active" : rosterGaps.errors.join("; ") || "not_loaded",
         jobsheetEvidence: "not_loaded",
         clientComplaintFeed: "not_loaded",
@@ -852,6 +885,7 @@ export async function GET(request: Request) {
       duplicateIssueGroups,
       tomorrowJobs: calendarJobs.rows.filter((row) => row.job_date === dateOnly(addDays(generatedAt, 1))),
       rosterGaps: rosterGaps.gaps,
+      assetTrackingRisks: assetTrackingFocus.riskAssets,
       ownerQueue: entityLinks.filter((item) => item.escalationLevel !== "none"),
       actionCarryover: actionClosure.carryoverItems,
       nationalReview,
@@ -877,6 +911,39 @@ export async function GET(request: Request) {
         inductionEligibleSites: staff.inductions.eligibleSites
       })),
       rosterGaps
+    },
+    assetTracking: {
+      purpose: "Read-only Fleet Complete GPS context for wash units. Odin can use this to spot stale GPS, offline units, moving/stopped status, region distribution and possible equipment/location risk. Odin cannot write back to Fleet Complete.",
+      connected: Boolean(assetTracking.snapshot?.connected),
+      error: assetTracking.error,
+      source: assetTracking.snapshot?.source || "Fleet Complete Unity API",
+      fleetName: assetTracking.snapshot?.fleetName || "Fleet Complete",
+      generatedAt: assetTracking.snapshot?.generatedAt || null,
+      totalAssets: assetTracking.snapshot?.totalAssets || 0,
+      summary: assetTracking.snapshot?.summary || [],
+      focus: assetTrackingFocus,
+      assets: (assetTracking.snapshot?.assets || []).map((asset) => ({
+        id: asset.id,
+        unit: asset.unit,
+        region: asset.region,
+        group: asset.group,
+        status: asset.status,
+        severity: asset.severity,
+        location: asset.location,
+        latitude: asset.latitude,
+        longitude: asset.longitude,
+        speedKph: asset.speedKph,
+        direction: asset.direction,
+        ignition: asset.ignition,
+        odometer: asset.odometer,
+        engineHours: asset.engineHours,
+        licensePlate: asset.licensePlate,
+        vehicleType: asset.vehicleType,
+        latestAt: asset.latestAt,
+        staleMinutes: asset.staleMinutes,
+        deviceSerial: asset.deviceSerial,
+        mapHref: asset.mapHref
+      }))
     },
     operationsMasterData: {
       purpose: "Customer/site source of truth and recurring schedule control for calendar and Odin roster reasoning.",
