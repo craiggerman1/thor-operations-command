@@ -23,6 +23,8 @@ import { tocFetch } from "@/lib/toc-client-auth";
 
 type CalendarViewMode = "calendar" | "list";
 type VisibleJob = CalendarJob & { originalIndex: number };
+const calendarTileJobLimit = 5;
+const listDayJobLimit = 6;
 
 function getStoredScope() {
   if (typeof window === "undefined") return "National";
@@ -62,6 +64,7 @@ export default function CalendarPage() {
   const [editTarget, setEditTarget] = useState<CalendarEditTarget | null>(null);
   const [weatherForecast, setWeatherForecast] = useState<TocWeatherDay[]>([]);
   const [saveMessage, setSaveMessage] = useState("");
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(() => new Set());
   const calendarDays = useMemo(() => getVisibleCalendarDays(calendarData), [calendarData]);
   const listCalendarDays = useMemo(() => calendarDays.filter(isTodayOrFuture), [calendarDays]);
   const activeCalendarDays = viewMode === "list" ? listCalendarDays : calendarDays;
@@ -138,6 +141,15 @@ export default function CalendarPage() {
     }
   }
 
+  function toggleDayExpanded(daySlug: string) {
+    setExpandedDays((current) => {
+      const next = new Set(current);
+      if (next.has(daySlug)) next.delete(daySlug);
+      else next.add(daySlug);
+      return next;
+    });
+  }
+
   function updateDraft(field: keyof CalendarJob, value: string | number | undefined) {
     if (!editTarget) return;
     const nextJob = { ...editTarget.job, [field]: value } as CalendarJob;
@@ -206,11 +218,13 @@ export default function CalendarPage() {
                   const daySlug = getCalendarDaySlug(day);
                   const dayLabel = `${day.day} ${day.date} ${day.month}`;
                   const visibleJobs = getVisibleJobs(day.jobs);
+                  const isExpanded = expandedDays.has(daySlug);
+                  const jobsToShow = isExpanded ? visibleJobs : visibleJobs.slice(0, calendarTileJobLimit);
                   const forecast = getCalendarForecast(day, scope, weatherForecast);
                   const isToday = isCurrentCalendarDay(day);
                   return (
                     <article
-                      className={`calendar-date ${isToday ? "today" : ""}`}
+                      className={`calendar-date ${isToday ? "today" : ""} ${isExpanded ? "expanded" : ""}`}
                       key={daySlug}
                       onClick={() => openDay(daySlug)}
                       onKeyDown={(event) => openDayFromKeyboard(event, daySlug)}
@@ -229,14 +243,26 @@ export default function CalendarPage() {
                         <small>{visibleJobs.length ? `${visibleJobs.length} jobs` : "No jobs"}</small>
                       </div>
                       <div className="calendar-date-jobs">
-                        {visibleJobs.slice(0, 5).map((job) => (
+                        {jobsToShow.map((job) => (
                           <button className={`calendar-job-pill ${job.severity}`} key={`${day.date}-${job.time}-${job.site}`} type="button" onClick={(event) => { event.stopPropagation(); openEditor(daySlug, dayLabel, job.originalIndex, job); }}>
                             <span>{job.time}</span>
                             <strong>{job.location}</strong>
                             <small>{job.site}</small>
                           </button>
                         ))}
-                        {visibleJobs.length > 5 ? <small className="calendar-more-count">+{visibleJobs.length - 5} more shifts</small> : null}
+                        {visibleJobs.length > calendarTileJobLimit ? (
+                          <button
+                            className="calendar-more-count"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleDayExpanded(daySlug);
+                            }}
+                            aria-expanded={isExpanded}
+                          >
+                            {isExpanded ? "Show fewer jobs" : `Show all ${visibleJobs.length} jobs`}
+                          </button>
+                        ) : null}
                       </div>
                     </article>
                   );
@@ -249,6 +275,8 @@ export default function CalendarPage() {
                 const daySlug = getCalendarDaySlug(day);
                 const dayLabel = `${day.day} ${day.date} ${day.month}`;
                 const visibleJobs = getVisibleJobs(day.jobs);
+                const isExpanded = expandedDays.has(daySlug);
+                const jobsToShow = isExpanded ? visibleJobs : visibleJobs.slice(0, listDayJobLimit);
                 const forecast = getCalendarForecast(day, scope, weatherForecast);
                 return (
                   <article
@@ -264,12 +292,24 @@ export default function CalendarPage() {
                       <small>{visibleJobs.length ? `${visibleJobs.length} visible jobs for ${scope}` : `No visible jobs for ${scope}`}</small>
                     </div>
                     <div className="calendar-list-jobs">
-                      {visibleJobs.slice(0, 6).map((job) => (
+                      {jobsToShow.map((job) => (
                         <button className={`calendar-list-edit ${job.severity}`} type="button" key={`${day.date}-${job.time}-${job.site}`} onClick={(event) => { event.stopPropagation(); openEditor(daySlug, dayLabel, job.originalIndex, job); }}>
                           {job.time} {job.location}
                         </button>
                       ))}
-                      {visibleJobs.length > 6 ? <small className="calendar-more-count">+{visibleJobs.length - 6} more jobs</small> : null}
+                      {visibleJobs.length > listDayJobLimit ? (
+                        <button
+                          className="calendar-more-count"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleDayExpanded(daySlug);
+                          }}
+                          aria-expanded={isExpanded}
+                        >
+                          {isExpanded ? "Show fewer jobs" : `Show all ${visibleJobs.length} jobs`}
+                        </button>
+                      ) : null}
                     </div>
                   </article>
                 );

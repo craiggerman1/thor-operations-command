@@ -5537,6 +5537,12 @@ body:not([data-access="admin"]) .admin-only-panel {
   transition: box-shadow 180ms ease, border-color 180ms ease;
 }
 
+.calendar-date.expanded {
+  min-height: 360px;
+  border-color: rgba(10, 49, 82, 0.46);
+  box-shadow: 0 14px 30px rgba(7, 23, 38, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
 .calendar-date:hover {
   border-color: rgba(10, 49, 82, 0.42);
   box-shadow: 0 14px 30px rgba(7, 23, 38, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.82);
@@ -5910,10 +5916,24 @@ body:not([data-access="admin"]) .admin-only-panel {
 }
 
 .calendar-more-count {
+  width: fit-content;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 1px solid rgba(10, 49, 82, 0.16);
+  border-radius: 999px;
+  background: rgba(232, 243, 248, 0.94);
   color: var(--blue);
+  cursor: pointer;
+  font: inherit;
   font-size: 11px;
   font-weight: 900;
+  line-height: 1;
   text-transform: uppercase;
+}
+
+.calendar-more-count:hover {
+  border-color: rgba(10, 49, 82, 0.34);
+  background: #ffffff;
 }
 
 .calendar-day-link {
