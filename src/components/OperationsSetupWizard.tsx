@@ -3,11 +3,12 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { allRegions } from "@/lib/access";
+import { THOR_ABCD_WEEKS, formatAbcdWeeks } from "@/lib/abcd-schedule";
 import { clearTocClientCache, tocFetch } from "@/lib/toc-client-auth";
 
 type StaffRow = { id: string; name: string; role: string; status: string; skills: string[]; mobile: string; whatsapp: string; availabilitySheetName: string; inductionSheetName: string; notes: string; regions?: string[] };
 type SiteRow = { id: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; requiredCrewCount: number; notes: string; status: string; regions?: string[] };
-type ScheduleRow = { id: string; siteId: string; siteLabel: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; scheduleName: string; startDate: string; endDate: string; jobTime: string; recurrence: string; recurrenceIntervalWeeks: number; requiredCrewCount: number; jobTitle: string; washAsset: string; notes: string; status: string; staffIds: string[]; regions?: string[] };
+type ScheduleRow = { id: string; siteId: string; siteLabel: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; scheduleName: string; startDate: string; endDate: string; jobTime: string; recurrence: string; recurrenceIntervalWeeks: number; abcdWeeks: string[]; requiredCrewCount: number; jobTitle: string; washAsset: string; notes: string; status: string; staffIds: string[]; regions?: string[] };
 type InductionRow = { id: string; staffId: string; siteId: string; staffName: string; siteName: string; status: string; expiry: string };
 type RosterImportRow = {
   rowNumber: number;
@@ -18,6 +19,7 @@ type RosterImportRow = {
   startTime: string;
   resolvedStartDate: string;
   frequency: string;
+  abcdWeeks: string[];
   staffRequired: number;
   rosteredStaff: string[];
   matchedStaff: Array<{ name: string; id: string }>;
@@ -67,7 +69,7 @@ function blankSite(): Partial<SiteRow> {
 }
 
 function blankSchedule(): Partial<ScheduleRow> {
-  return { siteId: "", siteLabel: "", clientName: "", siteName: "", address: "", requiredInduction: true, scheduleName: "", startDate: today(), endDate: "", jobTime: "07:00", recurrence: "Weekly", recurrenceIntervalWeeks: 1, requiredCrewCount: 2, jobTitle: "Scheduled wash", washAsset: "", notes: "", status: "active", staffIds: [] };
+  return { siteId: "", siteLabel: "", clientName: "", siteName: "", address: "", requiredInduction: true, scheduleName: "", startDate: today(), endDate: "", jobTime: "07:00", recurrence: "Weekly", recurrenceIntervalWeeks: 1, abcdWeeks: [], requiredCrewCount: 2, jobTitle: "Scheduled wash", washAsset: "", notes: "", status: "active", staffIds: [] };
 }
 
 function readSessionScope() {
@@ -94,6 +96,10 @@ function readSessionRegions() {
 
 function skillToggle(selected: string[] = [], skill: string) {
   return selected.includes(skill) ? selected.filter((item) => item !== skill) : [...selected, skill];
+}
+
+function weekToggle(selected: string[] = [], week: string) {
+  return selected.includes(week) ? selected.filter((item) => item !== week) : [...selected, week];
 }
 
 function roleFromSkills(selected: string[] = []) {
@@ -174,7 +180,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     const regions = rowRegions(schedule, region);
     const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(" ");
     const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
-    return regionMatch && matchesSearch([schedule.siteLabel, schedule.jobTitle, schedule.washAsset, schedule.recurrence, rosteredNames, regions.join(" "), schedule.notes], scheduleSearch);
+    return regionMatch && matchesSearch([schedule.siteLabel, schedule.jobTitle, schedule.washAsset, schedule.recurrence, formatAbcdWeeks(schedule.abcdWeeks || []), rosteredNames, regions.join(" "), schedule.notes], scheduleSearch);
   }), [schedules, staff, scheduleSearch, tableRegionFilter, region]);
 
   async function load(nextRegion = region) {
@@ -560,7 +566,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                 </div>
                 <div className="setup-table-scroll compact">
                   <table>
-                    <thead><tr><th>Row</th><th>Status</th><th>Region</th><th>Client</th><th>Site</th><th>Job</th><th>Start</th><th>Staff</th><th>Messages</th></tr></thead>
+                    <thead><tr><th>Row</th><th>Status</th><th>Region</th><th>Client</th><th>Site</th><th>Job</th><th>Start</th><th>ABCD</th><th>Staff</th><th>Messages</th></tr></thead>
                     <tbody>
                       {rosterImportResult.rows.slice(0, 20).map((row) => (
                         <tr key={`import-${row.rowNumber}`} className={row.status === "error" ? "setup-import-error" : row.status === "warning" ? "setup-import-warning" : ""}>
@@ -571,6 +577,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                           <td>{row.siteName}</td>
                           <td>{row.jobTitle}</td>
                           <td>{row.resolvedStartDate} {row.startTime}</td>
+                          <td>{formatAbcdWeeks(row.abcdWeeks || [])}</td>
                           <td>{row.matchedStaff.length}/{row.rosteredStaff.length || 0}</td>
                           <td>{[...row.messages, row.duplicateHint].filter(Boolean).join(" ")}</td>
                         </tr>
@@ -586,7 +593,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             title="Recurring Client Jobs"
             count={filteredSchedules.length}
             total={schedules.length}
-            headers={["Client", "Site", "Address", "Job", "Asset", "Start", "Time", "Repeat", "Crew", "Normal staff", "Induction", "Notes", "Region", "Action"]}
+            headers={["Client", "Site", "Address", "Job", "Asset", "Start", "Time", "Repeat", "ABCD", "Crew", "Normal staff", "Induction", "Notes", "Region", "Action"]}
             search={scheduleSearch}
             onSearchChange={setScheduleSearch}
             regionFilter={tableRegionFilter}
@@ -603,6 +610,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                 <td><input type="date" value={scheduleDraft.startDate || today()} onChange={(event) => setScheduleDraft((current) => ({ ...current, startDate: event.target.value }))} /></td>
                 <td><input type="time" value={scheduleDraft.jobTime || "07:00"} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /></td>
                 <td><select value={scheduleDraft.recurrence || "Weekly"} onChange={(event) => setScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select></td>
+                <td><AbcdWeekPicker value={scheduleDraft.abcdWeeks || []} onChange={(abcdWeeks) => setScheduleDraft((current) => ({ ...current, abcdWeeks }))} /></td>
                 <td><input type="number" min={0} max={20} value={scheduleDraft.requiredCrewCount || 2} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></td>
                 <td><StaffPicker staff={staff} value={scheduleDraft.staffIds || []} onChange={(staffIds) => setScheduleDraft((current) => ({ ...current, staffIds }))} /></td>
                 <td><label className="setup-cell-check"><input type="checkbox" checked={scheduleDraft.requiredInduction !== false} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label></td>
@@ -624,6 +632,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                     <td>{isEditing ? <input type="date" value={draft.startDate || today()} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, startDate: event.target.value }))} /> : schedule.startDate}</td>
                     <td>{isEditing ? <input type="time" value={draft.jobTime || "07:00"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /> : schedule.jobTime}</td>
                     <td>{isEditing ? <select value={draft.recurrence || "Weekly"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, recurrence: event.target.value }))}>{recurrences.map((item) => <option key={item}>{item}</option>)}</select> : schedule.recurrence}</td>
+                    <td>{isEditing ? <AbcdWeekPicker value={draft.abcdWeeks || []} onChange={(abcdWeeks) => setEditingScheduleDraft((current) => ({ ...current, abcdWeeks }))} /> : <span className="setup-abcd-summary">{formatAbcdWeeks(schedule.abcdWeeks || [])}</span>}</td>
                     <td>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || 2} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : `${schedule.requiredCrewCount} crew`}</td>
                     <td>{isEditing ? <StaffPicker staff={staff} value={draft.staffIds || []} onChange={(staffIds) => setEditingScheduleDraft((current) => ({ ...current, staffIds }))} /> : rosteredNames || "Unassigned"}</td>
                     <td>{isEditing ? <label className="setup-cell-check"><input type="checkbox" checked={draft.requiredInduction !== false} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label> : schedule.requiredInduction ? "Required" : "Not required"}</td>
@@ -830,6 +839,23 @@ function StaffPicker({ staff, value, onChange }: { staff: StaffRow[]; value: str
           </label>
         );
       })}
+    </div>
+  );
+}
+
+function AbcdWeekPicker({ value, onChange }: { value: string[]; onChange: (weeks: string[]) => void }) {
+  return (
+    <div className="setup-abcd-picker" title="Leave all blank to run every ABCD week. Select A/B/C/D to limit this recurring job to those Thor weeks.">
+      {THOR_ABCD_WEEKS.map((week) => {
+        const selected = value.includes(week);
+        return (
+          <label key={`abcd-${week}`} className={selected ? "selected" : ""}>
+            <input type="checkbox" checked={selected} onChange={() => onChange(weekToggle(value, week))} />
+            <span>{week}</span>
+          </label>
+        );
+      })}
+      {!value.length ? <small>Every</small> : null}
     </div>
   );
 }

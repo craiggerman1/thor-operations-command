@@ -3,6 +3,7 @@ import { logTocAudit } from "@/lib/audit";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { canAccessScope, hasNationalAccess, requireTocRole, requireTocScope, requireTocUser } from "@/lib/toc-auth";
 import { normaliseSheetSourceConfig } from "@/lib/sheet-source-settings";
+import { buildScheduleDates, cleanAbcdWeeks, composeScheduleNotes, extractAbcdWeeks, formatAbcdWeeks, stripAbcdMarker } from "@/lib/abcd-schedule";
 
 type RegionRow = { id: string; name: string };
 type Related<T> = T | T[] | null | undefined;
@@ -109,12 +110,6 @@ function recurrenceStepDays(recurrence: string, intervalWeeks: number) {
   if (recurrence === "4 weekly") return 28;
   if (recurrence === "Custom") return intervalWeeks * 7;
   return null;
-}
-
-function addDays(isoDate: string, days: number) {
-  const date = new Date(`${isoDate}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return dateOnly(date);
 }
 
 async function regionLookup() {
@@ -274,10 +269,12 @@ async function readSetup(regionName: string, profileId: string) {
       jobTime: schedule.job_time?.slice(0, 5) || "07:00",
       recurrence: schedule.recurrence,
       recurrenceIntervalWeeks: schedule.recurrence_interval_weeks,
+      abcdWeeks: extractAbcdWeeks(schedule.notes),
+      abcdLabel: formatAbcdWeeks(extractAbcdWeeks(schedule.notes)),
       requiredCrewCount: schedule.required_crew_count,
       jobTitle: schedule.job_title,
       washAsset: schedule.wash_asset || "",
-      notes: schedule.notes || "",
+      notes: stripAbcdMarker(schedule.notes),
       status: schedule.status,
       regions: [regionNames.get(schedule.region_id || "") || regionName],
       staffIds: scheduleStaff.filter((link) => link.site_schedule_id === schedule.id).map((link) => link.staff_profile_id)
@@ -316,10 +313,22 @@ async function generateScheduleJobs(scheduleId: string) {
   const regionName = firstRelated(site.region)?.name || "National";
   const stepDays = recurrenceStepDays(schedule.recurrence, schedule.recurrence_interval_weeks || 1);
   const startDate = schedule.start_date < dateOnly(new Date()) ? dateOnly(new Date()) : schedule.start_date;
-  const dates = Array.from({ length: stepDays ? 12 : 1 }, (_, index) => stepDays ? addDays(startDate, index * stepDays) : startDate)
-    .filter((jobDate) => !schedule.end_date || jobDate <= schedule.end_date);
-  const { data: existing } = await supabase.from("calendar_jobs").select("id,job_date").eq("source_schedule_id", schedule.id).in("job_date", dates);
-  const existingRows = (existing || []) as ExistingCalendarJobRow[];
+  const abcdWeeks = extractAbcdWeeks(schedule.notes);
+  const dates = buildScheduleDates({ startDate, endDate: schedule.end_date, stepDays, abcdWeeks });
+  const visibleNotes = stripAbcdMarker(schedule.notes);
+  const recurrenceDetail = [schedule.schedule_name || "", abcdWeeks.length ? `ABCD: ${formatAbcdWeeks(abcdWeeks)}` : ""].filter(Boolean).join(" | ") || null;
+  const { data: futureExisting } = await supabase.from("calendar_jobs").select("id,job_date").eq("source_schedule_id", schedule.id).gte("job_date", startDate);
+  const selectedDateSet = new Set(dates);
+  const futureRows = (futureExisting || []) as ExistingCalendarJobRow[];
+  const staleIds = futureRows.filter((row) => !selectedDateSet.has(row.job_date)).map((row) => row.id);
+  if (staleIds.length) {
+    const { error: staffDeleteError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", staleIds);
+    if (staffDeleteError) throw staffDeleteError;
+    const { error: staleDeleteError } = await supabase.from("calendar_jobs").delete().in("id", staleIds);
+    if (staleDeleteError) throw staleDeleteError;
+  }
+  if (!dates.length) return { created: 0 };
+  const existingRows = futureRows.filter((row) => selectedDateSet.has(row.job_date));
   const existingDates = new Set(existingRows.map((row) => row.job_date));
   const existingIds = existingRows.map((row) => row.id);
   if (existingIds.length) {
@@ -328,9 +337,9 @@ async function generateScheduleJobs(scheduleId: string) {
       site: `${site.client_name} - ${site.site_name}`,
       crew,
       job_title: schedule.job_title || "Scheduled wash",
-      notes: [schedule.notes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n"),
+      notes: [visibleNotes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n"),
       recurrence: schedule.recurrence,
-      recurrence_detail: schedule.schedule_name || null,
+      recurrence_detail: recurrenceDetail,
       recurrence_interval_weeks: schedule.recurrence === "Custom" ? schedule.recurrence_interval_weeks : null,
       site_id: schedule.site_id,
       required_crew_count: schedule.required_crew_count,
@@ -352,10 +361,10 @@ async function generateScheduleJobs(scheduleId: string) {
     crew,
     job_title: schedule.job_title || "Scheduled wash",
     status: "Scheduled",
-    notes: [schedule.notes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n"),
+    notes: [visibleNotes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n"),
     severity: "green",
     recurrence: schedule.recurrence,
-    recurrence_detail: schedule.schedule_name || null,
+    recurrence_detail: recurrenceDetail,
     recurrence_interval_weeks: schedule.recurrence === "Custom" ? schedule.recurrence_interval_weeks : null,
     site_id: schedule.site_id,
     required_crew_count: schedule.required_crew_count,
@@ -627,7 +636,7 @@ export async function POST(request: Request) {
         required_crew_count: cleanNumber(payload.requiredCrewCount, 2, 0, 20),
         job_title: cleanString(payload.jobTitle) || "Scheduled wash",
         wash_asset: cleanString(payload.washAsset),
-        notes: cleanString(payload.notes),
+        notes: composeScheduleNotes(cleanString(payload.notes), cleanAbcdWeeks(payload.abcdWeeks)),
         status: cleanString(payload.status) || "active",
         updated_at: new Date().toISOString()
       };

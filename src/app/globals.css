@@ -972,6 +972,67 @@ body.next-app .rail-nav {
   padding: 4px 8px;
 }
 
+.setup-abcd-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(26px, 1fr));
+  gap: 4px;
+  min-width: 122px;
+}
+
+.setup-abcd-picker label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 26px;
+  border: 1px solid rgba(12, 57, 84, 0.14);
+  border-radius: 5px;
+  background: rgba(238, 250, 252, 0.64);
+  color: #12324a;
+  font-size: 0.72rem;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.setup-abcd-picker label.selected {
+  border-color: rgba(15, 129, 98, 0.42);
+  background: rgba(224, 246, 236, 0.94);
+  color: #0f6d52;
+}
+
+.setup-table td .setup-abcd-picker input,
+.setup-abcd-picker input {
+  width: 11px;
+  min-width: 11px;
+  height: 11px;
+  min-height: 11px;
+  margin: 0;
+  padding: 0;
+  accent-color: #0f8162;
+}
+
+.setup-abcd-picker small {
+  grid-column: 1 / -1;
+  color: #6a7c89;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
+.setup-abcd-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 5px;
+  background: rgba(12, 57, 84, 0.07);
+  color: #0c3954;
+  font-size: 0.74rem;
+  font-weight: 950;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
 .setup-table-scroll {
   overflow-x: auto;
 }

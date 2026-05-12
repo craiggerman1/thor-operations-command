@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
+import { buildScheduleDates, cleanAbcdWeeks, composeScheduleNotes, extractAbcdWeeks, formatAbcdWeeks, stripAbcdMarker } from "@/lib/abcd-schedule";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { canAccessScope, hasNationalAccess, requireTocScope, type TocAuthenticatedUser } from "@/lib/toc-auth";
 
@@ -46,6 +47,7 @@ type ImportRow = {
   startTime: string;
   endTime: string;
   frequency: string;
+  abcdWeeks: string[];
   staffRequired: number;
   rosteredStaff: string[];
   washAsset: string;
@@ -82,6 +84,9 @@ const headerAliases: Record<string, keyof ImportRow> = {
   "end time": "endTime",
   frequency: "frequency",
   recurrence: "frequency",
+  "abcd weeks": "abcdWeeks",
+  "abcd cycle": "abcdWeeks",
+  "week cycle": "abcdWeeks",
   "staff required": "staffRequired",
   crew: "staffRequired",
   "required crew": "staffRequired",
@@ -163,12 +168,6 @@ function dateOnly(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function addDays(isoDate: string, days: number) {
-  const date = new Date(`${isoDate}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return dateOnly(date);
-}
-
 function nextDateForDay(dayName: string) {
   const target = dayLookup[cleanKey(dayName)];
   if (target === undefined) return "";
@@ -210,6 +209,11 @@ function parseActive(value: unknown) {
   return !["no", "n", "false", "inactive", "0"].includes(key);
 }
 
+function parseWeekFlag(value: unknown) {
+  const key = cleanKey(value);
+  return ["yes", "y", "true", "1", "x", "tick", "checked"].includes(key);
+}
+
 function parseCsv(text: string) {
   const rows: string[][] = [];
   let current = "";
@@ -249,10 +253,18 @@ function parseWorkbook(text: string) {
   const rows = dataRows.map((cells) => Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""])));
   return rows.map((source, index): ImportRow => {
     const mapped: Partial<ImportRow> = { rowNumber: index + 2 };
+    const explicitWeeks: string[] = [];
     Object.entries(source).forEach(([header, value]) => {
-      const field = headerAliases[cleanKey(header)];
+      const headerKey = cleanKey(header);
+      const weekFlag = headerKey.match(/^([abcd])(?:\s+week)?$/);
+      if (weekFlag && parseWeekFlag(value)) {
+        explicitWeeks.push(weekFlag[1].toUpperCase());
+        return;
+      }
+      const field = headerAliases[headerKey];
       if (!field) return;
       if (field === "rosteredStaff") mapped.rosteredStaff = splitNames(value);
+      else if (field === "abcdWeeks") mapped.abcdWeeks = cleanAbcdWeeks(value);
       else if (field === "staffRequired") mapped.staffRequired = Math.max(0, Math.min(20, Math.round(Number(value) || 0)));
       else if (field === "active") mapped.active = parseActive(value);
       else if (field === "startDate" || field === "endDate") mapped[field] = cleanDate(value);
@@ -271,6 +283,7 @@ function parseWorkbook(text: string) {
       startTime: mapped.startTime || "07:00",
       endTime: mapped.endTime || "",
       frequency: mapped.frequency || "Weekly",
+      abcdWeeks: cleanAbcdWeeks([...(mapped.abcdWeeks || []), ...explicitWeeks]),
       staffRequired: mapped.staffRequired || 2,
       rosteredStaff: mapped.rosteredStaff || [],
       washAsset: mapped.washAsset || "",
@@ -392,15 +405,24 @@ async function generateScheduleJobs(scheduleId: string) {
   const stepDays = recurrenceStepDays(schedule.recurrence, schedule.recurrence_interval_weeks || 1);
   const today = dateOnly(new Date());
   const startDate = schedule.start_date < today ? today : schedule.start_date;
-  const dates = Array.from({ length: stepDays ? 12 : 1 }, (_, index) => stepDays ? addDays(startDate, stepDays * index) : startDate)
-    .filter((jobDate) => !schedule.end_date || jobDate <= schedule.end_date);
-  const { data: existing } = dates.length
-    ? await supabase.from("calendar_jobs").select("id,job_date").eq("source_schedule_id", schedule.id).in("job_date", dates)
-    : { data: [] };
-  const existingRows = (existing || []) as Array<{ id: string; job_date: string }>;
+  const abcdWeeks = extractAbcdWeeks(schedule.notes);
+  const dates = buildScheduleDates({ startDate, endDate: schedule.end_date, stepDays, abcdWeeks });
+  const visibleNotes = stripAbcdMarker(schedule.notes);
+  const recurrenceDetail = [schedule.schedule_name || "", abcdWeeks.length ? `ABCD: ${formatAbcdWeeks(abcdWeeks)}` : ""].filter(Boolean).join(" | ") || null;
+  const { data: futureExisting } = await supabase.from("calendar_jobs").select("id,job_date").eq("source_schedule_id", schedule.id).gte("job_date", startDate);
+  const selectedDateSet = new Set(dates);
+  const futureRows = (futureExisting || []) as Array<{ id: string; job_date: string }>;
+  const staleIds = futureRows.filter((row) => !selectedDateSet.has(row.job_date)).map((row) => row.id);
+  if (staleIds.length) {
+    const { error: staffDeleteError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", staleIds);
+    if (staffDeleteError) throw staffDeleteError;
+    const { error: staleDeleteError } = await supabase.from("calendar_jobs").delete().in("id", staleIds);
+    if (staleDeleteError) throw staleDeleteError;
+  }
+  const existingRows = futureRows.filter((row) => selectedDateSet.has(row.job_date));
   const existingDates = new Set(existingRows.map((row) => row.job_date));
   const existingIds = existingRows.map((row) => row.id);
-  const notes = [schedule.notes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n");
+  const notes = [visibleNotes, schedule.wash_asset ? `Asset: ${schedule.wash_asset}` : ""].filter(Boolean).join("\n");
 
   if (existingIds.length) {
     const { error: updateError } = await supabase.from("calendar_jobs").update({
@@ -410,7 +432,7 @@ async function generateScheduleJobs(scheduleId: string) {
       job_title: schedule.job_title || "Scheduled wash",
       notes,
       recurrence: schedule.recurrence,
-      recurrence_detail: schedule.schedule_name || null,
+      recurrence_detail: recurrenceDetail,
       recurrence_interval_weeks: schedule.recurrence === "Custom" ? schedule.recurrence_interval_weeks : null,
       site_id: schedule.site_id,
       required_crew_count: schedule.required_crew_count,
@@ -436,7 +458,7 @@ async function generateScheduleJobs(scheduleId: string) {
     notes,
     severity: "green",
     recurrence: schedule.recurrence,
-    recurrence_detail: schedule.schedule_name || null,
+    recurrence_detail: recurrenceDetail,
     recurrence_interval_weeks: schedule.recurrence === "Custom" ? schedule.recurrence_interval_weeks : null,
     site_id: schedule.site_id,
     required_crew_count: schedule.required_crew_count,
@@ -488,7 +510,7 @@ async function importRows(rows: PreviewRow[], actor: TocAuthenticatedUser) {
     }
 
     const scheduleName = `${row.clientName} - ${row.siteName} ${row.startTime}`;
-    const notes = [row.notes, row.endTime ? `End time: ${row.endTime}` : ""].filter(Boolean).join("\n");
+    const notes = composeScheduleNotes([row.notes, row.endTime ? `End time: ${row.endTime}` : ""].filter(Boolean).join("\n"), row.abcdWeeks);
     const existingSchedule = lookups.schedules.find((schedule) =>
       schedule.region_id === region.id &&
       schedule.site_id === site!.id &&

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
+import { THOR_ABCD_WEEKS, formatAbcdWeeks } from "@/lib/abcd-schedule";
 import { tocFetch } from "@/lib/toc-client-auth";
 
 type SiteRow = {
@@ -32,6 +33,7 @@ type ScheduleRow = {
   jobTime: string;
   recurrence: string;
   recurrenceIntervalWeeks: number;
+  abcdWeeks: string[];
   requiredCrewCount: number;
   jobTitle: string;
   notes: string;
@@ -93,6 +95,7 @@ function blankSchedule(siteId = ""): ScheduleDraft {
     jobTime: "07:00",
     recurrence: "Weekly",
     recurrenceIntervalWeeks: 1,
+    abcdWeeks: [],
     requiredCrewCount: 2,
     jobTitle: "Scheduled wash",
     notes: "",
@@ -182,6 +185,7 @@ export function AdminOperationsMasterData() {
       jobTime: schedule.jobTime,
       recurrence: schedule.recurrence,
       recurrenceIntervalWeeks: schedule.recurrenceIntervalWeeks,
+      abcdWeeks: schedule.abcdWeeks || [],
       requiredCrewCount: schedule.requiredCrewCount,
       jobTitle: schedule.jobTitle,
       notes: schedule.notes,
@@ -417,6 +421,10 @@ export function AdminOperationsMasterData() {
             <label><span>Region</span><select value={scheduleDraft.region} onChange={(event) => patchSchedule({ region: event.target.value })}>{regionOptions.map((region) => <option key={region}>{region}</option>)}</select></label>
             {scheduleDraft.recurrence === "Custom" ? <label><span>Every weeks</span><input type="number" min="1" max="52" value={scheduleDraft.recurrenceIntervalWeeks} onChange={(event) => patchSchedule({ recurrenceIntervalWeeks: Number(event.target.value) })} /></label> : null}
           </div>
+          <label>
+            <span>ABCD weeks</span>
+            <AdminAbcdWeekPicker value={scheduleDraft.abcdWeeks || []} onChange={(abcdWeeks) => patchSchedule({ abcdWeeks })} />
+          </label>
           <label><span>Schedule notes</span><textarea value={scheduleDraft.notes} onChange={(event) => patchSchedule({ notes: event.target.value })} /></label>
           <div className="admin-action-controls">
             <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : editingScheduleId ? "Save Schedule" : "Add Schedule"}</button>
@@ -483,6 +491,24 @@ export function AdminOperationsMasterData() {
         </div>
         {message ? <small className="admin-hint-message">{message}</small> : null}
       </section>
+    </div>
+  );
+}
+
+function AdminAbcdWeekPicker({ value, onChange }: { value: string[]; onChange: (weeks: string[]) => void }) {
+  function toggle(week: string) {
+    onChange(value.includes(week) ? value.filter((item) => item !== week) : [...value, week]);
+  }
+
+  return (
+    <div className="setup-abcd-picker" title="Leave all blank to run every ABCD week. Select A/B/C/D to limit this recurring job to those Thor weeks.">
+      {THOR_ABCD_WEEKS.map((week) => (
+        <label key={`admin-abcd-${week}`} className={value.includes(week) ? "selected" : ""}>
+          <input type="checkbox" checked={value.includes(week)} onChange={() => toggle(week)} />
+          <span>{week}</span>
+        </label>
+      ))}
+      {!value.length ? <small>{formatAbcdWeeks(value)}</small> : null}
     </div>
   );
 }
