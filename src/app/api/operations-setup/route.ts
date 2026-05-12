@@ -47,7 +47,7 @@ type ScheduleRow = {
   notes: string;
   status: string;
   wash_asset?: string | null;
-  site?: Related<{ client_name: string; site_name: string; region?: Related<{ name: string }> }>;
+  site?: Related<{ client_name: string; site_name: string; address?: string | null; required_induction?: boolean | null; region?: Related<{ name: string }> }>;
 };
 type ScheduleStaffRow = { site_schedule_id: string; staff_profile_id: string };
 type ExistingCalendarJobRow = { id: string; job_date: string };
@@ -204,7 +204,7 @@ async function readSetup(regionName: string, profileId: string) {
     supabase.from("staff_profiles").select("id,display_name,role,status,primary_region_id,skills,contact_mobile,contact_whatsapp,availability_sheet_name,induction_sheet_name,reliability_notes").order("display_name", { ascending: true }),
     supabase.from("staff_profile_regions").select("staff_profile_id,region_id"),
     supabase.from("operation_sites").select("id,client_name,site_name,region_id,address,required_induction,required_crew_count,notes,status,region:regions(name)").eq("region_id", regionId).order("client_name", { ascending: true }),
-    supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,wash_asset,site:operation_sites(client_name,site_name)").eq("region_id", regionId).order("start_date", { ascending: true }),
+    supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,wash_asset,site:operation_sites(client_name,site_name,address,required_induction)").eq("region_id", regionId).order("start_date", { ascending: true }),
     supabase.from("site_schedule_staff").select("site_schedule_id,staff_profile_id"),
     supabase.from("staff_induction_cache").select("id,staff_profile_id,site_id,staff_name,site_name,status,expiry").eq("region_id", regionId).order("staff_name", { ascending: true }),
     supabase.from("app_settings").select("value").eq("key", settingKey("staff-availability", regionName)).maybeSingle(),
@@ -264,6 +264,10 @@ async function readSetup(regionName: string, profileId: string) {
       id: schedule.id,
       siteId: schedule.site_id,
       siteLabel: firstRelated(schedule.site) ? `${firstRelated(schedule.site)?.client_name} - ${firstRelated(schedule.site)?.site_name}` : "Unassigned site",
+      clientName: firstRelated(schedule.site)?.client_name || "",
+      siteName: firstRelated(schedule.site)?.site_name || "",
+      address: firstRelated(schedule.site)?.address || "",
+      requiredInduction: firstRelated(schedule.site)?.required_induction !== false,
       scheduleName: schedule.schedule_name || "",
       startDate: schedule.start_date,
       endDate: schedule.end_date || "",
@@ -549,6 +553,106 @@ export async function POST(request: Request) {
       if (!data) return NextResponse.json({ error: "Client/site record was not found." }, { status: 404 });
       await logTocAudit({ actor: user, action: isUuid(payload.id) ? "operations_setup.site.update" : "operations_setup.site.create", entityTable: "operation_sites", entityId: data.id, scope });
       return NextResponse.json(await readSetup(scope, user.id));
+    }
+
+    if (action === "upsertClientJob") {
+      const clientName = cleanString(payload.clientName);
+      const siteName = cleanString(payload.siteName);
+      if (!clientName || !siteName) return NextResponse.json({ error: "Client and site name are required." }, { status: 400 });
+      if (isUuid(payload.id) && !hasNationalAccess(user)) await ensureScheduleBelongsToRegion(payload.id, regionId);
+
+      let siteId = isUuid(payload.siteId) ? cleanString(payload.siteId) : "";
+      if (siteId) {
+        await ensureSiteBelongsToRegion(siteId, regionId);
+        const { error: siteUpdateError } = await supabase.from("operation_sites").update({
+          client_name: clientName,
+          site_name: siteName,
+          region_id: regionId,
+          address: cleanString(payload.address),
+          required_induction: payload.requiredInduction !== false,
+          required_crew_count: cleanNumber(payload.requiredCrewCount, 2, 0, 20),
+          status: "active",
+          updated_at: new Date().toISOString()
+        }).eq("id", siteId);
+        if (siteUpdateError) throw siteUpdateError;
+      } else {
+        const { data: existingSite, error: existingSiteError } = await supabase
+          .from("operation_sites")
+          .select("id")
+          .eq("region_id", regionId)
+          .eq("client_name", clientName)
+          .eq("site_name", siteName)
+          .maybeSingle();
+        if (existingSiteError) throw existingSiteError;
+        siteId = (existingSite as { id?: string } | null)?.id || "";
+        if (siteId) {
+          const { error: siteUpdateError } = await supabase.from("operation_sites").update({
+            address: cleanString(payload.address),
+            required_induction: payload.requiredInduction !== false,
+            required_crew_count: cleanNumber(payload.requiredCrewCount, 2, 0, 20),
+            status: "active",
+            updated_at: new Date().toISOString()
+          }).eq("id", siteId);
+          if (siteUpdateError) throw siteUpdateError;
+        }
+        if (!siteId) {
+          const { data: insertedSite, error: siteInsertError } = await supabase.from("operation_sites").insert({
+            client_name: clientName,
+            site_name: siteName,
+            region_id: regionId,
+            address: cleanString(payload.address),
+            required_induction: payload.requiredInduction !== false,
+            required_crew_count: cleanNumber(payload.requiredCrewCount, 2, 0, 20),
+            notes: cleanString(payload.siteNotes),
+            status: "active",
+            updated_at: new Date().toISOString()
+          }).select("id").single();
+          if (siteInsertError) throw siteInsertError;
+          siteId = insertedSite.id;
+        }
+      }
+
+      const staffIds = cleanArray(payload.staffIds).filter(isUuid);
+      await ensureStaffBelongToRegion(staffIds, regionId);
+      const recurrence = allowedRecurrences.includes(cleanString(payload.recurrence)) ? cleanString(payload.recurrence) : "Weekly";
+      const scheduleRow = {
+        site_id: siteId,
+        region_id: regionId,
+        schedule_name: cleanString(payload.scheduleName) || `${clientName} - ${siteName}`,
+        start_date: cleanString(payload.startDate) || dateOnly(new Date()),
+        end_date: cleanString(payload.endDate) || null,
+        job_time: cleanString(payload.jobTime) || "07:00",
+        recurrence,
+        recurrence_interval_weeks: cleanNumber(payload.recurrenceIntervalWeeks, 1, 1, 52),
+        required_crew_count: cleanNumber(payload.requiredCrewCount, 2, 0, 20),
+        job_title: cleanString(payload.jobTitle) || "Scheduled wash",
+        wash_asset: cleanString(payload.washAsset),
+        notes: cleanString(payload.notes),
+        status: cleanString(payload.status) || "active",
+        updated_at: new Date().toISOString()
+      };
+      const scheduleQuery = isUuid(payload.id)
+        ? supabase.from("site_schedules").update(scheduleRow).eq("id", payload.id).select("id").maybeSingle()
+        : supabase.from("site_schedules").insert(scheduleRow).select("id").single();
+      const { data: scheduleData, error: scheduleError } = await scheduleQuery;
+      if (scheduleError) throw scheduleError;
+      if (!scheduleData) return NextResponse.json({ error: "Schedule record was not found." }, { status: 404 });
+      await supabase.from("site_schedule_staff").delete().eq("site_schedule_id", scheduleData.id);
+      const staffRows = staffIds.map((staffId) => ({ site_schedule_id: scheduleData.id, staff_profile_id: staffId }));
+      if (staffRows.length) {
+        const { error: staffError } = await supabase.from("site_schedule_staff").insert(staffRows);
+        if (staffError) throw staffError;
+      }
+      const generation = await generateScheduleJobs(scheduleData.id);
+      await logTocAudit({
+        actor: user,
+        action: isUuid(payload.id) ? "operations_setup.client_job.update" : "operations_setup.client_job.create",
+        entityTable: "site_schedules",
+        entityId: scheduleData.id,
+        scope,
+        details: { siteId, generation }
+      });
+      return NextResponse.json({ ...await readSetup(scope, user.id), generation });
     }
 
     if (action === "upsertSchedule") {

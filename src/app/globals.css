@@ -643,6 +643,69 @@ body.next-app .developer-region-control {
   min-width: 150px;
 }
 
+.setup-staff-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 5px;
+  min-width: 260px;
+  max-width: 420px;
+}
+
+.setup-staff-picker label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px 6px;
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-radius: 6px;
+  background: rgba(238, 250, 252, 0.58);
+  color: #12324a;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.setup-staff-picker label.selected {
+  border-color: rgba(15, 129, 98, 0.36);
+  background: rgba(224, 246, 236, 0.9);
+  color: #0f6d52;
+}
+
+.setup-staff-picker input {
+  grid-row: span 2;
+  width: auto;
+  min-width: auto;
+}
+
+.setup-staff-picker span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.setup-staff-picker small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6a7c89;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.setup-staff-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 6px;
+  background: rgba(255, 249, 226, 0.9);
+  color: #7d5c11;
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 4px 8px;
+}
+
 .setup-table-scroll {
   overflow-x: auto;
 }
