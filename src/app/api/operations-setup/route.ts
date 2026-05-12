@@ -199,7 +199,7 @@ async function readSetup(regionName: string, profileId: string) {
     .from("operations_setup_status")
     .upsert({ profile_id: profileId, region_id: regionId, last_opened_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: "profile_id,region_id" });
 
-  const [statusResult, staffResult, linkResult, sitesResult, schedulesResult, scheduleStaffResult, inductionsResult, sourceResult] = await Promise.all([
+  const [statusResult, staffResult, linkResult, sitesResult, schedulesResult, scheduleStaffResult, inductionsResult, availabilitySourceResult, inductionSourceResult] = await Promise.all([
     supabase.from("operations_setup_status").select("current_step,completed_at,force_run_next_login,last_opened_at").eq("profile_id", profileId).eq("region_id", regionId).maybeSingle(),
     supabase.from("staff_profiles").select("id,display_name,role,status,primary_region_id,skills,contact_mobile,contact_whatsapp,availability_sheet_name,induction_sheet_name,reliability_notes").order("display_name", { ascending: true }),
     supabase.from("staff_profile_regions").select("staff_profile_id,region_id"),
@@ -207,10 +207,11 @@ async function readSetup(regionName: string, profileId: string) {
     supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,wash_asset,site:operation_sites(client_name,site_name)").eq("region_id", regionId).order("start_date", { ascending: true }),
     supabase.from("site_schedule_staff").select("site_schedule_id,staff_profile_id"),
     supabase.from("staff_induction_cache").select("id,staff_profile_id,site_id,staff_name,site_name,status,expiry").eq("region_id", regionId).order("staff_name", { ascending: true }),
-    supabase.from("app_settings").select("value").eq("key", settingKey("staff-availability", regionName)).maybeSingle()
+    supabase.from("app_settings").select("value").eq("key", settingKey("staff-availability", regionName)).maybeSingle(),
+    supabase.from("app_settings").select("value").eq("key", settingKey("inductions", regionName)).maybeSingle()
   ]);
 
-  const firstError = statusResult.error || staffResult.error || linkResult.error || sitesResult.error || schedulesResult.error || scheduleStaffResult.error || inductionsResult.error || sourceResult.error;
+  const firstError = statusResult.error || staffResult.error || linkResult.error || sitesResult.error || schedulesResult.error || scheduleStaffResult.error || inductionsResult.error || availabilitySourceResult.error || inductionSourceResult.error;
   if (firstError) return { connected: false, error: firstError.message, region: regionName };
 
   const regionStaffLinks = ((linkResult.data || []) as StaffRegionRow[]).filter((link) => link.region_id === regionId);
@@ -245,7 +246,8 @@ async function readSetup(regionName: string, profileId: string) {
     connected: true,
     region: regionName,
     setup: statusResult.data || { current_step: 1, completed_at: null, force_run_next_login: false },
-    availabilitySource: sourceResult.data?.value || null,
+    availabilitySource: availabilitySourceResult.data?.value || null,
+    inductionSource: inductionSourceResult.data?.value || null,
     staff,
     sites: ((sitesResult.data || []) as SiteRow[]).map((site) => ({
       id: site.id,
@@ -631,6 +633,21 @@ export async function POST(request: Request) {
       const { error } = await supabase.from("app_settings").upsert({ key: settingKey("staff-availability", scope), value: config, updated_at: new Date().toISOString() }, { onConflict: "key" });
       if (error) throw error;
       await logTocAudit({ actor: user, action: "operations_setup.availability_source.save", entityTable: "app_settings", scope, details: { sourceName: config.sourceName } });
+      return NextResponse.json(await readSetup(scope, user.id));
+    }
+
+    if (action === "saveInductionSource") {
+      const config = normaliseSheetSourceConfig("inductions", {
+        slug: "inductions",
+        sourceName: cleanString(payload.sourceName) || `${scope} Staff Inductions`,
+        spreadsheetUrl: cleanString(payload.spreadsheetUrl),
+        region: scope,
+        statusLabel: cleanString(payload.statusLabel) || "Live Google Sheet",
+        connected: Boolean(cleanString(payload.spreadsheetUrl))
+      });
+      const { error } = await supabase.from("app_settings").upsert({ key: settingKey("inductions", scope), value: config, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      if (error) throw error;
+      await logTocAudit({ actor: user, action: "operations_setup.induction_source.save", entityTable: "app_settings", scope, details: { sourceName: config.sourceName } });
       return NextResponse.json(await readSetup(scope, user.id));
     }
 

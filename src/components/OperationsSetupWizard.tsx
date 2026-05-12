@@ -15,12 +15,14 @@ type SetupPayload = {
   region: string;
   setup?: { completed_at?: string | null; force_run_next_login?: boolean | null };
   availabilitySource?: { spreadsheetUrl?: string; sourceName?: string } | null;
+  inductionSource?: { spreadsheetUrl?: string; sourceName?: string } | null;
   staff: StaffRow[];
   sites: SiteRow[];
   schedules: ScheduleRow[];
   inductions: InductionRow[];
 };
 type AvailabilityFeed = { staff?: Array<{ name: string }> };
+type InductionFeed = { staff?: Array<{ name: string }> };
 
 const skills = ["Wash Hand", "Driver", "Team Leader"];
 const recurrences = ["None", "Daily", "Weekly", "Fortnightly", "4 weekly", "Custom"];
@@ -105,6 +107,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [siteDraft, setSiteDraft] = useState<Partial<SiteRow>>(blankSite);
   const [scheduleDraft, setScheduleDraft] = useState<Partial<ScheduleRow>>(blankSchedule);
   const [availabilityUrl, setAvailabilityUrl] = useState("");
+  const [inductionUrl, setInductionUrl] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [staffSearch, setStaffSearch] = useState("");
@@ -118,6 +121,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [editingScheduleId, setEditingScheduleId] = useState("");
   const [editingScheduleDraft, setEditingScheduleDraft] = useState<Partial<ScheduleRow>>(blankSchedule);
   const [availabilityRowsByRegion, setAvailabilityRowsByRegion] = useState<Record<string, string[]>>({});
+  const [inductionRowsByRegion, setInductionRowsByRegion] = useState<Record<string, string[]>>({});
 
   const regionOptions = useMemo(() => adminMode ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(), [adminMode]);
   const specificRegionOptions = useMemo(() => regionOptions.filter((item) => item !== allRegionsLabel), [regionOptions]);
@@ -167,16 +171,20 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         };
         setPayload(combined);
         setAvailabilityUrl("");
+        setInductionUrl("");
         setTableRegionFilter(allRegionsLabel);
         void loadAvailabilityRows(specificRegionOptions);
+        void loadInductionRows(specificRegionOptions);
         return;
       }
       const response = await tocFetch(`/api/operations-setup?region=${encodeURIComponent(nextRegion)}`, { cache: "no-store" });
       const nextPayload = await readPayload(response);
       setPayload(nextPayload);
       setAvailabilityUrl(nextPayload.availabilitySource?.spreadsheetUrl || "");
+      setInductionUrl(nextPayload.inductionSource?.spreadsheetUrl || "");
       setTableRegionFilter(nextRegion);
       void loadAvailabilityRows([nextRegion]);
+      void loadInductionRows([nextRegion]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Setup data could not be loaded.");
     }
@@ -193,6 +201,19 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       }
     }));
     setAvailabilityRowsByRegion((current) => ({ ...current, ...Object.fromEntries(entries) }));
+  }
+
+  async function loadInductionRows(regions: string[]) {
+    const entries = await Promise.all(regions.map(async (item) => {
+      try {
+        const response = await tocFetch(`/api/inductions?scope=${encodeURIComponent(item)}&refresh=${Date.now()}`, { cache: "no-store" });
+        const feed = await response.json() as InductionFeed;
+        return [item, (feed.staff || []).map((person) => person.name).filter(Boolean)] as const;
+      } catch {
+        return [item, []] as const;
+      }
+    }));
+    setInductionRowsByRegion((current) => ({ ...current, ...Object.fromEntries(entries) }));
   }
 
   useEffect(() => {
@@ -324,6 +345,12 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     await mutate({ action: "saveAvailabilitySource", spreadsheetUrl: availabilityUrl, sourceName: `${region} Staff Availability` }, "Availability sheet linked for this region.");
   }
 
+  async function saveInductionSource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const ok = await mutate({ action: "saveInductionSource", spreadsheetUrl: inductionUrl, sourceName: `${region} Staff Inductions` }, "Induction sheet linked for this region.");
+    if (ok) void loadInductionRows([region]);
+  }
+
   async function completeSetup() {
     const ok = await mutate({ action: "completeSetup" }, "Operations setup completed. TOC is ready for this region.");
     if (ok) {
@@ -340,6 +367,15 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   function sheetMatchForStaff(person: StaffRow) {
     const names = rowRegions(person, region).flatMap((item) => availabilityRowsByRegion[item] || []);
     const expected = cleanNameKey(person.availabilitySheetName || person.name);
+    return {
+      matched: names.some((name) => cleanNameKey(name) === expected),
+      count: names.length
+    };
+  }
+
+  function inductionMatchForStaff(person: StaffRow) {
+    const names = rowRegions(person, region).flatMap((item) => inductionRowsByRegion[item] || []);
+    const expected = cleanNameKey(person.inductionSheetName || person.name);
     return {
       matched: names.some((name) => cleanNameKey(name) === expected),
       count: names.length
@@ -560,7 +596,43 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 3 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 3. Site inductions</strong><p>Walk through each client site and confirm who is inducted, not inducted, expired or expiring.</p></div>
+          <div className="setup-copy"><strong>Step 3. Site inductions</strong><p>Link this region's induction Google Sheet, then confirm every staff profile maps to the correct induction row name so Odin can trust site eligibility.</p></div>
+          <form className="setup-grid-form" onSubmit={saveInductionSource}>
+            <input className="wide-input" placeholder="Google Sheet URL for this region's induction register" value={inductionUrl} onChange={(event) => setInductionUrl(event.target.value)} />
+            <button disabled={saving || allRegionMode} type="submit">Link Induction Sheet</button>
+          </form>
+          <CollapsibleTable
+            title="Induction Name Sync"
+            count={filteredStaff.length}
+            total={staff.length}
+            headers={["Staff name", "Induction row", "Sheet match", "Region", "Action"]}
+            search={staffSearch}
+            onSearchChange={setStaffSearch}
+            regionFilter={tableRegionFilter}
+            onRegionFilterChange={setTableRegionFilter}
+            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
+          >
+            <tbody>{filteredStaff.map((person, index) => {
+              const isEditing = editingStaffId === person.id;
+              const match = inductionMatchForStaff(person);
+              return (
+                <tr key={`${person.id}-induction-${index}`} className={isEditing ? "setup-editing-row" : ""}>
+                  <td>{person.name}</td>
+                  <td>{isEditing ? <input value={editingStaffDraft.inductionSheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, inductionSheetName: event.target.value }))} /> : person.inductionSheetName || person.name}</td>
+                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
+                  <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
+                  <td className="setup-row-actions">
+                    {isEditing ? (
+                      <>
+                        <button type="button" disabled={saving} onClick={saveStaffRowEdit}>Save</button>
+                        <button type="button" onClick={() => { setEditingStaffId(""); setEditingStaffDraft(blankStaff()); }}>Cancel</button>
+                      </>
+                    ) : <button type="button" disabled={allRegionMode} onClick={() => startStaffRowEdit(person)}>Edit Row Name</button>}
+                  </td>
+                </tr>
+              );
+            })}</tbody>
+          </CollapsibleTable>
           <div className="setup-induction-grid">
             {!staff.length || !sites.some((site) => site.requiredInduction) ? <div className="setup-empty">Add staff and client sites with required inductions first, then this step becomes the site-by-site induction checklist.</div> : null}
             {sites.filter((site) => site.requiredInduction).flatMap((site) => staff.map((person) => {
