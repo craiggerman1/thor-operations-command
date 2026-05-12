@@ -392,6 +392,17 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     }
   }
 
+  async function deleteScheduleRow(schedule: ScheduleRow) {
+    if (allRegionMode) return;
+    const confirmed = window.confirm(`Delete ${schedule.clientName || schedule.siteLabel} - ${schedule.jobTitle}? Future generated Calendar jobs for this recurring schedule will be removed. Past Calendar history will remain.`);
+    if (!confirmed) return;
+    const ok = await mutate({ action: "deleteClientJob", id: schedule.id }, "Recurring job deleted and future Calendar jobs removed.");
+    if (ok && editingScheduleId === schedule.id) {
+      setEditingScheduleId("");
+      setEditingScheduleDraft(blankSchedule());
+    }
+  }
+
   async function saveAvailability(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const ok = await mutate({ action: "saveAvailabilitySource", spreadsheetUrl: availabilityUrl, sourceName: `${region} Staff Availability` }, "Availability sheet linked for this region.");
@@ -644,7 +655,12 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                           <button type="button" disabled={saving || !editingScheduleDraft.clientName || !editingScheduleDraft.siteName} onClick={saveScheduleRowEdit}>Save</button>
                           <button type="button" onClick={() => { setEditingScheduleId(""); setEditingScheduleDraft(blankSchedule()); }}>Cancel</button>
                         </>
-                      ) : <button type="button" disabled={allRegionMode} onClick={() => startScheduleRowEdit(schedule)}>Edit</button>}
+                      ) : (
+                        <>
+                          <button type="button" disabled={allRegionMode} onClick={() => startScheduleRowEdit(schedule)}>Edit</button>
+                          <button type="button" className="setup-danger-button" disabled={allRegionMode || saving} onClick={() => deleteScheduleRow(schedule)}>Delete</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );

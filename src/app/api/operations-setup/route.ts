@@ -183,6 +183,24 @@ async function ensureStaffBelongToRegion(staffIds: string[], regionId: string) {
   if (invalidIds.length) throw new Error("One or more selected staff are not mapped to this region.");
 }
 
+async function removeFutureCalendarJobsForSchedule(scheduleId: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+  const { data, error } = await supabase
+    .from("calendar_jobs")
+    .select("id")
+    .eq("source_schedule_id", scheduleId)
+    .gte("job_date", dateOnly(new Date()));
+  if (error) throw error;
+  const futureJobIds = ((data || []) as Array<{ id: string }>).map((row) => row.id);
+  if (!futureJobIds.length) return { removedCalendarJobs: 0 };
+  const { error: staffError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", futureJobIds);
+  if (staffError) throw staffError;
+  const { error: deleteError } = await supabase.from("calendar_jobs").delete().in("id", futureJobIds);
+  if (deleteError) throw deleteError;
+  return { removedCalendarJobs: futureJobIds.length };
+}
+
 async function readSetup(regionName: string, profileId: string) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { connected: false, error: "Supabase server key is not configured." };
@@ -199,7 +217,7 @@ async function readSetup(regionName: string, profileId: string) {
     supabase.from("staff_profiles").select("id,display_name,role,status,primary_region_id,skills,contact_mobile,contact_whatsapp,availability_sheet_name,induction_sheet_name,reliability_notes").order("display_name", { ascending: true }),
     supabase.from("staff_profile_regions").select("staff_profile_id,region_id"),
     supabase.from("operation_sites").select("id,client_name,site_name,region_id,address,required_induction,required_crew_count,notes,status,region:regions(name)").eq("region_id", regionId).order("client_name", { ascending: true }),
-    supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,wash_asset,site:operation_sites(client_name,site_name,address,required_induction)").eq("region_id", regionId).order("start_date", { ascending: true }),
+    supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,end_date,job_time,recurrence,recurrence_interval_weeks,required_crew_count,job_title,notes,status,wash_asset,site:operation_sites(client_name,site_name,address,required_induction)").eq("region_id", regionId).eq("status", "active").order("start_date", { ascending: true }),
     supabase.from("site_schedule_staff").select("site_schedule_id,staff_profile_id"),
     supabase.from("staff_induction_cache").select("id,staff_profile_id,site_id,staff_name,site_name,status,expiry").eq("region_id", regionId).order("staff_name", { ascending: true }),
     supabase.from("app_settings").select("value").eq("key", settingKey("staff-availability", regionName)).maybeSingle(),
@@ -550,7 +568,7 @@ export async function POST(request: Request) {
         address: cleanString(payload.address),
         required_induction: payload.requiredInduction !== false,
         required_crew_count: cleanNumber(payload.requiredCrewCount, 2, 0, 20),
-        notes: cleanString(payload.notes),
+        notes: composeScheduleNotes(cleanString(payload.notes), cleanAbcdWeeks(payload.abcdWeeks)),
         status: cleanString(payload.status) || "active",
         updated_at: new Date().toISOString()
       };
@@ -662,6 +680,25 @@ export async function POST(request: Request) {
         details: { siteId, generation }
       });
       return NextResponse.json({ ...await readSetup(scope, user.id), generation });
+    }
+
+    if (action === "deleteClientJob") {
+      if (!isUuid(payload.id)) return NextResponse.json({ error: "Schedule id is required." }, { status: 400 });
+      if (!hasNationalAccess(user)) await ensureScheduleBelongsToRegion(payload.id, regionId);
+      const cleanup = await removeFutureCalendarJobsForSchedule(payload.id);
+      const { error: staffDeleteError } = await supabase.from("site_schedule_staff").delete().eq("site_schedule_id", payload.id);
+      if (staffDeleteError) throw staffDeleteError;
+      const { error: scheduleError } = await supabase.from("site_schedules").update({ status: "inactive", updated_at: new Date().toISOString() }).eq("id", payload.id);
+      if (scheduleError) throw scheduleError;
+      await logTocAudit({
+        actor: user,
+        action: "operations_setup.client_job.delete",
+        entityTable: "site_schedules",
+        entityId: payload.id,
+        scope,
+        details: cleanup
+      });
+      return NextResponse.json({ ...await readSetup(scope, user.id), deletion: cleanup });
     }
 
     if (action === "upsertSchedule") {
