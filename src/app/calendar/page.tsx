@@ -11,6 +11,7 @@ import type { CalendarDay, CalendarJob } from "@/lib/toc-data";
 import {
   calendarWeekdays,
   getCalendarDaySlug,
+  getCalendarDate,
   getVisibleCalendarDays,
   generateCalendarWeeks,
   isCurrentCalendarDay,
@@ -45,6 +46,14 @@ function cleanEditableJob(job: CalendarJob & { originalIndex?: number }): Calend
   };
 }
 
+function isTodayOrFuture(day: CalendarDay) {
+  const dayDate = getCalendarDate(day);
+  if (!dayDate) return true;
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return dayDate.getTime() >= todayStart.getTime();
+}
+
 export default function CalendarPage() {
   const router = useRouter();
   const [scope, setScope] = useState("National");
@@ -54,7 +63,9 @@ export default function CalendarPage() {
   const [weatherForecast, setWeatherForecast] = useState<TocWeatherDay[]>([]);
   const [saveMessage, setSaveMessage] = useState("");
   const calendarDays = useMemo(() => getVisibleCalendarDays(calendarData), [calendarData]);
-  const totalVisibleJobs = calendarDays.reduce((total, day) => total + getVisibleJobs(day.jobs).length, 0);
+  const listCalendarDays = useMemo(() => calendarDays.filter(isTodayOrFuture), [calendarDays]);
+  const activeCalendarDays = viewMode === "list" ? listCalendarDays : calendarDays;
+  const totalVisibleJobs = activeCalendarDays.reduce((total, day) => total + getVisibleJobs(day.jobs).length, 0);
 
   function getVisibleJobs(jobs: CalendarJob[]): VisibleJob[] {
     return jobs
@@ -234,7 +245,7 @@ export default function CalendarPage() {
             </div>
           ) : (
             <div className="calendar-list-view">
-              {calendarDays.map((day) => {
+              {listCalendarDays.map((day) => {
                 const daySlug = getCalendarDaySlug(day);
                 const dayLabel = `${day.day} ${day.date} ${day.month}`;
                 const visibleJobs = getVisibleJobs(day.jobs);
