@@ -38,6 +38,11 @@ type RosterImportResult = {
   imported?: Array<{ rowNumber: number; siteId: string; scheduleId: string; calendarJobsCreated: number; calendarJobsUpdated: number }>;
   failed?: Array<{ rowNumber: number; error: string }>;
 };
+type RosterImportStatus = {
+  tone: "blue" | "green" | "amber" | "red";
+  title: string;
+  detail: string;
+};
 type SetupPayload = {
   connected: boolean;
   error?: string;
@@ -192,6 +197,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [rosterImportFile, setRosterImportFile] = useState<File | null>(null);
   const [rosterImportResult, setRosterImportResult] = useState<RosterImportResult | null>(null);
   const [rosterImportBusy, setRosterImportBusy] = useState(false);
+  const [rosterImportStatus, setRosterImportStatus] = useState<RosterImportStatus | null>(null);
 
   const canManageAllSetup = useMemo(() => adminMode && readSessionCanManageAllSetup(), [adminMode, sessionVersion]);
   const regionOptions = useMemo(() => canManageAllSetup ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(false), [canManageAllSetup, sessionVersion]);
@@ -399,6 +405,13 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     }
     setRosterImportBusy(true);
     setMessage("");
+    setRosterImportStatus({
+      tone: "blue",
+      title: mode === "preview" ? "Checking roster workbook" : "Saving roster workbook",
+      detail: mode === "preview"
+        ? "Reading every uploaded row and checking region, client, site and staff matches."
+        : "Writing valid rows to Recurring Client Jobs, linking normal staff and regenerating Calendar jobs."
+    });
     try {
       const formData = new FormData();
       formData.append("file", rosterImportFile);
@@ -410,20 +423,50 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       if (!response.ok) throw new Error(payload.error || "Roster import failed.");
       if (mode === "import") {
         clearTocClientCache();
+        setRosterImportStatus({
+          tone: "blue",
+          title: "Refreshing TOC job tables",
+          detail: "Import saved. Reloading Recurring Client Jobs now so the full uploaded roster is visible immediately."
+        });
         await load(region);
+        clearTocClientCache();
         window.dispatchEvent(new Event("toc.operationsSetup.updated"));
         window.dispatchEvent(new Event("toc.calendar.updated"));
         const failed = payload.failed?.length || 0;
         const imported = payload.imported?.length || 0;
         const expected = payload.summary.importableRows ?? payload.summary.totalRows - payload.summary.errorRows;
+        setRosterImportStatus(failed
+          ? {
+              tone: "amber",
+              title: "Roster import completed with row issues",
+              detail: `${imported}/${expected} importable rows saved. ${failed} row issue${failed === 1 ? "" : "s"} need review below.`
+            }
+          : {
+              tone: "green",
+              title: "Roster import saved successfully",
+              detail: `All ${imported}/${expected} importable rows saved to Recurring Client Jobs and pushed to Calendar. The table below has been refreshed.`
+            });
         setMessage(failed
           ? `Roster import completed with ${failed} row issue${failed === 1 ? "" : "s"}. ${imported}/${expected} rows saved. Review the failed row message before relying on the roster.`
           : `Roster import verified. All ${imported}/${expected} importable rows saved to Recurring Client Jobs and pushed to Calendar.`);
       } else {
+        setRosterImportStatus(payload.summary.errorRows
+          ? {
+              tone: "red",
+              title: "Roster preview found errors",
+              detail: `${payload.summary.errorRows} row${payload.summary.errorRows === 1 ? "" : "s"} need fixing before TOC can safely import this workbook.`
+            }
+          : {
+              tone: "green",
+              title: "Roster preview ready",
+              detail: `${payload.summary.totalRows} uploaded row${payload.summary.totalRows === 1 ? "" : "s"} checked. ${payload.summary.importableRows || 0} can be imported.`
+            });
         setMessage(payload.summary.errorRows ? "Roster preview found issues to fix before import." : "Roster preview is ready to import.");
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Roster import failed.");
+      const errorMessage = error instanceof Error ? error.message : "Roster import failed.";
+      setRosterImportStatus({ tone: "red", title: "Roster import stopped", detail: errorMessage });
+      setMessage(errorMessage);
     } finally {
       setRosterImportBusy(false);
     }
@@ -644,11 +687,18 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
               <input type="file" accept=".csv" onChange={(event) => {
                 setRosterImportFile(event.target.files?.[0] || null);
                 setRosterImportResult(null);
+                setRosterImportStatus(null);
               }} />
-              <button type="button" disabled={rosterImportBusy || !rosterImportFile} onClick={() => submitRosterImport("preview")}>Preview Upload</button>
-              <button type="button" disabled={rosterImportBusy || !rosterImportResult || rosterImportResult.summary.errorRows > 0} onClick={() => submitRosterImport("import")}>Confirm Import</button>
+              <button type="button" disabled={rosterImportBusy || !rosterImportFile} onClick={() => submitRosterImport("preview")}>{rosterImportBusy ? "Working..." : "Preview Upload"}</button>
+              <button type="button" disabled={rosterImportBusy || !rosterImportResult || rosterImportResult.summary.errorRows > 0} onClick={() => submitRosterImport("import")}>{rosterImportBusy ? "Saving..." : "Confirm Import"}</button>
               <button className="setup-danger-button" type="button" disabled={saving || allRegionMode || !schedules.length} onClick={deleteAllScheduleRows}>Delete All Jobs</button>
             </div>
+            {rosterImportStatus ? (
+              <div className={`setup-import-status ${rosterImportStatus.tone}`} role="status" aria-live="polite">
+                <strong>{rosterImportStatus.title}</strong>
+                <span>{rosterImportStatus.detail}</span>
+              </div>
+            ) : null}
             {rosterImportResult ? (
               <div className="setup-import-preview">
                 <div className="setup-import-summary">

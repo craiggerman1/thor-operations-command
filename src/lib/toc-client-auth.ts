@@ -50,7 +50,8 @@ export async function getTocRequestHeaders(includeJson = false) {
 
 export async function tocFetch(input: RequestInfo | URL, init: RequestInit = {}, includeJson = false) {
   const method = String(init.method || "GET").toUpperCase();
-  const canUseResponseCache = method === "GET" && !init.body;
+  const bypassResponseCache = init.cache === "no-store" || init.cache === "reload";
+  const canUseResponseCache = method === "GET" && !init.body && !bypassResponseCache;
   const cacheKey = canUseResponseCache ? String(input) : "";
   if (!canUseResponseCache) responseCache.clear();
   const cached = cacheKey ? responseCache.get(cacheKey) : null;
