@@ -213,12 +213,16 @@ export default function StaffAvailabilityPage() {
             <div>
               <span className="eyebrow">{sourceConfig.statusLabel}</span>
               <strong>{sourceConfig.sourceName || feed.sourceName}</strong>
-              <small>{feedStatus}. Source data has not been edited by TOC.</small>
+              <small>{feedStatus}. Source data has not been edited by TOC. TOC applies a hard-coded 2 hour early-start buffer to roster matching.</small>
             </div>
             <a href={sourceConfig.spreadsheetUrl || feed.spreadsheetUrl} target="_blank" rel="noreferrer">Open source sheet</a>
           </div>
 
           <div className="staff-availability-board">
+            <div className="availability-buffer-note">
+              <strong>Availability heat map</strong>
+              <span>Green means available in the linked Google Sheet. Odin treats each available window as starting 2 hours earlier for roster checks, e.g. 6pm availability can cover from 4pm.</span>
+            </div>
             <div className="availability-summary-grid" aria-label="Daily availability summary">
               <span className="availability-summary-spacer" aria-hidden="true" />
               {daySummaries.map((summary) => (

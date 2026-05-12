@@ -442,10 +442,11 @@ export async function readOdinStaffEntities(options: { includeProtected: boolean
 export function isStaffAvailableForJob(staff: OdinStaffEntity, jobDate: string, jobTime: string) {
   const date = new Date(`${jobDate}T00:00:00+10:00`);
   if (Number.isNaN(date.getTime())) return null;
+  const hour = Number(String(jobTime || "07:00").split(":")[0]);
+  if (hour >= 22) date.setDate(date.getDate() + 1);
   const dayName = date.toLocaleDateString("en-AU", { weekday: "long", timeZone: "Australia/Brisbane" });
   const dayIndex = staffAvailabilitySheet.days.findIndex((day) => day.toLowerCase() === dayName.toLowerCase());
-  const hour = Number(String(jobTime || "07:00").split(":")[0]);
-  const windowIndex = hour < 6 ? 3 : hour < 12 ? 0 : hour < 18 ? 1 : 2;
+  const windowIndex = hour >= 22 || hour < 6 ? 3 : hour >= 16 ? 2 : hour >= 10 ? 1 : 0;
   const value = staff.availability.matrix[dayIndex]?.[windowIndex];
   return value ? value === "Available" : null;
 }

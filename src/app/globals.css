@@ -754,6 +754,190 @@ body.next-app .developer-region-control {
   background: white;
 }
 
+.staff-source-strip,
+.availability-buffer-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(12, 57, 84, 0.1);
+  border-radius: 8px;
+  background: rgba(239, 247, 250, 0.78);
+}
+
+.staff-source-strip > div,
+.availability-buffer-note {
+  min-width: 0;
+}
+
+.staff-source-strip strong,
+.availability-buffer-note strong {
+  display: block;
+  color: #0c3954;
+  font-size: 0.98rem;
+}
+
+.staff-source-strip small,
+.availability-buffer-note span {
+  display: block;
+  margin-top: 3px;
+  color: #5d7183;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.staff-source-strip a {
+  flex: 0 0 auto;
+  min-height: 32px;
+  border-radius: 6px;
+  background: #0c3954;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.staff-availability-board {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.availability-summary-grid {
+  display: grid;
+  grid-template-columns: 150px repeat(7, minmax(118px, 1fr)) 86px;
+  gap: 7px;
+  min-width: 1080px;
+}
+
+.availability-summary-card {
+  min-height: 76px;
+  padding: 9px;
+  border: 1px solid rgba(12, 57, 84, 0.1);
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgba(238, 250, 252, 0.92), rgba(255, 255, 255, 0.92));
+}
+
+.availability-summary-card span,
+.staff-availability-row.header span,
+.staff-availability-row.header strong,
+.staff-availability-row.time-header span {
+  color: #0c3954;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.availability-summary-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #103d5b;
+  font-size: 1.55rem;
+}
+
+.availability-summary-card small {
+  color: #64798a;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.availability-summary-spacer {
+  display: block;
+}
+
+.staff-availability-row {
+  display: grid;
+  grid-template-columns: 150px repeat(7, minmax(118px, 1fr)) 86px;
+  gap: 7px;
+  align-items: stretch;
+  min-width: 1080px;
+}
+
+.staff-availability-row > span,
+.staff-availability-row > strong,
+.availability-day-cell {
+  min-height: 42px;
+  border: 1px solid rgba(12, 57, 84, 0.09);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 7px;
+}
+
+.staff-availability-row.header > span,
+.staff-availability-row.header > strong,
+.staff-availability-row.time-header > span {
+  display: flex;
+  align-items: center;
+  background: #0c3954;
+  color: white;
+}
+
+.staff-availability-row.time-header .time-labels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  background: rgba(12, 57, 84, 0.06);
+}
+
+.staff-availability-row.time-header small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5f7487;
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.staff-name,
+.staff-total {
+  display: flex;
+  align-items: center;
+}
+
+.staff-name strong {
+  color: #102d43;
+  font-size: 0.86rem;
+}
+
+.staff-total {
+  justify-content: center;
+  color: #0c3954;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.availability-day-cell:not(.time-labels) {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.availability-window {
+  display: block;
+  min-height: 28px;
+  border-radius: 5px;
+  border: 1px solid rgba(12, 57, 84, 0.08);
+}
+
+.availability-window.green {
+  background: linear-gradient(180deg, #32c982, #1f9f65);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+}
+
+.availability-window.red {
+  background: linear-gradient(180deg, #f0786e, #cf4137);
+}
+
+.availability-window.amber {
+  background: linear-gradient(180deg, #ffd56b, #e9a92d);
+}
+
 .training-cards span {
   display: grid;
   place-items: center;
