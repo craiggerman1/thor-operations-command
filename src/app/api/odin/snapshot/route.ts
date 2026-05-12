@@ -112,7 +112,7 @@ function severityForNationalRequest(row: SnapshotRow, generatedAt: Date) {
 function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
   const region = regionName(row);
   const id = String(row.id || "");
-  const due = row.due_at || row.next_service_due || row.job_date || "";
+  const due = entityType === "calendar_job" ? "" : row.due_at || row.next_service_due || "";
   const title = row.title || row.asset_name || row.site_name || row.job_title || itemName(row);
   const source = row.source_page || entityType;
   const severity = entityType === "action_item"
@@ -160,6 +160,7 @@ function entityLink(entityType: string, row: SnapshotRow, generatedAt: Date) {
     entity: operationalContext.entity,
     issueType: operationalContext.issueType,
     category: operationalContext.category,
+    scheduleContextOnly: entityType === "calendar_job",
     isOverdue: isPastDue(due, generatedAt),
     isDueSoon: isDueSoon(due, generatedAt)
   };

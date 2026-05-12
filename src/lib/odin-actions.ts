@@ -26,6 +26,15 @@ function isSystemDataIssue(input: { title: string; detail: string; payload: Reco
     systemDataIssuePattern.test(text);
 }
 
+function isRoutineCalendarOverdueNoise(input: { title: string; detail: string; payload: Record<string, unknown> }) {
+  const source = `${input.payload.sourcePage || ""} ${input.payload.sourceType || ""} ${input.payload.entityType || ""} ${input.payload.category || ""}`.toLowerCase();
+  const text = `${input.title} ${input.detail} ${input.payload.issueType || ""}`.toLowerCase();
+  const calendarSource = /\b(calendar|calendar_job|site_schedule|scheduled job|daily-brief)\b/.test(source);
+  const routineOverdueWash = /\boverdue\b/.test(text) && /\b(wash|scheduled|calendar|job)\b/.test(text);
+  const materialRisk = /\b(no crew|unassigned|under.?covered|missed|cancel|complaint|safety|incident|jobsheet|photo|checklist|client critical|blocked|not inducted|roster gap)\b/.test(text);
+  return calendarSource && routineOverdueWash && !materialRisk;
+}
+
 export function normaliseOdinTargetRegions(value: unknown, fallback = "National") {
   function cleanRegionName(region: string) {
     const cleaned = region
@@ -224,6 +233,17 @@ export async function createOdinDirectActionItems(input: OdinDirectActionInput) 
   if (!title) throw new Error("Action title is required.");
 
   const detail = String(payload.detail || payload.actionDetail || payload.recommendedAction || "Odin issued this Action Centre item for manager close-out.");
+  if (isRoutineCalendarOverdueNoise({ title, detail, payload })) {
+    return {
+      createdActionIds: [],
+      createdCount: 0,
+      linkedActionIds: [],
+      skippedDuplicateCount: 1,
+      targetRegions: normaliseOdinTargetRegions(payload.targetRegions || payload.regions || payload.region),
+      suppressed: true,
+      suppressionReason: "Routine scheduled calendar washes are roster context and do not create overdue Action Centre follow-ups."
+    };
+  }
   const systemDataIssue = isSystemDataIssue({ title, detail, payload });
   const requestedTargetRegions = normaliseOdinTargetRegions(payload.targetRegions || payload.regions || payload.region);
   const targetRegions = await getTargetRegions(systemDataIssue ? ["National"] : requestedTargetRegions);
