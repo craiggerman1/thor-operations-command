@@ -18,6 +18,38 @@ body.next-app .developer-region-control {
   min-width: 164px;
 }
 
+body.next-app .side-rail {
+  display: flex;
+  flex-direction: column;
+}
+
+body.next-app .brand-lockup {
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+body.next-app .brand-logo {
+  width: 58px;
+  max-height: 58px;
+  object-fit: contain;
+}
+
+body.next-app .brand-lockup strong {
+  font-size: 0.88rem;
+  line-height: 1.08;
+}
+
+body.next-app .brand-lockup span {
+  font-size: 0.68rem;
+}
+
+body.next-app .rail-nav {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
 .metric-card {
   color: inherit;
 }
