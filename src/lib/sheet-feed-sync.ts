@@ -267,7 +267,9 @@ export async function syncAvailabilitySheetToDatabase(config?: SheetSourceConfig
   const { error } = await supabase
     .from("staff_availability_cache")
     .upsert(cacheRows, { onConflict: "staff_name,region_id,source_slug,day_name,window_name" });
-  if (error) throw error;
+  if (error) {
+    return { connected: true, cachedRows: 0, feed, config, cacheError: error.message };
+  }
 
   return { connected: true, cachedRows: cacheRows.length, feed, config };
 }
@@ -345,7 +347,9 @@ export async function syncInductionSheetToDatabase(config?: SheetSourceConfig) {
   const { error } = await supabase
     .from("staff_induction_cache")
     .upsert(cacheRows, { onConflict: "staff_name,site_name,region_id,source_slug" });
-  if (error) throw error;
+  if (error) {
+    return { connected: true, cachedRows: 0, feed, config, cacheError: error.message };
+  }
 
   return { connected: true, cachedRows: cacheRows.length, feed, config };
 }

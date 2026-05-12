@@ -66,7 +66,7 @@ export default function StaffAvailabilityPage() {
   const [rosterGapStatus, setRosterGapStatus] = useState("Odin roster scan loading");
   const sheetRegion = sourceConfig.region;
   const isMappedScope = scope === sheetRegion;
-  const hasConnectedSource = (sourceConfig.connected && Boolean(sourceConfig.spreadsheetUrl)) || Boolean(feed.spreadsheetUrl && feed.staff.length);
+  const hasConnectedSource = (sourceConfig.connected && Boolean(sourceConfig.spreadsheetUrl)) || Boolean(feed.spreadsheetUrl);
   const hasAvailabilityRows = feed.staff.length > 0;
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
   const scopedRosterGaps = rosterGaps.filter((gap) => scope === "National" || gap.region === scope);
@@ -184,7 +184,13 @@ export default function StaffAvailabilityPage() {
       <section className="command-grid route-grid">
         {!hasAvailabilityRows ? (
           <Panel wide eyebrow="Region source" title={`${scope} availability source required`} pill={hasConnectedSource ? `${sheetRegion} only` : "Not connected"}>
-            <div className="empty-state">{hasConnectedSource ? `The current Google Sheet availability source is mapped to ${sheetRegion}. Select ${sheetRegion} to view this sheet, or assign a separate source for ${scope} in Admin Settings.` : `No Google Sheet availability source is connected for ${scope}. Link this region's availability sheet in the Operations Setup Wizard or Admin Settings.`}</div>
+            <div className="empty-state">
+              {hasConnectedSource
+                ? isMappedScope
+                  ? `The ${scope} Google Sheet availability source is connected, but no availability rows were returned yet. Press refresh or check that the sheet has staff names in the first column.`
+                  : `The current Google Sheet availability source is mapped to ${sheetRegion}. Select ${sheetRegion} to view this sheet, or assign a separate source for ${scope} in Admin Settings.`
+                : `No Google Sheet availability source is connected for ${scope}. Link this region's availability sheet in the Operations Setup Wizard or Admin Settings.`}
+            </div>
           </Panel>
         ) : null}
         {hasAvailabilityRows ? (
