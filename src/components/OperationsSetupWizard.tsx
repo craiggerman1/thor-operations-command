@@ -109,8 +109,19 @@ function readSessionScope() {
   }
 }
 
-function readSessionRegions() {
+function readSessionCanManageAllSetup() {
+  if (typeof window === "undefined") return false;
+  try {
+    const session = JSON.parse(localStorage.getItem("toc.session") || "null");
+    return session?.role === "admin" || session?.scope === "National";
+  } catch {
+    return false;
+  }
+}
+
+function readSessionRegions(canManageAllSetup: boolean) {
   if (typeof window === "undefined") return ["Brisbane"];
+  if (!canManageAllSetup) return [readSessionScope()];
   try {
     const session = JSON.parse(localStorage.getItem("toc.session") || "null");
     const regions = Array.isArray(session?.regions) ? session.regions.filter((region: string) => region && region !== "National") : [];
@@ -159,6 +170,7 @@ function cleanNameKey(value: string) {
 
 export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { adminMode?: boolean; initialStep?: number }) {
   const [region, setRegion] = useState(readSessionScope);
+  const [sessionVersion, setSessionVersion] = useState(0);
   const [step, setStep] = useState(initialStep);
   const [payload, setPayload] = useState<SetupPayload | null>(null);
   const [staffDraft, setStaffDraft] = useState<Partial<StaffRow>>(blankStaff);
@@ -181,9 +193,10 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [rosterImportResult, setRosterImportResult] = useState<RosterImportResult | null>(null);
   const [rosterImportBusy, setRosterImportBusy] = useState(false);
 
-  const regionOptions = useMemo(() => adminMode ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(), [adminMode]);
+  const canManageAllSetup = useMemo(() => adminMode && readSessionCanManageAllSetup(), [adminMode, sessionVersion]);
+  const regionOptions = useMemo(() => canManageAllSetup ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(false), [canManageAllSetup, sessionVersion]);
   const specificRegionOptions = useMemo(() => regionOptions.filter((item) => item !== allRegionsLabel), [regionOptions]);
-  const allRegionMode = adminMode && region === allRegionsLabel;
+  const allRegionMode = canManageAllSetup && region === allRegionsLabel;
   const staff = payload?.staff || [];
   const schedules = payload?.schedules || [];
   const inductions = payload?.inductions || [];
@@ -204,7 +217,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   async function load(nextRegion = region) {
     setMessage("");
     try {
-      if (adminMode && nextRegion === allRegionsLabel) {
+      if (canManageAllSetup && nextRegion === allRegionsLabel) {
         const responses = await Promise.all(specificRegionOptions.map(async (item) => {
           const response = await tocFetch(`/api/operations-setup?region=${encodeURIComponent(item)}`, { cache: "no-store" });
           return readPayload(response);
@@ -269,6 +282,26 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   useEffect(() => {
     void load(region);
   }, [region]);
+
+  useEffect(() => {
+    if (!regionOptions.includes(region)) setRegion(regionOptions[0] || "Brisbane");
+  }, [region, regionOptions]);
+
+  useEffect(() => {
+    function syncSessionAccess() {
+      setSessionVersion((current) => current + 1);
+      if (!readSessionCanManageAllSetup()) setRegion(readSessionScope());
+    }
+
+    window.addEventListener("toc.sessionchange", syncSessionAccess);
+    window.addEventListener("toc.scopechange", syncSessionAccess);
+    window.addEventListener("storage", syncSessionAccess);
+    return () => {
+      window.removeEventListener("toc.sessionchange", syncSessionAccess);
+      window.removeEventListener("toc.scopechange", syncSessionAccess);
+      window.removeEventListener("storage", syncSessionAccess);
+    };
+  }, []);
 
   async function mutate(body: Record<string, unknown>, success: string) {
     if (allRegionMode) {
@@ -496,9 +529,11 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         </div>
         <label>
           <span>Setup region</span>
-          <select value={region} onChange={(event) => setRegion(event.target.value)} disabled={!adminMode && regionOptions.length === 1}>
-            {regionOptions.map((item) => <option value={item} key={item}>{item}</option>)}
-          </select>
+          {canManageAllSetup ? (
+            <select value={region} onChange={(event) => setRegion(event.target.value)}>
+              {regionOptions.map((item) => <option value={item} key={item}>{item}</option>)}
+            </select>
+          ) : <strong className="setup-region-readonly">{region}</strong>}
         </label>
       </div>
 

@@ -449,6 +449,7 @@ body.next-app .rail-nav {
 }
 
 .setup-hero select,
+.setup-region-readonly,
 .setup-grid-form input,
 .setup-grid-form select,
 .setup-source-row input,
@@ -461,6 +462,13 @@ body.next-app .rail-nav {
   color: #12283a;
   font-weight: 750;
   padding: 6px 8px;
+}
+
+.setup-region-readonly {
+  display: inline-flex;
+  align-items: center;
+  min-width: 180px;
+  text-transform: none;
 }
 
 .setup-steps {
