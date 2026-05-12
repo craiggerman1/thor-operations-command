@@ -302,7 +302,7 @@ async function readLookups(regionNames: string[]) {
     supabase.from("staff_profiles").select("id,display_name,availability_sheet_name,induction_sheet_name,primary_region_id,status"),
     supabase.from("staff_profile_regions").select("staff_profile_id,region_id"),
     supabase.from("operation_sites").select("id,client_name,site_name,region_id"),
-    supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,job_time,recurrence,job_title")
+    supabase.from("site_schedules").select("id,site_id,region_id,schedule_name,start_date,job_time,recurrence,job_title,notes")
   ]);
   const firstError = regionsResult.error || staffResult.error || staffRegionResult.error || sitesResult.error || schedulesResult.error;
   if (firstError) throw firstError;
@@ -329,8 +329,29 @@ async function readLookups(regionNames: string[]) {
   });
 
   const sites = (sitesResult.data || []) as OperationSiteRow[];
-  const schedules = (schedulesResult.data || []) as Array<{ id: string; site_id: string; region_id: string | null; schedule_name: string; start_date: string; job_time: string; recurrence: string; job_title: string }>;
+  const schedules = (schedulesResult.data || []) as Array<{ id: string; site_id: string; region_id: string | null; schedule_name: string; start_date: string; job_time: string; recurrence: string; job_title: string; notes?: string | null }>;
   return { regionByName, regionIdToName, staffByRegion, sites, schedules };
+}
+
+function sameAbcdWeeks(left: unknown, right: unknown) {
+  const leftWeeks = cleanAbcdWeeks(left).join(",");
+  const rightWeeks = cleanAbcdWeeks(right).join(",");
+  return leftWeeks === rightWeeks;
+}
+
+function scheduleMatchesImportRow(input: {
+  schedule: { site_id: string; region_id: string | null; start_date: string; job_time: string; recurrence: string; job_title: string; notes?: string | null };
+  row: Pick<PreviewRow, "resolvedStartDate" | "startTime" | "recurrence" | "jobTitle" | "abcdWeeks">;
+  regionId: string;
+  siteId: string;
+}) {
+  return input.schedule.region_id === input.regionId &&
+    input.schedule.site_id === input.siteId &&
+    input.schedule.start_date === input.row.resolvedStartDate &&
+    timeKey(input.schedule.job_time) === timeKey(input.row.startTime) &&
+    cleanKey(input.schedule.recurrence) === cleanKey(input.row.recurrence) &&
+    cleanKey(input.schedule.job_title) === cleanKey(input.row.jobTitle) &&
+    sameAbcdWeeks(extractAbcdWeeks(input.schedule.notes), input.row.abcdWeeks);
 }
 
 async function buildPreview(rows: ImportRow[], allowedScope: string, userHasNationalAccess: boolean) {
@@ -359,25 +380,22 @@ async function buildPreview(rows: ImportRow[], allowedScope: string, userHasNati
 
     const { recurrence, recurrenceIntervalWeeks } = normaliseFrequency(row.frequency);
     const site = region ? lookups.sites.find((item) => item.region_id === region.id && cleanKey(item.client_name) === cleanKey(row.clientName) && cleanKey(item.site_name) === cleanKey(row.siteName)) : null;
-    const duplicate = site ? lookups.schedules.find((schedule) =>
-      schedule.region_id === region?.id &&
-      schedule.site_id === site.id &&
-      timeKey(schedule.job_time) === timeKey(row.startTime) &&
-      cleanKey(schedule.recurrence) === cleanKey(recurrence) &&
-      cleanKey(schedule.job_title) === cleanKey(row.jobTitle)
-    ) : null;
+    const previewRow = { ...row, recurrence, recurrenceIntervalWeeks, resolvedStartDate };
+    const duplicate = site && region ? lookups.schedules.find((schedule) => scheduleMatchesImportRow({
+      schedule,
+      row: previewRow,
+      regionId: region.id,
+      siteId: site.id
+    })) : null;
     const duplicateHint = duplicate ? "Existing matching schedule will be updated." : "New site/schedule will be created if imported.";
     const status = messages.length ? "error" : duplicate ? "warning" : "valid";
 
     return {
-      ...row,
+      ...previewRow,
       status,
       messages,
       matchedStaff,
       unmatchedStaff,
-      recurrence,
-      recurrenceIntervalWeeks,
-      resolvedStartDate,
       duplicateHint
     };
   });
@@ -513,13 +531,12 @@ async function importRows(rows: PreviewRow[], actor: TocAuthenticatedUser) {
 
       const scheduleName = `${row.clientName} - ${row.siteName} ${row.startTime}`;
       const notes = composeScheduleNotes([row.notes, row.endTime ? `End time: ${row.endTime}` : ""].filter(Boolean).join("\n"), row.abcdWeeks);
-      const existingSchedule = lookups.schedules.find((schedule) =>
-        schedule.region_id === region.id &&
-        schedule.site_id === site!.id &&
-        timeKey(schedule.job_time) === timeKey(row.startTime) &&
-        cleanKey(schedule.recurrence) === cleanKey(row.recurrence) &&
-        cleanKey(schedule.job_title) === cleanKey(row.jobTitle)
-      );
+      const existingSchedule = lookups.schedules.find((schedule) => scheduleMatchesImportRow({
+        schedule,
+        row,
+        regionId: region.id,
+        siteId: site.id
+      }));
       const schedulePayload = {
         site_id: site.id,
         region_id: region.id,
@@ -542,7 +559,7 @@ async function importRows(rows: PreviewRow[], actor: TocAuthenticatedUser) {
       if (scheduleResult.error) throw scheduleResult.error;
       if (!scheduleResult.data) throw new Error(`Row ${row.rowNumber} schedule could not be saved.`);
       const scheduleId = scheduleResult.data.id;
-      if (!existingSchedule) lookups.schedules.push({ id: scheduleId, site_id: site.id, region_id: region.id, schedule_name: scheduleName, start_date: row.resolvedStartDate, job_time: row.startTime, recurrence: row.recurrence, job_title: row.jobTitle });
+      if (!existingSchedule) lookups.schedules.push({ id: scheduleId, site_id: site.id, region_id: region.id, schedule_name: scheduleName, start_date: row.resolvedStartDate, job_time: row.startTime, recurrence: row.recurrence, job_title: row.jobTitle, notes });
 
       await supabase.from("site_schedule_staff").delete().eq("site_schedule_id", scheduleId);
       if (row.matchedStaff.length) {
@@ -593,7 +610,8 @@ export async function POST(request: Request) {
       totalRows: previewRows.length,
       validRows: previewRows.filter((row) => row.status === "valid").length,
       warningRows: previewRows.filter((row) => row.status === "warning").length,
-      errorRows: previewRows.filter((row) => row.status === "error").length
+      errorRows: previewRows.filter((row) => row.status === "error").length,
+      importableRows: previewRows.filter((row) => row.status !== "error" && row.active).length
     };
 
     if (mode === "preview") {
@@ -604,7 +622,19 @@ export async function POST(request: Request) {
     }
     const result = await importRows(previewRows, permission.user);
     const status = result.failed.length ? 207 : 200;
-    return NextResponse.json({ connected: !result.failed.length, mode, summary, imported: result.imported, failed: result.failed, rows: previewRows }, { status });
+    return NextResponse.json({
+      connected: !result.failed.length,
+      mode,
+      summary: {
+        ...summary,
+        importedRows: result.imported.length,
+        failedRows: result.failed.length,
+        allRowsImported: result.imported.length === summary.importableRows && result.failed.length === 0
+      },
+      imported: result.imported,
+      failed: result.failed,
+      rows: previewRows
+    }, { status });
   } catch (error) {
     return NextResponse.json({ connected: false, error: error instanceof Error ? error.message : "Roster import failed." }, { status: 500 });
   }

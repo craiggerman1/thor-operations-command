@@ -33,7 +33,7 @@ type RosterImportResult = {
   connected: boolean;
   mode: "preview" | "import";
   error?: string;
-  summary: { totalRows: number; validRows: number; warningRows: number; errorRows: number };
+  summary: { totalRows: number; validRows: number; warningRows: number; errorRows: number; importableRows?: number; importedRows?: number; failedRows?: number; allRowsImported?: boolean };
   rows: RosterImportRow[];
   imported?: Array<{ rowNumber: number; siteId: string; scheduleId: string; calendarJobsCreated: number; calendarJobsUpdated: number }>;
   failed?: Array<{ rowNumber: number; error: string }>;
@@ -414,9 +414,11 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         window.dispatchEvent(new Event("toc.operationsSetup.updated"));
         window.dispatchEvent(new Event("toc.calendar.updated"));
         const failed = payload.failed?.length || 0;
+        const imported = payload.imported?.length || 0;
+        const expected = payload.summary.importableRows ?? payload.summary.totalRows - payload.summary.errorRows;
         setMessage(failed
-          ? `Roster import completed with ${failed} row issue${failed === 1 ? "" : "s"}. ${payload.imported?.length || 0} jobs imported. Review the preview messages before relying on the roster.`
-          : `Roster import complete. ${payload.imported?.length || 0} jobs imported and pushed to Calendar.`);
+          ? `Roster import completed with ${failed} row issue${failed === 1 ? "" : "s"}. ${imported}/${expected} rows saved. Review the failed row message before relying on the roster.`
+          : `Roster import verified. All ${imported}/${expected} importable rows saved to Recurring Client Jobs and pushed to Calendar.`);
       } else {
         setMessage(payload.summary.errorRows ? "Roster preview found issues to fix before import." : "Roster preview is ready to import.");
       }
@@ -654,8 +656,10 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                   <span>{rosterImportResult.summary.validRows} valid</span>
                   <span>{rosterImportResult.summary.warningRows} update warnings</span>
                   <span>{rosterImportResult.summary.errorRows} errors</span>
+                  {typeof rosterImportResult.summary.importableRows === "number" ? <span>{rosterImportResult.summary.importableRows} importable</span> : null}
                   {rosterImportResult.imported ? <span>{rosterImportResult.imported.length} imported</span> : null}
                   {rosterImportResult.failed?.length ? <span>{rosterImportResult.failed.length} failed</span> : null}
+                  {rosterImportResult.summary.allRowsImported ? <span>All rows saved</span> : null}
                 </div>
                 <div className="setup-table-scroll compact">
                   <table>
