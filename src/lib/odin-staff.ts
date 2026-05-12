@@ -1,6 +1,7 @@
 import { staffAvailabilitySheet, type StaffSheetStatus } from "@/lib/toc-data";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { normaliseSheetSourceConfig, sheetSourceDefaults, toGoogleSheetCsvUrl } from "@/lib/sheet-source-settings";
+import { readSheetSourceConfig } from "@/lib/sheet-feed-sync";
 
 const availabilitySettingsKey = "sheet_source_settings_staff-availability";
 const inductionSettingsKey = "sheet_source_settings_inductions";
@@ -37,11 +38,13 @@ type StaffRegionLinkRow = {
 
 type LiveAvailabilityStaff = {
   name: string;
+  region: string;
   availability: StaffSheetStatus[][];
 };
 
 type LiveInductionStaff = {
   name: string;
+  region: string;
   inductions: { site: string; status: string; expiry: string }[];
 };
 
@@ -155,61 +158,80 @@ function normalizeInductionStatus(value: string) {
 }
 
 async function readLiveStaffFeeds(): Promise<LiveStaffFeeds> {
-  const availabilityConfig = await readAvailabilitySourceConfig();
-  const inductionsConfig = await readInductionsSourceConfig();
-  const [availabilityResponse, inductionsResponse] = await Promise.allSettled([
-    availabilityConfig.connected && availabilityConfig.spreadsheetUrl ? fetch(toGoogleSheetCsvUrl(availabilityConfig.spreadsheetUrl, Date.now()), { cache: "no-store" }) : Promise.resolve(null),
-    inductionsConfig.connected && inductionsConfig.spreadsheetUrl ? fetch(toGoogleSheetCsvUrl(inductionsConfig.spreadsheetUrl, Date.now()), { cache: "no-store" }) : Promise.resolve(null)
-  ]);
+  const regions = await readActiveRegionNames();
+  const configs = await Promise.all(regions.flatMap((region) => [
+    readSheetSourceConfig("staff-availability", region),
+    readSheetSourceConfig("inductions", region)
+  ]));
+  const availabilityConfigs = configs.filter((config) => config.slug === "staff-availability" && config.connected && config.spreadsheetUrl);
+  const inductionConfigs = configs.filter((config) => config.slug === "inductions" && config.connected && config.spreadsheetUrl);
 
-  let availabilityStaff: LiveAvailabilityStaff[] = [];
-  let inductionSites: LiveStaffFeeds["inductionSites"] = [];
-  let inductionStaff: LiveInductionStaff[] = [];
-
-  if (availabilityResponse.status === "fulfilled" && availabilityResponse.value?.ok) {
-    const rows = parseCsv(await availabilityResponse.value.text());
+  const availabilityResults = await Promise.allSettled(availabilityConfigs.map(async (config) => {
+    const response = await fetch(toGoogleSheetCsvUrl(config.spreadsheetUrl, Date.now()), { cache: "no-store" });
+    if (!response.ok) return [] as LiveAvailabilityStaff[];
+    const rows = parseCsv(await response.text());
     const staffRows = rows.slice(2).filter((row) => row[0]?.trim());
-    availabilityStaff = staffRows.map((row) => ({
+    return staffRows.map((row) => ({
       name: row[0].trim(),
+      region: config.region,
       availability: staffAvailabilitySheet.days.map((_, dayIndex) => {
         const startColumn = 1 + dayIndex * staffAvailabilitySheet.windows.length;
         return staffAvailabilitySheet.windows.map((_, windowIndex) => normalizeAvailabilityStatus(row[startColumn + windowIndex] || ""));
       })
     }));
-  }
-
-  if (inductionsResponse.status === "fulfilled" && inductionsResponse.value?.ok) {
-    const rows = parseCsv(await inductionsResponse.value.text());
+  }));
+  const inductionResults = await Promise.allSettled(inductionConfigs.map(async (config) => {
+    const response = await fetch(toGoogleSheetCsvUrl(config.spreadsheetUrl, Date.now()), { cache: "no-store" });
+    if (!response.ok) return { sites: [] as LiveStaffFeeds["inductionSites"], staff: [] as LiveInductionStaff[] };
+    const rows = parseCsv(await response.text());
     const siteRow = rows[0] || [];
-    inductionSites = siteRow
+    const sites = siteRow
       .slice(1)
       .filter((_, index) => index % 2 === 0)
-        .map((name) => ({ name: name.trim().replace(/\s+Status$/i, ""), region: inductionsConfig.region }))
+      .map((name) => ({ name: name.trim().replace(/\s+Status$/i, ""), region: config.region }))
       .filter((site) => site.name);
     const staffRows = rows.slice(1).filter((row) => {
       const staffName = row[0]?.trim() || "";
       return staffName && !/^staff\b/i.test(staffName);
     });
-    inductionStaff = staffRows.map((row) => ({
-      name: row[0].trim(),
-      inductions: inductionSites.map((site, index) => {
-        const statusColumn = 1 + index * 2;
-        return {
-          site: site.name,
-          status: normalizeInductionStatus(row[statusColumn] || ""),
-          expiry: (row[statusColumn + 1] || "").trim()
-        };
-      })
-    }));
-  }
+    return {
+      sites,
+      staff: staffRows.map((row) => ({
+        name: row[0].trim(),
+        region: config.region,
+        inductions: sites.map((site, index) => {
+          const statusColumn = 1 + index * 2;
+          return {
+            site: site.name,
+            status: normalizeInductionStatus(row[statusColumn] || ""),
+            expiry: (row[statusColumn + 1] || "").trim()
+          };
+        })
+      }))
+    };
+  }));
+
+  const availabilityStaff = availabilityResults.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+  const inductionPayloads = inductionResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+  const inductionSites = inductionPayloads.flatMap((payload) => payload.sites);
+  const inductionStaff = inductionPayloads.flatMap((payload) => payload.staff);
 
   return {
     availabilityStaff,
     inductionSites,
     inductionStaff,
-    availabilitySource: availabilityConfig.sourceName || "Staff Availability Source Required",
-    inductionsSource: inductionsConfig.sourceName || "Staff Induction Source Required"
+    availabilitySource: availabilityConfigs.length ? "Regional staff availability sheets" : "Staff Availability Source Required",
+    inductionsSource: inductionConfigs.length ? "Regional staff induction sheets" : "Staff Induction Source Required"
   };
+}
+
+async function readActiveRegionNames() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return ["Brisbane"];
+  const { data, error } = await supabase.from("regions").select("name,is_active").eq("is_active", true).order("name", { ascending: true });
+  if (error) return ["Brisbane"];
+  const names = ((data || []) as RegionRow[]).map((region) => region.name).filter((name) => name && name !== "National");
+  return names.length ? names : ["Brisbane"];
 }
 
 async function readAvailabilitySourceConfig() {
@@ -240,16 +262,18 @@ async function readInductionsSourceConfig() {
   return normaliseSheetSourceConfig("inductions", data.value as Record<string, unknown>);
 }
 
-function availabilityForName(name: string, feeds: LiveStaffFeeds) {
-  return feeds.availabilityStaff.find((staff) => staff.name.toLowerCase() === name.toLowerCase());
+function availabilityForName(name: string, feeds: LiveStaffFeeds, regions: string[] = []) {
+  const matches = feeds.availabilityStaff.filter((staff) => staff.name.toLowerCase() === name.toLowerCase());
+  return matches.find((staff) => regions.includes(staff.region)) || matches[0];
 }
 
-function inductionsForName(name: string, feeds: LiveStaffFeeds) {
-  return feeds.inductionStaff.find((staff) => staff.name.toLowerCase() === name.toLowerCase());
+function inductionsForName(name: string, feeds: LiveStaffFeeds, regions: string[] = []) {
+  const matches = feeds.inductionStaff.filter((staff) => staff.name.toLowerCase() === name.toLowerCase());
+  return matches.find((staff) => regions.includes(staff.region)) || matches[0];
 }
 
-function availabilitySummary(name: string, feeds: LiveStaffFeeds) {
-  const match = availabilityForName(name, feeds);
+function availabilitySummary(name: string, feeds: LiveStaffFeeds, regions: string[] = []) {
+  const match = availabilityForName(name, feeds, regions);
   const matrix = match?.availability || [];
   const totalWindows = matrix.reduce((total, day) => total + day.length, 0);
   const availableWindows = matrix.flat().filter((status) => status === "Available").length;
@@ -264,8 +288,8 @@ function availabilitySummary(name: string, feeds: LiveStaffFeeds) {
   };
 }
 
-function inductionSummary(name: string, feeds: LiveStaffFeeds) {
-  const match = inductionsForName(name, feeds);
+function inductionSummary(name: string, feeds: LiveStaffFeeds, regions: string[] = []) {
+  const match = inductionsForName(name, feeds, regions);
   const records = (match?.inductions || []).map((induction) => ({
     site: induction.site,
     status: induction.status || "Unknown",
@@ -281,16 +305,18 @@ function inductionSummary(name: string, feeds: LiveStaffFeeds) {
 
 function fallbackStaffEntities(includeProtected: boolean, feeds: LiveStaffFeeds): OdinStaffEntity[] {
   const names = Array.from(new Set([
-    ...feeds.availabilityStaff.map((staff) => staff.name),
-    ...feeds.inductionStaff.map((staff) => staff.name)
+    ...feeds.availabilityStaff.map((staff) => `${staff.region}::${staff.name}`),
+    ...feeds.inductionStaff.map((staff) => `${staff.region}::${staff.name}`)
   ])).sort((a, b) => a.localeCompare(b));
 
-  return names.map((name) => ({
-    id: `sheet:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+  return names.map((key) => {
+    const [region, name] = key.split("::");
+    return ({
+    id: `sheet:${region.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     name: titleCaseName(name),
     preferredName: null,
-    regions: ["Brisbane"],
-    primaryRegion: "Brisbane",
+    regions: [region],
+    primaryRegion: region,
     role: "Wash Hand",
     status: "active",
     skills: [],
@@ -298,13 +324,14 @@ function fallbackStaffEntities(includeProtected: boolean, feeds: LiveStaffFeeds)
     preferredWindows: {},
     availabilitySheetName: name,
     inductionSheetName: name,
-    availability: availabilitySummary(name, feeds),
-    inductions: inductionSummary(name, feeds),
+    availability: availabilitySummary(name, feeds, [region]),
+    inductions: inductionSummary(name, feeds, [region]),
     contact: includeProtected ? { mobile: null, whatsapp: null, emergencyContact: {} } : undefined,
     contactVisibleToOdin: true,
     source: "availability_sheet",
     updatedAt: null
-  }));
+  });
+  });
 }
 
 export async function readOdinStaffEntities(options: { includeProtected: boolean }): Promise<StaffReadResult> {
@@ -388,8 +415,8 @@ export async function readOdinStaffEntities(options: { includeProtected: boolean
           preferredWindows: profile.preferred_windows || {},
           availabilitySheetName: availabilityName,
           inductionSheetName: inductionName,
-          availability: availabilitySummary(availabilityName, feeds),
-          inductions: inductionSummary(inductionName, feeds),
+          availability: availabilitySummary(availabilityName, feeds, profileRegions),
+          inductions: inductionSummary(inductionName, feeds, profileRegions),
           contact: canShowContact ? {
             mobile: profile.contact_mobile,
             whatsapp: profile.contact_whatsapp,

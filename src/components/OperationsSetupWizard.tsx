@@ -20,6 +20,7 @@ type SetupPayload = {
   schedules: ScheduleRow[];
   inductions: InductionRow[];
 };
+type AvailabilityFeed = { staff?: Array<{ name: string }> };
 
 const skills = ["Wash Hand", "Driver", "Team Leader"];
 const recurrences = ["None", "Daily", "Weekly", "Fortnightly", "4 weekly", "Custom"];
@@ -31,7 +32,7 @@ function today() {
 }
 
 function blankStaff(): Partial<StaffRow> {
-  return { name: "", role: "Wash Hand", status: "active", skills: ["Wash Hand"], mobile: "", whatsapp: "", notes: "" };
+  return { name: "", role: "Wash Hand", status: "active", skills: ["Wash Hand"], mobile: "", whatsapp: "", availabilitySheetName: "", inductionSheetName: "", notes: "" };
 }
 
 function blankSite(): Partial<SiteRow> {
@@ -92,6 +93,10 @@ function matchesSearch(parts: Array<unknown>, search: string) {
   return parts.filter(Boolean).join(" ").toLowerCase().includes(needle);
 }
 
+function cleanNameKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { adminMode?: boolean; initialStep?: number }) {
   const [region, setRegion] = useState(readSessionScope);
   const [step, setStep] = useState(initialStep);
@@ -108,6 +113,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [tableRegionFilter, setTableRegionFilter] = useState(allRegionsLabel);
   const [editingStaffId, setEditingStaffId] = useState("");
   const [editingStaffDraft, setEditingStaffDraft] = useState<Partial<StaffRow>>(blankStaff);
+  const [availabilityRowsByRegion, setAvailabilityRowsByRegion] = useState<Record<string, string[]>>({});
 
   const regionOptions = useMemo(() => adminMode ? [allRegionsLabel, ...allRegions.filter((item) => item !== "National")] : readSessionRegions(), [adminMode]);
   const specificRegionOptions = useMemo(() => regionOptions.filter((item) => item !== allRegionsLabel), [regionOptions]);
@@ -119,9 +125,11 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const selectedSite = sites.find((site) => site.id === scheduleDraft.siteId);
   const filteredStaff = useMemo(() => staff.filter((person) => {
     const regions = rowRegions(person, region);
+    const sheetRows = regions.flatMap((item) => availabilityRowsByRegion[item] || []);
+    const matchLabel = sheetRows.some((name) => cleanNameKey(name) === cleanNameKey(person.availabilitySheetName || person.name)) ? "matched" : "not matched";
     const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
-    return regionMatch && matchesSearch([person.name, person.mobile, person.whatsapp, person.role, person.skills.join(" "), regions.join(" "), person.notes], staffSearch);
-  }), [staff, staffSearch, tableRegionFilter, region]);
+    return regionMatch && matchesSearch([person.name, person.mobile, person.whatsapp, person.availabilitySheetName, matchLabel, person.role, person.skills.join(" "), regions.join(" "), person.notes], staffSearch);
+  }), [staff, availabilityRowsByRegion, staffSearch, tableRegionFilter, region]);
   const filteredSites = useMemo(() => sites.filter((site) => {
     const regions = rowRegions(site, region);
     const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
@@ -155,6 +163,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         setPayload(combined);
         setAvailabilityUrl("");
         setTableRegionFilter(allRegionsLabel);
+        void loadAvailabilityRows(specificRegionOptions);
         return;
       }
       const response = await tocFetch(`/api/operations-setup?region=${encodeURIComponent(nextRegion)}`, { cache: "no-store" });
@@ -162,9 +171,23 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       setPayload(nextPayload);
       setAvailabilityUrl(nextPayload.availabilitySource?.spreadsheetUrl || "");
       setTableRegionFilter(nextRegion);
+      void loadAvailabilityRows([nextRegion]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Setup data could not be loaded.");
     }
+  }
+
+  async function loadAvailabilityRows(regions: string[]) {
+    const entries = await Promise.all(regions.map(async (item) => {
+      try {
+        const response = await tocFetch(`/api/staff-availability?scope=${encodeURIComponent(item)}&refresh=${Date.now()}`, { cache: "no-store" });
+        const feed = await response.json() as AvailabilityFeed;
+        return [item, (feed.staff || []).map((person) => person.name).filter(Boolean)] as const;
+      } catch {
+        return [item, []] as const;
+      }
+    }));
+    setAvailabilityRowsByRegion((current) => ({ ...current, ...Object.fromEntries(entries) }));
   }
 
   useEffect(() => {
@@ -261,6 +284,15 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       || inductions.find((item) => item.staffName === staffRow.name && item.siteName === site.siteName);
   }
 
+  function sheetMatchForStaff(person: StaffRow) {
+    const names = rowRegions(person, region).flatMap((item) => availabilityRowsByRegion[item] || []);
+    const expected = cleanNameKey(person.availabilitySheetName || person.name);
+    return {
+      matched: names.some((name) => cleanNameKey(name) === expected),
+      count: names.length
+    };
+  }
+
   return (
     <div className="setup-wizard">
       <div className="setup-hero">
@@ -292,6 +324,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <input placeholder="Staff name" value={staffDraft.name || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, name: event.target.value }))} />
             <input placeholder="Mobile phone" value={staffDraft.mobile || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, mobile: event.target.value }))} />
             <input placeholder="WhatsApp / Telegram phone" value={staffDraft.whatsapp || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} />
+            <input placeholder="Exact availability sheet name" value={staffDraft.availabilitySheetName || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} />
             <div className="setup-checks setup-checks-wide">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div>
             <input placeholder="Notes for Odin / manager" value={staffDraft.notes || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, notes: event.target.value }))} />
             <button disabled={saving || allRegionMode} type="submit">{staffDraft.id ? "Save Staff" : "Add Staff"}</button>
@@ -302,7 +335,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             title="Current Staff"
             count={filteredStaff.length}
             total={staff.length}
-            headers={["Staff name", "Phone", "Skills", "Region", "Action"]}
+            headers={["Staff name", "Phone", "Skills", "Availability row", "Sheet match", "Region", "Action"]}
             search={staffSearch}
             onSearchChange={setStaffSearch}
             regionFilter={tableRegionFilter}
@@ -312,6 +345,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <tbody>{filteredStaff.map((person, index) => {
               const isEditing = editingStaffId === person.id;
               const rowKey = `${person.id}-${rowRegions(person, region).join("-")}-${index}`;
+              const match = sheetMatchForStaff(person);
               return (
                 <tr key={rowKey} className={isEditing ? "setup-editing-row" : ""}>
                   <td>{isEditing ? <input value={editingStaffDraft.name || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, name: event.target.value }))} /> : person.name}</td>
@@ -323,6 +357,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                       </div>
                     ) : person.skills.join(", ") || person.role}
                   </td>
+                  <td>{isEditing ? <input value={editingStaffDraft.availabilitySheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /> : person.availabilitySheetName || person.name}</td>
+                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
                   <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
                   <td className="setup-row-actions">
                     {isEditing ? (

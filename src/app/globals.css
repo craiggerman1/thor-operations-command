@@ -644,6 +644,26 @@ body.next-app .developer-region-control {
   padding: 2px 8px;
 }
 
+.setup-match-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  padding: 2px 8px;
+}
+
+.setup-match-chip.matched {
+  background: rgba(35, 156, 99, 0.14);
+  color: #137047;
+}
+
+.setup-match-chip.missing {
+  background: rgba(210, 57, 45, 0.12);
+  color: #b83125;
+}
+
 .setup-induction-grid,
 .training-cards {
   display: grid;
