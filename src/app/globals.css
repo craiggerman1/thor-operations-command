@@ -723,6 +723,48 @@ body.next-app .rail-nav {
   padding: 8px 13px;
 }
 
+.odin-status-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.odin-toggle {
+  width: 52px;
+  min-width: 52px;
+  height: 28px;
+  min-height: 28px;
+  border: 1px solid rgba(12, 57, 84, 0.14);
+  border-radius: 999px;
+  background: #d9e3e8;
+  cursor: pointer;
+  padding: 3px;
+  transition: background 160ms ease, opacity 160ms ease;
+}
+
+.odin-toggle span {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(12, 57, 84, 0.22);
+  transition: transform 160ms ease;
+}
+
+.odin-toggle.on {
+  background: #2c9f73;
+}
+
+.odin-toggle.on span {
+  transform: translateX(22px);
+}
+
+.odin-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .odin-simple-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -762,6 +804,81 @@ body.next-app .rail-nav {
 
 .odin-simple-metric.red {
   background: rgba(255, 239, 237, 0.94);
+}
+
+.odin-control-switchboard {
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-radius: 8px;
+  background: white;
+}
+
+.odin-switchboard-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.odin-switchboard-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.odin-switchboard-head strong {
+  color: #10283b;
+  font-size: 1.05rem;
+}
+
+.odin-switchboard-head small,
+.odin-manager-list small {
+  color: #5d7180;
+  font-weight: 800;
+}
+
+.odin-switchboard-head > span {
+  border-radius: 999px;
+  background: rgba(44, 159, 115, 0.12);
+  color: #1c7d5a;
+  font-size: 0.78rem;
+  font-weight: 950;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.odin-manager-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 8px;
+}
+
+.odin-manager-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  min-height: 58px;
+  padding: 10px 11px;
+  border: 1px solid rgba(12, 57, 84, 0.1);
+  border-radius: 8px;
+  background: rgba(248, 252, 253, 0.92);
+}
+
+.odin-manager-list article.muted {
+  background: rgba(243, 246, 248, 0.82);
+}
+
+.odin-manager-list article > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.odin-manager-list strong {
+  color: #10283b;
+  font-size: 0.95rem;
 }
 
 .odin-simple-panels {

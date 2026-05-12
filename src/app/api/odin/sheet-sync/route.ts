@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
+import { blockOdinWriteIfOverwatchPaused } from "@/lib/odin-control";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { isSheetSourceSlug, type SheetSourceSlug } from "@/lib/sheet-source-settings";
 import { syncAvailabilitySheetToDatabase, syncInductionSheetToDatabase } from "@/lib/sheet-feed-sync";
@@ -56,6 +57,8 @@ async function syncOne(slug: SheetSourceSlug): Promise<SyncResult> {
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
+  const paused = await blockOdinWriteIfOverwatchPaused(permission);
+  if (paused) return paused;
 
   const body = await request.json().catch(() => ({}));
   const requestedSlug = typeof body.slug === "string" ? body.slug : "";

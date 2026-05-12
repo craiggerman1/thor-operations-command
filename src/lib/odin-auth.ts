@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { requireTocUser, type TocAuthenticatedUser } from "@/lib/toc-auth";
 
-type OdinPermission =
+export type OdinPermission =
   | { kind: "odin"; user: undefined; error: undefined }
   | { kind: "toc"; user: TocAuthenticatedUser; error: undefined }
   | { kind: "none"; user: undefined; error: NextResponse };

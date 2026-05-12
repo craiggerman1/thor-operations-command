@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
+import { blockOdinWriteIfOverwatchPaused } from "@/lib/odin-control";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { handleOdinTodoItems } from "@/lib/odin-todos";
@@ -872,6 +873,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
+  const paused = await blockOdinWriteIfOverwatchPaused(permission);
+  if (paused) return paused;
 
   const supabase = getSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ connected: false, error: "Supabase server key is not configured." }, { status: 503 });

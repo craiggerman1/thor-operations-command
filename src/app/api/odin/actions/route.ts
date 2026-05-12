@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { blockOdinWriteIfOverwatchPaused } from "@/lib/odin-control";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { logTocAudit } from "@/lib/audit";
@@ -200,6 +201,8 @@ async function mutateActions(input: {
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
+  const paused = await blockOdinWriteIfOverwatchPaused(permission);
+  if (paused) return paused;
 
   const payload = await request.json().catch(() => ({}));
 

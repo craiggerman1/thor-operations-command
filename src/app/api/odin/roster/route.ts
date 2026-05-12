@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { logTocAudit } from "@/lib/audit";
+import { blockOdinWriteIfOverwatchPaused } from "@/lib/odin-control";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { readOdinStaffEntities } from "@/lib/odin-staff";
@@ -65,6 +66,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
+  const paused = await blockOdinWriteIfOverwatchPaused(permission);
+  if (paused) return paused;
 
   const payload = await request.json().catch(() => ({}));
   const action = String(payload.action || "create").toLowerCase();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
+import { readOdinControlSettings } from "@/lib/odin-control";
 import { buildOdinOperationalContext, odinDedupeKey } from "@/lib/odin-operational-context";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { readOdinStaffEntities } from "@/lib/odin-staff";
@@ -659,7 +660,8 @@ export async function GET(request: Request) {
     rosterGaps,
     operationSites,
     siteSchedules,
-    managerContacts
+    managerContacts,
+    odinControl
   ] = await Promise.all([
     readRows({
       table: "action_items",
@@ -721,7 +723,8 @@ export async function GET(request: Request) {
       orderBy: "updated_at",
       limit: 200
     }),
-    readManagerContacts()
+    readManagerContacts(),
+    readOdinControlSettings()
   ]);
 
   const sections = {
@@ -765,6 +768,13 @@ export async function GET(request: Request) {
       duplicatePrevention: "Prefer dedupeKey over title matching: region + entity type + source/category + title/entity + due date.",
       managerAccountability: "Use owner region, due date, status, last update and returned/submitted workflow to chase manager follow-through."
     },
+    odinControl: {
+      overwatchEnabled: odinControl.settings.overwatchEnabled,
+      controlError: odinControl.error,
+      managerEscalationPolicy: "Odin may contact a manager only when Overwatch is enabled, the manager has escalationEnabled=true, contact details exist, and the issue meets high-severity escalation rules.",
+      enabledManagerCount: Object.values(odinControl.settings.managerEscalations).filter(Boolean).length,
+      updatedAt: odinControl.settings.updatedAt || null
+    },
     instructions: {
       actionWriteEndpoint: "/api/odin/actions",
       todoReminderEndpoint: "/api/odin/todos",
@@ -791,13 +801,19 @@ export async function GET(request: Request) {
         notes: "/api/odin/notes"
       },
       actionCreationApprovalRequired: false,
-      note: "Use the specific Odin endpoint for the destination. Non-create lifecycle operations require id/ids. Keep all admin user/password/role changes prohibited.",
+      note: odinControl.settings.overwatchEnabled
+        ? "Use the specific Odin endpoint for the destination. Non-create lifecycle operations require id/ids. Keep all admin user/password/role changes prohibited."
+        : "Odin Overwatch is paused. Do not monitor, reason, create work, contact managers or run daily operating control until Admin or National enables Overwatch again.",
       prohibitedActions: ["send_external_message_without_rule", "change_user", "change_password", "change_role", "admin_settings"]
     },
     managerContacts: {
       purpose: "Protected manager/admin/director contact mapping for Odin escalation. Odin may use these only for approved escalation rules, never for user/password/admin changes.",
       error: managerContacts.error,
-      contacts: managerContacts.rows
+      contacts: managerContacts.rows.map((contact) => ({
+        ...contact,
+        escalationEnabled: odinControl.settings.managerEscalations[String(contact.id || "")] === true,
+        contactAllowed: odinControl.settings.overwatchEnabled && odinControl.settings.managerEscalations[String(contact.id || "")] === true && Boolean(contact.whatsapp || contact.mobile)
+      }))
     },
     summary: {
       totalOpenWork: entityLinks.length,

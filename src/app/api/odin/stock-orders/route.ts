@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logTocAudit } from "@/lib/audit";
 import { odinIdsFromPayload, odinOperation, odinRegionId } from "@/lib/odin-api-utils";
+import { blockOdinWriteIfOverwatchPaused } from "@/lib/odin-control";
 import { requireOdinOrTocNationalUser } from "@/lib/odin-auth";
 import { buildOdinOperationalContext, saveOdinOperationalMemory } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
@@ -74,6 +75,8 @@ function stockUpdates(payload: Record<string, unknown>) {
 export async function POST(request: Request) {
   const permission = await requireOdinOrTocNationalUser(request);
   if (permission.error) return permission.error;
+  const paused = await blockOdinWriteIfOverwatchPaused(permission);
+  if (paused) return paused;
 
   const supabase = getSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ connected: false, error: "Supabase server key is not configured." }, { status: 503 });
