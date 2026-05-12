@@ -410,8 +410,8 @@ export function AdminStaffManager() {
           const personDraft = editDrafts[person.id] || draftFromStaff(person);
           const canSave = person.source !== "availability_sheet";
           return (
-            <article className={`admin-action-card staff-entity-card ${person.status === "inactive" ? "disabled" : ""}`} key={person.id}>
-              <div className="admin-action-card-head">
+            <details className={`admin-action-card staff-entity-card ${person.status === "inactive" ? "disabled" : ""}`} key={person.id}>
+              <summary className="admin-action-card-head staff-entity-summary">
                 <div>
                   <strong>{person.name}</strong>
                   <small>{person.role} - {person.primaryRegion} - {person.id}</small>
@@ -421,13 +421,12 @@ export function AdminStaffManager() {
                   <Tag>{person.contact?.mobile || "No phone"}</Tag>
                   <Tag tone={canSave ? "green" : "amber"}>{canSave ? "DB record" : "Sheet only"}</Tag>
                 </div>
-              </div>
-              <div className="staff-card-summary">
-                <span>{person.regions.join(", ") || "No region mapped"}</span>
-                <span>{person.skills.length ? person.skills.join(", ") : "No skills mapped"}</span>
-              </div>
-              <details className="admin-staff-details">
-                <summary>Edit staff details</summary>
+              </summary>
+              <div className="staff-entity-body">
+                <div className="staff-card-summary">
+                  <span>{person.regions.join(", ") || "No region mapped"}</span>
+                  <span>{person.skills.length ? person.skills.join(", ") : "No skills mapped"}</span>
+                </div>
                 {!canSave ? <small className="admin-hint-message">This is a sheet fallback record. Add it as a staff entity before editing protected details.</small> : null}
                 <StaffEditor
                   draft={personDraft}
@@ -437,8 +436,8 @@ export function AdminStaffManager() {
                   onSave={() => saveStaff(person)}
                   onDelete={canSave ? () => deleteStaff(person) : undefined}
                 />
-              </details>
-            </article>
+              </div>
+            </details>
           );
         })}
 
