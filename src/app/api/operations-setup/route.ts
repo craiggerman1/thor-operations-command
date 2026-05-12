@@ -655,7 +655,7 @@ export async function POST(request: Request) {
       const { error } = await supabase.from("operations_setup_status").upsert({
         profile_id: user.id,
         region_id: regionId,
-        current_step: 5,
+        current_step: 4,
         completed_at: new Date().toISOString(),
         force_run_next_login: false,
         updated_at: new Date().toISOString()

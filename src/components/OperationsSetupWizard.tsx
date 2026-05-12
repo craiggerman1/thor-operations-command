@@ -345,7 +345,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
   async function saveAvailability(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await mutate({ action: "saveAvailabilitySource", spreadsheetUrl: availabilityUrl, sourceName: `${region} Staff Availability` }, "Availability sheet linked for this region.");
+    const ok = await mutate({ action: "saveAvailabilitySource", spreadsheetUrl: availabilityUrl, sourceName: `${region} Staff Availability` }, "Availability sheet linked for this region.");
+    if (ok) void loadAvailabilityRows([region]);
   }
 
   async function saveInductionSource(event: FormEvent<HTMLFormElement>) {
@@ -402,7 +403,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       </div>
 
       <div className="setup-steps">
-        {["Staff", "Clients & Jobs", "Inductions", "Availability", "Training"].map((label, index) => (
+        {["Staff", "Clients & Jobs", "Inductions", "Training"].map((label, index) => (
           <button className={step === index + 1 ? "active" : ""} type="button" onClick={() => setStep(index + 1)} key={label}>
             <span>{index + 1}</span>{label}
           </button>
@@ -411,7 +412,11 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 1 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 1. Staff</strong><p>Add every person who works in this region. Tick every skill that applies so Odin can match staff to roster needs without guessing.</p></div>
+          <div className="setup-copy"><strong>Step 1. Staff</strong><p>Add staff, link the region availability sheet, and confirm each staff profile maps to the correct Google Sheet row so Odin can match people, availability and jobs without guessing.</p></div>
+          <form className="setup-grid-form" onSubmit={saveAvailability}>
+            <input className="wide-input" placeholder="Google Sheet URL for this region's staff availability" value={availabilityUrl} onChange={(event) => setAvailabilityUrl(event.target.value)} />
+            <button disabled={saving || allRegionMode} type="submit">Link Availability Sheet</button>
+          </form>
           <form className="setup-grid-form" onSubmit={saveStaff}>
             <input placeholder="Staff name" value={staffDraft.name || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, name: event.target.value }))} />
             <input placeholder="Mobile phone" value={staffDraft.mobile || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, mobile: event.target.value }))} />
@@ -427,7 +432,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             title="Current Staff"
             count={filteredStaff.length}
             total={staff.length}
-            headers={["Staff name", "Phone", "Skills", "Region", "Action"]}
+            headers={["Staff name", "Phone", "Skills", "Availability row", "Sheet match", "Region", "Action"]}
             search={staffSearch}
             onSearchChange={setStaffSearch}
             regionFilter={tableRegionFilter}
@@ -437,6 +442,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <tbody>{filteredStaff.map((person, index) => {
               const isEditing = editingStaffId === person.id;
               const rowKey = `${person.id}-${rowRegions(person, region).join("-")}-${index}`;
+              const match = sheetMatchForStaff(person);
               return (
                 <tr key={rowKey} className={isEditing ? "setup-editing-row" : ""}>
                   <td>{isEditing ? <input value={editingStaffDraft.name || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, name: event.target.value }))} /> : person.name}</td>
@@ -448,6 +454,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                       </div>
                     ) : person.skills.join(", ") || person.role}
                   </td>
+                  <td>{isEditing ? <input value={editingStaffDraft.availabilitySheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /> : person.availabilitySheetName || person.name}</td>
+                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
                   <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
                   <td className="setup-row-actions">
                     {isEditing ? (
@@ -461,38 +469,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                         <button className="setup-danger-button" type="button" disabled={saving || allRegionMode} onClick={() => removeStaffRow(person)}>Remove</button>
                       </>
                     )}
-                  </td>
-                </tr>
-              );
-            })}</tbody>
-          </CollapsibleTable>
-          <CollapsibleTable
-            title="Availability Name Sync"
-            count={filteredStaff.length}
-            total={staff.length}
-            headers={["Staff name", "Availability row", "Sheet match", "Region", "Action"]}
-            search={staffSearch}
-            onSearchChange={setStaffSearch}
-            regionFilter={tableRegionFilter}
-            onRegionFilterChange={setTableRegionFilter}
-            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
-          >
-            <tbody>{filteredStaff.map((person, index) => {
-              const isEditing = editingStaffId === person.id;
-              const match = sheetMatchForStaff(person);
-              return (
-                <tr key={`${person.id}-availability-${index}`} className={isEditing ? "setup-editing-row" : ""}>
-                  <td>{person.name}</td>
-                  <td>{isEditing ? <input value={editingStaffDraft.availabilitySheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /> : person.availabilitySheetName || person.name}</td>
-                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
-                  <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
-                  <td className="setup-row-actions">
-                    {isEditing ? (
-                      <>
-                        <button type="button" disabled={saving} onClick={saveStaffRowEdit}>Save</button>
-                        <button type="button" onClick={() => { setEditingStaffId(""); setEditingStaffDraft(blankStaff()); }}>Cancel</button>
-                      </>
-                    ) : <button type="button" disabled={allRegionMode} onClick={() => startStaffRowEdit(person)}>Edit Row Name</button>}
                   </td>
                 </tr>
               );
@@ -676,18 +652,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       ) : null}
 
       {step === 4 ? (
-        <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 4. Staff availability</strong><p>Paste the editable Google Sheet link for this region. Staff can keep using the sheet, while TOC reads it live into the region view.</p></div>
-          <form className="setup-grid-form" onSubmit={saveAvailability}>
-            <input className="wide-input" placeholder="Google Sheet URL" value={availabilityUrl} onChange={(event) => setAvailabilityUrl(event.target.value)} />
-            <button disabled={saving || allRegionMode} type="submit">Link Availability Sheet</button>
-          </form>
-        </section>
-      ) : null}
-
-      {step === 5 ? (
         <section className="setup-panel training-panel">
-          <strong>Step 5. TOC walkthrough</strong>
+          <strong>Step 4. TOC walkthrough</strong>
           <p>Staff holds your people list. Jobs is the source of truth for clients and recurring work. Calendar displays the generated schedule. Inductions confirms site readiness. Odin watches these sources and creates work when something needs attention.</p>
           <div className="training-cards">
             <article><span>1</span><strong>Keep Staff current</strong><small>Names, phone numbers and skills drive Odin roster logic.</small></article>
@@ -701,11 +667,11 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       <div className="setup-guide-footer">
         <button type="button" disabled={step <= 1} onClick={() => setStep((current) => Math.max(1, current - 1))}>Back</button>
         <div>
-          <strong>Step {step} of 5</strong>
-          <span>{["Staff setup", "Client jobs", "Site inductions", "Availability link", "TOC walkthrough"][step - 1]}</span>
-          <i><em style={{ width: `${(step / 5) * 100}%` }} /></i>
+          <strong>Step {step} of 4</strong>
+          <span>{["Staff setup", "Client jobs", "Site inductions", "TOC walkthrough"][step - 1]}</span>
+          <i><em style={{ width: `${(step / 4) * 100}%` }} /></i>
         </div>
-        {step < 5 ? <button type="button" onClick={() => setStep((current) => Math.min(5, current + 1))}>Next Step</button> : <button type="button" disabled={saving || allRegionMode} onClick={completeSetup}>Complete Setup</button>}
+        {step < 4 ? <button type="button" onClick={() => setStep((current) => Math.min(4, current + 1))}>Next Step</button> : <button type="button" disabled={saving || allRegionMode} onClick={completeSetup}>Complete Setup</button>}
       </div>
 
       {message ? <div className="setup-message">{message}</div> : null}
