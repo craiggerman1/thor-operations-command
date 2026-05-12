@@ -483,18 +483,69 @@ body.next-app .developer-region-control {
 }
 
 .setup-table {
-  border: 1px solid rgba(12, 57, 84, 0.12);
+  border: 1px solid rgba(12, 57, 84, 0.18);
   border-radius: 8px;
   overflow: hidden;
   background: white;
+  box-shadow: 0 8px 20px rgba(12, 57, 84, 0.06);
 }
 
 .setup-table summary {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 12px 14px;
   cursor: pointer;
-  color: #12283a;
+  color: white;
+  background: #0c3954;
+  list-style: none;
+  user-select: none;
+}
+
+.setup-table summary::-webkit-details-marker {
+  display: none;
+}
+
+.setup-table summary::before {
+  content: "+";
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.setup-table[open] summary::before {
+  content: "-";
+}
+
+.setup-table summary:hover {
+  background: #11486a;
+}
+
+.setup-table summary strong {
+  font-size: 1rem;
+}
+
+.setup-table summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setup-table summary > span:last-child {
+  min-height: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 3px 9px;
 }
 
 .setup-table table {
@@ -506,7 +557,7 @@ body.next-app .developer-region-control {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(150px, 220px);
   gap: 8px;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-top: 1px solid rgba(12, 57, 84, 0.08);
   background: rgba(238, 250, 252, 0.72);
 }
@@ -519,7 +570,7 @@ body.next-app .developer-region-control {
   border-radius: 5px;
   background: white;
   color: #12283a;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   font-weight: 750;
   padding: 5px 7px;
 }
@@ -530,28 +581,28 @@ body.next-app .developer-region-control {
 
 .setup-table th,
 .setup-table td {
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-top: 1px solid rgba(12, 57, 84, 0.08);
   text-align: left;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
 }
 
 .setup-table th {
   background: rgba(12, 57, 84, 0.06);
   color: #0c3954;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
 }
 
 .setup-table button {
-  min-height: 28px;
+  min-height: 26px;
   border: 1px solid rgba(12, 57, 84, 0.14);
   border-radius: 5px;
   background: #0c3954;
   color: white;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 900;
-  padding: 4px 8px;
+  padding: 3px 8px;
 }
 
 .setup-table button:disabled {
