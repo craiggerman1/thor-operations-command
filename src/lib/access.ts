@@ -31,8 +31,6 @@ export const navigationItems: NavItem[] = [
   { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
   { label: "Calendar", href: "/calendar", roles: ["admin", "manager"] },
   { label: "Setup Wizard", href: "/operations-setup", roles: ["admin", "manager"] },
-  { label: "Staff", href: "/staff", roles: ["admin", "manager"] },
-  { label: "Jobs", href: "/jobs", roles: ["admin", "manager"] },
   { label: "Inductions", href: "/inductions", roles: ["admin", "manager"] },
   { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager"] },
   { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "director", "manager"] },
