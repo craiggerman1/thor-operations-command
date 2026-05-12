@@ -1,6 +1,5 @@
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
-import { OdinCommandClient } from "@/components/OdinCommandClient";
 import { OdinConfidenceCentre } from "@/components/OdinConfidenceCentre";
 import { OdinDailyRhythmPanel } from "@/components/OdinDailyRhythmPanel";
 import { OdinOperationsControlPanel } from "@/components/OdinOperationsControlPanel";
@@ -11,22 +10,19 @@ export const dynamic = "force-dynamic";
 export default function OdinControlPage() {
   return (
     <TocShell>
-      <PageIntro title="ODIN Control" detail="Odin command, rhythm, confidence and autonomous operating controls." />
-      <FlowHeading eyebrow="ODIN Control" title="Review Odin's control surfaces from one dedicated command page without scattering AI controls across normal manager workflows." />
+      <PageIntro title="Odin Control" detail="Odin status, operating rhythm and automation health." />
+      <FlowHeading eyebrow="Odin Control" title="Use this page to confirm Odin is watching TOC correctly, driving the daily rhythm, and only escalating what matters." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Odin command" title="Direct Odin controls and item queue" pill="Admin / National">
-          <OdinCommandClient />
-        </Panel>
-        <Panel wide eyebrow="Odin operating rhythm" title="Morning brief, midday check and end-of-day closeout" pill="National">
-          <OdinDailyRhythmPanel />
-        </Panel>
-        <Panel wide eyebrow="Odin closure control" title="Closure, escalation and manager follow-through" pill="Live snapshot">
+        <Panel wide eyebrow="Odin status" title="Watcher status, closure pressure and escalation control" pill="Live snapshot">
           <OdinOperationsControlPanel />
+        </Panel>
+        <Panel wide eyebrow="Operating rhythm" title="Morning brief, midday check and end-of-day closeout" pill="National">
+          <OdinDailyRhythmPanel />
         </Panel>
         <Panel wide eyebrow="Odin roster scan" title="Detected roster gaps and staffing risks">
           <RosterGapReview />
         </Panel>
-        <Panel wide eyebrow="Odin Confidence" title="Data quality and routing trust">
+        <Panel wide eyebrow="Automation confidence" title="Data quality and routing trust">
           <OdinConfidenceCentre />
         </Panel>
       </section>

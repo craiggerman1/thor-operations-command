@@ -51,7 +51,7 @@ export const odinStatusLabels: Record<OdinItemStatus, string> = {
 };
 
 export const odinCommandFeatures = [
-  "Ask Odin about TOC records and operational risk.",
+  "Monitor TOC records and operational risk through controlled backend APIs.",
   "Review Odin alerts, recommendations, daily briefs and follow-ups.",
   "Keep every Odin write visible, routed and auditable.",
   "Odin operational access remains separate from admin user, password and account controls."
