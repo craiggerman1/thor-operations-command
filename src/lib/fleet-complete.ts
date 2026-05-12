@@ -1,4 +1,3 @@
-import { allRegions } from "@/lib/access";
 import type { Status } from "@/lib/toc-data";
 
 type FleetCompleteUserInfo = {
@@ -151,26 +150,7 @@ function normaliseCoordinate(value: number | null | undefined, axis: "lat" | "lo
   return Math.abs(value) > maxDegree ? value / 60 : value;
 }
 
-function inferRegion(vehicle: FleetCompleteVehicle) {
-  const addressRegion = String(vehicle.latestData?.address?.region || "").trim().toUpperCase();
-  const city = String(vehicle.latestData?.address?.city || "").trim().toLowerCase();
-  const stateRegionMap: Record<string, string> = {
-    QLD: "Brisbane",
-    NSW: "Sydney",
-    VIC: "Melbourne",
-    SA: "Adelaide",
-    WA: "Perth",
-    ACT: "Canberra"
-  };
-
-  if (stateRegionMap[addressRegion]) return stateRegionMap[addressRegion];
-  if (city.includes("brisbane") || city.includes("gold coast")) return "Brisbane";
-  if (city.includes("sydney") || city.includes("central coast")) return "Sydney";
-  if (city.includes("melbourne")) return "Melbourne";
-  if (city.includes("adelaide")) return "Adelaide";
-  if (city.includes("perth") || city.includes("welshpool")) return "Perth";
-  if (city.includes("canberra") || city.includes("gungahlin")) return "Canberra";
-
+function regionFromText(value: unknown) {
   const aliases: Record<string, string[]> = {
     Brisbane: ["brisbane", "bne", "qld", "queensland"],
     Sydney: ["sydney", "syd", "nsw"],
@@ -180,20 +160,38 @@ function inferRegion(vehicle: FleetCompleteVehicle) {
     Canberra: ["canberra", "cbr", "act"],
     Workshop: ["workshop", "service", "yard"]
   };
+
+  const text = String(value || "").toLowerCase();
+  if (!text) return null;
+
+  const matches = Object.entries(aliases)
+    .filter(([, regionAliases]) => regionAliases.some((alias) => text.includes(alias)))
+    .map(([region]) => region);
+
+  return new Set(matches).size === 1 ? matches[0] : null;
+}
+
+function inferRegion(vehicle: FleetCompleteVehicle) {
+  const assetTypeRegion = regionFromText(vehicle.vehicleType?.name);
+  if (assetTypeRegion) return assetTypeRegion;
+
+  const fieldRegion = regionFromText(
+    (vehicle.customFields || [])
+      .filter((field) => /region|asset|type|category|depot|branch/i.test(`${field.name || ""}`))
+      .flatMap((field) => [field.name, field.value])
+      .filter(Boolean)
+      .join(" ")
+  );
+  if (fieldRegion) return fieldRegion;
+
+  const labelRegion = regionFromText((vehicle.assignedLabels || []).map((label) => label.name).filter(Boolean).join(" "));
+  if (labelRegion) return labelRegion;
+
   const singleRegionGroups = (vehicle.assignedGroups || [])
     .map((group) => `${group.name || ""} ${group.description || ""}`.trim())
     .filter((group) => group && !group.includes("/") && !/access|read-only|managing director|titan rental group|operations/i.test(group));
-  const searchable = [
-    vehicle.name,
-    vehicle.licensePlate,
-    ...singleRegionGroups,
-    ...(vehicle.assignedLabels || []).map((label) => label.name),
-    ...(vehicle.customFields || []).flatMap((field) => [field.name, field.value])
-  ].filter(Boolean).join(" ").toLowerCase();
-
-  for (const region of allRegions.filter((item) => item !== "National")) {
-    if ((aliases[region] || [region.toLowerCase()]).some((alias) => searchable.includes(alias))) return region;
-  }
+  const groupRegion = regionFromText(singleRegionGroups.join(" "));
+  if (groupRegion) return groupRegion;
 
   return "National";
 }
