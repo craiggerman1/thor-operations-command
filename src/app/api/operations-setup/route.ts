@@ -710,7 +710,7 @@ export async function POST(request: Request) {
         site_name: siteName,
         region_id: regionId,
         source_slug: "manual-setup",
-        source_name: `${scope} setup wizard`,
+        source_name: `${scope} Operations Setup`,
         status: cleanString(payload.status),
         expiry: cleanString(payload.expiry),
         updated_at: new Date().toISOString()

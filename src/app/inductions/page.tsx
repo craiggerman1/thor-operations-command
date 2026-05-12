@@ -251,7 +251,7 @@ export default function InductionsPage() {
         </Panel>
         {!hasConnectedSource || !isMappedScope ? (
           <Panel wide eyebrow="Region source" title={`${scope} induction source required`} pill={hasConnectedSource ? `${sheetRegion} only` : "Not connected"}>
-            <div className="empty-state">{hasConnectedSource ? `The current Google Sheet induction register is mapped to ${sheetRegion}. Select ${sheetRegion} to view this sheet, or assign a separate induction source for ${scope} in Admin Settings.` : `No Google Sheet induction register is connected for ${scope}. Link this region's induction sheet in the Operations Setup Wizard or Admin Settings.`}</div>
+            <div className="empty-state">{hasConnectedSource ? `The current Google Sheet induction register is mapped to ${sheetRegion}. Select ${sheetRegion} to view this sheet, or assign a separate induction source for ${scope} in Admin Settings.` : `No Google Sheet induction register is connected for ${scope}. Link this region's induction sheet in Operations Setup or Admin Settings.`}</div>
           </Panel>
         ) : null}
         {isMappedScope && hasConnectedSource ? (

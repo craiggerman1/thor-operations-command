@@ -22,22 +22,22 @@ export const assignableRegions = allRegions;
 
 export const navigationItems: NavItem[] = [
   { label: "Home", href: "/home", roles: ["admin", "director", "manager"] },
-  { label: "Admin Settings", href: "/admin", roles: ["admin"] },
   { label: "National Requests", href: "/national-requests", roles: ["admin", "manager"], nationalOnly: true },
   { label: "Action Centre", href: "/actions", roles: ["admin", "director", "manager"] },
+  { label: "Operations Setup", href: "/operations-setup", roles: ["admin", "manager"] },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },
   { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager"] },
   { label: "Compliance", href: "/compliance", roles: ["admin", "director", "manager"] },
   { label: "Calendar", href: "/calendar", roles: ["admin", "manager"] },
-  { label: "Setup Wizard", href: "/operations-setup", roles: ["admin", "manager"] },
   { label: "Inductions", href: "/inductions", roles: ["admin", "manager"] },
   { label: "Staff Availability", href: "/staff-availability", roles: ["admin", "manager"] },
   { label: "Stock Orders", href: "/stock-orders", roles: ["admin", "director", "manager"] },
   { label: "Asset Tracking", href: "/asset-tracking", roles: ["admin", "director", "manager"] },
   { label: "Jobsheets", href: "/jobsheets", roles: ["admin", "director", "manager"] },
   { label: "To Do", href: "/todo", roles: ["admin", "director", "manager"] },
-  { label: "Chat", href: "/chat", roles: ["admin", "director", "manager"] }
+  { label: "Chat", href: "/chat", roles: ["admin", "director", "manager"] },
+  { label: "Admin Settings", href: "/admin", roles: ["admin"] }
 ];
 
 export const sessionProfiles: Record<AccessRole, SessionProfile> = {

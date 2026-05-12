@@ -189,7 +189,7 @@ export default function StaffAvailabilityPage() {
                 ? isMappedScope
                   ? `The ${scope} Google Sheet availability source is connected, but no availability rows were returned yet. Press refresh or check that the sheet has staff names in the first column.`
                   : `The current Google Sheet availability source is mapped to ${sheetRegion}. Select ${sheetRegion} to view this sheet, or assign a separate source for ${scope} in Admin Settings.`
-                : `No Google Sheet availability source is connected for ${scope}. Link this region's availability sheet in the Operations Setup Wizard or Admin Settings.`}
+                : `No Google Sheet availability source is connected for ${scope}. Link this region's availability sheet in Operations Setup or Admin Settings.`}
             </div>
           </Panel>
         ) : null}

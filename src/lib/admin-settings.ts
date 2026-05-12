@@ -23,7 +23,7 @@ export const adminSettingStateDescriptions: Record<AdminPageSetting["state"], st
 export const pageSettings: AdminPageSetting[] = [
   { page: "User Access", slug: "user-access", owner: "Security and permissions", control: "Register users, reset passwords, assign access levels and assign region responsibility.", state: "Active" },
   { page: "Staff Register", slug: "staff-register", owner: "People control", control: "Manage staff entities, roles, regions, skills, sheet links, notes and protected contact fields.", state: "Active" },
-  { page: "Operations Setup Wizard", slug: "operations-setup", owner: "Manager onboarding", control: "Run the guided regional setup for staff, clients, jobs, inductions and availability sources.", state: "Active" },
+  { page: "Operations Setup", slug: "operations-setup", owner: "Manager onboarding", control: "Run the guided regional setup for staff, clients, jobs, inductions and availability sources.", state: "Active" },
   { page: "Operations Master Data", slug: "operations-master", owner: "Customer, site and roster source of truth", control: "Manage customer/site register rows, recurring site schedules, crew requirements and calendar generation.", state: "Active" },
   { page: "Messages And Hints", slug: "messages", owner: "Global communications", control: "Manage urgent notices, Director messages, operational news and page hint controls.", state: "Active" },
   { page: "Audit Trail", slug: "audit-trail", owner: "Security and Odin logging", control: "Review Odin, user access, security and admin activity written to the audit log.", state: "Active" },

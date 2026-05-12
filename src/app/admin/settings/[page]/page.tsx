@@ -89,7 +89,7 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
           </Panel>
         ) : null}
         {setting.slug === "operations-setup" ? (
-          <Panel wide eyebrow="Operations Setup Wizard" title="Run guided setup for any region">
+          <Panel wide eyebrow="Operations Setup" title="Run guided setup for any region">
             <OperationsSetupWizard adminMode />
           </Panel>
         ) : null}

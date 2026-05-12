@@ -374,7 +374,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     <div className="setup-wizard">
       <div className="setup-hero">
         <div>
-          <span>Operations Setup Wizard</span>
+          <span>Operations Setup</span>
           <h2>{region} command setup</h2>
           <p>Build the region source of truth once, then TOC turns it into staff visibility, jobs, inductions, calendar schedules and Odin context.</p>
         </div>

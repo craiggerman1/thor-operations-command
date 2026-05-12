@@ -329,10 +329,10 @@ export function AdminAccessManager() {
         body: JSON.stringify({ action: "forceForUser", profileId: user.id, region: targetRegion })
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Setup wizard could not be scheduled.");
-      setStatus(`Operations Setup Wizard will run for ${user.name} on next login for ${targetRegion}.`);
+      if (!response.ok) throw new Error(result.error || "Operations Setup could not be scheduled.");
+      setStatus(`Operations Setup will run for ${user.name} on next login for ${targetRegion}.`);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Setup wizard could not be scheduled.");
+      setStatus(error instanceof Error ? error.message : "Operations Setup could not be scheduled.");
     }
   }
 
@@ -439,12 +439,12 @@ export function AdminAccessManager() {
               </div>
               {user.role === "manager" ? (
                 <div className="admin-user-security-box">
-                  <strong>Operations Setup Wizard</strong>
-                  <small>Require this manager to run the guided region setup wizard on their next login.</small>
+                  <strong>Operations Setup</strong>
+                  <small>Require this manager to run the guided region setup on their next login.</small>
                   <select value={draft.setupRegion} onChange={(event) => updateDraft(user.id, { setupRegion: event.target.value })}>
                     {(user.regions.filter((region) => region !== "National").length ? user.regions.filter((region) => region !== "National") : ["Brisbane"]).map((region) => <option value={region} key={region}>{region}</option>)}
                   </select>
-                  <button type="button" onClick={() => forceSetupWizard(user, draft.setupRegion || user.regions.find((region) => region !== "National") || "Brisbane")}>Require Setup Wizard Next Login</button>
+                  <button type="button" onClick={() => forceSetupWizard(user, draft.setupRegion || user.regions.find((region) => region !== "National") || "Brisbane")}>Require Operations Setup Next Login</button>
                 </div>
               ) : null}
               <label>
