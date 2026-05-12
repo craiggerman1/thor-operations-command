@@ -711,11 +711,13 @@ function StaffPicker({ staff, value, onChange }: { staff: StaffRow[]; value: str
     <div className="setup-staff-picker">
       {staff.map((person, index) => {
         const selected = value.includes(person.id);
+        const displayName = person.name || person.availabilitySheetName || person.inductionSheetName || "Unnamed staff";
+        const skillsLabel = person.skills?.length ? person.skills.join(", ") : person.role || "Staff";
         return (
-          <label className={selected ? "selected" : ""} key={`${person.id}-staff-picker-${index}`}>
+          <label className={selected ? "selected" : ""} title={displayName} key={`${person.id}-staff-picker-${index}`}>
             <input type="checkbox" checked={selected} onChange={() => toggleStaff(person.id)} />
-            <span>{person.name}</span>
-            <small>{person.skills?.join(", ") || person.role}</small>
+            <span>{displayName}</span>
+            <small>{skillsLabel}</small>
           </label>
         );
       })}
