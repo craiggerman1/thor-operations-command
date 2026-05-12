@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Panel, Tag } from "@/components/TocCards";
 import { tocFetch } from "@/lib/toc-client-auth";
 import type { Status } from "@/lib/toc-data";
+import type { LayerGroup, Map as LeafletMap } from "leaflet";
 
 type AssetSummary = {
   label: string;
@@ -48,6 +49,8 @@ type AssetTrackingPayload = {
   error?: string;
 };
 
+type LeafletModule = typeof import("leaflet");
+
 const emptyPayload: AssetTrackingPayload = {
   connected: false,
   source: "Fleet Complete Unity API",
@@ -86,12 +89,29 @@ function formatNumber(value: number | null | undefined, suffix = "") {
   return `${new Intl.NumberFormat("en-AU", { maximumFractionDigits: 0 }).format(Number(value))}${suffix}`;
 }
 
+function escapeHtml(value: string | number | null | undefined) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function markerTone(asset: TrackedAsset) {
+  return asset.severity === "green" ? "green" : asset.severity === "red" ? "red" : asset.severity === "amber" ? "amber" : "blue";
+}
+
 export function AssetTrackingClient() {
   const [scope, setScope] = useState("National");
   const [payload, setPayload] = useState<AssetTrackingPayload>(emptyPayload);
   const [status, setStatus] = useState("Loading Fleet Complete assets...");
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const mapNodeRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markerLayerRef = useRef<LayerGroup | null>(null);
+  const leafletRef = useRef<LeafletModule | null>(null);
 
   useEffect(() => {
     function syncScope(event?: Event) {
@@ -143,6 +163,96 @@ export function AssetTrackingClient() {
     ].join(" ").toLowerCase().includes(needle));
   }, [payload.assets, query]);
 
+  const mappedAssets = useMemo(
+    () => filteredAssets.filter((asset) => typeof asset.latitude === "number" && typeof asset.longitude === "number"),
+    [filteredAssets]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function drawMap() {
+      if (!mapNodeRef.current) return;
+
+      const leaflet = leafletRef.current || await import("leaflet");
+      if (cancelled || !mapNodeRef.current) return;
+      leafletRef.current = leaflet;
+
+      if (!mapRef.current) {
+        mapRef.current = leaflet.map(mapNodeRef.current, {
+          center: [-25.2744, 133.7751],
+          zoom: 4,
+          zoomControl: true,
+          scrollWheelZoom: false
+        });
+        leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+        }).addTo(mapRef.current);
+        markerLayerRef.current = leaflet.layerGroup().addTo(mapRef.current);
+      }
+
+      markerLayerRef.current?.clearLayers();
+
+      const bounds: [number, number][] = [];
+      mappedAssets.forEach((asset) => {
+        if (asset.latitude === null || asset.longitude === null) return;
+        const tone = markerTone(asset);
+        const marker = leaflet.marker([asset.latitude, asset.longitude], {
+          title: `${asset.unit} - ${asset.region}`,
+          icon: leaflet.divIcon({
+            className: "",
+            html: `<span class="asset-map-marker ${tone}"><span>${escapeHtml(asset.unit.replace(/^Unit\s*/i, "").slice(0, 4))}</span></span>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -18]
+          })
+        });
+
+        marker.bindPopup(`
+          <div class="asset-map-popup">
+            <strong>${escapeHtml(asset.unit)}</strong>
+            <small>${escapeHtml(asset.vehicleType)} | Plate ${escapeHtml(asset.licensePlate)}</small>
+            <dl>
+              <div><dt>Region</dt><dd>${escapeHtml(asset.region)}</dd></div>
+              <div><dt>Status</dt><dd>${escapeHtml(asset.status)}</dd></div>
+              <div><dt>Speed</dt><dd>${escapeHtml(formatNumber(asset.speedKph, " km/h"))}</dd></div>
+              <div><dt>Last GPS</dt><dd>${escapeHtml(formatDateTime(asset.latestAt))}</dd></div>
+            </dl>
+            <p>${escapeHtml(asset.location)}</p>
+            ${asset.mapHref ? `<a href="${escapeHtml(asset.mapHref)}" target="_blank" rel="noreferrer">Open in Google Maps</a>` : ""}
+          </div>
+        `);
+        marker.addTo(markerLayerRef.current!);
+        bounds.push([asset.latitude, asset.longitude]);
+      });
+
+      if (bounds.length > 1) {
+        mapRef.current.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
+      } else if (bounds.length === 1) {
+        mapRef.current.setView(bounds[0], 12);
+      } else {
+        mapRef.current.setView([-25.2744, 133.7751], 4);
+      }
+
+      window.setTimeout(() => mapRef.current?.invalidateSize(), 100);
+    }
+
+    void drawMap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mappedAssets]);
+
+  useEffect(() => {
+    return () => {
+      mapRef.current?.remove();
+      mapRef.current = null;
+      markerLayerRef.current = null;
+    };
+  }, []);
+
   return (
     <>
       <Panel wide eyebrow="Live GPS feed" title={`${scope} asset tracking`} pill={payload.connected ? "Fleet Complete connected" : "Connection required"}>
@@ -174,6 +284,22 @@ export function AssetTrackingClient() {
         </div>
 
         {payload.error ? <div className="asset-tracking-error">{payload.error}</div> : null}
+
+        <section className="asset-tracking-map-card" aria-label="Fleet Complete unit map">
+          <div className="asset-map-header">
+            <div>
+              <strong>Live unit map</strong>
+              <small>{mappedAssets.length} mapped units visible. {filteredAssets.length - mappedAssets.length} without GPS coordinates.</small>
+            </div>
+            <div className="asset-map-legend" aria-label="Map marker legend">
+              <span><i className="green" /> Moving</span>
+              <span><i className="blue" /> Stopped</span>
+              <span><i className="amber" /> Stale</span>
+              <span><i className="red" /> Offline</span>
+            </div>
+          </div>
+          <div className="asset-tracking-map" ref={mapNodeRef} />
+        </section>
 
         <div className="asset-tracking-table" role="table" aria-label="Fleet Complete tracked units">
           <div className="asset-tracking-row header" role="row">
