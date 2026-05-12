@@ -94,10 +94,6 @@ function blankStaff(): Partial<StaffRow> {
   return { name: "", role: "Wash Hand", status: "active", skills: ["Wash Hand"], mobile: "", whatsapp: "", availabilitySheetName: "", inductionSheetName: "", notes: "" };
 }
 
-function blankSite(): Partial<SiteRow> {
-  return { clientName: "", siteName: "", address: "", requiredInduction: true, requiredCrewCount: 2, notes: "", status: "active" };
-}
-
 function blankSchedule(): Partial<ScheduleRow> {
   return { siteId: "", siteLabel: "", clientName: "", siteName: "", address: "", requiredInduction: true, scheduleName: "", startDate: today(), endDate: "", jobTime: "07:00", recurrence: "Weekly", recurrenceIntervalWeeks: 1, abcdWeeks: [], requiredCrewCount: 2, jobTitle: "Scheduled wash", washAsset: "", notes: "", status: "active", staffIds: [] };
 }
@@ -165,20 +161,16 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [step, setStep] = useState(initialStep);
   const [payload, setPayload] = useState<SetupPayload | null>(null);
   const [staffDraft, setStaffDraft] = useState<Partial<StaffRow>>(blankStaff);
-  const [siteDraft, setSiteDraft] = useState<Partial<SiteRow>>(blankSite);
   const [scheduleDraft, setScheduleDraft] = useState<Partial<ScheduleRow>>(blankSchedule);
   const [availabilityUrl, setAvailabilityUrl] = useState("");
   const [inductionUrl, setInductionUrl] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [staffSearch, setStaffSearch] = useState("");
-  const [siteSearch, setSiteSearch] = useState("");
   const [scheduleSearch, setScheduleSearch] = useState("");
   const [tableRegionFilter, setTableRegionFilter] = useState(allRegionsLabel);
   const [editingStaffId, setEditingStaffId] = useState("");
   const [editingStaffDraft, setEditingStaffDraft] = useState<Partial<StaffRow>>(blankStaff);
-  const [editingSiteId, setEditingSiteId] = useState("");
-  const [editingSiteDraft, setEditingSiteDraft] = useState<Partial<SiteRow>>(blankSite);
   const [editingScheduleId, setEditingScheduleId] = useState("");
   const [editingScheduleDraft, setEditingScheduleDraft] = useState<Partial<ScheduleRow>>(blankSchedule);
   const [availabilityRowsByRegion, setAvailabilityRowsByRegion] = useState<Record<string, string[]>>({});
@@ -191,7 +183,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const specificRegionOptions = useMemo(() => regionOptions.filter((item) => item !== allRegionsLabel), [regionOptions]);
   const allRegionMode = adminMode && region === allRegionsLabel;
   const staff = payload?.staff || [];
-  const sites = payload?.sites || [];
   const schedules = payload?.schedules || [];
   const inductions = payload?.inductions || [];
   const filteredStaff = useMemo(() => staff.filter((person) => {
@@ -201,11 +192,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
     return regionMatch && matchesSearch([person.name, person.mobile, person.whatsapp, person.availabilitySheetName, matchLabel, person.role, person.skills.join(" "), regions.join(" "), person.notes], staffSearch);
   }), [staff, availabilityRowsByRegion, staffSearch, tableRegionFilter, region]);
-  const filteredSites = useMemo(() => sites.filter((site) => {
-    const regions = rowRegions(site, region);
-    const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
-    return regionMatch && matchesSearch([site.clientName, site.siteName, site.address, site.requiredCrewCount, regions.join(" "), site.notes], siteSearch);
-  }), [sites, siteSearch, tableRegionFilter, region]);
   const filteredSchedules = useMemo(() => schedules.filter((schedule) => {
     const regions = rowRegions(schedule, region);
     const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(" ");
@@ -339,28 +325,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     if (ok && editingStaffId === person.id) {
       setEditingStaffId("");
       setEditingStaffDraft(blankStaff());
-    }
-  }
-
-  async function addSiteRow() {
-    const ok = await mutate({ action: "upsertSite", ...siteDraft }, "Client site saved.");
-    if (ok) setSiteDraft(blankSite());
-  }
-
-  function startSiteRowEdit(site: SiteRow) {
-    if (allRegionMode) {
-      setMessage("Select a specific region before editing client rows.");
-      return;
-    }
-    setEditingSiteId(site.id);
-    setEditingSiteDraft(site);
-  }
-
-  async function saveSiteRowEdit() {
-    const ok = await mutate({ action: "upsertSite", ...editingSiteDraft }, "Client site row saved.");
-    if (ok) {
-      setEditingSiteId("");
-      setEditingSiteDraft(blankSite());
     }
   }
 
@@ -689,54 +653,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                           <button type="button" className="setup-danger-button" disabled={allRegionMode || saving} onClick={() => deleteScheduleRow(schedule)}>Delete</button>
                         </>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </CollapsibleTable>
-          <CollapsibleTable
-            title="Client Site Library"
-            count={filteredSites.length}
-            total={sites.length}
-            headers={["Client", "Site", "Address", "Crew", "Induction", "Notes", "Region", "Action"]}
-            search={siteSearch}
-            onSearchChange={setSiteSearch}
-            regionFilter={tableRegionFilter}
-            onRegionFilterChange={setTableRegionFilter}
-            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
-            defaultOpen={false}
-          >
-            <tbody>
-              <tr className="setup-new-row">
-                <td><input placeholder="Client name" value={siteDraft.clientName || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, clientName: event.target.value }))} /></td>
-                <td><input placeholder="Site name" value={siteDraft.siteName || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, siteName: event.target.value }))} /></td>
-                <td><input placeholder="Address" value={siteDraft.address || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, address: event.target.value }))} /></td>
-                <td><input type="number" min={0} max={20} value={siteDraft.requiredCrewCount || 2} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></td>
-                <td><label className="setup-cell-check"><input type="checkbox" checked={siteDraft.requiredInduction !== false} onChange={(event) => setSiteDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label></td>
-                <td><input placeholder="Notes" value={siteDraft.notes || ""} onChange={(event) => setSiteDraft((current) => ({ ...current, notes: event.target.value }))} /></td>
-                <td><span className="setup-region-chip">{region}</span></td>
-                <td><button disabled={saving || allRegionMode} type="button" onClick={addSiteRow}>Add Site</button></td>
-              </tr>
-              {filteredSites.map((site, index) => {
-                const isEditing = editingSiteId === site.id;
-                const draft = isEditing ? editingSiteDraft : site;
-                return (
-                  <tr key={`${site.id}-${index}`} className={isEditing ? "setup-editing-row" : ""}>
-                    <td>{isEditing ? <input value={draft.clientName || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, clientName: event.target.value }))} /> : site.clientName}</td>
-                    <td>{isEditing ? <input value={draft.siteName || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, siteName: event.target.value }))} /> : site.siteName}</td>
-                    <td>{isEditing ? <input value={draft.address || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, address: event.target.value }))} /> : site.address || "-"}</td>
-                    <td>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || 2} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : `${site.requiredCrewCount} crew`}</td>
-                    <td>{isEditing ? <label className="setup-cell-check"><input type="checkbox" checked={draft.requiredInduction !== false} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label> : site.requiredInduction ? "Required" : "Not required"}</td>
-                    <td>{isEditing ? <input value={draft.notes || ""} onChange={(event) => setEditingSiteDraft((current) => ({ ...current, notes: event.target.value }))} /> : site.notes || "-"}</td>
-                    <td><span className="setup-region-chip">{rowRegions(site, region).join(", ")}</span></td>
-                    <td className="setup-row-actions">
-                      {isEditing ? (
-                        <>
-                          <button type="button" disabled={saving} onClick={saveSiteRowEdit}>Save</button>
-                          <button type="button" onClick={() => { setEditingSiteId(""); setEditingSiteDraft(blankSite()); }}>Cancel</button>
-                        </>
-                      ) : <button type="button" disabled={allRegionMode} onClick={() => startSiteRowEdit(site)}>Edit</button>}
                     </td>
                   </tr>
                 );
