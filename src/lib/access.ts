@@ -25,7 +25,7 @@ export const navigationItems: NavItem[] = [
   { label: "National Requests", href: "/national-requests", roles: ["admin", "manager"], nationalOnly: true },
   { label: "Action Centre", href: "/actions", roles: ["admin", "director", "manager"] },
   { label: "Operations Setup", href: "/operations-setup", roles: ["admin", "manager"] },
-  { label: "Odin Control", href: "/odin-control", roles: ["admin", "manager"], nationalOnly: true, adminAlways: true },
+  { label: "Odin Control", href: "/odin-control", roles: ["admin", "manager"], nationalOnly: true },
   { label: "Region Health", href: "/overview", roles: ["admin", "director", "manager"] },
   { label: "Productivity", href: "/operations", roles: ["admin", "director", "manager"] },
   { label: "Equipment Servicing", href: "/equipment-servicing", roles: ["admin", "director", "manager"] },
