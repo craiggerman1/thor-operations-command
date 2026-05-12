@@ -483,86 +483,91 @@ async function importRows(rows: PreviewRow[], actor: TocAuthenticatedUser) {
   const validRows = rows.filter((row) => row.status !== "error" && row.active);
   const lookups = await readLookups(Array.from(new Set(validRows.map((row) => row.region))));
   const imported: Array<{ rowNumber: number; siteId: string; scheduleId: string; calendarJobsCreated: number; calendarJobsUpdated: number }> = [];
+  const failed: Array<{ rowNumber: number; error: string }> = [];
 
   for (const row of validRows) {
-    const region = lookups.regionByName.get(cleanKey(row.region));
-    if (!region) continue;
-    let site = lookups.sites.find((item) => item.region_id === region.id && cleanKey(item.client_name) === cleanKey(row.clientName) && cleanKey(item.site_name) === cleanKey(row.siteName));
-    const siteRow = {
-      client_name: row.clientName,
-      site_name: row.siteName,
-      region_id: region.id,
-      address: row.siteAddress,
-      required_induction: true,
-      required_crew_count: row.staffRequired || 2,
-      status: "active",
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const region = lookups.regionByName.get(cleanKey(row.region));
+      if (!region) throw new Error(`Region "${row.region}" is not mapped in TOC.`);
+      let site = lookups.sites.find((item) => item.region_id === region.id && cleanKey(item.client_name) === cleanKey(row.clientName) && cleanKey(item.site_name) === cleanKey(row.siteName));
+      const siteRow = {
+        client_name: row.clientName,
+        site_name: row.siteName,
+        region_id: region.id,
+        address: row.siteAddress,
+        required_induction: true,
+        required_crew_count: row.staffRequired || 2,
+        status: "active",
+        updated_at: new Date().toISOString()
+      };
 
-    if (site) {
-      const { error } = await supabase.from("operation_sites").update(siteRow).eq("id", site.id);
-      if (error) throw error;
-    } else {
-      const { data, error } = await supabase.from("operation_sites").insert({ ...siteRow, notes: "" }).select("id,client_name,site_name,region_id").single();
-      if (error) throw error;
-      site = data as OperationSiteRow;
-      lookups.sites.push(site);
+      if (site) {
+        const { error } = await supabase.from("operation_sites").update(siteRow).eq("id", site.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from("operation_sites").insert({ ...siteRow, notes: "" }).select("id,client_name,site_name,region_id").single();
+        if (error) throw error;
+        site = data as OperationSiteRow;
+        lookups.sites.push(site);
+      }
+
+      const scheduleName = `${row.clientName} - ${row.siteName} ${row.startTime}`;
+      const notes = composeScheduleNotes([row.notes, row.endTime ? `End time: ${row.endTime}` : ""].filter(Boolean).join("\n"), row.abcdWeeks);
+      const existingSchedule = lookups.schedules.find((schedule) =>
+        schedule.region_id === region.id &&
+        schedule.site_id === site!.id &&
+        timeKey(schedule.job_time) === timeKey(row.startTime) &&
+        cleanKey(schedule.recurrence) === cleanKey(row.recurrence) &&
+        cleanKey(schedule.job_title) === cleanKey(row.jobTitle)
+      );
+      const schedulePayload = {
+        site_id: site.id,
+        region_id: region.id,
+        schedule_name: scheduleName,
+        start_date: row.resolvedStartDate,
+        end_date: row.endDate || null,
+        job_time: row.startTime || "07:00",
+        recurrence: row.recurrence,
+        recurrence_interval_weeks: row.recurrenceIntervalWeeks,
+        required_crew_count: row.staffRequired || 2,
+        job_title: row.jobTitle || "Scheduled wash",
+        wash_asset: row.washAsset,
+        notes,
+        status: row.active ? "active" : "inactive",
+        updated_at: new Date().toISOString()
+      };
+      const scheduleResult = existingSchedule
+        ? await supabase.from("site_schedules").update(schedulePayload).eq("id", existingSchedule.id).select("id").maybeSingle()
+        : await supabase.from("site_schedules").insert(schedulePayload).select("id").single();
+      if (scheduleResult.error) throw scheduleResult.error;
+      if (!scheduleResult.data) throw new Error(`Row ${row.rowNumber} schedule could not be saved.`);
+      const scheduleId = scheduleResult.data.id;
+      if (!existingSchedule) lookups.schedules.push({ id: scheduleId, site_id: site.id, region_id: region.id, schedule_name: scheduleName, start_date: row.resolvedStartDate, job_time: row.startTime, recurrence: row.recurrence, job_title: row.jobTitle });
+
+      await supabase.from("site_schedule_staff").delete().eq("site_schedule_id", scheduleId);
+      if (row.matchedStaff.length) {
+        const { error } = await supabase.from("site_schedule_staff").insert(row.matchedStaff.map((staff) => ({ site_schedule_id: scheduleId, staff_profile_id: staff.id })));
+        if (error) throw error;
+      }
+      const generation = await generateScheduleJobs(scheduleId);
+      imported.push({ rowNumber: row.rowNumber, siteId: site.id, scheduleId, calendarJobsCreated: generation.created, calendarJobsUpdated: generation.updated });
+    } catch (error) {
+      failed.push({ rowNumber: row.rowNumber, error: error instanceof Error ? error.message : "Row import failed." });
     }
-
-    const scheduleName = `${row.clientName} - ${row.siteName} ${row.startTime}`;
-    const notes = composeScheduleNotes([row.notes, row.endTime ? `End time: ${row.endTime}` : ""].filter(Boolean).join("\n"), row.abcdWeeks);
-    const existingSchedule = lookups.schedules.find((schedule) =>
-      schedule.region_id === region.id &&
-      schedule.site_id === site!.id &&
-      timeKey(schedule.job_time) === timeKey(row.startTime) &&
-      cleanKey(schedule.recurrence) === cleanKey(row.recurrence) &&
-      cleanKey(schedule.job_title) === cleanKey(row.jobTitle)
-    );
-    const schedulePayload = {
-      site_id: site.id,
-      region_id: region.id,
-      schedule_name: scheduleName,
-      start_date: row.resolvedStartDate,
-      end_date: row.endDate || null,
-      job_time: row.startTime || "07:00",
-      recurrence: row.recurrence,
-      recurrence_interval_weeks: row.recurrenceIntervalWeeks,
-      required_crew_count: row.staffRequired || 2,
-      job_title: row.jobTitle || "Scheduled wash",
-      wash_asset: row.washAsset,
-      notes,
-      status: row.active ? "active" : "inactive",
-      updated_at: new Date().toISOString()
-    };
-    const scheduleResult = existingSchedule
-      ? await supabase.from("site_schedules").update(schedulePayload).eq("id", existingSchedule.id).select("id").maybeSingle()
-      : await supabase.from("site_schedules").insert(schedulePayload).select("id").single();
-    if (scheduleResult.error) throw scheduleResult.error;
-    if (!scheduleResult.data) throw new Error(`Row ${row.rowNumber} schedule could not be saved.`);
-    const scheduleId = scheduleResult.data.id;
-    if (!existingSchedule) lookups.schedules.push({ id: scheduleId, site_id: site.id, region_id: region.id, schedule_name: scheduleName, start_date: row.resolvedStartDate, job_time: row.startTime, recurrence: row.recurrence, job_title: row.jobTitle });
-
-    await supabase.from("site_schedule_staff").delete().eq("site_schedule_id", scheduleId);
-    if (row.matchedStaff.length) {
-      const { error } = await supabase.from("site_schedule_staff").insert(row.matchedStaff.map((staff) => ({ site_schedule_id: scheduleId, staff_profile_id: staff.id })));
-      if (error) throw error;
-    }
-    const generation = await generateScheduleJobs(scheduleId);
-    imported.push({ rowNumber: row.rowNumber, siteId: site.id, scheduleId, calendarJobsCreated: generation.created, calendarJobsUpdated: generation.updated });
   }
 
-  if (imported.length) {
+  if (imported.length || failed.length) {
     await logTocAudit({
       actor,
       action: "operations_setup.roster_import",
       entityTable: "site_schedules",
-      entityId: imported[0].scheduleId,
+      entityId: imported[0]?.scheduleId,
       scope: Array.from(new Set(validRows.map((row) => row.region))).join(", "),
-      details: { importedCount: imported.length, rows: imported }
+      details: { importedCount: imported.length, failedCount: failed.length, rows: imported, failed }
     });
   }
 
-  return imported;
+  return { imported, failed };
 }
 
 export async function POST(request: Request) {
@@ -597,8 +602,9 @@ export async function POST(request: Request) {
     if (summary.errorRows) {
       return NextResponse.json({ connected: false, mode, summary, rows: previewRows, error: "Fix import errors before confirming the roster import." }, { status: 400 });
     }
-    const imported = await importRows(previewRows, permission.user);
-    return NextResponse.json({ connected: true, mode, summary, imported, rows: previewRows });
+    const result = await importRows(previewRows, permission.user);
+    const status = result.failed.length ? 207 : 200;
+    return NextResponse.json({ connected: !result.failed.length, mode, summary, imported: result.imported, failed: result.failed, rows: previewRows }, { status });
   } catch (error) {
     return NextResponse.json({ connected: false, error: error instanceof Error ? error.message : "Roster import failed." }, { status: 500 });
   }

@@ -36,6 +36,7 @@ type RosterImportResult = {
   summary: { totalRows: number; validRows: number; warningRows: number; errorRows: number };
   rows: RosterImportRow[];
   imported?: Array<{ rowNumber: number; siteId: string; scheduleId: string; calendarJobsCreated: number; calendarJobsUpdated: number }>;
+  failed?: Array<{ rowNumber: number; error: string }>;
 };
 type SetupPayload = {
   connected: boolean;
@@ -379,7 +380,10 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         await load(region);
         window.dispatchEvent(new Event("toc.operationsSetup.updated"));
         window.dispatchEvent(new Event("toc.calendar.updated"));
-        setMessage(`Roster import complete. ${payload.imported?.length || 0} jobs imported and pushed to Calendar.`);
+        const failed = payload.failed?.length || 0;
+        setMessage(failed
+          ? `Roster import completed with ${failed} row issue${failed === 1 ? "" : "s"}. ${payload.imported?.length || 0} jobs imported. Review the preview messages before relying on the roster.`
+          : `Roster import complete. ${payload.imported?.length || 0} jobs imported and pushed to Calendar.`);
       } else {
         setMessage(payload.summary.errorRows ? "Roster preview found issues to fix before import." : "Roster preview is ready to import.");
       }
@@ -421,6 +425,19 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     if (ok && editingScheduleId === schedule.id) {
       setEditingScheduleId("");
       setEditingScheduleDraft(blankSchedule());
+    }
+  }
+
+  async function deleteAllScheduleRows() {
+    if (allRegionMode) return;
+    const confirmed = window.confirm(`Delete all recurring jobs for ${region}? Future generated Calendar jobs for this region will be removed. Past Calendar history will remain.`);
+    if (!confirmed) return;
+    const ok = await mutate({ action: "deleteAllClientJobs" }, "All recurring jobs for this region were deleted and future Calendar jobs removed.");
+    if (ok) {
+      setEditingScheduleId("");
+      setEditingScheduleDraft(blankSchedule());
+      setRosterImportResult(null);
+      window.dispatchEvent(new Event("toc.calendar.updated"));
     }
   }
 
@@ -593,6 +610,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
               }} />
               <button type="button" disabled={rosterImportBusy || !rosterImportFile} onClick={() => submitRosterImport("preview")}>Preview Upload</button>
               <button type="button" disabled={rosterImportBusy || !rosterImportResult || rosterImportResult.summary.errorRows > 0} onClick={() => submitRosterImport("import")}>Confirm Import</button>
+              <button className="setup-danger-button" type="button" disabled={saving || allRegionMode || !schedules.length} onClick={deleteAllScheduleRows}>Delete All Jobs</button>
             </div>
             {rosterImportResult ? (
               <div className="setup-import-preview">
@@ -602,12 +620,13 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                   <span>{rosterImportResult.summary.warningRows} update warnings</span>
                   <span>{rosterImportResult.summary.errorRows} errors</span>
                   {rosterImportResult.imported ? <span>{rosterImportResult.imported.length} imported</span> : null}
+                  {rosterImportResult.failed?.length ? <span>{rosterImportResult.failed.length} failed</span> : null}
                 </div>
                 <div className="setup-table-scroll compact">
                   <table>
                     <thead><tr><th>Row</th><th>Status</th><th>Region</th><th>Client</th><th>Site</th><th>Day</th><th>Time</th><th>ABCD</th><th>Staff</th><th>Messages</th></tr></thead>
                     <tbody>
-                      {rosterImportResult.rows.slice(0, 20).map((row) => (
+                      {rosterImportResult.rows.map((row) => (
                         <tr key={`import-${row.rowNumber}`} className={row.status === "error" ? "setup-import-error" : row.status === "warning" ? "setup-import-warning" : ""}>
                           <td>{row.rowNumber}</td>
                           <td>{row.status}</td>
@@ -621,10 +640,18 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                           <td>{[...row.messages, row.duplicateHint].filter(Boolean).join(" ")}</td>
                         </tr>
                       ))}
+                      {rosterImportResult.failed?.map((row) => (
+                        <tr key={`import-failed-${row.rowNumber}`} className="setup-import-error">
+                          <td>{row.rowNumber}</td>
+                          <td>failed</td>
+                          <td colSpan={7}>Import failed after preview validation.</td>
+                          <td>{row.error}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-                {rosterImportResult.rows.length > 20 ? <small>Showing first 20 rows. Fix any errors in the workbook, then preview again.</small> : null}
+                <small>Showing all {rosterImportResult.rows.length} uploaded rows so the workbook can be checked before import.</small>
               </div>
             ) : null}
           </div>

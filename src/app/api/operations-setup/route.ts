@@ -201,6 +201,28 @@ async function removeFutureCalendarJobsForSchedule(scheduleId: string) {
   return { removedCalendarJobs: futureJobIds.length };
 }
 
+async function removeFutureCalendarJobsForSchedules(scheduleIds: string[]) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase server key is not configured.");
+  if (!scheduleIds.length) return { removedCalendarJobs: 0 };
+
+  const { data, error } = await supabase
+    .from("calendar_jobs")
+    .select("id")
+    .in("source_schedule_id", scheduleIds)
+    .gte("job_date", dateOnly(new Date()));
+  if (error) throw error;
+
+  const futureJobIds = ((data || []) as Array<{ id: string }>).map((row) => row.id);
+  if (!futureJobIds.length) return { removedCalendarJobs: 0 };
+
+  const { error: staffError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", futureJobIds);
+  if (staffError) throw staffError;
+  const { error: deleteError } = await supabase.from("calendar_jobs").delete().in("id", futureJobIds);
+  if (deleteError) throw deleteError;
+  return { removedCalendarJobs: futureJobIds.length };
+}
+
 async function readSetup(regionName: string, profileId: string) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { connected: false, error: "Supabase server key is not configured." };
@@ -728,6 +750,35 @@ export async function POST(request: Request) {
         details: cleanup
       });
       return NextResponse.json({ ...await readSetup(scope, user.id), deletion: cleanup });
+    }
+
+    if (action === "deleteAllClientJobs") {
+      const { data: scheduleRows, error: scheduleReadError } = await supabase
+        .from("site_schedules")
+        .select("id")
+        .eq("region_id", regionId)
+        .eq("status", "active");
+      if (scheduleReadError) throw scheduleReadError;
+
+      const scheduleIds = ((scheduleRows || []) as Array<{ id: string }>).map((row) => row.id);
+      const cleanup = await removeFutureCalendarJobsForSchedules(scheduleIds);
+      if (scheduleIds.length) {
+        const { error: staffDeleteError } = await supabase.from("site_schedule_staff").delete().in("site_schedule_id", scheduleIds);
+        if (staffDeleteError) throw staffDeleteError;
+        const { error: scheduleError } = await supabase
+          .from("site_schedules")
+          .update({ status: "inactive", updated_at: new Date().toISOString() })
+          .in("id", scheduleIds);
+        if (scheduleError) throw scheduleError;
+      }
+      await logTocAudit({
+        actor: user,
+        action: "operations_setup.client_jobs.delete_all",
+        entityTable: "site_schedules",
+        scope,
+        details: { removedSchedules: scheduleIds.length, ...cleanup }
+      });
+      return NextResponse.json({ ...await readSetup(scope, user.id), deletion: { removedSchedules: scheduleIds.length, ...cleanup } });
     }
 
     if (action === "upsertSchedule") {
