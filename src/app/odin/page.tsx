@@ -3,5 +3,5 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default function OdinPage() {
-  redirect("/admin");
+  redirect("/odin-control");
 }

@@ -33,7 +33,6 @@ const UrgentBroadcastControls = dynamic(() => import("@/components/UrgentBroadca
 const OperationsNewsControls = dynamic(() => import("@/components/OperationsNewsControls").then((mod) => mod.OperationsNewsControls), { loading: SettingManagerLoading });
 const OperationsSetupWizard = dynamic(() => import("@/components/OperationsSetupWizard").then((mod) => mod.OperationsSetupWizard), { loading: SettingManagerLoading });
 const AdminAuditTrail = dynamic(() => import("@/components/AdminAuditTrail").then((mod) => mod.AdminAuditTrail), { loading: SettingManagerLoading });
-const OdinConfidenceCentre = dynamic(() => import("@/components/OdinConfidenceCentre").then((mod) => mod.OdinConfidenceCentre), { loading: SettingManagerLoading });
 const NationalActionRequests = dynamic(() => import("@/components/NationalActionRequests").then((mod) => mod.NationalActionRequests), { loading: SettingManagerLoading });
 const StockOrderAdminReview = dynamic(() => import("@/components/StockOrderAdminReview").then((mod) => mod.StockOrderAdminReview), { loading: SettingManagerLoading });
 
@@ -112,11 +111,6 @@ export default async function AdminPageSettingDetail({ params }: PageProps) {
         {setting.slug === "audit-trail" ? (
           <Panel wide eyebrow="Audit trail" title="Odin, security and admin activity">
             <AdminAuditTrail />
-          </Panel>
-        ) : null}
-        {setting.slug === "odin-confidence" ? (
-          <Panel wide eyebrow="Odin Confidence" title="Data quality and routing trust">
-            <OdinConfidenceCentre />
           </Panel>
         ) : null}
         {setting.slug === "national-requests" ? (

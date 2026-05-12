@@ -165,7 +165,7 @@ export function OdinCommandClient() {
         <div>
           <span className="eyebrow">AI watch tower</span>
           <h2>Odin Command</h2>
-          <p>Odin reads TOC signals through controlled APIs, writes recommendations into this command queue, and cannot edit, close, approve or execute anything without express human approval.</p>
+          <p>Odin reads TOC signals through controlled APIs, writes operational work through audited routes, and has no access to admin user, password or account controls.</p>
         </div>
         <div className="odin-command-status">
           <strong>{context?.connected ? "Online" : "Ready"}</strong>

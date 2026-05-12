@@ -120,7 +120,7 @@ function sourceIssues(results: Record<string, ReadResult>) {
       category: "source",
       severity: "red",
       page: "Admin Settings",
-      href: "/admin/settings/odin-confidence",
+      href: "/odin-control",
       recommendedAction: "Check Supabase table access, RLS, service key and the API select fields for this source."
     }));
 }

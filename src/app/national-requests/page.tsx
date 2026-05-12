@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
 import { NationalActionRequests } from "@/components/NationalActionRequests";
-import { RosterGapReview } from "@/components/RosterGapReview";
 import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
 
 function getStoredScope() {
@@ -51,9 +50,6 @@ export default function NationalRequestsPage() {
             </Panel>
             <Panel wide eyebrow="Stock requests" title="Stock order requests from regions">
               <StockOrderAdminReview />
-            </Panel>
-            <Panel wide eyebrow="Odin roster scan" title="Detected roster gaps and staffing risks">
-              <RosterGapReview />
             </Panel>
           </section>
         </>

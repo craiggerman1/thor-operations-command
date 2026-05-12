@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
-import { AskOdinButton } from "@/components/AskOdinButton";
 import type { EnhancedActionItem } from "@/lib/action-state";
 import { tocFetch } from "@/lib/toc-client-auth";
 
@@ -218,17 +217,6 @@ export default function ActionDetailPage() {
                 <strong>{currentAction.dueDate}</strong>
                 <small>{currentAction.closeFlow}</small>
               </div>
-              <AskOdinButton
-                sourceType="action_item"
-                sourceId={currentAction.id}
-                title={currentAction.title}
-                region={currentAction.region}
-                severity={currentAction.severity}
-                summary={`${currentAction.source} action item requires review: ${currentAction.detail}`}
-                noticed={`${currentAction.directive} is open for ${currentAction.region} with due date ${currentAction.dueDate}.`}
-                whyItMatters="Open action items affect Region Health and may require national escalation if not resolved."
-                recommendedAction="Summarise the blocker, identify missing evidence, and recommend the safest close-out path for the manager."
-              />
               <Link className="node-action" href={sourceHref}>Open source page</Link>
             </aside>
             <div className="action-closeout-panel">

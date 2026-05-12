@@ -52,9 +52,9 @@ export const odinStatusLabels: Record<OdinItemStatus, string> = {
 
 export const odinCommandFeatures = [
   "Ask Odin about TOC records and operational risk.",
-  "Review Odin Alerts, recommendations, daily briefs and follow-ups.",
-  "TOC users approve, reject, dismiss or close Odin action recommendations.",
-  "Keep every Odin action visible and logged before sensitive work proceeds."
+  "Review Odin alerts, recommendations, daily briefs and follow-ups.",
+  "Keep every Odin write visible, routed and auditable.",
+  "Odin operational access remains separate from admin user, password and account controls."
 ];
 
 export const odinDefaultItems: OdinItem[] = [];

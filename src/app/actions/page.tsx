@@ -33,8 +33,6 @@ export default function ActionsPage() {
   const canQuickManage = role === "admin" || (role === "manager" && scope === "National");
   const canQuickProgress = role === "admin" || role === "manager";
   const closureSummary = buildClosureSummary(scopedActions);
-  const managerWorkload = buildManagerWorkload(scopedActions);
-  const repeatGroups = buildRepeatGroups(scopedActions);
   const systemDataActions = scopedActions.filter(isSystemDataAction);
   const operationalActions = scopedActions.filter((action) => !isSystemDataAction(action));
   const queueFilters: { value: QueueFilter; label: string; count: number }[] = [
@@ -173,41 +171,6 @@ export default function ActionsPage() {
       <PageIntro title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <FlowHeading eyebrow="Action Centre" title="Ensure all items are actioned, owned, escalated where needed, and then cleared from the queue." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Odin closure control" title="Action ageing and escalation" pill={`${closureSummary.carryover} carryover`}>
-          <div className="closure-control-grid">
-            <ClosureMetric label="Open actions" value={sortedActions.length} tone={sortedActions.length ? "amber" : "green"} />
-            <ClosureMetric label="Overdue" value={closureSummary.overdue} tone={closureSummary.overdue ? "red" : "green"} />
-            <ClosureMetric label="Stale >24h" value={closureSummary.stale} tone={closureSummary.stale ? "amber" : "green"} />
-            <ClosureMetric label="Craig escalation" value={closureSummary.craigEscalations} tone={closureSummary.craigEscalations ? "red" : "green"} />
-            <ClosureMetric label="Blocked" value={closureSummary.blocked} tone={closureSummary.blocked ? "red" : "green"} />
-            <ClosureMetric label="In progress" value={closureSummary.inProgress} tone={closureSummary.inProgress ? "amber" : "green"} />
-            <ClosureMetric label="Awaiting review" value={closureSummary.review} tone={closureSummary.review ? "amber" : "green"} />
-            <ClosureMetric label="System/data" value={systemDataActions.length} tone={systemDataActions.length ? "amber" : "green"} />
-          </div>
-          {systemDataActions.length ? (
-            <div className="repeat-issue-strip">
-              <span className="eyebrow">System/data queue</span>
-              <Tag tone="amber">{systemDataActions.length} National/Admin item{systemDataActions.length === 1 ? "" : "s"}</Tag>
-              <small>These are TOC source, mapping, watcher or database issues. They stay with National/Admin instead of being pushed to regional managers.</small>
-            </div>
-          ) : null}
-          <div className="manager-workload-grid">
-            {managerWorkload.map((item) => (
-              <article className={`manager-workload-card ${item.tone}`} key={item.region}>
-                <span>{item.region}</span>
-                <strong>{item.total}</strong>
-                <small>{item.overdue} overdue / {item.carryover} carryover</small>
-              </article>
-            ))}
-            {managerWorkload.length ? null : <div className="empty-state">No manager workload pressure currently open.</div>}
-          </div>
-          {repeatGroups.length ? (
-            <div className="repeat-issue-strip">
-              <span className="eyebrow">Repeated issue watch</span>
-              {repeatGroups.map((group) => <Tag tone="amber" key={group.key}>{group.count} x {group.label}</Tag>)}
-            </div>
-          ) : null}
-        </Panel>
         <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} shown / ${scopedActions.length} open`}>
           {message ? <div className="admin-hint-message">{message}</div> : null}
           <div className="action-filter-strip" aria-label="Action queue filters">
@@ -300,53 +263,4 @@ function actionMatchesQueueFilter(action: EnhancedActionItem, filter: QueueFilte
   if (filter === "carryover") return action.isCarryover;
   if (filter === "system") return isSystemDataAction(action);
   return true;
-}
-
-function buildManagerWorkload(actions: EnhancedActionItem[]) {
-  const workload = actions.reduce<Record<string, { region: string; total: number; overdue: number; carryover: number }>>((lookup, action) => {
-    const region = action.region || "National";
-    const current = lookup[region] || { region, total: 0, overdue: 0, carryover: 0 };
-    lookup[region] = {
-      ...current,
-      total: current.total + 1,
-      overdue: current.overdue + (action.isOverdue ? 1 : 0),
-      carryover: current.carryover + (action.isCarryover ? 1 : 0)
-    };
-    return lookup;
-  }, {});
-
-  return Object.values(workload)
-    .sort((a, b) => b.overdue - a.overdue || b.carryover - a.carryover || b.total - a.total)
-    .map((item) => ({
-      ...item,
-      tone: item.overdue ? "red" : item.carryover ? "amber" : "green" as "red" | "amber" | "green"
-    }));
-}
-
-function normaliseRepeatKey(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function buildRepeatGroups(actions: EnhancedActionItem[]) {
-  const groups = actions.reduce<Record<string, { key: string; label: string; count: number }>>((lookup, action) => {
-    const label = `${action.region} ${action.source} ${normaliseRepeatKey(action.title)}`;
-    const key = normaliseRepeatKey(label);
-    const current = lookup[key] || { key, label: action.title, count: 0 };
-    lookup[key] = { ...current, count: current.count + 1 };
-    return lookup;
-  }, {});
-
-  return Object.values(groups)
-    .filter((group) => group.count > 1)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 4);
-}
-
-function ClosureMetric({ label, value, tone }: { label: string; value: number; tone: "red" | "amber" | "green" }) {
-  return (
-    <article className={`closure-metric-card ${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
-  );
 }
