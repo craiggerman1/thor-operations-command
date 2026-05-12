@@ -33,7 +33,7 @@ type RosterImportResult = {
   connected: boolean;
   mode: "preview" | "import";
   error?: string;
-  summary: { totalRows: number; validRows: number; warningRows: number; errorRows: number; importableRows?: number; importedRows?: number; failedRows?: number; allRowsImported?: boolean };
+  summary: { totalRows: number; validRows: number; warningRows: number; errorRows: number; importableRows?: number; importedRows?: number; failedRows?: number; batchOffset?: number; batchLimit?: number; batchCount?: number; nextOffset?: number; remainingRows?: number; allRowsImported?: boolean };
   rows: RosterImportRow[];
   imported?: Array<{ rowNumber: number; siteId: string; scheduleId: string; calendarJobsCreated: number; calendarJobsUpdated: number }>;
   failed?: Array<{ rowNumber: number; error: string }>;
@@ -403,6 +403,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       setMessage("Choose a roster import file first.");
       return;
     }
+    const batchSize = 20;
     setRosterImportBusy(true);
     setMessage("");
     setRosterImportStatus({
@@ -413,15 +414,57 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         : "Writing valid rows to Recurring Client Jobs, linking normal staff and regenerating Calendar jobs."
     });
     try {
-      const formData = new FormData();
-      formData.append("file", rosterImportFile);
-      formData.append("mode", mode);
-      formData.append("region", allRegionMode ? "National" : region);
-      const response = await tocFetch("/api/operations-setup/roster-import", { method: "POST", body: formData });
-      const payload = await response.json() as RosterImportResult;
-      setRosterImportResult(payload);
-      if (!response.ok) throw new Error(payload.error || "Roster import failed.");
+      const sendRosterImportBatch = async (batchMode: "preview" | "import", batchOffset = 0) => {
+        const formData = new FormData();
+        formData.append("file", rosterImportFile);
+        formData.append("mode", batchMode);
+        formData.append("region", allRegionMode ? "National" : region);
+        if (batchMode === "import") {
+          formData.append("batchOffset", String(batchOffset));
+          formData.append("batchLimit", String(batchSize));
+        }
+        const response = await tocFetch("/api/operations-setup/roster-import", { method: "POST", body: formData });
+        const payload = await response.json() as RosterImportResult;
+        if (!response.ok) throw new Error(payload.error || "Roster import failed.");
+        return payload;
+      };
+
       if (mode === "import") {
+        let offset = 0;
+        let expected = rosterImportResult?.summary.importableRows || 0;
+        let previewRows = rosterImportResult?.rows || [];
+        const importedRows: RosterImportResult["imported"] = [];
+        const failedRows: RosterImportResult["failed"] = [];
+        let latestPayload: RosterImportResult | null = null;
+
+        do {
+          setRosterImportStatus({
+            tone: "blue",
+            title: "Saving roster workbook",
+            detail: expected
+              ? `Saving rows ${offset + 1}-${Math.min(offset + batchSize, expected)} of ${expected}. This keeps large imports stable and prevents timeout.`
+              : "Starting roster import in stable batches."
+          });
+          latestPayload = await sendRosterImportBatch("import", offset);
+          if (!expected) expected = latestPayload.summary.importableRows || 0;
+          if (!previewRows.length) previewRows = latestPayload.rows || [];
+          importedRows.push(...(latestPayload.imported || []));
+          failedRows.push(...(latestPayload.failed || []));
+          offset = latestPayload.summary.nextOffset ?? offset + (latestPayload.summary.batchCount || batchSize);
+          setRosterImportResult({
+            ...latestPayload,
+            rows: previewRows.length ? previewRows : latestPayload.rows,
+            imported: importedRows,
+            failed: failedRows,
+            summary: {
+              ...latestPayload.summary,
+              importedRows: importedRows.length,
+              failedRows: failedRows.length,
+              allRowsImported: expected ? offset >= expected && !failedRows.length : latestPayload.summary.allRowsImported
+            }
+          });
+        } while (expected && offset < expected && latestPayload?.summary.remainingRows !== 0);
+
         clearTocClientCache();
         setRosterImportStatus({
           tone: "blue",
@@ -432,24 +475,41 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
         clearTocClientCache();
         window.dispatchEvent(new Event("toc.operationsSetup.updated"));
         window.dispatchEvent(new Event("toc.calendar.updated"));
-        const failed = payload.failed?.length || 0;
-        const imported = payload.imported?.length || 0;
-        const expected = payload.summary.importableRows ?? payload.summary.totalRows - payload.summary.errorRows;
+        const failed = failedRows.length;
+        const imported = importedRows.length;
+        const finalExpected = expected || latestPayload?.summary.importableRows || 0;
+        const finalPayload = latestPayload || rosterImportResult;
+        if (finalPayload) {
+          setRosterImportResult({
+            ...finalPayload,
+            rows: previewRows.length ? previewRows : finalPayload.rows,
+            imported: importedRows,
+            failed: failedRows,
+            summary: {
+              ...finalPayload.summary,
+              importedRows: imported,
+              failedRows: failed,
+              allRowsImported: imported === finalExpected && failed === 0
+            }
+          });
+        }
         setRosterImportStatus(failed
           ? {
               tone: "amber",
               title: "Roster import completed with row issues",
-              detail: `${imported}/${expected} importable rows saved. ${failed} row issue${failed === 1 ? "" : "s"} need review below.`
+              detail: `${imported}/${finalExpected} importable rows saved. ${failed} row issue${failed === 1 ? "" : "s"} need review below.`
             }
           : {
               tone: "green",
               title: "Roster import saved successfully",
-              detail: `All ${imported}/${expected} importable rows saved to Recurring Client Jobs and pushed to Calendar. The table below has been refreshed.`
+              detail: `All ${imported}/${finalExpected} importable rows saved to Recurring Client Jobs and pushed to Calendar. The table below has been refreshed.`
             });
         setMessage(failed
-          ? `Roster import completed with ${failed} row issue${failed === 1 ? "" : "s"}. ${imported}/${expected} rows saved. Review the failed row message before relying on the roster.`
-          : `Roster import verified. All ${imported}/${expected} importable rows saved to Recurring Client Jobs and pushed to Calendar.`);
+          ? `Roster import completed with ${failed} row issue${failed === 1 ? "" : "s"}. ${imported}/${finalExpected} rows saved. Review the failed row message before relying on the roster.`
+          : `Roster import verified. All ${imported}/${finalExpected} importable rows saved to Recurring Client Jobs and pushed to Calendar.`);
       } else {
+        const payload = await sendRosterImportBatch("preview");
+        setRosterImportResult(payload);
         setRosterImportStatus(payload.summary.errorRows
           ? {
               tone: "red",

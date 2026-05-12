@@ -6,6 +6,7 @@ import { canAccessScope, hasNationalAccess, requireTocScope, type TocAuthenticat
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type RegionRow = { id: string; name: string };
 type StaffRow = {
@@ -207,6 +208,12 @@ function splitNames(value: unknown) {
 function parseActive(value: unknown) {
   const key = cleanKey(value || "yes");
   return !["no", "n", "false", "inactive", "0"].includes(key);
+}
+
+function cleanPositiveInteger(value: unknown, fallback: number, min: number, max: number) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(numeric)));
 }
 
 function parseWeekFlag(value: unknown) {
@@ -593,6 +600,8 @@ export async function POST(request: Request) {
   const file = formData.get("file");
   const requestedRegion = cleanString(formData.get("region")) || "Brisbane";
   const mode = cleanKey(formData.get("mode")) === "import" ? "import" : "preview";
+  const batchOffset = cleanPositiveInteger(formData.get("batchOffset"), 0, 0, 10000);
+  const batchLimit = cleanPositiveInteger(formData.get("batchLimit"), 25, 1, 50);
   const permission = await requireTocScope(request, requestedRegion);
   if (permission.error) return permission.error;
   if (!(file instanceof File)) return NextResponse.json({ error: "Roster import file is required." }, { status: 400 });
@@ -620,7 +629,10 @@ export async function POST(request: Request) {
     if (summary.errorRows) {
       return NextResponse.json({ connected: false, mode, summary, rows: previewRows, error: "Fix import errors before confirming the roster import." }, { status: 400 });
     }
-    const result = await importRows(previewRows, permission.user);
+    const importableRows = previewRows.filter((row) => row.status !== "error" && row.active);
+    const batchRows = importableRows.slice(batchOffset, batchOffset + batchLimit);
+    const result = await importRows(batchRows, permission.user);
+    const nextOffset = Math.min(batchOffset + batchRows.length, importableRows.length);
     const status = result.failed.length ? 207 : 200;
     return NextResponse.json({
       connected: !result.failed.length,
@@ -629,7 +641,12 @@ export async function POST(request: Request) {
         ...summary,
         importedRows: result.imported.length,
         failedRows: result.failed.length,
-        allRowsImported: result.imported.length === summary.importableRows && result.failed.length === 0
+        batchOffset,
+        batchLimit,
+        batchCount: batchRows.length,
+        nextOffset,
+        remainingRows: Math.max(0, importableRows.length - nextOffset),
+        allRowsImported: nextOffset >= importableRows.length && result.failed.length === 0
       },
       imported: result.imported,
       failed: result.failed,
