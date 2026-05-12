@@ -450,6 +450,8 @@ export async function POST(request: Request) {
       const name = cleanString(payload.name);
       if (!name) return NextResponse.json({ error: "Staff name is required." }, { status: 400 });
       if (isUuid(payload.id) && !hasNationalAccess(user)) await ensureStaffBelongToRegion([payload.id], regionId);
+      const mobile = cleanString(payload.mobile);
+      const whatsapp = cleanString(payload.whatsapp) || (payload.useMobileAsWhatsapp === true ? mobile : "");
       const row = {
         display_name: name,
         preferred_name: cleanString(payload.preferredName) || null,
@@ -457,8 +459,8 @@ export async function POST(request: Request) {
         status: cleanString(payload.status) || "active",
         primary_region_id: regionId,
         skills: cleanSkills(payload.skills),
-        contact_mobile: cleanString(payload.mobile) || null,
-        contact_whatsapp: cleanString(payload.whatsapp) || null,
+        contact_mobile: mobile || null,
+        contact_whatsapp: whatsapp || null,
         availability_sheet_name: cleanString(payload.availabilitySheetName || name),
         induction_sheet_name: cleanString(payload.inductionSheetName || name),
         reliability_notes: cleanString(payload.notes),
@@ -474,6 +476,33 @@ export async function POST(request: Request) {
       await saveStaffRegions(data.id, [regionId]);
       await logTocAudit({ actor: user, action: isUuid(payload.id) ? "operations_setup.staff.update" : "operations_setup.staff.create", entityTable: "staff_profiles", entityId: data.id, scope });
       return NextResponse.json(await readSetup(scope, user.id));
+    }
+
+    if (action === "syncRegionWhatsappFromMobile") {
+      const [profilesResult, linksResult] = await Promise.all([
+        supabase.from("staff_profiles").select("id,primary_region_id,contact_mobile").eq("status", "active"),
+        supabase.from("staff_profile_regions").select("staff_profile_id,region_id").eq("region_id", regionId)
+      ]);
+      if (profilesResult.error) throw profilesResult.error;
+      if (linksResult.error) throw linksResult.error;
+      const linkedIds = new Set(((linksResult.data || []) as StaffRegionRow[]).map((link) => link.staff_profile_id));
+      const profileRows = ((profilesResult.data || []) as Array<{ id: string; primary_region_id: string | null; contact_mobile: string | null }>)
+        .filter((profile) => (profile.primary_region_id === regionId || linkedIds.has(profile.id)) && cleanString(profile.contact_mobile));
+      const updates = await Promise.all(profileRows.map((profile) => supabase
+        .from("staff_profiles")
+        .update({ contact_whatsapp: cleanString(profile.contact_mobile), updated_at: new Date().toISOString() })
+        .eq("id", profile.id)
+      ));
+      const firstError = updates.find((result) => result.error)?.error;
+      if (firstError) throw firstError;
+      await logTocAudit({
+        actor: user,
+        action: "operations_setup.staff.whatsapp_from_mobile",
+        entityTable: "staff_profiles",
+        scope,
+        details: { updatedCount: profileRows.length }
+      });
+      return NextResponse.json({ ...await readSetup(scope, user.id), whatsappSyncedCount: profileRows.length });
     }
 
     if (action === "removeStaffFromRegion") {

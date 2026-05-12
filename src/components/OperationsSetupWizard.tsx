@@ -166,6 +166,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [inductionUrl, setInductionUrl] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [useMobileAsWhatsapp, setUseMobileAsWhatsapp] = useState(false);
   const [staffSearch, setStaffSearch] = useState("");
   const [scheduleSearch, setScheduleSearch] = useState("");
   const [tableRegionFilter, setTableRegionFilter] = useState(allRegionsLabel);
@@ -295,7 +296,14 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
   async function addStaffRow() {
     const selectedSkills = staffDraft.skills?.length ? staffDraft.skills : ["Wash Hand"];
-    const ok = await mutate({ action: "upsertStaff", ...staffDraft, role: roleFromSkills(selectedSkills), skills: selectedSkills }, "Staff member saved to the region database.");
+    const ok = await mutate({
+      action: "upsertStaff",
+      ...staffDraft,
+      whatsapp: useMobileAsWhatsapp ? staffDraft.mobile : staffDraft.whatsapp,
+      useMobileAsWhatsapp,
+      role: roleFromSkills(selectedSkills),
+      skills: selectedSkills
+    }, "Staff member saved to the region database.");
     if (ok) setStaffDraft(blankStaff());
   }
 
@@ -310,7 +318,14 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
   async function saveStaffRowEdit() {
     const selectedSkills = editingStaffDraft.skills?.length ? editingStaffDraft.skills : ["Wash Hand"];
-    const ok = await mutate({ action: "upsertStaff", ...editingStaffDraft, role: roleFromSkills(selectedSkills), skills: selectedSkills }, "Staff row saved to the region database.");
+    const ok = await mutate({
+      action: "upsertStaff",
+      ...editingStaffDraft,
+      whatsapp: useMobileAsWhatsapp ? editingStaffDraft.mobile : editingStaffDraft.whatsapp,
+      useMobileAsWhatsapp,
+      role: roleFromSkills(selectedSkills),
+      skills: selectedSkills
+    }, "Staff row saved to the region database.");
     if (ok) {
       setEditingStaffId("");
       setEditingStaffDraft(blankStaff());
@@ -325,6 +340,16 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     if (ok && editingStaffId === person.id) {
       setEditingStaffId("");
       setEditingStaffDraft(blankStaff());
+    }
+  }
+
+  async function toggleMobileAsWhatsapp(checked: boolean) {
+    setUseMobileAsWhatsapp(checked);
+    if (checked) {
+      setStaffDraft((current) => ({ ...current, whatsapp: current.mobile || current.whatsapp || "" }));
+      setEditingStaffDraft((current) => ({ ...current, whatsapp: current.mobile || current.whatsapp || "" }));
+      const ok = await mutate({ action: "syncRegionWhatsappFromMobile" }, "WhatsApp numbers copied from mobile numbers for this region.");
+      if (!ok) setUseMobileAsWhatsapp(false);
     }
   }
 
@@ -478,6 +503,13 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             </div>
             <button disabled={saving || allRegionMode} type="submit">Link Sheet</button>
           </form>
+          <label className="setup-option-row">
+            <input type="checkbox" checked={useMobileAsWhatsapp} disabled={saving || allRegionMode} onChange={(event) => void toggleMobileAsWhatsapp(event.target.checked)} />
+            <span>
+              <strong>Use mobile numbers as WhatsApp numbers for this region</strong>
+              <small>Copies each staff mobile into the WhatsApp field so Odin can use the correct contact channel when needed.</small>
+            </span>
+          </label>
           {allRegionMode ? <div className="setup-empty">All regions is a filterable overview. Select a specific region above before adding or editing staff.</div> : null}
           <CollapsibleTable
             title="Current Staff"
@@ -493,8 +525,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <tbody>
               <tr className="setup-new-row">
                 <td><input placeholder="Staff name" value={staffDraft.name || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, name: event.target.value }))} /></td>
-                <td><input placeholder="Mobile" value={staffDraft.mobile || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, mobile: event.target.value }))} /></td>
-                <td><input placeholder="WhatsApp / Telegram" value={staffDraft.whatsapp || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></td>
+                <td><input placeholder="Mobile" value={staffDraft.mobile || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, mobile: event.target.value, whatsapp: useMobileAsWhatsapp ? event.target.value : current.whatsapp }))} /></td>
+                <td><input placeholder="WhatsApp / Telegram" value={useMobileAsWhatsapp ? staffDraft.mobile || "" : staffDraft.whatsapp || ""} disabled={useMobileAsWhatsapp} onChange={(event) => setStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></td>
                 <td><div className="setup-checks setup-row-checks">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div></td>
                 <td><input placeholder="Exact sheet name" value={staffDraft.availabilitySheetName || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /></td>
                 <td><span className="setup-match-chip pending">{availabilityUrl ? "Ready to match" : "Link sheet"}</span></td>
@@ -511,8 +543,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
               return (
                 <tr key={rowKey} className={isEditing ? "setup-editing-row" : ""}>
                   <td>{isEditing ? <input value={editingStaffDraft.name || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, name: event.target.value }))} /> : person.name}</td>
-                  <td>{isEditing ? <input value={editingStaffDraft.mobile || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, mobile: event.target.value }))} /> : person.mobile || "No phone"}</td>
-                  <td>{isEditing ? <input value={editingStaffDraft.whatsapp || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} /> : person.whatsapp || "-"}</td>
+                  <td>{isEditing ? <input value={editingStaffDraft.mobile || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, mobile: event.target.value, whatsapp: useMobileAsWhatsapp ? event.target.value : current.whatsapp }))} /> : person.mobile || "No phone"}</td>
+                  <td>{isEditing ? <input value={useMobileAsWhatsapp ? editingStaffDraft.mobile || "" : editingStaffDraft.whatsapp || ""} disabled={useMobileAsWhatsapp} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} /> : person.whatsapp || (useMobileAsWhatsapp ? person.mobile : "") || "-"}</td>
                   <td>
                     {isEditing ? (
                       <div className="setup-checks setup-row-checks">
