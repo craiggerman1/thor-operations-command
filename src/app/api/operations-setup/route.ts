@@ -86,6 +86,14 @@ function cleanArray(value: unknown) {
   return [];
 }
 
+function chunkArray<T>(items: T[], size = 100) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 function cleanSkills(value: unknown) {
   const selected = cleanArray(value);
   return allowedSkills.filter((skill) => selected.includes(skill));
@@ -194,10 +202,14 @@ async function removeFutureCalendarJobsForSchedule(scheduleId: string) {
   if (error) throw error;
   const futureJobIds = ((data || []) as Array<{ id: string }>).map((row) => row.id);
   if (!futureJobIds.length) return { removedCalendarJobs: 0 };
-  const { error: staffError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", futureJobIds);
-  if (staffError) throw staffError;
-  const { error: deleteError } = await supabase.from("calendar_jobs").delete().in("id", futureJobIds);
-  if (deleteError) throw deleteError;
+  for (const jobIdBatch of chunkArray(futureJobIds)) {
+    const { error: staffError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", jobIdBatch);
+    if (staffError) throw staffError;
+  }
+  for (const jobIdBatch of chunkArray(futureJobIds)) {
+    const { error: deleteError } = await supabase.from("calendar_jobs").delete().in("id", jobIdBatch);
+    if (deleteError) throw deleteError;
+  }
   return { removedCalendarJobs: futureJobIds.length };
 }
 
@@ -206,20 +218,27 @@ async function removeFutureCalendarJobsForSchedules(scheduleIds: string[]) {
   if (!supabase) throw new Error("Supabase server key is not configured.");
   if (!scheduleIds.length) return { removedCalendarJobs: 0 };
 
-  const { data, error } = await supabase
-    .from("calendar_jobs")
-    .select("id")
-    .in("source_schedule_id", scheduleIds)
-    .gte("job_date", dateOnly(new Date()));
-  if (error) throw error;
+  const futureJobIds: string[] = [];
+  for (const scheduleIdBatch of chunkArray(scheduleIds)) {
+    const { data, error } = await supabase
+      .from("calendar_jobs")
+      .select("id")
+      .in("source_schedule_id", scheduleIdBatch)
+      .gte("job_date", dateOnly(new Date()));
+    if (error) throw error;
+    futureJobIds.push(...((data || []) as Array<{ id: string }>).map((row) => row.id));
+  }
 
-  const futureJobIds = ((data || []) as Array<{ id: string }>).map((row) => row.id);
   if (!futureJobIds.length) return { removedCalendarJobs: 0 };
 
-  const { error: staffError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", futureJobIds);
-  if (staffError) throw staffError;
-  const { error: deleteError } = await supabase.from("calendar_jobs").delete().in("id", futureJobIds);
-  if (deleteError) throw deleteError;
+  for (const jobIdBatch of chunkArray(futureJobIds)) {
+    const { error: staffError } = await supabase.from("calendar_job_staff").delete().in("calendar_job_id", jobIdBatch);
+    if (staffError) throw staffError;
+  }
+  for (const jobIdBatch of chunkArray(futureJobIds)) {
+    const { error: deleteError } = await supabase.from("calendar_jobs").delete().in("id", jobIdBatch);
+    if (deleteError) throw deleteError;
+  }
   return { removedCalendarJobs: futureJobIds.length };
 }
 
@@ -763,13 +782,18 @@ export async function POST(request: Request) {
       const scheduleIds = ((scheduleRows || []) as Array<{ id: string }>).map((row) => row.id);
       const cleanup = await removeFutureCalendarJobsForSchedules(scheduleIds);
       if (scheduleIds.length) {
-        const { error: staffDeleteError } = await supabase.from("site_schedule_staff").delete().in("site_schedule_id", scheduleIds);
-        if (staffDeleteError) throw staffDeleteError;
-        const { error: scheduleError } = await supabase
-          .from("site_schedules")
-          .update({ status: "inactive", updated_at: new Date().toISOString() })
-          .in("id", scheduleIds);
-        if (scheduleError) throw scheduleError;
+        const updatedAt = new Date().toISOString();
+        for (const scheduleIdBatch of chunkArray(scheduleIds)) {
+          const { error: staffDeleteError } = await supabase.from("site_schedule_staff").delete().in("site_schedule_id", scheduleIdBatch);
+          if (staffDeleteError) throw staffDeleteError;
+        }
+        for (const scheduleIdBatch of chunkArray(scheduleIds)) {
+          const { error: scheduleError } = await supabase
+            .from("site_schedules")
+            .update({ status: "inactive", updated_at: updatedAt })
+            .in("id", scheduleIdBatch);
+          if (scheduleError) throw scheduleError;
+        }
       }
       await logTocAudit({
         actor: user,
