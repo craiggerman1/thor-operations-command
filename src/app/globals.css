@@ -419,6 +419,7 @@ body.next-app .developer-region-control {
 .setup-hero select,
 .setup-grid-form input,
 .setup-grid-form select,
+.setup-source-row input,
 .setup-induction-card input,
 .setup-induction-card select {
   min-height: 34px;
@@ -478,6 +479,29 @@ body.next-app .developer-region-control {
   align-items: center;
 }
 
+.setup-source-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 9px;
+  align-items: end;
+  padding: 9px;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-radius: 8px;
+  background: rgba(238, 250, 252, 0.65);
+}
+
+.setup-source-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.setup-source-row span {
+  color: #5b7081;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .setup-grid-form .wide-input {
   grid-column: span 2;
 }
@@ -506,6 +530,7 @@ body.next-app .developer-region-control {
 }
 
 .setup-grid-form button,
+.setup-source-row button,
 .setup-induction-card button,
 .training-panel button {
   min-height: 34px;
@@ -735,6 +760,11 @@ body.next-app .developer-region-control {
 .setup-match-chip.missing {
   background: rgba(210, 57, 45, 0.12);
   color: #b83125;
+}
+
+.setup-match-chip.pending {
+  background: rgba(233, 169, 45, 0.16);
+  color: #9c6a13;
 }
 
 .setup-induction-grid,
@@ -1027,7 +1057,8 @@ body.next-app .developer-region-control {
 
 @media (max-width: 900px) {
   .setup-hero,
-  .setup-grid-form {
+  .setup-grid-form,
+  .setup-source-row {
     grid-template-columns: 1fr;
   }
 

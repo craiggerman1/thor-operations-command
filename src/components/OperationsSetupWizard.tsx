@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { allRegions } from "@/lib/access";
-import { tocFetch } from "@/lib/toc-client-auth";
+import { clearTocClientCache, tocFetch } from "@/lib/toc-client-auth";
 
 type StaffRow = { id: string; name: string; role: string; status: string; skills: string[]; mobile: string; whatsapp: string; availabilitySheetName: string; inductionSheetName: string; notes: string; regions?: string[] };
 type SiteRow = { id: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; requiredCrewCount: number; notes: string; status: string; regions?: string[] };
@@ -26,7 +26,6 @@ type InductionFeed = { staff?: Array<{ name: string }> };
 
 const skills = ["Wash Hand", "Driver", "Team Leader"];
 const recurrences = ["None", "Daily", "Weekly", "Fortnightly", "4 weekly", "Custom"];
-const inductionStatuses = ["", "Inducted", "Not Inducted", "Expired", "Expiring Soon", "Expiring This Month"];
 const allRegionsLabel = "All regions";
 
 function today() {
@@ -245,8 +244,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     }
   }
 
-  async function saveStaff(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function addStaffRow() {
     const selectedSkills = staffDraft.skills?.length ? staffDraft.skills : ["Wash Hand"];
     const ok = await mutate({ action: "upsertStaff", ...staffDraft, role: roleFromSkills(selectedSkills), skills: selectedSkills }, "Staff member saved to the region database.");
     if (ok) setStaffDraft(blankStaff());
@@ -330,23 +328,13 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     }
   }
 
-  async function saveInduction(staffRow: StaffRow, site: SiteRow, existing?: InductionRow, status = existing?.status || "", expiry = existing?.expiry || "") {
-    await mutate({
-      action: "upsertInduction",
-      id: existing?.id,
-      staffId: staffRow.id,
-      siteId: site.id,
-      staffName: staffRow.name,
-      siteName: site.siteName,
-      status,
-      expiry
-    }, `${staffRow.name} induction saved for ${site.siteName}.`);
-  }
-
   async function saveAvailability(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const ok = await mutate({ action: "saveAvailabilitySource", spreadsheetUrl: availabilityUrl, sourceName: `${region} Staff Availability` }, "Availability sheet linked for this region.");
-    if (ok) void loadAvailabilityRows([region]);
+    if (ok) {
+      clearTocClientCache();
+      void loadAvailabilityRows([region]);
+    }
   }
 
   async function saveInductionSource(event: FormEvent<HTMLFormElement>) {
@@ -363,26 +351,25 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     }
   }
 
-  function findInduction(staffRow: StaffRow, site: SiteRow) {
-    return inductions.find((item) => item.staffId === staffRow.id && item.siteId === site.id)
-      || inductions.find((item) => item.staffName === staffRow.name && item.siteName === site.siteName);
-  }
-
   function sheetMatchForStaff(person: StaffRow) {
     const names = rowRegions(person, region).flatMap((item) => availabilityRowsByRegion[item] || []);
     const expected = cleanNameKey(person.availabilitySheetName || person.name);
+    const hasLinkedSource = Boolean(availabilityUrl || payload?.availabilitySource?.spreadsheetUrl);
     return {
       matched: names.some((name) => cleanNameKey(name) === expected),
-      count: names.length
+      count: names.length,
+      hasLinkedSource
     };
   }
 
   function inductionMatchForStaff(person: StaffRow) {
     const names = rowRegions(person, region).flatMap((item) => inductionRowsByRegion[item] || []);
     const expected = cleanNameKey(person.inductionSheetName || person.name);
+    const hasLinkedSource = Boolean(inductionUrl || payload?.inductionSource?.spreadsheetUrl);
     return {
       matched: names.some((name) => cleanNameKey(name) === expected),
-      count: names.length
+      count: names.length,
+      hasLinkedSource
     };
   }
 
@@ -412,41 +399,49 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 1 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 1. Staff</strong><p>Add staff, link the region availability sheet, and confirm each staff profile maps to the correct Google Sheet row so Odin can match people, availability and jobs without guessing.</p></div>
-          <form className="setup-grid-form" onSubmit={saveAvailability}>
-            <input className="wide-input" placeholder="Google Sheet URL for this region's staff availability" value={availabilityUrl} onChange={(event) => setAvailabilityUrl(event.target.value)} />
-            <button disabled={saving || allRegionMode} type="submit">Link Availability Sheet</button>
-          </form>
-          <form className="setup-grid-form" onSubmit={saveStaff}>
-            <input placeholder="Staff name" value={staffDraft.name || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, name: event.target.value }))} />
-            <input placeholder="Mobile phone" value={staffDraft.mobile || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, mobile: event.target.value }))} />
-            <input placeholder="WhatsApp / Telegram phone" value={staffDraft.whatsapp || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} />
-            <input placeholder="Exact availability sheet name" value={staffDraft.availabilitySheetName || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} />
-            <div className="setup-checks setup-checks-wide">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div>
-            <input placeholder="Notes for Odin / manager" value={staffDraft.notes || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, notes: event.target.value }))} />
-            <button disabled={saving || allRegionMode} type="submit">{staffDraft.id ? "Save Staff" : "Add Staff"}</button>
-            {staffDraft.id ? <button type="button" onClick={() => setStaffDraft(blankStaff())}>Cancel Edit</button> : null}
+          <div className="setup-copy"><strong>Step 1. Staff and availability source</strong><p>Link the staff availability sheet, then maintain the region staff list directly in the table. The availability row must match the name in the Google Sheet so Odin can join staff, availability, jobs and inductions correctly.</p></div>
+          <form className="setup-source-row" onSubmit={saveAvailability}>
+            <div>
+              <span>Staff availability Google Sheet</span>
+              <input placeholder="Paste this region's staff availability Google Sheet URL" value={availabilityUrl} onChange={(event) => setAvailabilityUrl(event.target.value)} />
+            </div>
+            <button disabled={saving || allRegionMode} type="submit">Link Sheet</button>
           </form>
           {allRegionMode ? <div className="setup-empty">All regions is a filterable overview. Select a specific region above before adding or editing staff.</div> : null}
           <CollapsibleTable
             title="Current Staff"
             count={filteredStaff.length}
             total={staff.length}
-            headers={["Staff name", "Phone", "Skills", "Availability row", "Sheet match", "Region", "Action"]}
+            headers={["Staff name", "Mobile", "WhatsApp", "Skills", "Availability row", "Sheet match", "Notes", "Region", "Action"]}
             search={staffSearch}
             onSearchChange={setStaffSearch}
             regionFilter={tableRegionFilter}
             onRegionFilterChange={setTableRegionFilter}
             regionOptions={[allRegionsLabel, ...specificRegionOptions]}
           >
-            <tbody>{filteredStaff.map((person, index) => {
+            <tbody>
+              <tr className="setup-new-row">
+                <td><input placeholder="Staff name" value={staffDraft.name || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, name: event.target.value }))} /></td>
+                <td><input placeholder="Mobile" value={staffDraft.mobile || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, mobile: event.target.value }))} /></td>
+                <td><input placeholder="WhatsApp / Telegram" value={staffDraft.whatsapp || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></td>
+                <td><div className="setup-checks setup-row-checks">{skills.map((skill) => <label key={skill}><input type="checkbox" checked={(staffDraft.skills || []).includes(skill)} onChange={() => setStaffDraft((current) => ({ ...current, skills: skillToggle(current.skills, skill) }))} /> {skill}</label>)}</div></td>
+                <td><input placeholder="Exact sheet name" value={staffDraft.availabilitySheetName || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /></td>
+                <td><span className="setup-match-chip pending">{availabilityUrl ? "Ready to match" : "Link sheet"}</span></td>
+                <td><input placeholder="Odin notes" value={staffDraft.notes || ""} onChange={(event) => setStaffDraft((current) => ({ ...current, notes: event.target.value }))} /></td>
+                <td><span className="setup-region-chip">{region}</span></td>
+                <td><button disabled={saving || allRegionMode || !staffDraft.name} type="button" onClick={addStaffRow}>Add Staff</button></td>
+              </tr>
+              {filteredStaff.map((person, index) => {
               const isEditing = editingStaffId === person.id;
               const rowKey = `${person.id}-${rowRegions(person, region).join("-")}-${index}`;
               const match = sheetMatchForStaff(person);
+              const matchLabel = match.matched ? "Matched" : match.count ? "Not matched" : match.hasLinkedSource ? "Sheet linked" : "No sheet";
+              const matchClass = match.matched ? "matched" : match.hasLinkedSource && !match.count ? "pending" : "missing";
               return (
                 <tr key={rowKey} className={isEditing ? "setup-editing-row" : ""}>
                   <td>{isEditing ? <input value={editingStaffDraft.name || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, name: event.target.value }))} /> : person.name}</td>
                   <td>{isEditing ? <input value={editingStaffDraft.mobile || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, mobile: event.target.value }))} /> : person.mobile || "No phone"}</td>
+                  <td>{isEditing ? <input value={editingStaffDraft.whatsapp || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, whatsapp: event.target.value }))} /> : person.whatsapp || "-"}</td>
                   <td>
                     {isEditing ? (
                       <div className="setup-checks setup-row-checks">
@@ -455,7 +450,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                     ) : person.skills.join(", ") || person.role}
                   </td>
                   <td>{isEditing ? <input value={editingStaffDraft.availabilitySheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, availabilitySheetName: event.target.value }))} /> : person.availabilitySheetName || person.name}</td>
-                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
+                  <td><span className={`setup-match-chip ${matchClass}`}>{matchLabel}</span></td>
+                  <td>{isEditing ? <input value={editingStaffDraft.notes || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, notes: event.target.value }))} /> : person.notes || "-"}</td>
                   <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
                   <td className="setup-row-actions">
                     {isEditing ? (
@@ -479,7 +475,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 2 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 2. Clients and recurring jobs</strong><p>Type directly into the spreadsheet rows. Save client sites first, then create recurring jobs from those saved sites. Calendar is generated from the jobs table.</p></div>
+          <div className="setup-copy"><strong>Step 2. Clients and recurring jobs</strong><p>Use the spreadsheet rows below as the region jobs source. First add client sites, then create recurring jobs against those sites. Calendar is only the visual output of this jobs table.</p></div>
           <CollapsibleTable
             title="Client Sites"
             count={filteredSites.length}
@@ -604,10 +600,13 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
       {step === 3 ? (
         <section className="setup-panel">
-          <div className="setup-copy"><strong>Step 3. Site inductions</strong><p>Link this region's induction Google Sheet, then confirm every staff profile maps to the correct induction row name so Odin can trust site eligibility.</p></div>
-          <form className="setup-grid-form" onSubmit={saveInductionSource}>
-            <input className="wide-input" placeholder="Google Sheet URL for this region's induction register" value={inductionUrl} onChange={(event) => setInductionUrl(event.target.value)} />
-            <button disabled={saving || allRegionMode} type="submit">Link Induction Sheet</button>
+          <div className="setup-copy"><strong>Step 3. Site inductions</strong><p>Link the induction Google Sheet and match each TOC staff profile to the exact row name in that sheet. Managers update actual induction status and expiry dates in the source Google Sheet.</p></div>
+          <form className="setup-source-row" onSubmit={saveInductionSource}>
+            <div>
+              <span>Staff inductions Google Sheet</span>
+              <input placeholder="Paste this region's induction register Google Sheet URL" value={inductionUrl} onChange={(event) => setInductionUrl(event.target.value)} />
+            </div>
+            <button disabled={saving || allRegionMode} type="submit">Link Sheet</button>
           </form>
           <CollapsibleTable
             title="Induction Name Sync"
@@ -623,11 +622,13 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
             <tbody>{filteredStaff.map((person, index) => {
               const isEditing = editingStaffId === person.id;
               const match = inductionMatchForStaff(person);
+              const matchLabel = match.matched ? "Matched" : match.count ? "Not matched" : match.hasLinkedSource ? "Sheet linked" : "No sheet";
+              const matchClass = match.matched ? "matched" : match.hasLinkedSource && !match.count ? "pending" : "missing";
               return (
                 <tr key={`${person.id}-induction-${index}`} className={isEditing ? "setup-editing-row" : ""}>
                   <td>{person.name}</td>
                   <td>{isEditing ? <input value={editingStaffDraft.inductionSheetName || ""} onChange={(event) => setEditingStaffDraft((current) => ({ ...current, inductionSheetName: event.target.value }))} /> : person.inductionSheetName || person.name}</td>
-                  <td><span className={`setup-match-chip ${match.matched ? "matched" : "missing"}`}>{match.matched ? "Matched" : match.count ? "Not matched" : "No sheet"}</span></td>
+                  <td><span className={`setup-match-chip ${matchClass}`}>{matchLabel}</span></td>
                   <td><span className="setup-region-chip">{rowRegions(person, region).join(", ")}</span></td>
                   <td className="setup-row-actions">
                     {isEditing ? (
@@ -641,13 +642,6 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
               );
             })}</tbody>
           </CollapsibleTable>
-          <div className="setup-induction-grid">
-            {!staff.length || !sites.some((site) => site.requiredInduction) ? <div className="setup-empty">Add staff and client sites with required inductions first, then this step becomes the site-by-site induction checklist.</div> : null}
-            {sites.filter((site) => site.requiredInduction).flatMap((site) => staff.map((person) => {
-              const existing = findInduction(person, site);
-              return <InductionEditor key={`${person.id}-${site.id}`} person={person} site={site} existing={existing} onSave={saveInduction} />;
-            }))}
-          </div>
         </section>
       ) : null}
 
@@ -715,23 +709,5 @@ function CollapsibleTable({
         <table><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>{children}</table>
       </div>
     </details>
-  );
-}
-
-function InductionEditor({ person, site, existing, onSave }: { person: StaffRow; site: SiteRow; existing?: InductionRow; onSave: (person: StaffRow, site: SiteRow, existing?: InductionRow, status?: string, expiry?: string) => void }) {
-  const [status, setStatus] = useState(existing?.status || "");
-  const [expiry, setExpiry] = useState(existing?.expiry || "");
-  useEffect(() => {
-    setStatus(existing?.status || "");
-    setExpiry(existing?.expiry || "");
-  }, [existing?.status, existing?.expiry]);
-  return (
-    <article className="setup-induction-card">
-      <strong>{person.name}</strong>
-      <small>{site.clientName} - {site.siteName}</small>
-      <select value={status} onChange={(event) => setStatus(event.target.value)}>{inductionStatuses.map((item) => <option value={item} key={item}>{item || "Select status"}</option>)}</select>
-      <input placeholder="Expiry date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
-      <button type="button" onClick={() => onSave(person, site, existing, status, expiry)}>Save</button>
-    </article>
   );
 }
