@@ -3,6 +3,7 @@ import { clearComplianceForDeletedActions, markComplianceForClosedActions, reope
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { canAccessScope, requireTocNationalAccess, requireTocScope, requireTocUser } from "@/lib/toc-auth";
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
+import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { logTocAudit } from "@/lib/audit";
 import type { Status } from "@/lib/toc-data";
 
@@ -65,6 +66,8 @@ type NationalRequestHistoryRow = {
   created_at: string;
   updated_at: string | null;
 };
+
+type RosterGap = Awaited<ReturnType<typeof buildOdinRosterGaps>>["gaps"][number];
 
 const systemDataPromotionPattern = /\b(system|data|database|schema|source|feed|api|integration|sync|mapping|profile table|staff profile|visibility|rls|permission|auth|configuration|config|watcher|heartbeat|cron)\b/i;
 
@@ -506,6 +509,100 @@ function mapReviewHistory(row: NationalRequestHistoryRow) {
   };
 }
 
+function rosterGroupForGap(gap: RosterGap) {
+  if (gap.gapType === "induction" || gap.gapType === "assigned-not-inducted") {
+    return {
+      id: "induction-gaps",
+      title: "Induction Gaps",
+      source: "Staff Availability",
+      detail: "Rostered jobs where site induction coverage is missing or assigned staff are not showing as inducted.",
+      recommendedAction: "Check the induction sheet mapping, confirm staff induction status for the site, then update the roster or induction record."
+    };
+  }
+
+  if (gap.gapType === "availability" || gap.gapType === "assigned-unavailable") {
+    return {
+      id: "availability-gaps",
+      title: "Staff Availability Gaps",
+      source: "Staff Availability",
+      detail: "Rostered jobs where Odin cannot see matching available staff for the scheduled time window.",
+      recommendedAction: "Check the staff availability sheet, confirm the rostered staff are available, or update the roster."
+    };
+  }
+
+  return {
+    id: "coverage-gaps",
+    title: "Roster Coverage Gaps",
+    source: "Calendar",
+    detail: "Rostered jobs where crew coverage is missing or under the required crew count.",
+    recommendedAction: "Assign enough suitable staff and confirm availability and induction before the job starts."
+  };
+}
+
+function buildRosterActionGroups(gaps: RosterGap[], scope: string) {
+  const scopedGaps = gaps.filter((gap) => (scope === "National" || gap.region === scope) && !gap.alreadyActioned);
+  const groups = new Map<string, ReturnType<typeof rosterGroupForGap> & {
+    count: number;
+    affectedJobs: Set<string>;
+    regionCounts: Record<string, number>;
+    severity: Status;
+    dueAt: string | null;
+    gaps: RosterGap[];
+  }>();
+
+  scopedGaps.forEach((gap) => {
+    const base = rosterGroupForGap(gap);
+    const existing = groups.get(base.id) || {
+      ...base,
+      count: 0,
+      affectedJobs: new Set<string>(),
+      regionCounts: {},
+      severity: "blue" as Status,
+      dueAt: null,
+      gaps: []
+    };
+
+    existing.count += 1;
+    existing.affectedJobs.add(gap.jobId);
+    existing.regionCounts[gap.region] = (existing.regionCounts[gap.region] || 0) + 1;
+    existing.severity = existing.severity === "red" || gap.severity === "red" ? "red" : "amber";
+    existing.dueAt = !existing.dueAt || new Date(gap.dueAt).getTime() < new Date(existing.dueAt).getTime() ? gap.dueAt : existing.dueAt;
+    existing.gaps.push(gap);
+    groups.set(base.id, existing);
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    id: group.id,
+    title: group.title,
+    source: group.source,
+    detail: group.detail,
+    recommendedAction: group.recommendedAction,
+    count: group.count,
+    affectedJobCount: group.affectedJobs.size,
+    regionCounts: group.regionCounts,
+    severity: group.severity,
+    dueDate: displayDueDate(group.dueAt),
+    href: "/staff-availability",
+    gaps: group.gaps
+      .sort((first, second) => new Date(first.dueAt).getTime() - new Date(second.dueAt).getTime())
+      .slice(0, 30)
+      .map((gap) => ({
+        id: gap.id,
+        title: gap.title,
+        region: gap.region,
+        severity: gap.severity,
+        gapType: gap.gapType,
+        dueAt: gap.dueAt,
+        dueDate: displayDueDate(gap.dueAt),
+        reason: gap.reason,
+        recommendedAction: gap.recommendedAction,
+        requiredCrew: gap.requiredCrew,
+        assignedCrewCount: gap.assignedCrewCount,
+        staffSuggestionNames: gap.staffSuggestionNames
+      }))
+  }));
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
@@ -539,6 +636,12 @@ export async function GET(request: Request) {
   let actions = ((data as ActionRow[] | null) || [])
     .map(mapAction)
     .filter((action) => permittedScope === "National" || action.region === permittedScope);
+  let rosterGroups: ReturnType<typeof buildRosterActionGroups> = [];
+
+  if (!id) {
+    const rosterGapResult = await buildOdinRosterGaps();
+    rosterGroups = buildRosterActionGroups(rosterGapResult.gaps, permittedScope);
+  }
 
   if (id && actions.length) {
     const { data: reviewRows } = await supabase
@@ -554,7 +657,7 @@ export async function GET(request: Request) {
     }));
   }
 
-  return NextResponse.json({ actions, connected: true });
+  return NextResponse.json({ actions, rosterGroups, connected: true });
 }
 
 export async function POST(request: Request) {

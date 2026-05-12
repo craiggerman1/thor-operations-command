@@ -73,6 +73,12 @@ function isTodoVisibleForScope(item: TodoRow, role: string, scope: string) {
   return !item.is_done && (ownerMatches || sharedMatches);
 }
 
+function rosterGroupId(gapType: string) {
+  if (gapType === "induction" || gapType === "assigned-not-inducted") return "induction-gaps";
+  if (gapType === "availability" || gapType === "assigned-unavailable") return "availability-gaps";
+  return "coverage-gaps";
+}
+
 export async function GET(request: Request) {
   const permission = await requireTocUser(request);
   if (permission.error) return permission.error;
@@ -137,6 +143,7 @@ export async function GET(request: Request) {
   const scopedRosterGaps = rosterGaps.gaps.filter((gap) => (scope === "National" || gap.region === scope) && !gap.alreadyActioned);
   const redRosterGapCount = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
   const rosterGapTone = redRosterGapCount ? "red" : scopedRosterGaps.length ? "amber" : "blue";
+  const rosterGapGroupCount = new Set(scopedRosterGaps.map((gap) => rosterGroupId(gap.gapType))).size;
 
   const payload = {
     connected: true,
@@ -145,11 +152,11 @@ export async function GET(request: Request) {
       "Region Health": makeBadge(scopedActions.length, urgentActionCount ? "red" : "amber"),
       "Equipment Servicing": makeBadge(countBySource(["Equipment Servicing", "Workshop"]), "amber"),
       Compliance: makeBadge(complianceBadgeCount, complianceBadgeCount ? "red" : "blue"),
-      "Staff Availability": makeBadge(scopedRosterGaps.length || countBySource(["Roster"]), rosterGapTone),
+      "Staff Availability": makeBadge(rosterGapGroupCount || countBySource(["Roster"]), rosterGapTone),
       Jobsheets: makeBadge(countBySource(["Thor Portal", "Jobsheets"]), "amber"),
       "Stock Orders": makeBadge(scopedStock.length, scopedStock.length > 2 ? "red" : "amber"),
       "To Do": makeBadge(todoCount || countByDirective(["To Do"]), todoCount ? "blue" : "blue"),
-      "National Requests": makeBadge(nationalRequestCount + (scope === "National" ? scopedRosterGaps.length : 0), redRosterGapCount || nationalRequestCount ? "red" : rosterGapTone)
+      "National Requests": makeBadge(nationalRequestCount + (scope === "National" ? rosterGapGroupCount : 0), redRosterGapCount || nationalRequestCount ? "red" : rosterGapTone)
     }
   };
   badgeCache.set(cacheKey, { expiresAt: Date.now() + badgeCacheMs, payload });

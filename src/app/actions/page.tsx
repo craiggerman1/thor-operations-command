@@ -19,6 +19,33 @@ const directivePriority = {
 
 type QueueFilter = "operational" | "all" | "overdue" | "blocked" | "review" | "carryover" | "system";
 
+type RosterActionGroup = {
+  id: string;
+  title: string;
+  source: string;
+  detail: string;
+  recommendedAction: string;
+  count: number;
+  affectedJobCount: number;
+  regionCounts: Record<string, number>;
+  severity: "red" | "amber" | "blue" | "green";
+  dueDate: string;
+  href: string;
+  gaps: {
+    id: string;
+    title: string;
+    region: string;
+    severity: string;
+    gapType: string;
+    dueDate: string;
+    reason: string;
+    recommendedAction: string;
+    requiredCrew: number;
+    assignedCrewCount: number;
+    staffSuggestionNames: string[];
+  }[];
+};
+
 export default function ActionsPage() {
   const router = useRouter();
   const [openActions, setOpenActions] = useState<EnhancedActionItem[]>([]);
@@ -27,6 +54,8 @@ export default function ActionsPage() {
   const [scope, setScope] = useState("National");
   const [role, setRole] = useState<AccessRole>("manager");
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("operational");
+  const [rosterGroups, setRosterGroups] = useState<RosterActionGroup[]>([]);
+  const [expandedRosterGroupId, setExpandedRosterGroupId] = useState<string | null>(null);
   const scopedActions = getScopedActionItems(openActions, scope, role);
   const filteredActions = scopedActions.filter((action) => actionMatchesQueueFilter(action, queueFilter));
   const sortedActions = [...filteredActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
@@ -65,8 +94,10 @@ export default function ActionsPage() {
         const payload = await response.json();
         const actions = (payload.actions || []) as EnhancedActionItem[];
         setOpenActions(actions.filter((item) => item.status !== "Closed"));
+        setRosterGroups((payload.rosterGroups || []) as RosterActionGroup[]);
       } catch {
         setOpenActions([]);
+        setRosterGroups([]);
       }
     }
 
@@ -166,6 +197,10 @@ export default function ActionsPage() {
     event.stopPropagation();
   }
 
+  function toggleRosterGroup(groupId: string) {
+    setExpandedRosterGroupId((current) => current === groupId ? null : groupId);
+  }
+
   return (
     <TocShell>
       <PageIntro title="Action Centre" detail="Ensure all items are actioned and then cleared." />
@@ -186,6 +221,65 @@ export default function ActionsPage() {
               </button>
             ))}
           </div>
+          {rosterGroups.length ? (
+            <div className="roster-action-group-list" aria-label="Grouped roster risk actions">
+              {rosterGroups.map((group) => {
+                const isExpanded = expandedRosterGroupId === group.id;
+                const regionSummary = Object.entries(group.regionCounts).map(([regionName, count]) => `${regionName}: ${count}`).join(" | ");
+                return (
+                  <article
+                    className={`signal-action-card roster-action-group action-card-clickable ${group.severity}`}
+                    key={group.id}
+                    role="button"
+                    tabIndex={0}
+                    title="Open grouped roster detail"
+                    onClick={() => toggleRosterGroup(group.id)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      toggleRosterGroup(group.id);
+                    }}
+                    aria-expanded={isExpanded}
+                  >
+                    <div>
+                      <span className="eyebrow">{group.source} - grouped roster risk</span>
+                      <strong>{group.title}</strong>
+                      <small>{group.detail}</small>
+                      <span className="action-due-date">{group.count} findings across {group.affectedJobCount} job{group.affectedJobCount === 1 ? "" : "s"}{regionSummary ? ` - ${regionSummary}` : ""}</span>
+                    </div>
+                    <div className="signal-action-controls">
+                      <Tag tone={group.severity}>{group.severity === "red" ? "High risk" : "Needs review"}</Tag>
+                      <button className="node-action" type="button" onClick={(event) => { event.stopPropagation(); toggleRosterGroup(group.id); }}>
+                        {isExpanded ? "Hide Detail" : "View Detail"}
+                      </button>
+                      <Link className="node-action" href={group.href} onClick={stopCardOpen}>Open Staff Availability</Link>
+                    </div>
+                    {isExpanded ? (
+                      <div className="roster-action-group-detail" onClick={stopCardOpen}>
+                        <div className="closeout-quality-panel">
+                          <span className="eyebrow">Odin recommended action</span>
+                          <small>{group.recommendedAction}</small>
+                        </div>
+                        <div className="roster-action-gap-table">
+                          {group.gaps.map((gap) => (
+                            <article key={gap.id}>
+                              <div>
+                                <strong>{gap.title}</strong>
+                                <small>{gap.region} - {gap.dueDate} - {gap.gapType.replace(/-/g, " ")}</small>
+                              </div>
+                              <p>{gap.reason}</p>
+                              <small>{gap.recommendedAction}</small>
+                              <span>{gap.assignedCrewCount || 0}/{gap.requiredCrew || 0} crew visible</span>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
           <div className="signal-action-list">
             {sortedActions.map((signal) => (
               <article

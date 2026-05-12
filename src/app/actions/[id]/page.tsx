@@ -173,10 +173,28 @@ export default function ActionDetailPage() {
 
   return (
     <TocShell>
-      <PageIntro title="Action Centre" detail={`${currentAction.id} close-out workflow.`} />
-      <FlowHeading eyebrow="Action Centre" title="Complete the required action, record the manager response, then submit for national approval." />
+      <PageIntro title="Action Centre" detail={`${currentAction.region} - ${currentAction.source}`} />
+      <FlowHeading eyebrow="Action Centre" title="Update the status, record what was done, and submit material items to National review." />
       <section className="command-grid route-grid">
         <Panel wide eyebrow={currentAction.directive} title={currentAction.title} pill={`Due ${currentAction.dueDate}`}>
+          <div className="action-workbench-summary">
+            <article>
+              <span>Status</span>
+              <strong>{currentAction.lifecycleLabel || currentAction.status}</strong>
+            </article>
+            <article>
+              <span>Owner</span>
+              <strong>{currentAction.region}</strong>
+            </article>
+            <article>
+              <span>Risk</span>
+              <strong>{currentAction.severity}</strong>
+            </article>
+            <article>
+              <span>Source</span>
+              <strong>{currentAction.source}</strong>
+            </article>
+          </div>
           <div className={`action-detail-shell ${currentAction.severity}`}>
             <aside className="action-detail-summary">
               <span className="eyebrow">{currentAction.source} - {currentAction.region}</span>
@@ -188,8 +206,8 @@ export default function ActionDetailPage() {
                 <Tag>{currentAction.region}</Tag>
               </div>
               <div className="action-lifecycle-panel">
-                <span>Lifecycle status</span>
-                <strong>{currentAction.lifecycleLabel || currentAction.status}</strong>
+                <span>Quick status update</span>
+                <strong>Where is this up to?</strong>
                 <small>{currentAction.lifecycleHelp || "Use the buttons below to keep National and Odin clear on where this action sits."}</small>
                 <label className="action-lifecycle-note">
                   <span>Blocker / escalation note</span>
@@ -221,8 +239,8 @@ export default function ActionDetailPage() {
             </aside>
             <div className="action-closeout-panel">
               <div>
-                <span className="eyebrow">Manager close-out steps</span>
-                <strong>Actions required to clear this item</strong>
+                <span className="eyebrow">Close-out path</span>
+                <strong>What needs to happen</strong>
               </div>
               <ol className="action-closeout-steps">
                 {currentAction.closeActions.map((step) => <li key={step}>{step}</li>)}
@@ -249,7 +267,7 @@ export default function ActionDetailPage() {
               </div>
               <form className="action-closeout-form" onSubmit={(event) => void submitForNationalApproval(event)}>
                 <div className="closeout-quality-panel">
-                  <span className="eyebrow">Close-out quality gate</span>
+                  <span className="eyebrow">Ready to submit?</span>
                   <div className="meta-row">
                     <Tag tone={responseReady ? "green" : "amber"}>{responseReady ? "Response ready" : needsEvidence ? "Response needs detail" : "Response required"}</Tag>
                     <Tag tone={evidenceReady ? "green" : "amber"}>{evidenceReady ? "Evidence ready" : "Evidence/reference required"}</Tag>
@@ -257,11 +275,11 @@ export default function ActionDetailPage() {
                   <small>{needsEvidence ? "Material actions need a clear response plus evidence or a reference before National review." : "Routine actions need a clear manager response before National review."}</small>
                 </div>
                 <label>
-                  <span>Manager response</span>
+                  <span>What was done?</span>
                   <textarea value={managerResponse} placeholder="Record what was checked, what was fixed, and any remaining risk." onChange={(event) => setManagerResponse(event.target.value)} />
                 </label>
                 <label>
-                  <span>Evidence / reference</span>
+                  <span>Evidence or reference</span>
                   <input value={evidence} placeholder="Example: Fleetio checked, jobsheets approved, stock order raised, photo/evidence uploaded later" onChange={(event) => setEvidence(event.target.value)} />
                 </label>
                 <div className="action-closeout-buttons">
