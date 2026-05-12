@@ -85,6 +85,13 @@ function nowBrisbaneLabel() {
   return new Date().toLocaleString("en-AU", { timeZone: "Australia/Brisbane", dateStyle: "medium", timeStyle: "short" });
 }
 
+function brisbaneDateTimeLabel(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-AU", { timeZone: "Australia/Brisbane", dateStyle: "medium", timeStyle: "short" });
+}
+
 export function scopedEmptyAvailabilityFeed(region: string): StaffAvailabilityFeed {
   return {
     ...staffAvailabilitySheet,
@@ -132,6 +139,59 @@ export async function readSheetSourceConfig(slug: SheetSourceSlug, region?: stri
   }
 
   return region ? { ...sheetSourceDefaults[slug], region } : sheetSourceDefaults[slug];
+}
+
+export async function readCachedAvailabilityFeed(regionName: string, config?: SheetSourceConfig): Promise<StaffAvailabilityFeed | null> {
+  const supabase = getSupabaseAdminClient();
+  const region = await resolveRegion(regionName);
+  if (!supabase || !region) return null;
+
+  const { data, error } = await supabase
+    .from("staff_availability_cache")
+    .select("staff_name,day_name,window_name,status,source_name,source_updated_at,updated_at")
+    .eq("region_id", region.id)
+    .eq("source_slug", "staff-availability")
+    .order("staff_name", { ascending: true });
+
+  if (error || !data?.length) return null;
+
+  const rows = data as Array<{
+    staff_name: string;
+    day_name: string;
+    window_name: string;
+    status: string;
+    source_name: string | null;
+    source_updated_at: string | null;
+    updated_at: string | null;
+  }>;
+  const staffMap = new Map<string, StaffSheetStatus[][]>();
+
+  rows.forEach((row) => {
+    const staffName = row.staff_name?.trim();
+    if (!staffName) return;
+    if (!staffMap.has(staffName)) {
+      staffMap.set(staffName, staffAvailabilitySheet.days.map(() => staffAvailabilitySheet.windows.map(() => "" as StaffSheetStatus)));
+    }
+    const dayIndex = staffAvailabilitySheet.days.findIndex((day) => day.toLowerCase() === String(row.day_name || "").toLowerCase());
+    const windowIndex = staffAvailabilitySheet.windows.findIndex((windowName) => windowName.toLowerCase() === String(row.window_name || "").toLowerCase());
+    if (dayIndex >= 0 && windowIndex >= 0) {
+      staffMap.get(staffName)![dayIndex][windowIndex] = normalizeAvailabilityStatus(row.status || "");
+    }
+  });
+
+  const latestUpdate = rows
+    .map((row) => row.source_updated_at || row.updated_at || "")
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
+  return {
+    ...staffAvailabilitySheet,
+    sourceName: config?.sourceName || rows[0]?.source_name || `${regionName} cached availability`,
+    spreadsheetUrl: config?.spreadsheetUrl || staffAvailabilitySheet.spreadsheetUrl,
+    lastRead: latestUpdate ? `Cached ${brisbaneDateTimeLabel(latestUpdate)}` : "Cached availability",
+    staff: Array.from(staffMap.entries()).map(([name, availability]) => ({ name, availability }))
+  };
 }
 
 async function readSheetCsv(config: SheetSourceConfig) {

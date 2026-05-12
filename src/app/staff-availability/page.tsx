@@ -66,7 +66,8 @@ export default function StaffAvailabilityPage() {
   const [rosterGapStatus, setRosterGapStatus] = useState("Odin roster scan loading");
   const sheetRegion = sourceConfig.region;
   const isMappedScope = scope === sheetRegion;
-  const hasConnectedSource = sourceConfig.connected && Boolean(sourceConfig.spreadsheetUrl);
+  const hasConnectedSource = (sourceConfig.connected && Boolean(sourceConfig.spreadsheetUrl)) || Boolean(feed.spreadsheetUrl && feed.staff.length);
+  const hasAvailabilityRows = feed.staff.length > 0;
   const daySummaries = feed.days.map((day, index) => ({ day, ...getDaySummary(feed, index) }));
   const scopedRosterGaps = rosterGaps.filter((gap) => scope === "National" || gap.region === scope);
   const redRosterGaps = scopedRosterGaps.filter((gap) => gap.severity === "red").length;
@@ -116,18 +117,16 @@ export default function StaffAvailabilityPage() {
     let refreshInterval: number | null = null;
 
     function syncAvailabilityFeed() {
-      if (!isMappedScope || !hasConnectedSource) {
-        setFeed(emptyAvailabilityFeed(scope));
-        setFeedStatus(hasConnectedSource ? `${sheetRegion} source only` : "Source required");
-        return;
-      }
-
       tocFetch(`/api/staff-availability?scope=${encodeURIComponent(scope)}&refresh=${Date.now()}`, { cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Feed unavailable")))
         .then((nextFeed: StaffAvailabilityFeed) => {
           if (!isActive) return;
           setFeed(nextFeed);
-          setFeedStatus(nextFeed.lastRead ? `Source connected. Last read ${nextFeed.lastRead}` : "Source connected");
+          if (nextFeed.staff?.length) {
+            setFeedStatus(nextFeed.lastRead ? `Source connected. Last read ${nextFeed.lastRead}` : "Source connected");
+          } else {
+            setFeedStatus(hasConnectedSource ? `${sheetRegion} source unavailable or empty` : "Source required");
+          }
         })
         .catch(() => {
           if (!isActive) return;
@@ -137,7 +136,7 @@ export default function StaffAvailabilityPage() {
     }
 
     syncAvailabilityFeed();
-    if (isMappedScope && hasConnectedSource) {
+    if (hasConnectedSource || hasAvailabilityRows) {
       refreshInterval = window.setInterval(syncAvailabilityFeed, liveRefreshMs);
       window.addEventListener("toc.manualRefresh", syncAvailabilityFeed);
       window.addEventListener("toc.sheetSourceSettings.updated", syncAvailabilityFeed);
@@ -149,7 +148,7 @@ export default function StaffAvailabilityPage() {
       window.removeEventListener("toc.manualRefresh", syncAvailabilityFeed);
       window.removeEventListener("toc.sheetSourceSettings.updated", syncAvailabilityFeed);
     };
-  }, [hasConnectedSource, isMappedScope, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
+  }, [hasAvailabilityRows, hasConnectedSource, scope, sheetRegion, sourceConfig.connected, sourceConfig.spreadsheetUrl]);
 
   useEffect(() => {
     let isActive = true;
@@ -183,12 +182,12 @@ export default function StaffAvailabilityPage() {
       <PageIntro title="Staff Availability" detail="Staff coverage by day and time window." />
       <FlowHeading eyebrow="Staff Availability" title="Read the coverage by staff name, day and shift window before roster gaps become urgent." />
       <section className="command-grid route-grid">
-        {!hasConnectedSource || !isMappedScope ? (
+        {!hasAvailabilityRows ? (
           <Panel wide eyebrow="Region source" title={`${scope} availability source required`} pill={hasConnectedSource ? `${sheetRegion} only` : "Not connected"}>
             <div className="empty-state">{hasConnectedSource ? `The current Google Sheet availability source is mapped to ${sheetRegion}. Select ${sheetRegion} to view this sheet, or assign a separate source for ${scope} in Admin Settings.` : `No Google Sheet availability source is connected for ${scope}. Link this region's availability sheet in the Operations Setup Wizard or Admin Settings.`}</div>
           </Panel>
         ) : null}
-        {isMappedScope && hasConnectedSource ? (
+        {hasAvailabilityRows ? (
         <>
         <Panel wide eyebrow="Odin roster risk" title="Staffing risks detected from schedule, availability and inductions" pill={scopedRosterGaps.length ? `${scopedRosterGaps.length} open` : "Clear"}>
           <div className={`staff-risk-strip ${redRosterGaps ? "red" : scopedRosterGaps.length ? "amber" : "clear"}`}>
