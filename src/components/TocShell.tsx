@@ -169,6 +169,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   const developerScope = developerRegionOverrideEnabled && session.developerScope && allRegions.includes(session.developerScope)
     ? session.developerScope
     : "";
+  const isDeveloperViewActive = Boolean(developerRole || developerScope);
   const currentScope = developerScope || accountScope;
   const visibleNav = useMemo(
     () => navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National")),
@@ -340,7 +341,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   }, [activeProfile.role, currentScope, pathname, router, session.mustChangePassword, session.role, sessionReady]);
 
   useEffect(() => {
-    if (!sessionReady || activeProfile.role !== "manager" || !session.id || session.authMode !== "supabase") return;
+    if (!sessionReady || activeProfile.role !== "manager" || !session.id || session.authMode !== "supabase" || isDeveloperViewActive) return;
     if (pathname === "/operations-setup" || pathname.startsWith("/account/password")) return;
     if (sessionStorage.getItem(`toc.setup.dismissed.${currentScope}`) === "true") return;
 
@@ -357,7 +358,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [activeProfile.role, currentScope, pathname, router, session.authMode, session.id, sessionReady]);
+  }, [activeProfile.role, currentScope, isDeveloperViewActive, pathname, router, session.authMode, session.id, sessionReady]);
 
   useEffect(() => {
     if (!sessionReady || !session.role) return;
@@ -377,6 +378,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     setSession(nextSession);
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextEffectiveScope } }));
+    window.dispatchEvent(new CustomEvent("toc.sessionchange", { detail: nextSession }));
   }
 
   function updateDeveloperScope(scope: string) {
@@ -395,6 +397,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     setSession(nextSession);
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextEffectiveScope } }));
+    window.dispatchEvent(new CustomEvent("toc.sessionchange", { detail: nextSession }));
   }
 
   function updateDeveloperRole(role: string) {
@@ -419,6 +422,7 @@ export function TocShell({ children }: { children: ReactNode }) {
     document.body.dataset.access = nextProfile.role;
     localStorage.setItem("toc.session", JSON.stringify(nextSession));
     window.dispatchEvent(new CustomEvent("toc.scopechange", { detail: { scope: nextScope } }));
+    window.dispatchEvent(new CustomEvent("toc.sessionchange", { detail: nextSession }));
   }
 
   function signOut() {
@@ -494,7 +498,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.394</em>
+              <em>Build 0.395</em>
             </div>
           </div>
           <div className="topbar-actions">
