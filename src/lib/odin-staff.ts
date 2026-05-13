@@ -92,6 +92,23 @@ export type OdinStaffEntity = {
   updatedAt: string | null;
 };
 
+export type AvailabilityWindowCheck = {
+  day: string;
+  window: string;
+  status: StaffSheetStatus | null;
+  bufferStart: string;
+  windowEnd: string;
+};
+
+export type StaffAvailabilityCheckResult = {
+  available: boolean | null;
+  jobDate: string;
+  jobTime: string;
+  bufferHours: number;
+  checkedWindows: AvailabilityWindowCheck[];
+  explanation: string;
+};
+
 export type StaffReadResult = {
   connected: boolean;
   source: "database" | "availability_sheet";
@@ -303,6 +320,79 @@ function inductionSummary(name: string, feeds: LiveStaffFeeds, regions: string[]
   };
 }
 
+const availabilityBufferHours = 2;
+
+const availabilityWindowHours = [
+  { window: "6am-12pm", startHour: 6, endHour: 12 },
+  { window: "12pm-6pm", startHour: 12, endHour: 18 },
+  { window: "6pm-12am", startHour: 18, endHour: 24 },
+  { window: "12am-6am", startHour: 0, endHour: 6 }
+];
+
+function brisbaneDateTime(jobDate: string, jobTime: string) {
+  const [hourPart = "7", minutePart = "0"] = String(jobTime || "07:00").split(":");
+  const hour = Number(hourPart);
+  const minute = Number(minutePart);
+  const safeHour = Number.isFinite(hour) ? hour : 7;
+  const safeMinute = Number.isFinite(minute) ? minute : 0;
+  return new Date(`${jobDate}T${String(safeHour).padStart(2, "0")}:${String(safeMinute).padStart(2, "0")}:00+10:00`);
+}
+
+function addHours(date: Date, hours: number) {
+  const nextDate = new Date(date);
+  nextDate.setHours(nextDate.getHours() + hours);
+  return nextDate;
+}
+
+function addDays(date: Date, days: number) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function dayNameForDate(date: Date) {
+  return date.toLocaleDateString("en-AU", { weekday: "long", timeZone: "Australia/Brisbane" });
+}
+
+function formatCheckTime(date: Date) {
+  return date.toLocaleString("en-AU", {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Australia/Brisbane"
+  });
+}
+
+function availabilityCandidatesForJob(jobDate: string, jobTime: string) {
+  const jobDateTime = brisbaneDateTime(jobDate, jobTime);
+  if (Number.isNaN(jobDateTime.getTime())) return [];
+
+  const baseDay = new Date(`${jobDate}T00:00:00+10:00`);
+  if (Number.isNaN(baseDay.getTime())) return [];
+
+  return [-1, 0, 1].flatMap((dayOffset) => {
+    const sheetDate = addDays(baseDay, dayOffset);
+    return availabilityWindowHours.flatMap((windowRule) => {
+      const windowStart = new Date(sheetDate);
+      windowStart.setHours(windowRule.startHour, 0, 0, 0);
+      const windowEnd = new Date(sheetDate);
+      windowEnd.setHours(windowRule.endHour === 24 ? 0 : windowRule.endHour, 0, 0, 0);
+      if (windowRule.endHour === 24) windowEnd.setDate(windowEnd.getDate() + 1);
+
+      const bufferStart = addHours(windowStart, -availabilityBufferHours);
+      if (jobDateTime < bufferStart || jobDateTime >= windowEnd) return [];
+
+      return [{
+        day: dayNameForDate(sheetDate),
+        window: windowRule.window,
+        bufferStart,
+        windowEnd
+      }];
+    });
+  });
+}
+
 function fallbackStaffEntities(includeProtected: boolean, feeds: LiveStaffFeeds): OdinStaffEntity[] {
   const names = Array.from(new Set([
     ...feeds.availabilityStaff.map((staff) => `${staff.region}::${staff.name}`),
@@ -439,16 +529,44 @@ export async function readOdinStaffEntities(options: { includeProtected: boolean
   }
 }
 
+export function explainStaffAvailabilityForJob(staff: OdinStaffEntity, jobDate: string, jobTime: string): StaffAvailabilityCheckResult {
+  const candidates = availabilityCandidatesForJob(jobDate, jobTime);
+  const checkedWindows = candidates.map((candidate) => {
+    const dayIndex = staffAvailabilitySheet.days.findIndex((day) => day.toLowerCase() === candidate.day.toLowerCase());
+    const windowIndex = staffAvailabilitySheet.windows.findIndex((window) => window.toLowerCase() === candidate.window.toLowerCase());
+    const status = staff.availability.matrix[dayIndex]?.[windowIndex] ?? null;
+    return {
+      day: candidate.day,
+      window: candidate.window,
+      status,
+      bufferStart: formatCheckTime(candidate.bufferStart),
+      windowEnd: formatCheckTime(candidate.windowEnd)
+    };
+  });
+
+  const statuses = checkedWindows.map((check) => check.status).filter(Boolean);
+  const available = statuses.includes("Available")
+    ? true
+    : statuses.length && statuses.every((status) => status === "Not Available")
+      ? false
+      : null;
+  const checkedLabel = checkedWindows.length
+    ? checkedWindows.map((check) => `${check.day} ${check.window}: ${check.status || "No sheet entry"}`).join("; ")
+    : "No matching availability window could be calculated.";
+  const explanation = `TOC applied a ${availabilityBufferHours} hour early-start buffer and checked ${checkedLabel}`;
+
+  return {
+    available,
+    jobDate,
+    jobTime,
+    bufferHours: availabilityBufferHours,
+    checkedWindows,
+    explanation
+  };
+}
+
 export function isStaffAvailableForJob(staff: OdinStaffEntity, jobDate: string, jobTime: string) {
-  const date = new Date(`${jobDate}T00:00:00+10:00`);
-  if (Number.isNaN(date.getTime())) return null;
-  const hour = Number(String(jobTime || "07:00").split(":")[0]);
-  if (hour >= 22) date.setDate(date.getDate() + 1);
-  const dayName = date.toLocaleDateString("en-AU", { weekday: "long", timeZone: "Australia/Brisbane" });
-  const dayIndex = staffAvailabilitySheet.days.findIndex((day) => day.toLowerCase() === dayName.toLowerCase());
-  const windowIndex = hour >= 22 || hour < 6 ? 3 : hour >= 16 ? 2 : hour >= 10 ? 1 : 0;
-  const value = staff.availability.matrix[dayIndex]?.[windowIndex];
-  return value ? value === "Available" : null;
+  return explainStaffAvailabilityForJob(staff, jobDate, jobTime).available;
 }
 
 export function isStaffInductedForSite(staff: OdinStaffEntity, site: string) {

@@ -14,7 +14,15 @@ function actionDetailForGap(gap: Awaited<ReturnType<typeof buildOdinRosterGaps>>
   const coverage = typeof gap.requiredCrew === "number"
     ? ` Crew visible: ${gap.assignedCrewCount || 0}/${gap.requiredCrew}.`
     : "";
-  return `${gap.reason} ${gap.recommendedAction}${coverage}${suggestions}`.trim();
+  const availability = gap.availabilityDetail?.checkedWindows?.length
+    ? ` Availability checked with 2 hour buffer: ${gap.availabilityDetail.checkedWindows.map((check) => `${check.day} ${check.window} ${check.status || "No entry"}`).join("; ")}.`
+    : gap.availabilityDiagnostics?.length
+      ? ` Availability checked with 2 hour buffer: ${gap.availabilityDiagnostics.slice(0, 4).map((staff) => {
+          const statuses = staff.checkedWindows.map((check) => `${check.day} ${check.window} ${check.status || "No entry"}`).join(", ");
+          return `${staff.name}: ${statuses || "no sheet match"}`;
+        }).join("; ")}.`
+      : "";
+  return `${gap.reason} ${gap.recommendedAction}${coverage}${suggestions}${availability}`.trim();
 }
 
 async function readLinkedRosterActions(dedupeKeys: string[]) {

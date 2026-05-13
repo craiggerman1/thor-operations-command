@@ -43,6 +43,19 @@ type RosterActionGroup = {
     requiredCrew: number;
     assignedCrewCount: number;
     staffSuggestionNames: string[];
+    availabilityDetail?: {
+      explanation: string;
+      bufferHours: number;
+      checkedWindows: { day: string; window: string; status: string | null; bufferStart: string; windowEnd: string }[];
+    } | null;
+    availabilityDiagnostics?: {
+      id: string;
+      name: string;
+      sheetName: string;
+      available: boolean | null;
+      checkedWindows: { day: string; window: string; status: string | null; bufferStart: string; windowEnd: string }[];
+      explanation: string;
+    }[];
   }[];
 };
 
@@ -269,6 +282,27 @@ export default function ActionsPage() {
                               </div>
                               <p>{gap.reason}</p>
                               <small>{gap.recommendedAction}</small>
+                              {gap.availabilityDetail || gap.availabilityDiagnostics?.length ? (
+                                <div className="action-closure-meta">
+                                  <Tag tone="blue">2h buffer applied</Tag>
+                                  {gap.availabilityDetail?.checkedWindows?.slice(0, 2).map((check) => (
+                                    <Tag key={`${gap.id}-${check.day}-${check.window}`} tone={check.status === "Available" ? "green" : check.status === "Not Available" ? "red" : "amber"}>
+                                      {check.day} {check.window}: {check.status || "No entry"}
+                                    </Tag>
+                                  ))}
+                                  {!gap.availabilityDetail?.checkedWindows?.length && gap.availabilityDiagnostics?.[0]?.checkedWindows?.[0] ? (
+                                    <Tag tone="amber">{gap.availabilityDiagnostics[0].checkedWindows[0].day} {gap.availabilityDiagnostics[0].checkedWindows[0].window}</Tag>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {gap.availabilityDiagnostics?.length ? (
+                                <small>
+                                  Why flagged: {gap.availabilityDiagnostics.slice(0, 4).map((staff) => {
+                                    const statuses = staff.checkedWindows.map((check) => `${check.day} ${check.window} ${check.status || "No entry"}`).join(", ");
+                                    return `${staff.name}: ${statuses || "no sheet match"}`;
+                                  }).join(" | ")}
+                                </small>
+                              ) : null}
                               <span>{gap.assignedCrewCount || 0}/{gap.requiredCrew || 0} crew visible</span>
                             </article>
                           ))}

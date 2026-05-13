@@ -598,7 +598,9 @@ function buildRosterActionGroups(gaps: RosterGap[], scope: string) {
         recommendedAction: gap.recommendedAction,
         requiredCrew: gap.requiredCrew,
         assignedCrewCount: gap.assignedCrewCount,
-        staffSuggestionNames: gap.staffSuggestionNames
+        staffSuggestionNames: gap.staffSuggestionNames,
+        availabilityDetail: gap.availabilityDetail,
+        availabilityDiagnostics: gap.availabilityDiagnostics
       }))
   }));
 }

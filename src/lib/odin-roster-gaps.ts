@@ -1,4 +1,10 @@
-import { isStaffAvailableForJob, isStaffInductedForSite, readOdinStaffEntities, type OdinStaffEntity } from "@/lib/odin-staff";
+import {
+  explainStaffAvailabilityForJob,
+  isStaffInductedForSite,
+  readOdinStaffEntities,
+  type OdinStaffEntity,
+  type StaffAvailabilityCheckResult
+} from "@/lib/odin-staff";
 import { odinDedupeKey } from "@/lib/odin-operational-context";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -23,9 +29,19 @@ type StaffSuitability = {
   role: string;
   regions: string[];
   availability: "available" | "unavailable" | "unknown";
+  availabilityDetail: StaffAvailabilityCheckResult;
   induction: "inducted" | "not_inducted" | "unknown";
   reasons: string[];
   cautions: string[];
+};
+
+type StaffAvailabilityDiagnostic = {
+  id: string;
+  name: string;
+  sheetName: string;
+  available: boolean | null;
+  checkedWindows: StaffAvailabilityCheckResult["checkedWindows"];
+  explanation: string;
 };
 
 type OdinRosterGap = {
@@ -41,6 +57,8 @@ type OdinRosterGap = {
   recommendedAction: string;
   requiredCrew: number;
   assignedCrewCount: number;
+  availabilityDetail: StaffAvailabilityCheckResult | null;
+  availabilityDiagnostics: StaffAvailabilityDiagnostic[];
   staffSuggestions: StaffSuitability[];
   staffSuggestionNames: string[];
   entityType: string;
@@ -122,7 +140,8 @@ function matchSkill(person: OdinStaffEntity, job: CalendarJobRow) {
 }
 
 function scoreStaffForJob(person: OdinStaffEntity, job: CalendarJobRow, region: string, site: string, time: string): StaffSuitability {
-  const available = isStaffAvailableForJob(person, job.job_date, time);
+  const availabilityDetail = explainStaffAvailabilityForJob(person, job.job_date, time);
+  const available = availabilityDetail.available;
   const inducted = site === "Unassigned site" ? null : isStaffInductedForSite(person, site);
   const sameRegion = person.regions.some((staffRegion) => staffRegion.toLowerCase() === region.toLowerCase());
   const matchedSkill = matchSkill(person, job);
@@ -183,6 +202,7 @@ function scoreStaffForJob(person: OdinStaffEntity, job: CalendarJobRow, region: 
     role: person.role,
     regions: person.regions,
     availability: available === true ? "available" : available === false ? "unavailable" : "unknown",
+    availabilityDetail,
     induction: inducted === true ? "inducted" : inducted === false ? "not_inducted" : "unknown",
     reasons,
     cautions
@@ -209,6 +229,20 @@ function recommendationWithSuggestions(base: string, suggestions: StaffSuitabili
     return `${suggestion.name} (${suggestion.score}/100${reason ? ` - ${reason}` : ""})`;
   }).join("; ");
   return `${base} Suggested staff: ${topSuggestions}.`;
+}
+
+function availabilityDiagnosticsForStaff(staff: OdinStaffEntity[], jobDate: string, time: string): StaffAvailabilityDiagnostic[] {
+  return staff.slice(0, 20).map((person) => {
+    const detail = explainStaffAvailabilityForJob(person, jobDate, time);
+    return {
+      id: person.id,
+      name: person.name,
+      sheetName: person.availabilitySheetName,
+      available: detail.available,
+      checkedWindows: detail.checkedWindows,
+      explanation: detail.explanation
+    };
+  });
 }
 
 async function readRosterJobs() {
@@ -283,12 +317,16 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
     const time = job.job_time || "07:00";
     const requiredCrew = requiredCrewCount(job);
     const regionalStaff = staffForRegion(staffResult.staff, region);
-    const availableStaff = regionalStaff.filter((person) => isStaffAvailableForJob(person, job.job_date, time) === true);
+    const availabilityDiagnostics = availabilityDiagnosticsForStaff(regionalStaff, job.job_date, time);
+    const availabilityLookup = new Map(availabilityDiagnostics.map((diagnostic) => [diagnostic.id, diagnostic]));
+    const availableStaff = regionalStaff.filter((person) => availabilityLookup.get(person.id)?.available === true);
     const inductedStaff = regionalStaff.filter((person) => isStaffInductedForSite(person, site) === true);
     const assignedNames = parseCrewNames(job.crew);
     const assignedStaff = assignedNames.map((name) => staffByName(staffResult.staff, name)).filter(Boolean) as OdinStaffEntity[];
     const assignedIds = assignedStaff.map((person) => person.id);
-    const assignedUnavailable = assignedStaff.filter((person) => isStaffAvailableForJob(person, job.job_date, time) === false);
+    const assignedAvailabilityDiagnostics = availabilityDiagnosticsForStaff(assignedStaff, job.job_date, time);
+    const assignedAvailabilityLookup = new Map(assignedAvailabilityDiagnostics.map((diagnostic) => [diagnostic.id, diagnostic]));
+    const assignedUnavailable = assignedStaff.filter((person) => assignedAvailabilityLookup.get(person.id)?.available === false);
     const assignedNotInducted = assignedStaff.filter((person) => isStaffInductedForSite(person, site) === false);
     const suitableStaff = staffSuitabilityForJob(regionalStaff, job, region, site, time, assignedIds);
     const items = [];
@@ -313,6 +351,8 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
         recommendedAction,
         requiredCrew,
         assignedCrewCount: assignedStaff.length,
+        availabilityDetail: null,
+        availabilityDiagnostics: availabilityDiagnostics.slice(0, 8),
         staffSuggestions: suitableStaff,
         staffSuggestionNames: suggestionNames(suitableStaff),
         entityType: "calendar_job",
@@ -341,6 +381,8 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
         recommendedAction,
         requiredCrew,
         assignedCrewCount: assignedStaff.length,
+        availabilityDetail: null,
+        availabilityDiagnostics: availabilityDiagnostics.slice(0, 8),
         staffSuggestions: suitableStaff,
         staffSuggestionNames: suggestionNames(suitableStaff),
         entityType: "calendar_job",
@@ -364,6 +406,17 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
         recommendedAction: `Review staff availability for ${region} before confirming ${site}.`,
         requiredCrew,
         assignedCrewCount: assignedStaff.length,
+        availabilityDetail: availabilityDiagnostics[0]
+          ? {
+              available: availabilityDiagnostics[0].available,
+              jobDate: job.job_date,
+              jobTime: time,
+              bufferHours: 2,
+              checkedWindows: availabilityDiagnostics[0].checkedWindows,
+              explanation: `TOC found no available ${region} staff after applying the 2 hour buffer to ${time}.`
+            }
+          : null,
+        availabilityDiagnostics: availabilityDiagnostics.slice(0, 12),
         staffSuggestions: [],
         staffSuggestionNames: [],
         entityType: "calendar_job",
@@ -387,6 +440,8 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
         recommendedAction: `Confirm site induction coverage for ${site} before the job proceeds.`,
         requiredCrew,
         assignedCrewCount: assignedStaff.length,
+        availabilityDetail: null,
+        availabilityDiagnostics: availabilityDiagnostics.slice(0, 8),
         staffSuggestions: [],
         staffSuggestionNames: [],
         entityType: "calendar_job",
@@ -398,6 +453,7 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
       const dueAt = `${job.job_date}T${time}:00+10:00`;
       const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "assigned-unavailable", entityId: person.id, dueAt });
       const replacementSuggestions = staffSuitabilityForJob(regionalStaff, job, region, site, time, [person.id]);
+      const availabilityDetail = explainStaffAvailabilityForJob(person, job.job_date, time);
       items.push({
         id: `assigned-unavailable:${job.id}:${person.id}`,
         jobId: job.id,
@@ -411,6 +467,8 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
         recommendedAction: recommendationWithSuggestions(`Review ${person.name}'s availability or replace them before the shift.`, replacementSuggestions),
         requiredCrew,
         assignedCrewCount: assignedStaff.length,
+        availabilityDetail,
+        availabilityDiagnostics: [assignedAvailabilityLookup.get(person.id)].filter(Boolean) as StaffAvailabilityDiagnostic[],
         staffSuggestions: replacementSuggestions,
         staffSuggestionNames: suggestionNames(replacementSuggestions),
         entityType: "staff_profile",
@@ -435,6 +493,8 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
         recommendedAction: recommendationWithSuggestions(`Do not confirm ${person.name} for ${site} unless induction status is corrected.`, replacementSuggestions),
         requiredCrew,
         assignedCrewCount: assignedStaff.length,
+        availabilityDetail: null,
+        availabilityDiagnostics: availabilityDiagnostics.slice(0, 8),
         staffSuggestions: replacementSuggestions,
         staffSuggestionNames: suggestionNames(replacementSuggestions),
         entityType: "staff_profile",

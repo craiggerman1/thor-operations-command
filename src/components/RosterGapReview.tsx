@@ -10,9 +10,25 @@ type StaffSuggestion = {
   score: number;
   role: string;
   availability: string;
+  availabilityDetail?: AvailabilityDetail;
   induction: string;
   reasons: string[];
   cautions: string[];
+};
+
+type AvailabilityDetail = {
+  explanation: string;
+  bufferHours: number;
+  checkedWindows: { day: string; window: string; status: string | null; bufferStart: string; windowEnd: string }[];
+};
+
+type AvailabilityDiagnostic = {
+  id: string;
+  name: string;
+  sheetName: string;
+  available: boolean | null;
+  checkedWindows: AvailabilityDetail["checkedWindows"];
+  explanation: string;
 };
 
 type RosterGap = {
@@ -26,6 +42,8 @@ type RosterGap = {
   recommendedAction: string;
   requiredCrew?: number;
   assignedCrewCount?: number;
+  availabilityDetail?: AvailabilityDetail | null;
+  availabilityDiagnostics?: AvailabilityDiagnostic[];
   staffSuggestions?: StaffSuggestion[];
   staffSuggestionNames?: string[];
   alreadyActioned?: boolean;
@@ -134,6 +152,24 @@ export function RosterGapReview() {
             </div>
             <p>{gap.reason}</p>
             <small>{gap.recommendedAction}</small>
+            {gap.availabilityDetail || gap.availabilityDiagnostics?.length ? (
+              <div className="action-closure-meta">
+                <Tag tone="blue">2h buffer applied</Tag>
+                {(gap.availabilityDetail?.checkedWindows || gap.availabilityDiagnostics?.[0]?.checkedWindows || []).slice(0, 3).map((check) => (
+                  <Tag key={`${gap.id}-${check.day}-${check.window}`} tone={check.status === "Available" ? "green" : check.status === "Not Available" ? "red" : "amber"}>
+                    {check.day} {check.window}: {check.status || "No entry"}
+                  </Tag>
+                ))}
+              </div>
+            ) : null}
+            {gap.availabilityDiagnostics?.length ? (
+              <small>
+                Availability checks: {gap.availabilityDiagnostics.slice(0, 5).map((staff) => {
+                  const statuses = staff.checkedWindows.map((check) => `${check.day} ${check.window} ${check.status || "No entry"}`).join(", ");
+                  return `${staff.name}: ${statuses || "no sheet match"}`;
+                }).join(" | ")}
+              </small>
+            ) : null}
             {gap.staffSuggestions?.length ? (
               <div className="roster-suggestion-strip">
                 {gap.staffSuggestions.slice(0, 3).map((suggestion) => (
