@@ -8,7 +8,7 @@ import { clearTocClientCache, tocFetch } from "@/lib/toc-client-auth";
 
 type StaffRow = { id: string; name: string; role: string; status: string; skills: string[]; mobile: string; whatsapp: string; availabilitySheetName: string; inductionSheetName: string; notes: string; regions?: string[] };
 type SiteRow = { id: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; requiredCrewCount: number; notes: string; status: string; regions?: string[] };
-type ScheduleRow = { id: string; siteId: string; siteLabel: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; scheduleName: string; startDate: string; endDate: string; jobTime: string; recurrence: string; recurrenceIntervalWeeks: number; abcdWeeks: string[]; requiredCrewCount: number; jobTitle: string; washAsset: string; notes: string; status: string; staffIds: string[]; regions?: string[] };
+type ScheduleRow = { id: string; siteId: string; siteLabel: string; clientName: string; siteName: string; address: string; requiredInduction: boolean; scheduleName: string; startDate: string; endDate: string; jobTime: string; recurrence: string; recurrenceIntervalWeeks: number; abcdWeeks: string[]; requiredCrewCount: number; jobTitle: string; washAsset: string; notes: string; status: string; staffIds: string[]; regions?: string[]; scheduleIds?: string[]; sourceCount?: number };
 type InductionRow = { id: string; staffId: string; siteId: string; staffName: string; siteName: string; status: string; expiry: string };
 type RosterImportRow = {
   rowNumber: number;
@@ -56,7 +56,7 @@ type SetupPayload = {
   inductions: InductionRow[];
 };
 type AvailabilityFeed = { staff?: Array<{ name: string }> };
-type InductionFeed = { staff?: Array<{ name: string }> };
+type InductionFeed = { staff?: Array<{ name: string }>; sites?: Array<{ name: string; region?: string }> };
 
 const skills = ["Wash Hand", "Driver", "Team Leader"];
 const allRegionsLabel = "All regions";
@@ -173,6 +173,45 @@ function cleanNameKey(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function scheduleGroupKey(schedule: ScheduleRow) {
+  return [
+    rowRegions(schedule, "").join("|"),
+    schedule.siteId || cleanNameKey(`${schedule.clientName} ${schedule.siteName}`),
+    dayFromDate(schedule.startDate),
+    schedule.jobTime,
+    cleanNameKey(schedule.jobTitle || "Scheduled wash"),
+    cleanNameKey(schedule.washAsset || ""),
+    String(schedule.requiredCrewCount || 0),
+    schedule.requiredInduction === false ? "no-induction" : "induction",
+    [...(schedule.staffIds || [])].sort().join("|"),
+    cleanNameKey(schedule.notes || "")
+  ].join("::");
+}
+
+function mergeScheduleGroup(group: ScheduleRow[]) {
+  const [first] = group;
+  const allWeeks = Array.from(new Set(group.flatMap((schedule) => schedule.abcdWeeks || []))).filter(Boolean);
+  const hasEveryWeekRow = group.some((schedule) => !schedule.abcdWeeks?.length);
+  const scheduleIds = group.map((schedule) => schedule.id).filter(Boolean);
+  return {
+    ...first,
+    id: scheduleIds[0] || first.id,
+    scheduleIds,
+    sourceCount: group.length,
+    abcdWeeks: hasEveryWeekRow ? [] : THOR_ABCD_WEEKS.filter((week) => allWeeks.includes(week)),
+    startDate: group.map((schedule) => schedule.startDate).sort()[0] || first.startDate
+  };
+}
+
+function mergeSchedulesForDisplay(schedules: ScheduleRow[]) {
+  const groups = new Map<string, ScheduleRow[]>();
+  schedules.forEach((schedule) => {
+    const key = scheduleGroupKey(schedule);
+    groups.set(key, [...(groups.get(key) || []), schedule]);
+  });
+  return Array.from(groups.values()).map(mergeScheduleGroup);
+}
+
 export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { adminMode?: boolean; initialStep?: number }) {
   const [region, setRegion] = useState(readSessionScope);
   const [sessionVersion, setSessionVersion] = useState(0);
@@ -194,6 +233,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
   const [editingScheduleDraft, setEditingScheduleDraft] = useState<Partial<ScheduleRow>>(blankSchedule);
   const [availabilityRowsByRegion, setAvailabilityRowsByRegion] = useState<Record<string, string[]>>({});
   const [inductionRowsByRegion, setInductionRowsByRegion] = useState<Record<string, string[]>>({});
+  const [inductionSitesByRegion, setInductionSitesByRegion] = useState<Record<string, string[]>>({});
   const [rosterImportFile, setRosterImportFile] = useState<File | null>(null);
   const [rosterImportResult, setRosterImportResult] = useState<RosterImportResult | null>(null);
   const [rosterImportBusy, setRosterImportBusy] = useState(false);
@@ -213,12 +253,15 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
     return regionMatch && matchesSearch([person.name, person.mobile, person.whatsapp, person.availabilitySheetName, matchLabel, person.role, person.skills.join(" "), regions.join(" "), person.notes], staffSearch);
   }), [staff, availabilityRowsByRegion, staffSearch, tableRegionFilter, region]);
-  const filteredSchedules = useMemo(() => schedules.filter((schedule) => {
+  const displaySchedules = useMemo(() => mergeSchedulesForDisplay(schedules), [schedules]);
+  const filteredSchedules = useMemo(() => displaySchedules.filter((schedule) => {
     const regions = rowRegions(schedule, region);
     const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(" ");
+    const inductionMatch = siteMatchForSchedule(schedule);
+    const inductionLabel = schedule.requiredInduction ? (inductionMatch.matched ? "induction site matched" : inductionMatch.hasLinkedSource ? "induction site not matched" : "induction sheet not linked") : "induction not required";
     const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
-    return regionMatch && matchesSearch([schedule.siteLabel, schedule.jobTitle, schedule.washAsset, schedule.recurrence, formatAbcdWeeks(schedule.abcdWeeks || []), rosteredNames, regions.join(" "), schedule.notes], scheduleSearch);
-  }), [schedules, staff, scheduleSearch, tableRegionFilter, region]);
+    return regionMatch && matchesSearch([schedule.siteLabel, schedule.clientName, schedule.siteName, schedule.jobTitle, schedule.washAsset, schedule.recurrence, formatAbcdWeeks(schedule.abcdWeeks || []), rosteredNames, inductionLabel, regions.join(" "), schedule.notes], scheduleSearch);
+  }), [displaySchedules, staff, scheduleSearch, tableRegionFilter, region, inductionSitesByRegion, inductionUrl, payload?.inductionSource?.spreadsheetUrl]);
 
   async function load(nextRegion = region) {
     setMessage("");
@@ -277,12 +320,16 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       try {
         const response = await tocFetch(`/api/inductions?scope=${encodeURIComponent(item)}&refresh=${Date.now()}`, { cache: "no-store" });
         const feed = await response.json() as InductionFeed;
-        return [item, (feed.staff || []).map((person) => person.name).filter(Boolean)] as const;
+        return [item, {
+          staff: (feed.staff || []).map((person) => person.name).filter(Boolean),
+          sites: (feed.sites || []).map((site) => site.name).filter(Boolean)
+        }] as const;
       } catch {
-        return [item, []] as const;
+        return [item, { staff: [] as string[], sites: [] as string[] }] as const;
       }
     }));
-    setInductionRowsByRegion((current) => ({ ...current, ...Object.fromEntries(entries) }));
+    setInductionRowsByRegion((current) => ({ ...current, ...Object.fromEntries(entries.map(([item, value]) => [item, value.staff])) }));
+    setInductionSitesByRegion((current) => ({ ...current, ...Object.fromEntries(entries.map(([item, value]) => [item, value.sites])) }));
   }
 
   useEffect(() => {
@@ -538,17 +585,22 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
       return;
     }
     setEditingScheduleId(schedule.id);
-    setEditingScheduleDraft(schedule);
+    setEditingScheduleDraft({ ...schedule, scheduleIds: schedule.scheduleIds?.length ? schedule.scheduleIds : [schedule.id] });
   }
 
   async function saveScheduleRowEdit() {
+    const scheduleIds = editingScheduleDraft.scheduleIds?.length ? editingScheduleDraft.scheduleIds : editingScheduleDraft.id ? [editingScheduleDraft.id] : [];
     const ok = await mutate({
       action: "upsertClientJob",
       ...editingScheduleDraft,
+      id: scheduleIds[0] || editingScheduleDraft.id,
       recurrence: "Weekly",
       recurrenceIntervalWeeks: 1,
       requiredCrewCount: editingScheduleDraft.requiredCrewCount || 2
     }, "Recurring job row saved and Calendar regenerated.");
+    if (ok && scheduleIds.length > 1) {
+      await mutate({ action: "deleteClientJobs", ids: scheduleIds.slice(1) }, "Duplicate ABCD schedule rows merged into one recurring job.");
+    }
     if (ok) {
       setEditingScheduleId("");
       setEditingScheduleDraft(blankSchedule());
@@ -557,9 +609,12 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
 
   async function deleteScheduleRow(schedule: ScheduleRow) {
     if (allRegionMode) return;
-    const confirmed = window.confirm(`Delete ${schedule.clientName || schedule.siteLabel} - ${schedule.jobTitle}? Future generated Calendar jobs for this recurring schedule will be removed. Past Calendar history will remain.`);
+    const scheduleIds = schedule.scheduleIds?.length ? schedule.scheduleIds : [schedule.id];
+    const confirmed = window.confirm(`Delete ${schedule.clientName || schedule.siteLabel} - ${schedule.jobTitle}? Future generated Calendar jobs for ${scheduleIds.length > 1 ? "these merged recurring schedules" : "this recurring schedule"} will be removed. Past Calendar history will remain.`);
     if (!confirmed) return;
-    const ok = await mutate({ action: "deleteClientJob", id: schedule.id }, "Recurring job deleted and future Calendar jobs removed.");
+    const ok = scheduleIds.length > 1
+      ? await mutate({ action: "deleteClientJobs", ids: scheduleIds }, "Merged recurring jobs deleted and future Calendar jobs removed.")
+      : await mutate({ action: "deleteClientJob", id: schedule.id }, "Recurring job deleted and future Calendar jobs removed.");
     if (ok && editingScheduleId === schedule.id) {
       setEditingScheduleId("");
       setEditingScheduleDraft(blankSchedule());
@@ -619,6 +674,22 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     const hasLinkedSource = Boolean(inductionUrl || payload?.inductionSource?.spreadsheetUrl);
     return {
       matched: names.some((name) => cleanNameKey(name) === expected),
+      count: names.length,
+      hasLinkedSource
+    };
+  }
+
+  function siteMatchForSchedule(schedule: ScheduleRow) {
+    const names = rowRegions(schedule, region).flatMap((item) => inductionSitesByRegion[item] || []);
+    const siteCandidates = [
+      schedule.siteName,
+      schedule.siteLabel,
+      `${schedule.clientName} - ${schedule.siteName}`,
+      `${schedule.clientName} ${schedule.siteName}`
+    ].filter(Boolean).map((value) => cleanNameKey(String(value)));
+    const hasLinkedSource = Boolean(inductionUrl || payload?.inductionSource?.spreadsheetUrl);
+    return {
+      matched: names.some((name) => siteCandidates.includes(cleanNameKey(name))),
       count: names.length,
       hasLinkedSource
     };
@@ -807,8 +878,8 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
           <CollapsibleTable
             title="Recurring Client Jobs"
             count={filteredSchedules.length}
-            total={schedules.length}
-            headers={["Client", "Site", "Address", "Unit", "Day", "Time", "ABCD", "Crew", "Normal staff", "Induction", "Notes", "Region", "Action"]}
+            total={displaySchedules.length}
+            headers={["Client", "Site", "Address", "Unit", "Day", "Time", "ABCD", "Crew", "Normal staff", "Induction required", "Induction site match", "Notes", "Region", "Action"]}
             search={scheduleSearch}
             onSearchChange={setScheduleSearch}
             regionFilter={tableRegionFilter}
@@ -827,6 +898,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                 <td><input type="number" min={0} max={20} value={scheduleDraft.requiredCrewCount || 2} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></td>
                 <td><StaffPicker staff={staff} value={scheduleDraft.staffIds || []} onChange={(staffIds) => setScheduleDraft((current) => ({ ...current, staffIds }))} /></td>
                 <td><label className="setup-cell-check"><input type="checkbox" checked={scheduleDraft.requiredInduction !== false} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label></td>
+                <td><span className={`setup-match-chip ${inductionUrl ? "pending" : "missing"}`}>{inductionUrl ? "Ready to match" : "Link induction sheet"}</span></td>
                 <td><input placeholder="Notes" value={scheduleDraft.notes || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /></td>
                 <td><span className="setup-region-chip">{region}</span></td>
                 <td><button disabled={saving || allRegionMode || !scheduleDraft.clientName || !scheduleDraft.siteName} type="button" onClick={addScheduleRow}>Add Job</button></td>
@@ -835,9 +907,12 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                 const isEditing = editingScheduleId === schedule.id;
                 const draft = isEditing ? editingScheduleDraft : schedule;
                 const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(", ");
+                const match = siteMatchForSchedule(schedule);
+                const matchLabel = !schedule.requiredInduction ? "Not required" : match.matched ? "Matched" : match.count ? "Not matched" : match.hasLinkedSource ? "Sheet linked" : "No sheet";
+                const matchClass = !schedule.requiredInduction ? "pending" : match.matched ? "matched" : match.hasLinkedSource && !match.count ? "pending" : "missing";
                 return (
                   <tr key={`${schedule.id}-${index}`} className={isEditing ? "setup-editing-row" : ""}>
-                    <td>{isEditing ? <input value={draft.clientName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, clientName: event.target.value }))} /> : schedule.clientName || schedule.siteLabel.split(" - ")[0]}</td>
+                    <td>{isEditing ? <input value={draft.clientName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, clientName: event.target.value }))} /> : <span>{schedule.clientName || schedule.siteLabel.split(" - ")[0]}{schedule.sourceCount && schedule.sourceCount > 1 ? <small className="setup-merged-note">Merged {schedule.sourceCount}</small> : null}</span>}</td>
                     <td>{isEditing ? <input value={draft.siteName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, siteName: event.target.value }))} /> : schedule.siteName || schedule.siteLabel.split(" - ").slice(1).join(" - ")}</td>
                     <td>{isEditing ? <input value={draft.address || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, address: event.target.value }))} /> : schedule.address || "-"}</td>
                     <td>{isEditing ? <input value={draft.washAsset || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /> : schedule.washAsset || "-"}</td>
@@ -847,6 +922,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
                     <td>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || 2} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : `${schedule.requiredCrewCount} crew`}</td>
                     <td>{isEditing ? <StaffPicker staff={staff} value={draft.staffIds || []} onChange={(staffIds) => setEditingScheduleDraft((current) => ({ ...current, staffIds }))} /> : rosteredNames || "Unassigned"}</td>
                     <td>{isEditing ? <label className="setup-cell-check"><input type="checkbox" checked={draft.requiredInduction !== false} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label> : schedule.requiredInduction ? "Required" : "Not required"}</td>
+                    <td><span className={`setup-match-chip ${matchClass}`}>{matchLabel}</span></td>
                     <td>{isEditing ? <input value={draft.notes || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /> : schedule.notes || "-"}</td>
                     <td><span className="setup-region-chip">{rowRegions(schedule, region).join(", ")}</span></td>
                     <td className="setup-row-actions">

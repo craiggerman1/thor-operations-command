@@ -1420,6 +1420,15 @@ body.next-app .rail-nav {
   color: #9c6a13;
 }
 
+.setup-merged-note {
+  display: block;
+  margin-top: 3px;
+  color: #557083;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .setup-induction-grid,
 .training-cards {
   display: grid;

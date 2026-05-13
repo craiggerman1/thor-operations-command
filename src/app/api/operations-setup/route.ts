@@ -771,6 +771,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ ...await readSetup(scope, user.id), deletion: cleanup });
     }
 
+    if (action === "deleteClientJobs") {
+      const ids = cleanArray(payload.ids).filter(isUuid);
+      if (!ids.length) return NextResponse.json({ error: "Schedule ids are required." }, { status: 400 });
+      if (!hasNationalAccess(user)) {
+        for (const scheduleId of ids) await ensureScheduleBelongsToRegion(scheduleId, regionId);
+      }
+      const cleanup = await removeFutureCalendarJobsForSchedules(ids);
+      for (const scheduleIdBatch of chunkArray(ids)) {
+        const { error: staffDeleteError } = await supabase.from("site_schedule_staff").delete().in("site_schedule_id", scheduleIdBatch);
+        if (staffDeleteError) throw staffDeleteError;
+      }
+      for (const scheduleIdBatch of chunkArray(ids)) {
+        const { error: scheduleError } = await supabase
+          .from("site_schedules")
+          .update({ status: "inactive", updated_at: new Date().toISOString() })
+          .in("id", scheduleIdBatch);
+        if (scheduleError) throw scheduleError;
+      }
+      await logTocAudit({
+        actor: user,
+        action: "operations_setup.client_jobs.delete_group",
+        entityTable: "site_schedules",
+        entityId: ids[0],
+        scope,
+        details: { removedSchedules: ids.length, ...cleanup }
+      });
+      return NextResponse.json({ ...await readSetup(scope, user.id), deletion: { removedSchedules: ids.length, ...cleanup } });
+    }
+
     if (action === "deleteAllClientJobs") {
       const { data: scheduleRows, error: scheduleReadError } = await supabase
         .from("site_schedules")
