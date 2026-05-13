@@ -1739,3 +1739,318 @@ body.next-app .rail-nav {
     grid-template-columns: 1fr;
   }
 }
+
+/* Build 0.421 - restore the older TOC command-centre visual language.
+   This intentionally rolls back the overly pale portal-style pass and keeps
+   the interface high-contrast, compact, and operational. */
+body.next-app {
+  color: var(--ink);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(237, 242, 245, 0.84) 42%, rgba(214, 226, 234, 0.72)),
+    linear-gradient(rgba(10, 49, 82, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 49, 82, 0.03) 1px, transparent 1px),
+    var(--bg);
+  background-size: auto, 34px 34px, 34px 34px, auto;
+}
+
+body.next-app::before {
+  opacity: 0.34;
+  filter: saturate(0.95) contrast(1.04);
+}
+
+body.next-app .app-shell {
+  grid-template-columns: 292px minmax(0, 1fr);
+  background: transparent;
+}
+
+body.next-app .side-rail {
+  padding: 22px 18px;
+  gap: 18px;
+  color: #eef5fb;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 210px),
+    linear-gradient(135deg, rgba(37, 161, 189, 0.16), transparent 48%),
+    linear-gradient(155deg, rgba(6, 7, 9, 0.54), rgba(10, 49, 82, 0.58)),
+    rgba(8, 36, 61, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 18px 0 54px rgba(6, 7, 9, 0.22), inset -1px 0 0 rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(1.12);
+}
+
+body.next-app .brand-lockup {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 0 0 6px;
+  text-align: center;
+  border-bottom: 0;
+}
+
+body.next-app .brand-logo {
+  width: 100%;
+  max-width: 176px;
+  max-height: 110px;
+  justify-self: center;
+  object-fit: contain;
+  filter: none;
+}
+
+body.next-app .brand-lockup strong {
+  color: #f6fbfd;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.08;
+}
+
+body.next-app .brand-lockup span {
+  color: #b9c9d6;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+body.next-app .rail-nav {
+  gap: 6px;
+  padding-right: 3px;
+  scrollbar-color: rgba(37, 161, 189, 0.72) rgba(255, 255, 255, 0.08);
+}
+
+body.next-app .rail-nav a {
+  min-height: 39px;
+  padding: 9px 10px;
+  color: #e6eff5;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+body.next-app .rail-nav a:hover,
+body.next-app .rail-nav a.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(37, 161, 189, 0.24), rgba(255, 255, 255, 0.08));
+  border-color: rgba(183, 220, 238, 0.36);
+  box-shadow: inset 3px 0 0 var(--teal);
+  transform: translateX(2px);
+}
+
+body.next-app .nav-icon {
+  width: 25px;
+  height: 25px;
+  flex-basis: 25px;
+  color: #d6eff6;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(144, 211, 225, 0.22);
+  font-size: 0.6rem;
+}
+
+body.next-app .rail-nav a:hover .nav-icon,
+body.next-app .rail-nav a.active .nav-icon {
+  color: #ffffff;
+  background: rgba(46, 180, 207, 0.28);
+  border-color: rgba(162, 232, 246, 0.42);
+}
+
+body.next-app .workspace {
+  padding: 24px;
+  padding-right: 384px;
+  background:
+    linear-gradient(180deg, rgba(10, 49, 82, 0.12), transparent 420px),
+    transparent;
+}
+
+body.todo-floating-disabled.next-app .workspace {
+  padding-right: 24px;
+}
+
+body.next-app .topbar {
+  min-height: 132px;
+  margin-bottom: 16px;
+  padding: 17px 19px;
+  color: #eef5fb;
+  border: 1px solid rgba(37, 161, 189, 0.32);
+  border-radius: 6px;
+  background:
+    linear-gradient(115deg, rgba(6, 7, 9, 0.9), rgba(6, 7, 9, 0.76) 48%, rgba(10, 49, 82, 0.62)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent 45%),
+    linear-gradient(90deg, rgba(37, 161, 189, 0.16), transparent 65%);
+  box-shadow: 0 22px 50px rgba(6, 7, 9, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px) saturate(1.12);
+}
+
+body.next-app .topbar::before {
+  opacity: 0.74;
+}
+
+body.next-app .title-block {
+  padding-left: 0;
+}
+
+body.next-app .title-block::before {
+  display: none;
+}
+
+body.next-app .topbar .title-block > .eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  color: #d4e1e8;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+body.next-app .topbar h1 {
+  color: #f7fbfd;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 2.9vw, 2.7rem);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.32);
+}
+
+body.next-app .live-beacon {
+  width: 18px;
+  height: 18px;
+  background: var(--red);
+  box-shadow: 0 0 24px rgba(191, 62, 57, 0.78);
+}
+
+body.next-app .live-label {
+  color: #ffe9e6;
+  background: rgba(191, 62, 57, 0.22);
+  border-color: rgba(255, 214, 211, 0.78);
+}
+
+body.next-app .build-notice {
+  color: #d4e1e8;
+}
+
+body.next-app .build-notice strong {
+  color: #ffe9e6;
+  background: rgba(191, 62, 57, 0.26);
+  border-color: rgba(255, 214, 211, 0.55);
+}
+
+body.next-app .build-notice em {
+  color: #b9c9d6;
+}
+
+body.next-app .topbar-actions {
+  width: auto;
+  max-width: min(840px, 60%);
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-self: center;
+  margin-left: auto;
+  padding: 9px;
+  border: 1px solid rgba(183, 220, 238, 0.22);
+  border-radius: 6px;
+  background: rgba(6, 7, 9, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+body.next-app .session-chip,
+body.next-app .select-wrap {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(183, 220, 238, 0.18);
+  color: #eef5fb;
+}
+
+body.next-app .session-chip span,
+body.next-app .select-wrap span {
+  color: #b9c9d6;
+}
+
+body.next-app .session-chip strong,
+body.next-app .session-chip small {
+  color: #ffffff;
+}
+
+body.next-app .topbar select {
+  border-color: #38536d;
+  background: rgba(6, 7, 9, 0.72);
+  color: #eef5fb;
+}
+
+body.next-app .manual-refresh-button {
+  background: #eef5fb;
+  color: #0a3152;
+}
+
+body.next-app .logout-button {
+  color: #ffe9e6;
+  background: rgba(191, 62, 57, 0.18);
+  border-color: rgba(255, 214, 211, 0.34);
+}
+
+body.next-app .page-title-copy,
+body.next-app .metric-card,
+body.next-app .panel,
+body.next-app .state-node,
+body.next-app .queue-card,
+body.next-app .asset-card,
+body.next-app .task-card,
+body.next-app .compliance-card,
+body.next-app .stock-card,
+body.next-app .brief-item,
+body.next-app .todo-item,
+body.next-app .wash-row,
+body.next-app .setup-table,
+body.next-app .setup-panel,
+body.next-app .setup-import-panel {
+  border-radius: 6px;
+  border-color: var(--aero-border);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(238, 246, 249, 0.68)),
+    var(--glass);
+  box-shadow: var(--aero-shadow);
+}
+
+body.next-app .metric-card {
+  min-height: 116px;
+}
+
+body.next-app .panel-head,
+body.next-app .setup-table th {
+  background: linear-gradient(180deg, rgba(248, 252, 253, 0.92), rgba(229, 241, 247, 0.76));
+}
+
+body.next-app .page-title-copy {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(238, 246, 249, 0.72)),
+    var(--glass);
+}
+
+body.next-app .page-title-news,
+body.next-app .page-title-weather {
+  background: linear-gradient(90deg, rgba(37, 161, 189, 0.06), rgba(255, 255, 255, 0));
+}
+
+@media (max-width: 1180px) {
+  body.next-app .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.next-app .topbar-actions {
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  body.next-app .workspace,
+  body.todo-floating-disabled.next-app .workspace {
+    padding: 10px;
+  }
+
+  body.next-app .topbar {
+    min-height: auto;
+    padding: 10px;
+  }
+
+  body.next-app .topbar-actions {
+    background: rgba(6, 7, 9, 0.28);
+  }
+}
