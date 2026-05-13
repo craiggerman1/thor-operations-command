@@ -30,6 +30,8 @@ type StaffSuitability = {
   regions: string[];
   availability: "available" | "unavailable" | "unknown";
   availabilityDetail: StaffAvailabilityCheckResult;
+  commitment: "free" | "committed";
+  conflictingJobs: { id: string; title: string; site: string; region: string; dueAt: string }[];
   induction: "inducted" | "not_inducted" | "unknown";
   reasons: string[];
   cautions: string[];
@@ -110,13 +112,17 @@ function parseCrewNames(crew: string | null) {
     .filter(Boolean);
 }
 
+function normaliseName(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 function staffForRegion(staff: OdinStaffEntity[], region: string) {
   return staff.filter((person) => person.status !== "inactive" && person.regions.some((staffRegion) => staffRegion.toLowerCase() === region.toLowerCase()));
 }
 
 function staffByName(staff: OdinStaffEntity[], name: string) {
-  const cleanName = name.toLowerCase();
-  return staff.find((person) => person.name.toLowerCase() === cleanName || person.preferredName?.toLowerCase() === cleanName);
+  const cleanName = normaliseName(name);
+  return staff.find((person) => normaliseName(person.name) === cleanName || (person.preferredName ? normaliseName(person.preferredName) === cleanName : false));
 }
 
 function jobRequiresMoreThanOnePerson(job: CalendarJobRow) {
@@ -139,12 +145,53 @@ function matchSkill(person: OdinStaffEntity, job: CalendarJobRow) {
   return person.skills.find((skill) => searchText.includes(skill.toLowerCase()));
 }
 
-function scoreStaffForJob(person: OdinStaffEntity, job: CalendarJobRow, region: string, site: string, time: string): StaffSuitability {
+function jobStartDate(job: CalendarJobRow) {
+  const time = job.job_time || "07:00";
+  const [hourPart = "7", minutePart = "0"] = String(time).split(":");
+  const hour = Number(hourPart);
+  const minute = Number(minutePart);
+  return new Date(`${job.job_date}T${String(Number.isFinite(hour) ? hour : 7).padStart(2, "0")}:${String(Number.isFinite(minute) ? minute : 0).padStart(2, "0")}:00+10:00`);
+}
+
+function activeRosterJob(job: CalendarJobRow) {
+  return !["completed", "cancelled", "closed", "complete"].includes(String(job.status || "").toLowerCase());
+}
+
+function jobClashes(first: CalendarJobRow, second: CalendarJobRow) {
+  const firstStart = jobStartDate(first).getTime();
+  const secondStart = jobStartDate(second).getTime();
+  if (!Number.isFinite(firstStart) || !Number.isFinite(secondStart)) return false;
+  const shiftWindowMs = 6 * 60 * 60 * 1000;
+  return Math.abs(firstStart - secondStart) < shiftWindowMs;
+}
+
+function staffAssignedToJob(person: OdinStaffEntity, job: CalendarJobRow) {
+  const staffNames = [person.name, person.preferredName || "", person.availabilitySheetName, person.inductionSheetName]
+    .filter(Boolean)
+    .map((name) => normaliseName(String(name)));
+  const crewNames = parseCrewNames(job.crew).map(normaliseName);
+  return crewNames.some((crewName) => staffNames.includes(crewName));
+}
+
+function rosterCommitmentsForStaff(person: OdinStaffEntity, targetJob: CalendarJobRow, jobs: CalendarJobRow[]) {
+  return jobs
+    .filter((job) => job.id !== targetJob.id && activeRosterJob(job) && staffAssignedToJob(person, job) && jobClashes(targetJob, job))
+    .map((job) => ({
+      id: job.id,
+      title: job.job_title || "Scheduled wash",
+      site: job.site || "Unassigned site",
+      region: job.location || "National",
+      dueAt: `${job.job_date}T${job.job_time || "07:00"}:00+10:00`
+    }));
+}
+
+function scoreStaffForJob(person: OdinStaffEntity, job: CalendarJobRow, region: string, site: string, time: string, jobs: CalendarJobRow[]): StaffSuitability {
   const availabilityDetail = explainStaffAvailabilityForJob(person, job.job_date, time);
   const available = availabilityDetail.available;
   const inducted = site === "Unassigned site" ? null : isStaffInductedForSite(person, site);
   const sameRegion = person.regions.some((staffRegion) => staffRegion.toLowerCase() === region.toLowerCase());
   const matchedSkill = matchSkill(person, job);
+  const conflictingJobs = rosterCommitmentsForStaff(person, job, jobs);
   const reasons: string[] = [];
   const cautions: string[] = [];
   let score = 0;
@@ -179,6 +226,14 @@ function scoreStaffForJob(person: OdinStaffEntity, job: CalendarJobRow, region: 
     cautions.push("availability not confirmed");
   }
 
+  if (conflictingJobs.length) {
+    score -= 100;
+    cautions.push(`already rostered on ${conflictingJobs[0].site} at a clashing time`);
+  } else {
+    score += 20;
+    reasons.push("not already committed to another rostered job in this shift window");
+  }
+
   if (inducted === true) {
     score += 30;
     reasons.push(`inducted for ${site}`);
@@ -203,17 +258,19 @@ function scoreStaffForJob(person: OdinStaffEntity, job: CalendarJobRow, region: 
     regions: person.regions,
     availability: available === true ? "available" : available === false ? "unavailable" : "unknown",
     availabilityDetail,
+    commitment: conflictingJobs.length ? "committed" : "free",
+    conflictingJobs,
     induction: inducted === true ? "inducted" : inducted === false ? "not_inducted" : "unknown",
     reasons,
     cautions
   };
 }
 
-function staffSuitabilityForJob(staff: OdinStaffEntity[], job: CalendarJobRow, region: string, site: string, time: string, excludeIds: string[] = []) {
+function staffSuitabilityForJob(staff: OdinStaffEntity[], jobs: CalendarJobRow[], job: CalendarJobRow, region: string, site: string, time: string, excludeIds: string[] = []) {
   return staff
     .filter((person) => !excludeIds.includes(person.id) && person.status !== "inactive")
-    .map((person) => scoreStaffForJob(person, job, region, site, time))
-    .filter((suggestion) => suggestion.score > 0)
+    .map((person) => scoreStaffForJob(person, job, region, site, time, jobs))
+    .filter((suggestion) => suggestion.score > 0 && suggestion.commitment === "free")
     .sort((first, second) => second.score - first.score)
     .slice(0, 5);
 }
@@ -228,7 +285,7 @@ function recommendationWithSuggestions(base: string, suggestions: StaffSuitabili
     const reason = suggestion.reasons.slice(0, 2).join(", ");
     return `${suggestion.name} (${suggestion.score}/100${reason ? ` - ${reason}` : ""})`;
   }).join("; ");
-  return `${base} Suggested staff: ${topSuggestions}.`;
+  return `${base} Suggested staff: ${topSuggestions}. Suggestions exclude staff already rostered on another clashing calendar job.`;
 }
 
 function availabilityDiagnosticsForStaff(staff: OdinStaffEntity[], jobDate: string, time: string): StaffAvailabilityDiagnostic[] {
@@ -328,7 +385,7 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
     const assignedAvailabilityLookup = new Map(assignedAvailabilityDiagnostics.map((diagnostic) => [diagnostic.id, diagnostic]));
     const assignedUnavailable = assignedStaff.filter((person) => assignedAvailabilityLookup.get(person.id)?.available === false);
     const assignedNotInducted = assignedStaff.filter((person) => isStaffInductedForSite(person, site) === false);
-    const suitableStaff = staffSuitabilityForJob(regionalStaff, job, region, site, time, assignedIds);
+    const suitableStaff = staffSuitabilityForJob(regionalStaff, jobsResult.jobs, job, region, site, time, assignedIds);
     const items = [];
 
     if (crewLooksUnassigned(job.crew)) {
@@ -452,7 +509,7 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
     assignedUnavailable.forEach((person) => {
       const dueAt = `${job.job_date}T${time}:00+10:00`;
       const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "assigned-unavailable", entityId: person.id, dueAt });
-      const replacementSuggestions = staffSuitabilityForJob(regionalStaff, job, region, site, time, [person.id]);
+      const replacementSuggestions = staffSuitabilityForJob(regionalStaff, jobsResult.jobs, job, region, site, time, [person.id]);
       const availabilityDetail = explainStaffAvailabilityForJob(person, job.job_date, time);
       items.push({
         id: `assigned-unavailable:${job.id}:${person.id}`,
@@ -479,7 +536,7 @@ export async function buildOdinRosterGaps(options: { forceRefresh?: boolean } = 
     assignedNotInducted.forEach((person) => {
       const dueAt = `${job.job_date}T${time}:00+10:00`;
       const dedupeKey = rosterGapKey({ region, jobId: job.id, gapType: "assigned-not-inducted", entityId: person.id, dueAt });
-      const replacementSuggestions = staffSuitabilityForJob(inductedStaff, job, region, site, time, [person.id]);
+      const replacementSuggestions = staffSuitabilityForJob(inductedStaff, jobsResult.jobs, job, region, site, time, [person.id]);
       items.push({
         id: `assigned-not-inducted:${job.id}:${person.id}`,
         jobId: job.id,
