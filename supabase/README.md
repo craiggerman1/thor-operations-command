@@ -12,3 +12,10 @@ Current security model:
 - Browser code must not use the service role key.
 - Public table access should be blocked with Row Level Security and server-only policies.
 
+Data API grant rule:
+
+- New public-schema tables must include explicit grants.
+- Default TOC posture is service-role-only table access through server API routes.
+- Do not grant `anon` access to TOC operational tables.
+- Only grant `authenticated` table access when a table is intentionally accessed directly from browser Supabase clients and has matching RLS policies.
+- Keep RLS enabled on every table in the exposed `public` schema.
