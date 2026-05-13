@@ -82,11 +82,12 @@ export function LoginPanel() {
   return (
     <div className={`login-card-shell ${signingIn ? "signing-in" : ""}`}>
       <form className="login-card" onSubmit={signIn}>
+        <img className="login-card-logo" src="/assets/thor-logo-stacked-clean.png" alt="Thor Mobile Truck Wash" />
         <div>
           <span className="eyebrow">Secure access beta</span>
           <div className="login-title-row">
             <h1>Thor Operations Command</h1>
-            <span>Build 0.416</span>
+            <span>Build 0.417</span>
           </div>
           <p>Sign in to open Thor Operations Command.</p>
         </div>
