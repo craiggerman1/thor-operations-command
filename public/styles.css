@@ -10172,3 +10172,314 @@ body.next-app .login-actions button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Build 0.418 - second visual polish pass. */
+body.next-app {
+  background:
+    radial-gradient(circle at 84% 0%, rgba(23, 152, 181, 0.1), transparent 26%),
+    linear-gradient(135deg, rgba(247, 250, 252, 0.98), rgba(229, 237, 243, 0.92)),
+    var(--bg);
+}
+
+body.next-app::before {
+  opacity: 0.16;
+}
+
+body.next-app .app-shell {
+  grid-template-columns: 264px minmax(0, 1fr);
+}
+
+body.next-app .side-rail {
+  padding: 16px 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 250, 0.96)),
+    rgba(255, 255, 255, 0.96);
+}
+
+body.next-app .brand-lockup {
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 72px;
+  padding: 2px 4px 13px;
+}
+
+body.next-app .brand-logo {
+  width: 68px;
+  max-height: 68px;
+  filter: drop-shadow(0 10px 14px rgba(15, 38, 55, 0.11));
+}
+
+body.next-app .brand-lockup strong {
+  font-size: 1.08rem;
+}
+
+body.next-app .rail-nav {
+  gap: 4px;
+}
+
+body.next-app .rail-nav a {
+  justify-content: flex-start;
+  min-height: 41px;
+  padding: 7px 9px;
+  font-size: 0.88rem;
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+body.next-app .rail-nav a::before {
+  display: none;
+}
+
+body.next-app .nav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-radius: 7px;
+  background: #edf4f7;
+  color: #244355;
+  font-size: 0.64rem;
+  font-weight: 1000;
+  letter-spacing: 0;
+}
+
+body.next-app .nav-link-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.next-app .rail-nav a.active .nav-icon,
+body.next-app .rail-nav a:hover .nav-icon {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(33, 169, 197, 0.2);
+  color: #ffffff;
+}
+
+body.next-app .workspace {
+  padding-top: 16px;
+}
+
+body.next-app .topbar {
+  min-height: 84px;
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.97), rgba(247, 251, 253, 0.91)),
+    rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 34px rgba(15, 38, 55, 0.1);
+}
+
+body.next-app .title-block {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  padding-left: 60px;
+}
+
+body.next-app .title-block::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(12, 57, 84, 0.08);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(240, 247, 250, 0.82)),
+    url("./assets/thor-logo-stacked-clean.png");
+  background-size: 37px auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 8px 18px rgba(15, 38, 55, 0.08);
+  transform: translateY(-50%);
+}
+
+body.next-app .topbar h1 {
+  font-size: clamp(1.5rem, 2.1vw, 2.12rem);
+}
+
+body.next-app .build-notice {
+  margin-top: 0;
+}
+
+body.next-app .topbar-actions {
+  background: rgba(242, 247, 250, 0.9);
+}
+
+body.next-app .session-chip,
+body.next-app .topbar select,
+body.next-app .manual-refresh-button,
+body.next-app .logout-button {
+  box-shadow: 0 2px 8px rgba(15, 38, 55, 0.04);
+}
+
+body.next-app .manual-refresh-button:hover,
+body.next-app .login-actions button:hover,
+body.next-app .setup-grid-form button:hover,
+body.next-app .setup-source-row button:hover,
+body.next-app .setup-induction-card button:hover,
+body.next-app .training-panel button:hover {
+  background: #083b5f;
+}
+
+body.next-app .logout-button:hover {
+  background: rgba(178, 54, 47, 0.08);
+}
+
+body.next-app .page-title-copy {
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(15, 38, 55, 0.08);
+}
+
+body.next-app .page-title-text {
+  position: relative;
+  padding-left: 11px;
+}
+
+body.next-app .page-title-text::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 4px;
+  border-radius: 999px;
+  background: #1798b5;
+}
+
+body.next-app .page-title-copy h2 {
+  font-size: 1.42rem;
+}
+
+body.next-app .page-title-news,
+body.next-app .page-title-weather {
+  border-radius: 10px;
+}
+
+body.next-app .page-title-weather {
+  background: rgba(245, 249, 251, 0.72);
+}
+
+body.next-app .metric-card,
+body.next-app .panel,
+body.next-app .state-node,
+body.next-app .queue-card,
+body.next-app .asset-card,
+body.next-app .task-card,
+body.next-app .compliance-card,
+body.next-app .compliance-stat,
+body.next-app .stock-card,
+body.next-app .brief-item,
+body.next-app .todo-item,
+body.next-app .wash-row,
+body.next-app .integration-grid div,
+body.next-app .asset-tracking-row,
+body.next-app .equipment-row,
+body.next-app .meeting-card,
+body.next-app .setup-table,
+body.next-app .setup-panel,
+body.next-app .setup-hero,
+body.next-app .setup-import-panel,
+body.next-app .master-data-sheet,
+body.next-app .master-data-list {
+  box-shadow: 0 9px 24px rgba(15, 38, 55, 0.075);
+}
+
+body.next-app .metric-card:hover,
+body.next-app .state-node:hover,
+body.next-app .queue-card:hover,
+body.next-app .signal-command-card:hover,
+body.next-app .signal-action-card:hover,
+body.next-app .pathway-item:hover,
+body.next-app .asset-card:hover,
+body.next-app .task-card:hover,
+body.next-app .stock-card:hover {
+  border-color: rgba(23, 152, 181, 0.28);
+  box-shadow: 0 15px 34px rgba(15, 38, 55, 0.11);
+  transform: translateY(-1px);
+}
+
+body.next-app .panel-head h2,
+body.next-app .state-node strong,
+body.next-app .queue-card strong,
+body.next-app .asset-card strong,
+body.next-app .task-card strong,
+body.next-app .compliance-card strong,
+body.next-app .stock-card strong {
+  letter-spacing: -0.01em;
+}
+
+body.next-app .setup-table th,
+body.next-app .setup-table td {
+  border-top-color: rgba(12, 57, 84, 0.075);
+}
+
+body.next-app .setup-table th {
+  background: #f3f8fb;
+}
+
+body.next-app .setup-table summary {
+  min-height: 48px;
+}
+
+body.next-app .login-card {
+  position: relative;
+  overflow: hidden;
+  width: min(500px, 100%);
+  padding: 28px;
+}
+
+body.next-app .login-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, #052c48, #1798b5);
+}
+
+body.next-app .login-card > div:first-of-type {
+  text-align: center;
+}
+
+body.next-app .login-card-logo {
+  width: 86px;
+}
+
+body.next-app .login-title-row {
+  justify-content: center;
+  gap: 8px;
+}
+
+body.next-app .login-card h1 {
+  font-size: clamp(1.58rem, 3vw, 1.86rem);
+  line-height: 1.04;
+}
+
+body.next-app .login-card input {
+  min-height: 42px;
+}
+
+body.next-app .login-actions button {
+  min-height: 46px;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 1180px) {
+  body.next-app .title-block {
+    padding-left: 56px;
+  }
+}
+
+@media (max-width: 760px) {
+  body.next-app .title-block {
+    padding-left: 0;
+  }
+
+  body.next-app .title-block::before {
+    display: none;
+  }
+}
