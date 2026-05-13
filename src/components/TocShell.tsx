@@ -79,27 +79,6 @@ const operationsNewsRefreshMs = 120000;
 let shellSessionCache: StoredSession | null = null;
 let shellRestoreInFlight: Promise<StoredSession | null> | null = null;
 
-const navInitials: Record<string, string> = {
-  "Home": "H",
-  "National Requests": "NR",
-  "Action Centre": "AC",
-  "Operations Setup": "OS",
-  "Odin Control": "OC",
-  "Region Health": "RH",
-  "Productivity": "P",
-  "Equipment Servicing": "ES",
-  "Compliance": "C",
-  "Calendar": "CA",
-  "Inductions": "I",
-  "Staff Availability": "SA",
-  "Stock Orders": "SO",
-  "Asset Tracking": "AT",
-  "Jobsheets": "J",
-  "To Do": "TD",
-  "Chat": "CH",
-  "Admin Settings": "AS"
-};
-
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
   return firstItems.every((item, index) => item === secondItems[index]);
@@ -498,7 +477,6 @@ export function TocShell({ children }: { children: ReactNode }) {
             const badge = navBadgeCounts[label];
             return (
               <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
-                <span className="nav-icon" aria-hidden="true">{navInitials[label] || label.slice(0, 1)}</span>
                 <span className="nav-link-label">{label}</span>
                 {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
               </Link>
@@ -520,7 +498,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.421</em>
+              <em>Build 0.422</em>
             </div>
           </div>
           <div className="topbar-actions">

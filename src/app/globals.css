@@ -1740,7 +1740,7 @@ body.next-app .rail-nav {
   }
 }
 
-/* Build 0.421 - restore the older TOC command-centre visual language.
+/* Build 0.422 - restore the older TOC command-centre visual language.
    This intentionally rolls back the overly pale portal-style pass and keeps
    the interface high-contrast, compact, and operational. */
 body.next-app {
@@ -1816,8 +1816,10 @@ body.next-app .rail-nav {
 }
 
 body.next-app .rail-nav a {
+  position: relative;
+  justify-content: flex-start;
   min-height: 39px;
-  padding: 9px 10px;
+  padding: 9px 12px 9px 16px;
   color: #e6eff5;
   background: rgba(255, 255, 255, 0.045);
   border: 1px solid rgba(255, 255, 255, 0.055);
@@ -1827,30 +1829,36 @@ body.next-app .rail-nav a {
   box-shadow: none;
 }
 
+body.next-app .rail-nav a::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 999px;
+  background: transparent;
+}
+
 body.next-app .rail-nav a:hover,
 body.next-app .rail-nav a.active {
   color: #ffffff;
   background: linear-gradient(135deg, rgba(37, 161, 189, 0.24), rgba(255, 255, 255, 0.08));
   border-color: rgba(183, 220, 238, 0.36);
-  box-shadow: inset 3px 0 0 var(--teal);
   transform: translateX(2px);
 }
 
-body.next-app .nav-icon {
-  width: 25px;
-  height: 25px;
-  flex-basis: 25px;
-  color: #d6eff6;
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(144, 211, 225, 0.22);
-  font-size: 0.6rem;
+body.next-app .rail-nav a:hover::before,
+body.next-app .rail-nav a.active::before {
+  background: var(--teal);
 }
 
-body.next-app .rail-nav a:hover .nav-icon,
-body.next-app .rail-nav a.active .nav-icon {
-  color: #ffffff;
-  background: rgba(46, 180, 207, 0.28);
-  border-color: rgba(162, 232, 246, 0.42);
+body.next-app .nav-link-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.next-app .workspace {
