@@ -4,17 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { Panel } from "@/components/TocCards";
 import type { EnhancedActionItem } from "@/lib/action-state";
 import { tocFetch } from "@/lib/toc-client-auth";
-
-const lifecycleButtons = [
-  { status: "acknowledged", label: "Acknowledge", activeLabel: "Acknowledged" },
-  { status: "in_progress", label: "Start Work", activeLabel: "In progress" },
-  { status: "blocked", label: "Mark Blocked", activeLabel: "Blocked" },
-  { status: "escalated", label: "Escalate", activeLabel: "Escalated" },
-  { status: "reopened", label: "Reopen", activeLabel: "Reopened" }
-];
 
 type ActionDetailItem = EnhancedActionItem & {
   sourceHref?: string;
@@ -54,7 +46,13 @@ export default function ActionDetailPage() {
         const scope = session?.scope || "National";
         const response = await tocFetch(`/api/actions?id=${encodeURIComponent(params.id)}&scope=${encodeURIComponent(scope)}`, { cache: "no-store" });
         const payload = await response.json();
-        setAction((payload.actions || [])[0] || null);
+        const loadedAction = (payload.actions || [])[0] || null;
+        setAction(loadedAction);
+        if (loadedAction?.id) {
+          const draft = JSON.parse(localStorage.getItem(`toc.actionDraft.${loadedAction.id}`) || "null");
+          if (draft?.managerResponse) setManagerResponse(draft.managerResponse);
+          if (draft?.evidence) setEvidence(draft.evidence);
+        }
       } catch {
         setAction(null);
       } finally {
@@ -95,7 +93,7 @@ export default function ActionDetailPage() {
   const sourceHref = currentAction.sourceHref || "/actions";
   const lifecycleStatus = String(currentAction.lifecycleStatus || currentAction.storageStatus || "").trim();
   const isAwaitingNational = currentAction.status === "Awaiting national review" || currentAction.status === "Resolved pending review" || lifecycleStatus === "submitted_for_review";
-  const isClosed = currentAction.status === "Closed";
+  const isClosed = currentAction.status === "Closed" || lifecycleStatus === "closed";
   const needsEvidence = currentAction.directive === "National Ops Directive" ||
     currentAction.severity === "red" ||
     /compliance|equipment|stock|jobsheet|safety/i.test(`${currentAction.source} ${currentAction.title} ${currentAction.detail}`);
@@ -137,15 +135,16 @@ export default function ActionDetailPage() {
       setMessage(payload.error || "Could not submit this action for national approval.");
       return;
     }
+    localStorage.removeItem(`toc.actionDraft.${currentAction.id}`);
     setAction({ ...currentAction, status: "Awaiting national review" });
     window.dispatchEvent(new Event("toc.actionState.updated"));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
     setMessage("Submitted to National Requests for approval.");
   }
 
-  async function updateLifecycle(status: string) {
-    if ((status === "blocked" || status === "escalated") && lifecycleNote.trim().length < 5) {
-      setMessage("Add a short blocker or escalation note before updating this action.");
+  async function updateLifecycle(status: "in_progress" | "blocked") {
+    if (status === "blocked" && lifecycleNote.trim().length < 5) {
+      setMessage("Add a short reason before marking this action blocked.");
       return;
     }
     setIsUpdatingLifecycle(true);
@@ -163,7 +162,7 @@ export default function ActionDetailPage() {
       setLifecycleEvidence("");
       window.dispatchEvent(new Event("toc.actionState.updated"));
       window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
-      setMessage("Action lifecycle updated.");
+      setMessage(status === "blocked" ? "Blocked update sent to National." : "Progress update saved.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Action lifecycle could not be updated.");
     } finally {
@@ -174,120 +173,103 @@ export default function ActionDetailPage() {
   return (
     <TocShell>
       <PageIntro title="Action Centre" detail={`${currentAction.region} - ${currentAction.source}`} />
-      <FlowHeading eyebrow="Action Centre" title="Update the status, record what was done, and submit material items to National review." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow={currentAction.directive} title={currentAction.title} pill={`Due ${currentAction.dueDate}`}>
-          <div className="action-workbench-summary">
-            <article>
-              <span>Status</span>
-              <strong>{currentAction.lifecycleLabel || currentAction.status}</strong>
-            </article>
-            <article>
-              <span>Owner</span>
-              <strong>{currentAction.region}</strong>
-            </article>
-            <article>
-              <span>Risk</span>
-              <strong>{currentAction.severity}</strong>
-            </article>
-            <article>
-              <span>Source</span>
-              <strong>{currentAction.source}</strong>
-            </article>
-          </div>
-          <div className={`action-detail-shell ${currentAction.severity}`}>
-            <aside className="action-detail-summary">
-              <span className="eyebrow">{currentAction.source} - {currentAction.region}</span>
-              <strong>{currentAction.title}</strong>
-              <p>{currentAction.detail}</p>
-              <div className="meta-row">
-                <Tag tone={currentAction.severity}>{currentAction.directive}</Tag>
-                <Tag tone={currentAction.lifecycleTone || "blue"}>{currentAction.lifecycleLabel || currentAction.status}</Tag>
-                <Tag>{currentAction.region}</Tag>
-              </div>
-              <div className="action-lifecycle-panel">
-                <span>Quick status update</span>
-                <strong>Where is this up to?</strong>
-                <small>{currentAction.lifecycleHelp || "Use the buttons below to keep National and Odin clear on where this action sits."}</small>
-                <label className="action-lifecycle-note">
-                  <span>Blocker / escalation note</span>
-                  <textarea value={lifecycleNote} placeholder="Required when marking blocked or escalated." onChange={(event) => setLifecycleNote(event.target.value)} />
-                </label>
-                <label className="action-lifecycle-note">
-                  <span>Evidence / reference</span>
-                  <input value={lifecycleEvidence} placeholder="Optional reference for National." onChange={(event) => setLifecycleEvidence(event.target.value)} />
-                </label>
-                <div className="action-lifecycle-buttons">
-                  {lifecycleButtons.map((item) => (
-                    <button
-                      type="button"
-                      key={item.status}
-                      disabled={isUpdatingLifecycle || isAwaitingNational || isClosed || lifecycleStatus === item.status}
-                      onClick={() => void updateLifecycle(item.status)}
-                    >
-                      {lifecycleStatus === item.status ? item.activeLabel : item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="action-due-panel">
-                <span>Due date</span>
-                <strong>{currentAction.dueDate}</strong>
-                <small>{currentAction.closeFlow}</small>
-              </div>
-              <Link className="node-action" href={sourceHref}>Open source page</Link>
-            </aside>
-            <div className="action-closeout-panel">
+        <Panel wide eyebrow="Manager close-out" title={currentAction.title}>
+          <div className={`manager-action-detail ${currentAction.severity}`}>
+            <div className="manager-action-hero">
               <div>
-                <span className="eyebrow">Close-out path</span>
-                <strong>What needs to happen</strong>
+                <span className="manager-action-label">Next step for {currentAction.region}</span>
+                <h2>{isAwaitingNational ? "Waiting for National review" : isClosed ? "This action is closed" : "Close this action out"}</h2>
+                <p>{isAwaitingNational ? "Your close-out has been submitted. National will approve it or return it if more detail is needed." : "Read the action, complete the work, then record what was done below."}</p>
               </div>
-              <ol className="action-closeout-steps">
-                {currentAction.closeActions.map((step) => <li key={step}>{step}</li>)}
-              </ol>
-              <div className="action-review-timeline">
-                <div>
-                  <span className="eyebrow">Review history</span>
-                  <strong>{reviewHistory.length ? `${reviewHistory.length} National review event${reviewHistory.length === 1 ? "" : "s"}` : "No National review yet"}</strong>
-                </div>
-                {reviewHistory.length ? reviewHistory.map((event) => (
-                  <article className="action-review-event" key={event.id}>
-                    <div className="action-review-event-head">
-                      <Tag tone={event.storageStatus === "approved" || event.storageStatus === "closed" ? "green" : event.storageStatus === "returned" ? "amber" : "blue"}>{event.status}</Tag>
-                      <small>{new Date(event.submittedAt).toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</small>
-                    </div>
-                    <p>{event.managerResponse}</p>
-                    <small>Evidence: {event.evidence}</small>
-                    {event.nationalResponse ? <small>National: {event.nationalResponse}</small> : null}
-                    <Link className="node-action" href={event.href}>Open review</Link>
-                  </article>
-                )) : (
-                  <small className="admin-hint-message">Submit this item for National review once the manager response and evidence are ready.</small>
-                )}
+              <div className="manager-action-status">
+                <span>{currentAction.lifecycleLabel || currentAction.status}</span>
+                <strong>Due {currentAction.dueDate}</strong>
               </div>
-              <form className="action-closeout-form" onSubmit={(event) => void submitForNationalApproval(event)}>
-                <div className="closeout-quality-panel">
-                  <span className="eyebrow">Ready to submit?</span>
-                  <div className="meta-row">
-                    <Tag tone={responseReady ? "green" : "amber"}>{responseReady ? "Response ready" : needsEvidence ? "Response needs detail" : "Response required"}</Tag>
-                    <Tag tone={evidenceReady ? "green" : "amber"}>{evidenceReady ? "Evidence ready" : "Evidence/reference required"}</Tag>
+            </div>
+
+            <div className="manager-action-layout">
+              <aside className="manager-action-context" aria-label="Action context">
+                <section>
+                  <span className="manager-action-label">What needs doing</span>
+                  <p>{currentAction.detail}</p>
+                </section>
+                <dl className="manager-action-facts">
+                  <div>
+                    <dt>Owner</dt>
+                    <dd>{currentAction.region}</dd>
                   </div>
-                  <small>{needsEvidence ? "Material actions need a clear response plus evidence or a reference before National review." : "Routine actions need a clear manager response before National review."}</small>
-                </div>
-                <label>
-                  <span>What was done?</span>
-                  <textarea value={managerResponse} placeholder="Record what was checked, what was fixed, and any remaining risk." onChange={(event) => setManagerResponse(event.target.value)} />
-                </label>
-                <label>
-                  <span>Evidence or reference</span>
-                  <input value={evidence} placeholder="Example: Fleetio checked, jobsheets approved, stock order raised, photo/evidence uploaded later" onChange={(event) => setEvidence(event.target.value)} />
-                </label>
-                <div className="action-closeout-buttons">
-                  <button type="button" onClick={saveDraft}>Save Draft</button>
-                  <button type="submit" disabled={!closeoutReady}>{isAwaitingNational ? "Awaiting National Review" : isClosed ? "Closed" : "Submit For National Approval"}</button>
-                </div>
-                {message ? <small className="admin-hint-message">{message}</small> : null}
-              </form>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>{currentAction.source}</dd>
+                  </div>
+                  <div>
+                    <dt>Priority</dt>
+                    <dd>{currentAction.directive}</dd>
+                  </div>
+                  <div>
+                    <dt>Risk</dt>
+                    <dd>{currentAction.severity}</dd>
+                  </div>
+                </dl>
+                <Link className="manager-source-link" href={sourceHref}>Open related page</Link>
+              </aside>
+
+              <div className="manager-action-workflow">
+                <form className="manager-closeout-form" onSubmit={(event) => void submitForNationalApproval(event)}>
+                  <div>
+                    <span className="manager-action-label">Close-out response</span>
+                    <h3>Tell National what was done</h3>
+                    <p>{needsEvidence ? "This is a material action, so add a clear result and evidence or a reference." : "A short clear close-out is enough for routine actions."}</p>
+                  </div>
+
+                  <label>
+                    <span>What did you do?</span>
+                    <textarea value={managerResponse} placeholder="Example: Checked the site, fixed the issue, spoke with the team, and confirmed no remaining risk." onChange={(event) => setManagerResponse(event.target.value)} />
+                  </label>
+
+                  <label>
+                    <span>{needsEvidence ? "Evidence or reference required" : "Evidence or reference optional"}</span>
+                    <input value={evidence} placeholder="Example: photo uploaded, stock order raised, checklist checked, manager confirmed" onChange={(event) => setEvidence(event.target.value)} />
+                  </label>
+
+                  <div className="manager-action-buttons">
+                    <button type="submit" disabled={!closeoutReady}>{isAwaitingNational ? "Already Submitted" : isClosed ? "Closed" : "Submit close-out"}</button>
+                    <button type="button" onClick={saveDraft}>Save draft</button>
+                  </div>
+                  {message ? <small className="manager-action-message">{message}</small> : null}
+                </form>
+
+                <details className="manager-blocked-panel">
+                  <summary>I cannot complete this yet</summary>
+                  <div>
+                    <label>
+                      <span>Why is it blocked?</span>
+                      <textarea value={lifecycleNote} placeholder="Example: waiting on stock, client access, equipment repair, staff confirmation." onChange={(event) => setLifecycleNote(event.target.value)} />
+                    </label>
+                    <label>
+                      <span>Reference if useful</span>
+                      <input value={lifecycleEvidence} placeholder="Optional reference, photo note or order number" onChange={(event) => setLifecycleEvidence(event.target.value)} />
+                    </label>
+                    <button type="button" disabled={isUpdatingLifecycle || isAwaitingNational || isClosed || lifecycleStatus === "blocked"} onClick={() => void updateLifecycle("blocked")}>
+                      {lifecycleStatus === "blocked" ? "Blocked update sent" : "Mark as blocked"}
+                    </button>
+                  </div>
+                </details>
+
+                <details className="manager-history-panel">
+                  <summary>National review history</summary>
+                  {reviewHistory.length ? reviewHistory.map((event) => (
+                    <article key={event.id}>
+                      <strong>{event.status}</strong>
+                      <small>{new Date(event.submittedAt).toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</small>
+                      <p>{event.managerResponse}</p>
+                      {event.evidence ? <small>Evidence: {event.evidence}</small> : null}
+                      {event.nationalResponse ? <small>National: {event.nationalResponse}</small> : null}
+                    </article>
+                  )) : <small>No National review has been submitted yet.</small>}
+                </details>
+              </div>
             </div>
           </div>
         </Panel>
