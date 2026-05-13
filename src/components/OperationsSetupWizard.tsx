@@ -212,6 +212,26 @@ function mergeSchedulesForDisplay(schedules: ScheduleRow[]) {
   return Array.from(groups.values()).map(mergeScheduleGroup);
 }
 
+function groupSchedulesByClient(schedules: ScheduleRow[], fallbackRegion: string) {
+  const groups = new Map<string, { key: string; clientName: string; regions: string[]; schedules: ScheduleRow[] }>();
+  schedules.forEach((schedule) => {
+    const clientName = (schedule.clientName || schedule.siteLabel.split(" - ")[0] || "Unassigned client").trim();
+    const regions = rowRegions(schedule, fallbackRegion);
+    const key = `${cleanNameKey(clientName)}::${regions.join("|")}`;
+    const existing = groups.get(key) || { key, clientName, regions, schedules: [] };
+    existing.schedules.push(schedule);
+    existing.regions = Array.from(new Set([...existing.regions, ...regions]));
+    groups.set(key, existing);
+  });
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      schedules: group.schedules.sort((first, second) => `${first.siteName}${dayFromDate(first.startDate)}${first.jobTime}`.localeCompare(`${second.siteName}${dayFromDate(second.startDate)}${second.jobTime}`)),
+      siteCount: new Set(group.schedules.map((schedule) => schedule.siteId || cleanNameKey(schedule.siteName || schedule.siteLabel))).size
+    }))
+    .sort((first, second) => first.clientName.localeCompare(second.clientName));
+}
+
 export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { adminMode?: boolean; initialStep?: number }) {
   const [region, setRegion] = useState(readSessionScope);
   const [sessionVersion, setSessionVersion] = useState(0);
@@ -262,6 +282,7 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
     const regionMatch = tableRegionFilter === allRegionsLabel || regions.includes(tableRegionFilter);
     return regionMatch && matchesSearch([schedule.siteLabel, schedule.clientName, schedule.siteName, schedule.jobTitle, schedule.washAsset, schedule.recurrence, formatAbcdWeeks(schedule.abcdWeeks || []), rosteredNames, inductionLabel, regions.join(" "), schedule.notes], scheduleSearch);
   }), [displaySchedules, staff, scheduleSearch, tableRegionFilter, region, inductionSitesByRegion, inductionUrl, payload?.inductionSource?.spreadsheetUrl]);
+  const groupedClientSchedules = useMemo(() => groupSchedulesByClient(filteredSchedules, region), [filteredSchedules, region]);
 
   async function load(nextRegion = region) {
     setMessage("");
@@ -875,74 +896,98 @@ export function OperationsSetupWizard({ adminMode = false, initialStep = 1 }: { 
               </div>
             ) : null}
           </div>
-          <CollapsibleTable
-            title="Recurring Client Jobs"
-            count={filteredSchedules.length}
-            total={displaySchedules.length}
-            headers={["Client", "Site", "Address", "Unit", "Day", "Time", "ABCD", "Crew", "Normal staff", "Induction required", "Induction site match", "Notes", "Region", "Action"]}
-            search={scheduleSearch}
-            onSearchChange={setScheduleSearch}
-            regionFilter={tableRegionFilter}
-            onRegionFilterChange={setTableRegionFilter}
-            regionOptions={[allRegionsLabel, ...specificRegionOptions]}
-          >
-            <tbody>
-              <tr className="setup-new-row">
-                <td><input placeholder="Client" value={scheduleDraft.clientName || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, clientName: event.target.value, scheduleName: current.scheduleName || `${event.target.value} - ${current.siteName || ""}`.trim() }))} /></td>
-                <td><input placeholder="Site / depot" value={scheduleDraft.siteName || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, siteName: event.target.value, scheduleName: current.scheduleName || `${current.clientName || ""} - ${event.target.value}`.trim() }))} /></td>
-                <td><input placeholder="Address" value={scheduleDraft.address || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, address: event.target.value }))} /></td>
-                <td><input placeholder="Unit" value={scheduleDraft.washAsset || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /></td>
-                <td><DayPicker value={dayFromDate(scheduleDraft.startDate || today())} onChange={(day) => setScheduleDraft((current) => ({ ...current, startDate: nextDateForDay(day) }))} /></td>
-                <td><input type="time" value={scheduleDraft.jobTime || "07:00"} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /></td>
-                <td><AbcdWeekPicker value={scheduleDraft.abcdWeeks || []} onChange={(abcdWeeks) => setScheduleDraft((current) => ({ ...current, abcdWeeks }))} /></td>
-                <td><input type="number" min={0} max={20} value={scheduleDraft.requiredCrewCount || 2} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></td>
-                <td><StaffPicker staff={staff} value={scheduleDraft.staffIds || []} onChange={(staffIds) => setScheduleDraft((current) => ({ ...current, staffIds }))} /></td>
-                <td><label className="setup-cell-check"><input type="checkbox" checked={scheduleDraft.requiredInduction !== false} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label></td>
-                <td><span className={`setup-match-chip ${inductionUrl ? "pending" : "missing"}`}>{inductionUrl ? "Ready to match" : "Link induction sheet"}</span></td>
-                <td><input placeholder="Notes" value={scheduleDraft.notes || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /></td>
-                <td><span className="setup-region-chip">{region}</span></td>
-                <td><button disabled={saving || allRegionMode || !scheduleDraft.clientName || !scheduleDraft.siteName} type="button" onClick={addScheduleRow}>Add Job</button></td>
-              </tr>
-              {filteredSchedules.map((schedule, index) => {
-                const isEditing = editingScheduleId === schedule.id;
-                const draft = isEditing ? editingScheduleDraft : schedule;
-                const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(", ");
-                const match = siteMatchForSchedule(schedule);
-                const matchLabel = !schedule.requiredInduction ? "Not required" : match.matched ? "Matched" : match.count ? "Not matched" : match.hasLinkedSource ? "Sheet linked" : "No sheet";
-                const matchClass = !schedule.requiredInduction ? "pending" : match.matched ? "matched" : match.hasLinkedSource && !match.count ? "pending" : "missing";
-                return (
-                  <tr key={`${schedule.id}-${index}`} className={isEditing ? "setup-editing-row" : ""}>
-                    <td>{isEditing ? <input value={draft.clientName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, clientName: event.target.value }))} /> : <span>{schedule.clientName || schedule.siteLabel.split(" - ")[0]}{schedule.sourceCount && schedule.sourceCount > 1 ? <small className="setup-merged-note">Merged {schedule.sourceCount}</small> : null}</span>}</td>
-                    <td>{isEditing ? <input value={draft.siteName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, siteName: event.target.value }))} /> : schedule.siteName || schedule.siteLabel.split(" - ").slice(1).join(" - ")}</td>
-                    <td>{isEditing ? <input value={draft.address || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, address: event.target.value }))} /> : schedule.address || "-"}</td>
-                    <td>{isEditing ? <input value={draft.washAsset || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /> : schedule.washAsset || "-"}</td>
-                    <td>{isEditing ? <DayPicker value={dayFromDate(draft.startDate || today())} onChange={(day) => setEditingScheduleDraft((current) => ({ ...current, startDate: nextDateForDay(day) }))} /> : dayFromDate(schedule.startDate) || schedule.startDate}</td>
-                    <td>{isEditing ? <input type="time" value={draft.jobTime || "07:00"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /> : schedule.jobTime}</td>
-                    <td>{isEditing ? <AbcdWeekPicker value={draft.abcdWeeks || []} onChange={(abcdWeeks) => setEditingScheduleDraft((current) => ({ ...current, abcdWeeks }))} /> : <span className="setup-abcd-summary">{formatAbcdWeeks(schedule.abcdWeeks || [])}</span>}</td>
-                    <td>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || 2} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : `${schedule.requiredCrewCount} crew`}</td>
-                    <td>{isEditing ? <StaffPicker staff={staff} value={draft.staffIds || []} onChange={(staffIds) => setEditingScheduleDraft((current) => ({ ...current, staffIds }))} /> : rosteredNames || "Unassigned"}</td>
-                    <td>{isEditing ? <label className="setup-cell-check"><input type="checkbox" checked={draft.requiredInduction !== false} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label> : schedule.requiredInduction ? "Required" : "Not required"}</td>
-                    <td><span className={`setup-match-chip ${matchClass}`}>{matchLabel}</span></td>
-                    <td>{isEditing ? <input value={draft.notes || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /> : schedule.notes || "-"}</td>
-                    <td><span className="setup-region-chip">{rowRegions(schedule, region).join(", ")}</span></td>
-                    <td className="setup-row-actions">
-                      {isEditing ? (
-                        <>
-                          <button type="button" disabled={saving || !editingScheduleDraft.clientName || !editingScheduleDraft.siteName} onClick={saveScheduleRowEdit}>Save</button>
-                          <button type="button" onClick={() => { setEditingScheduleId(""); setEditingScheduleDraft(blankSchedule()); }}>Cancel</button>
-                        </>
-                      ) : (
-                        <>
-                          <button type="button" disabled={allRegionMode} onClick={() => startScheduleRowEdit(schedule)}>Edit</button>
-                          <button type="button" className="setup-danger-button" disabled={allRegionMode || saving} onClick={() => deleteScheduleRow(schedule)}>Delete</button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </CollapsibleTable>
+          <div className="setup-client-board">
+            <div className="setup-client-board-head">
+              <div>
+                <strong>Clients & recurring jobs</strong>
+                <span>{groupedClientSchedules.length} clients / {filteredSchedules.length} recurring jobs</span>
+              </div>
+              <div className="setup-table-tools compact">
+                <input value={scheduleSearch} onChange={(event) => setScheduleSearch(event.target.value)} placeholder="Filter clients, sites, units, staff or induction matches" />
+                <select value={tableRegionFilter} onChange={(event) => setTableRegionFilter(event.target.value)}>
+                  {[allRegionsLabel, ...specificRegionOptions].map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <details className="setup-client-add" open={!filteredSchedules.length}>
+              <summary>Add one recurring client job</summary>
+              <div className="setup-client-job-grid setup-client-job-grid-new">
+                <label><span>Client</span><input placeholder="Client" value={scheduleDraft.clientName || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, clientName: event.target.value, scheduleName: current.scheduleName || `${event.target.value} - ${current.siteName || ""}`.trim() }))} /></label>
+                <label><span>Site</span><input placeholder="Site / depot" value={scheduleDraft.siteName || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, siteName: event.target.value, scheduleName: current.scheduleName || `${current.clientName || ""} - ${event.target.value}`.trim() }))} /></label>
+                <label><span>Address</span><input placeholder="Address" value={scheduleDraft.address || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, address: event.target.value }))} /></label>
+                <label><span>Unit</span><input placeholder="Unit" value={scheduleDraft.washAsset || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /></label>
+                <label><span>Day</span><DayPicker value={dayFromDate(scheduleDraft.startDate || today())} onChange={(day) => setScheduleDraft((current) => ({ ...current, startDate: nextDateForDay(day) }))} /></label>
+                <label><span>Time</span><input type="time" value={scheduleDraft.jobTime || "07:00"} onChange={(event) => setScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /></label>
+                <label><span>ABCD week</span><AbcdWeekPicker value={scheduleDraft.abcdWeeks || []} onChange={(abcdWeeks) => setScheduleDraft((current) => ({ ...current, abcdWeeks }))} /></label>
+                <label><span>Crew needed</span><input type="number" min={0} max={20} value={scheduleDraft.requiredCrewCount || 2} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /></label>
+                <label className="setup-client-staff-cell"><span>Normal staff</span><StaffPicker staff={staff} value={scheduleDraft.staffIds || []} onChange={(staffIds) => setScheduleDraft((current) => ({ ...current, staffIds }))} /></label>
+                <div className="setup-client-field"><span>Induction</span><label className="setup-cell-check"><input type="checkbox" checked={scheduleDraft.requiredInduction !== false} onChange={(event) => setScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label></div>
+                <label><span>Notes</span><input placeholder="Notes" value={scheduleDraft.notes || ""} onChange={(event) => setScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                <div className="setup-client-job-actions"><button disabled={saving || allRegionMode || !scheduleDraft.clientName || !scheduleDraft.siteName} type="button" onClick={addScheduleRow}>Add Job</button></div>
+              </div>
+            </details>
+
+            {groupedClientSchedules.length ? groupedClientSchedules.map((client) => (
+              <details className="setup-client-group" key={client.key} open>
+                <summary>
+                  <div>
+                    <strong>{client.clientName}</strong>
+                    <span>{client.siteCount} site{client.siteCount === 1 ? "" : "s"} / {client.schedules.length} recurring job{client.schedules.length === 1 ? "" : "s"}</span>
+                  </div>
+                  <small>{client.regions.join(", ")}</small>
+                </summary>
+                <div className="setup-client-sites">
+                  {client.schedules.map((schedule, index) => {
+                    const isEditing = editingScheduleId === schedule.id;
+                    const draft = isEditing ? editingScheduleDraft : schedule;
+                    const rosteredNames = staff.filter((person) => schedule.staffIds.includes(person.id)).map((person) => person.name).join(", ");
+                    const match = siteMatchForSchedule(schedule);
+                    const matchLabel = !schedule.requiredInduction ? "Not required" : match.matched ? "Matched" : match.count ? "Not matched" : match.hasLinkedSource ? "Sheet linked" : "No sheet";
+                    const matchClass = !schedule.requiredInduction ? "pending" : match.matched ? "matched" : match.hasLinkedSource && !match.count ? "pending" : "missing";
+                    return (
+                      <article className={`setup-client-job-card ${isEditing ? "editing" : ""}`} key={`${schedule.id}-${index}`}>
+                        <div className="setup-client-site-title">
+                          <div>
+                            <strong>{isEditing ? <input value={draft.siteName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, siteName: event.target.value }))} /> : schedule.siteName || schedule.siteLabel.split(" - ").slice(1).join(" - ")}</strong>
+                            <span>{isEditing ? <input value={draft.address || ""} placeholder="Address" onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, address: event.target.value }))} /> : schedule.address || "No address recorded"}</span>
+                          </div>
+                          <span className={`setup-match-chip ${matchClass}`}>Induction: {matchLabel}</span>
+                        </div>
+                        <div className="setup-client-job-grid">
+                          {isEditing ? <label><span>Client</span><input value={draft.clientName || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, clientName: event.target.value }))} /></label> : null}
+                          <label><span>Unit</span>{isEditing ? <input value={draft.washAsset || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, washAsset: event.target.value }))} /> : <strong>{schedule.washAsset || "-"}</strong>}</label>
+                          <label><span>Day</span>{isEditing ? <DayPicker value={dayFromDate(draft.startDate || today())} onChange={(day) => setEditingScheduleDraft((current) => ({ ...current, startDate: nextDateForDay(day) }))} /> : <strong>{dayFromDate(schedule.startDate) || schedule.startDate}</strong>}</label>
+                          <label><span>Time</span>{isEditing ? <input type="time" value={draft.jobTime || "07:00"} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, jobTime: event.target.value }))} /> : <strong>{schedule.jobTime}</strong>}</label>
+                          <label><span>ABCD</span>{isEditing ? <AbcdWeekPicker value={draft.abcdWeeks || []} onChange={(abcdWeeks) => setEditingScheduleDraft((current) => ({ ...current, abcdWeeks }))} /> : <span className="setup-abcd-summary">{formatAbcdWeeks(schedule.abcdWeeks || [])}</span>}</label>
+                          <label><span>Crew</span>{isEditing ? <input type="number" min={0} max={20} value={draft.requiredCrewCount || 2} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredCrewCount: Number(event.target.value) }))} /> : <strong>{schedule.requiredCrewCount} required</strong>}</label>
+                          <label className="setup-client-staff-cell"><span>Normal rostered staff</span>{isEditing ? <StaffPicker staff={staff} value={draft.staffIds || []} onChange={(staffIds) => setEditingScheduleDraft((current) => ({ ...current, staffIds }))} /> : <strong>{rosteredNames || "Unassigned"}</strong>}</label>
+                          <div className="setup-client-field"><span>Induction required</span>{isEditing ? <label className="setup-cell-check"><input type="checkbox" checked={draft.requiredInduction !== false} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, requiredInduction: event.target.checked }))} /> Required</label> : <strong>{schedule.requiredInduction ? "Yes" : "No"}</strong>}</div>
+                          <label><span>Notes</span>{isEditing ? <input value={draft.notes || ""} onChange={(event) => setEditingScheduleDraft((current) => ({ ...current, notes: event.target.value }))} /> : <strong>{schedule.notes || "-"}</strong>}</label>
+                        </div>
+                        <div className="setup-client-job-footer">
+                          {schedule.sourceCount && schedule.sourceCount > 1 ? <small>Merged {schedule.sourceCount} ABCD schedule rows into one job view.</small> : <small>Calendar is generated from this recurring job.</small>}
+                          <div className="setup-row-actions">
+                            {isEditing ? (
+                              <>
+                                <button type="button" disabled={saving || !editingScheduleDraft.clientName || !editingScheduleDraft.siteName} onClick={saveScheduleRowEdit}>Save</button>
+                                <button type="button" onClick={() => { setEditingScheduleId(""); setEditingScheduleDraft(blankSchedule()); }}>Cancel</button>
+                              </>
+                            ) : (
+                              <>
+                                <button type="button" disabled={allRegionMode} onClick={() => startScheduleRowEdit(schedule)}>Assign / Edit</button>
+                                <button type="button" className="setup-danger-button" disabled={allRegionMode || saving} onClick={() => deleteScheduleRow(schedule)}>Delete</button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </details>
+            )) : <div className="setup-empty">No recurring jobs match this filter. Upload a roster template or add one client job above.</div>}
+          </div>
         </section>
       ) : null}
 

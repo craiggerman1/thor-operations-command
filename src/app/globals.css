@@ -1090,6 +1090,265 @@ body.next-app .rail-nav {
   padding: 3px 9px;
 }
 
+.setup-client-board {
+  display: grid;
+  gap: 10px;
+}
+
+.setup-client-board-head {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(320px, 1.15fr);
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(12, 57, 84, 0.18);
+  border-radius: 8px;
+  background: #0c3954;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(12, 57, 84, 0.06);
+}
+
+.setup-client-board-head strong,
+.setup-client-board-head span {
+  display: block;
+}
+
+.setup-client-board-head strong {
+  font-size: 1rem;
+}
+
+.setup-client-board-head span {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.setup-table-tools.compact {
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 190px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.setup-client-add,
+.setup-client-group {
+  border: 1px solid rgba(12, 57, 84, 0.16);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(12, 57, 84, 0.06);
+}
+
+.setup-client-add > summary,
+.setup-client-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 14px;
+  user-select: none;
+}
+
+.setup-client-add > summary::-webkit-details-marker,
+.setup-client-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.setup-client-add > summary {
+  background: rgba(238, 250, 252, 0.86);
+  color: #0c3954;
+  font-weight: 950;
+}
+
+.setup-client-add > summary::before,
+.setup-client-group > summary::before {
+  content: "+";
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-weight: 950;
+}
+
+.setup-client-add[open] > summary::before,
+.setup-client-group[open] > summary::before {
+  content: "-";
+}
+
+.setup-client-add > summary::before {
+  background: rgba(12, 57, 84, 0.12);
+}
+
+.setup-client-group > summary {
+  background: linear-gradient(90deg, rgba(12, 57, 84, 0.08), rgba(238, 250, 252, 0.55));
+}
+
+.setup-client-group > summary::before {
+  background: rgba(12, 57, 84, 0.1);
+  color: #0c3954;
+}
+
+.setup-client-group > summary div {
+  flex: 1;
+}
+
+.setup-client-group > summary strong,
+.setup-client-group > summary span,
+.setup-client-group > summary small {
+  display: block;
+}
+
+.setup-client-group > summary strong {
+  color: #0c3954;
+  font-size: 1rem;
+}
+
+.setup-client-group > summary span,
+.setup-client-group > summary small {
+  color: #5b7081;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.setup-client-sites {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(238, 250, 252, 0.52);
+}
+
+.setup-client-job-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-left: 4px solid #29a0bc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.setup-client-job-card.editing {
+  border-left-color: #d8942d;
+  background: rgba(255, 249, 226, 0.72);
+}
+
+.setup-client-site-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.setup-client-site-title strong,
+.setup-client-site-title span {
+  display: block;
+}
+
+.setup-client-site-title strong {
+  color: #12283a;
+  font-size: 1rem;
+}
+
+.setup-client-site-title span {
+  color: #5b7081;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.setup-client-job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.setup-client-job-grid-new {
+  padding: 12px;
+  background: rgba(238, 250, 252, 0.44);
+}
+
+.setup-client-job-grid label,
+.setup-client-field,
+.setup-client-job-actions {
+  display: grid;
+  gap: 5px;
+  align-content: start;
+}
+
+.setup-client-job-grid label > span,
+.setup-client-field > span {
+  color: #0c3954;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.setup-client-job-grid strong,
+.setup-client-field strong {
+  min-height: 28px;
+  color: #12283a;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.setup-client-job-grid input,
+.setup-client-job-grid select {
+  min-height: 30px;
+  width: 100%;
+  border: 1px solid rgba(12, 57, 84, 0.14);
+  border-radius: 5px;
+  background: white;
+  color: #12283a;
+  font-size: 0.86rem;
+  font-weight: 750;
+  padding: 5px 7px;
+}
+
+.setup-client-staff-cell {
+  grid-column: span 2;
+}
+
+.setup-client-job-actions {
+  align-self: end;
+}
+
+.setup-client-job-actions button,
+.setup-client-board button {
+  min-height: 30px;
+  border: 1px solid rgba(12, 57, 84, 0.14);
+  border-radius: 5px;
+  background: #0c3954;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 900;
+  padding: 4px 9px;
+}
+
+.setup-client-board button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.setup-client-job-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(12, 57, 84, 0.08);
+}
+
+.setup-client-job-footer small {
+  color: #5b7081;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
 .setup-table table {
   width: 100%;
   border-collapse: collapse;
@@ -1738,6 +1997,20 @@ body.next-app .rail-nav {
 
   .setup-table-tools {
     grid-template-columns: 1fr;
+  }
+
+  .setup-client-board-head {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-client-site-title,
+  .setup-client-job-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .setup-client-staff-cell {
+    grid-column: span 1;
   }
 
   .setup-checks-wide {
