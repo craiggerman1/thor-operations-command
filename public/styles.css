@@ -10483,3 +10483,236 @@ body.next-app .login-actions button {
     display: none;
   }
 }
+
+/* Build 0.419 - balanced TOC command polish.
+   Keeps the Thor Portal cleanliness while restoring TOC's operational depth. */
+body.next-app {
+  color: #10283a;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(33, 169, 197, 0.16), transparent 31%),
+    radial-gradient(circle at 92% 12%, rgba(7, 64, 100, 0.15), transparent 28%),
+    linear-gradient(135deg, #edf3f7 0%, #f8fafc 44%, #e8f0f4 100%);
+}
+
+body.next-app .app-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(232, 241, 246, 0.64)),
+    transparent;
+}
+
+body.next-app .app-sidebar {
+  background:
+    linear-gradient(180deg, rgba(3, 27, 44, 0.98), rgba(5, 45, 72, 0.97) 52%, rgba(8, 63, 91, 0.96)),
+    #052d48;
+  border-right: 1px solid rgba(167, 219, 232, 0.22);
+  box-shadow: 18px 0 42px rgba(3, 18, 30, 0.18);
+}
+
+body.next-app .brand-card {
+  border-color: rgba(122, 201, 220, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 26px rgba(0, 0, 0, 0.16);
+}
+
+body.next-app .brand-card img {
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, 0.22));
+}
+
+body.next-app .brand-text strong,
+body.next-app .brand-text span,
+body.next-app .region-pill {
+  color: #f7fbfd;
+}
+
+body.next-app .brand-text small {
+  color: rgba(216, 237, 244, 0.74);
+}
+
+body.next-app .region-pill {
+  border-color: rgba(121, 211, 231, 0.28);
+  background: rgba(11, 83, 119, 0.72);
+}
+
+body.next-app .rail-nav a {
+  color: rgba(229, 241, 247, 0.84);
+  border-color: transparent;
+  background: transparent;
+}
+
+body.next-app .rail-nav a:hover {
+  color: #ffffff;
+  border-color: rgba(125, 211, 232, 0.22);
+  background: rgba(255, 255, 255, 0.075);
+}
+
+body.next-app .rail-nav a.active {
+  color: #ffffff;
+  border-color: rgba(105, 211, 236, 0.36);
+  background:
+    linear-gradient(90deg, rgba(29, 160, 190, 0.34), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 255, 0.07);
+  box-shadow: inset 3px 0 0 #40c8e6, 0 10px 22px rgba(1, 18, 32, 0.2);
+}
+
+body.next-app .nav-icon {
+  border-color: rgba(144, 211, 225, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #d6eff6;
+}
+
+body.next-app .rail-nav a.active .nav-icon,
+body.next-app .rail-nav a:hover .nav-icon {
+  border-color: rgba(162, 232, 246, 0.42);
+  background: rgba(46, 180, 207, 0.28);
+  color: #ffffff;
+}
+
+body.next-app .workspace {
+  background:
+    linear-gradient(180deg, rgba(245, 250, 252, 0.78), rgba(239, 246, 249, 0.92)),
+    transparent;
+}
+
+body.next-app .topbar {
+  border: 1px solid rgba(12, 57, 84, 0.11);
+  background:
+    linear-gradient(90deg, rgba(6, 48, 77, 0.96), rgba(9, 72, 105, 0.91) 46%, rgba(245, 250, 252, 0.96) 46.2%, rgba(255, 255, 255, 0.96)),
+    #ffffff;
+  box-shadow: 0 15px 36px rgba(10, 35, 51, 0.14);
+}
+
+body.next-app .title-block::before {
+  border-color: rgba(143, 218, 234, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(225, 240, 246, 0.92)),
+    url("./assets/thor-logo-stacked-clean.png");
+  background-size: 37px auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16);
+}
+
+body.next-app .topbar .title-block > .eyebrow,
+body.next-app .topbar h1,
+body.next-app .topbar .live-label {
+  color: #ffffff;
+}
+
+body.next-app .topbar h1 {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.14);
+}
+
+body.next-app .build-notice {
+  color: rgba(220, 239, 246, 0.78);
+}
+
+body.next-app .live-beacon {
+  background: #51d4ed;
+  box-shadow: 0 0 0 5px rgba(81, 212, 237, 0.12);
+}
+
+body.next-app .topbar-actions {
+  border-color: rgba(12, 57, 84, 0.08);
+  background: rgba(247, 250, 252, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+body.next-app .page-title-copy {
+  border: 1px solid rgba(14, 70, 103, 0.12);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(244, 250, 252, 0.96)),
+    #ffffff;
+  box-shadow: 0 13px 31px rgba(10, 35, 51, 0.1);
+}
+
+body.next-app .page-title-text::before {
+  background: linear-gradient(180deg, #052d48, #25aecd);
+}
+
+body.next-app .page-title-copy h2 {
+  color: #0a2b44;
+}
+
+body.next-app .page-title-news,
+body.next-app .page-title-weather {
+  border-color: rgba(12, 57, 84, 0.11);
+  background: rgba(236, 246, 250, 0.76);
+}
+
+body.next-app .metric-card,
+body.next-app .panel,
+body.next-app .state-node,
+body.next-app .queue-card,
+body.next-app .asset-card,
+body.next-app .task-card,
+body.next-app .compliance-card,
+body.next-app .stock-card,
+body.next-app .brief-item,
+body.next-app .todo-item,
+body.next-app .wash-row,
+body.next-app .setup-table,
+body.next-app .setup-panel,
+body.next-app .setup-import-panel,
+body.next-app .master-data-sheet,
+body.next-app .master-data-list {
+  border-color: rgba(13, 65, 96, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 253, 0.96)),
+    #ffffff;
+  box-shadow: 0 11px 27px rgba(10, 35, 51, 0.09);
+}
+
+body.next-app .panel-head,
+body.next-app .setup-table th {
+  background:
+    linear-gradient(180deg, rgba(240, 248, 251, 0.98), rgba(230, 241, 246, 0.96));
+}
+
+body.next-app .metric-card:hover,
+body.next-app .state-node:hover,
+body.next-app .queue-card:hover,
+body.next-app .asset-card:hover,
+body.next-app .task-card:hover,
+body.next-app .stock-card:hover {
+  border-color: rgba(10, 126, 158, 0.34);
+  box-shadow: 0 16px 36px rgba(10, 35, 51, 0.14);
+}
+
+body.next-app .login-screen {
+  background:
+    radial-gradient(circle at 22% 4%, rgba(38, 184, 213, 0.24), transparent 32%),
+    radial-gradient(circle at 80% 12%, rgba(7, 50, 81, 0.26), transparent 34%),
+    linear-gradient(135deg, #e8f1f5 0%, #f9fbfc 46%, #dce9ef 100%);
+}
+
+body.next-app .login-brand {
+  border-color: rgba(7, 47, 75, 0.14);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 24px rgba(7, 47, 75, 0.1);
+}
+
+body.next-app .login-card {
+  border-color: rgba(7, 47, 75, 0.15);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 253, 0.96)),
+    #ffffff;
+  box-shadow: 0 24px 60px rgba(5, 36, 58, 0.18);
+}
+
+body.next-app .login-card::before {
+  background: linear-gradient(90deg, #052d48 0%, #0d638e 48%, #24b5d0 100%);
+}
+
+@media (max-width: 1180px) {
+  body.next-app .topbar {
+    background:
+      linear-gradient(90deg, rgba(6, 48, 77, 0.96), rgba(9, 72, 105, 0.92)),
+      #06304d;
+  }
+
+  body.next-app .topbar-actions {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
