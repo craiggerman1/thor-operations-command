@@ -10716,3 +10716,275 @@ body.next-app .login-card::before {
     background: rgba(255, 255, 255, 0.08);
   }
 }
+
+/* Build 0.420 - readability correction after the blended theme pass.
+   The real shell uses .side-rail/.brand-lockup, so this restores a readable
+   dark TOC navigation while keeping the main work area clean and polished. */
+body.next-app {
+  --toc-ink: #0b263a;
+  --toc-muted: #5f7280;
+  --toc-rail: #07233a;
+  --toc-rail-2: #0a3858;
+  --toc-accent: #25aecd;
+  --toc-border: rgba(11, 60, 92, 0.13);
+  color: var(--toc-ink);
+  background:
+    radial-gradient(circle at 22% 0%, rgba(37, 174, 205, 0.13), transparent 30%),
+    linear-gradient(135deg, #edf3f7 0%, #f8fbfc 48%, #e7f0f5 100%);
+}
+
+body.next-app::before {
+  opacity: 0.12;
+  filter: saturate(0.92) contrast(1.04);
+}
+
+body.next-app .app-shell {
+  grid-template-columns: 272px minmax(0, 1fr);
+  background: transparent;
+}
+
+body.next-app .side-rail {
+  padding: 18px 14px 16px;
+  gap: 14px;
+  color: #eaf5fa;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 180px),
+    linear-gradient(150deg, rgba(37, 174, 205, 0.16), transparent 44%),
+    linear-gradient(180deg, var(--toc-rail), var(--toc-rail-2));
+  border-right: 1px solid rgba(163, 223, 237, 0.22);
+  box-shadow: 18px 0 44px rgba(5, 26, 42, 0.2);
+  backdrop-filter: none;
+}
+
+body.next-app .brand-lockup {
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 74px;
+  padding: 8px 8px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(197, 235, 244, 0.18);
+}
+
+body.next-app .brand-logo {
+  width: 74px;
+  max-height: 74px;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.24));
+}
+
+body.next-app .brand-lockup strong {
+  color: #ffffff;
+  font-size: 1.03rem;
+  font-weight: 950;
+  line-height: 1.06;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+body.next-app .brand-lockup span {
+  color: rgba(220, 239, 247, 0.78);
+  font-size: 0.76rem;
+  font-weight: 780;
+}
+
+body.next-app .rail-nav {
+  gap: 6px;
+  padding-right: 4px;
+  scrollbar-color: rgba(66, 199, 227, 0.55) rgba(255, 255, 255, 0.08);
+}
+
+body.next-app .rail-nav a {
+  min-height: 38px;
+  padding: 8px 9px;
+  color: rgba(232, 244, 249, 0.88);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(197, 235, 244, 0.1);
+  border-radius: 8px;
+  font-size: 0.89rem;
+  font-weight: 780;
+  box-shadow: none;
+}
+
+body.next-app .rail-nav a:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.095);
+  border-color: rgba(130, 218, 237, 0.28);
+  transform: none;
+}
+
+body.next-app .rail-nav a.active {
+  color: #ffffff;
+  background:
+    linear-gradient(90deg, rgba(37, 174, 205, 0.32), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 255, 0.075);
+  border-color: rgba(130, 218, 237, 0.4);
+  box-shadow: inset 3px 0 0 var(--toc-accent), 0 10px 18px rgba(0, 13, 23, 0.16);
+  transform: none;
+}
+
+body.next-app .nav-icon {
+  width: 25px;
+  height: 25px;
+  flex-basis: 25px;
+  border-color: rgba(160, 226, 240, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 245, 250, 0.88);
+  font-size: 0.61rem;
+}
+
+body.next-app .rail-nav a.active .nav-icon,
+body.next-app .rail-nav a:hover .nav-icon {
+  border-color: rgba(184, 240, 250, 0.46);
+  background: rgba(37, 174, 205, 0.26);
+  color: #ffffff;
+}
+
+body.next-app .nav-link-label {
+  color: inherit;
+}
+
+body.next-app .workspace {
+  padding: 18px 20px 28px;
+  padding-right: 372px;
+  background:
+    linear-gradient(180deg, rgba(247, 251, 252, 0.9), rgba(238, 246, 249, 0.94)),
+    transparent;
+}
+
+body.todo-floating-disabled.next-app .workspace {
+  padding-right: 20px;
+}
+
+body.next-app .topbar {
+  min-height: 78px;
+  margin-bottom: 12px;
+  padding: 12px 14px 12px 18px;
+  color: var(--toc-ink);
+  border: 1px solid var(--toc-border);
+  border-radius: 12px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(241, 248, 251, 0.94)),
+    #ffffff;
+  box-shadow: 0 13px 30px rgba(11, 40, 60, 0.1);
+}
+
+body.next-app .topbar::before {
+  opacity: 0.1;
+}
+
+body.next-app .title-block {
+  padding-left: 0;
+}
+
+body.next-app .title-block::before {
+  display: none;
+}
+
+body.next-app .topbar .title-block > .eyebrow {
+  display: block;
+  color: #547083;
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+body.next-app .topbar h1 {
+  color: #09263b;
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 1.8vw, 2.02rem);
+  font-weight: 950;
+  line-height: 1.04;
+  text-shadow: none;
+}
+
+body.next-app .live-beacon {
+  width: 10px;
+  height: 10px;
+  background: var(--toc-accent);
+  box-shadow: 0 0 0 4px rgba(37, 174, 205, 0.13);
+}
+
+body.next-app .live-label {
+  border-color: rgba(11, 60, 92, 0.14);
+  background: rgba(11, 60, 92, 0.06);
+  color: #304f62;
+}
+
+body.next-app .build-notice {
+  color: var(--toc-muted);
+}
+
+body.next-app .build-notice strong {
+  color: #096176;
+  background: rgba(37, 174, 205, 0.1);
+}
+
+body.next-app .build-notice em {
+  color: #607281;
+}
+
+body.next-app .topbar-actions {
+  max-width: min(980px, 69%);
+  border-color: rgba(11, 60, 92, 0.11);
+  background: rgba(246, 250, 252, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+body.next-app .session-chip,
+body.next-app .select-wrap,
+body.next-app .topbar select,
+body.next-app .manual-refresh-button,
+body.next-app .logout-button {
+  color: #10283a;
+}
+
+body.next-app .session-chip,
+body.next-app .select-wrap {
+  background: #ffffff;
+  border-color: rgba(11, 60, 92, 0.1);
+}
+
+body.next-app .page-title-copy,
+body.next-app .metric-card,
+body.next-app .panel,
+body.next-app .state-node,
+body.next-app .queue-card,
+body.next-app .asset-card,
+body.next-app .task-card,
+body.next-app .compliance-card,
+body.next-app .stock-card,
+body.next-app .brief-item,
+body.next-app .todo-item,
+body.next-app .wash-row,
+body.next-app .setup-table,
+body.next-app .setup-panel,
+body.next-app .setup-import-panel {
+  border-color: var(--toc-border);
+  box-shadow: 0 10px 24px rgba(11, 40, 60, 0.08);
+}
+
+body.next-app .page-title-copy h2,
+body.next-app .metric-card strong,
+body.next-app .panel-head h2,
+body.next-app .queue-card strong,
+body.next-app .state-node strong {
+  color: #09263b;
+}
+
+body.next-app .page-title-news,
+body.next-app .page-title-weather {
+  color: #10283a;
+  background: rgba(233, 245, 249, 0.82);
+}
+
+@media (max-width: 1180px) {
+  body.next-app .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.next-app .side-rail {
+    box-shadow: 18px 0 44px rgba(5, 26, 42, 0.22);
+  }
+
+  body.next-app .topbar-actions {
+    max-width: none;
+  }
+}
