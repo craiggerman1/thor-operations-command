@@ -123,6 +123,14 @@ function getGreeting() {
   return "Good evening";
 }
 
+function getNavGroup(label: string) {
+  if (["Home", "Region Health", "Productivity", "Calendar"].includes(label)) return "Command";
+  if (["Operations Setup", "Staff Availability", "Inductions", "Jobsheets"].includes(label)) return "Operations";
+  if (["Action Centre", "National Requests", "To Do", "Chat"].includes(label)) return "Workflows";
+  if (["Odin Control", "Admin Settings", "Compliance", "Stock Orders", "Asset Tracking", "Equipment Servicing"].includes(label)) return "Control";
+  return "Other";
+}
+
 function readJsonCache<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
 
@@ -186,6 +194,12 @@ export function TocShell({ children }: { children: ReactNode }) {
     () => navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National")),
     [activeProfile.role, currentScope]
   );
+  const groupedNav = useMemo(() => {
+    const groups = ["Command", "Operations", "Workflows", "Control", "Other"];
+    return groups
+      .map((group) => ({ group, items: visibleNav.filter((item) => getNavGroup(item.label) === group) }))
+      .filter((group) => group.items.length);
+  }, [visibleNav]);
 
   useEffect(() => {
     function applySession(nextSession: StoredSession | null) {
@@ -485,15 +499,20 @@ export function TocShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="rail-nav" aria-label="Primary">
-          {visibleNav.map(({ label, href }) => {
-            const badge = navBadgeCounts[label];
-            return (
-              <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
-                <span className="nav-link-label">{label}</span>
-                {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
-              </Link>
-            );
-          })}
+          {groupedNav.map(({ group, items }) => (
+            <section className="rail-nav-section" key={group} aria-label={group}>
+              <span className="rail-nav-heading">{group}</span>
+              {items.map(({ label, href }) => {
+                const badge = navBadgeCounts[label];
+                return (
+                  <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
+                    <span className="nav-link-label">{label}</span>
+                    {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
+                  </Link>
+                );
+              })}
+            </section>
+          ))}
         </nav>
       </aside>
 
@@ -510,7 +529,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.435</em>
+              <em>Build 0.436</em>
             </div>
           </div>
           <div className="topbar-actions">

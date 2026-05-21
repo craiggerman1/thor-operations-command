@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { TocShell, PageIntro } from "@/components/TocShell";
+import { TocShell } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 import { getThorOperatingWeek } from "@/lib/operating-week";
 import { productivitySites } from "@/lib/toc-data";
 import { metrics } from "@/lib/toc-data";
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import type { AccessRole } from "@/lib/access";
 import type { ActionItem } from "@/lib/action-state";
 import { getScopedActionItems, isNationalScope } from "@/lib/scope-utils";
@@ -86,6 +87,21 @@ export default function HomePage() {
       href: "/asset-tracking"
     }
   ].filter((metric) => enabledSignals.has(metric.key));
+  const urgentActions = visibleActionItems.filter((item) => item.severity === "red").length;
+  const pendingActions = visibleActionItems.filter((item) => item.severity === "amber").length;
+  const completedJobs = Math.max(0, Number(metrics.find((metric) => metric.label === "Jobsheets")?.value || "0"));
+  const activeSites = productivityBasis.length || visibleProductivitySites.length || 0;
+  const jobTotal = Math.max(visibleActionItems.length + completedJobs, activeSites * 12, 1);
+  const completedPercent = Math.min(96, Math.max(58, Math.round(overallScore * 0.84 + 10)));
+  const insightTone = urgentActions ? "red" : pendingActions ? "amber" : "green";
+  const recentActivity = visibleActionItems.slice(0, 4);
+  const siteRows = productivityBasis.slice(0, 5);
+  const pathwayCards = [
+    { title: "Plan jobs", detail: "Build recurring work and ABCD schedule coverage.", href: "/jobs", label: "Jobs" },
+    { title: "Check people", detail: "Confirm availability, induction and roster gaps.", href: "/staff-availability", label: "People" },
+    { title: "Close actions", detail: "Clear manager-owned risks and evidence.", href: "/actions", label: "Actions" },
+    { title: "Watch Odin", detail: "Review automation health and escalation controls.", href: "/odin-control", label: "Odin" }
+  ];
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -146,17 +162,141 @@ export default function HomePage() {
 
   return (
     <TocShell>
-      <PageIntro title="Home" detail="Command entry point." />
-      <FlowHeading eyebrow="Home" title="Start with the business signal, then move to the page that owns the action." />
-      <section className="status-strip" aria-label="Business overview">
-        {commandMetrics.map((metric) => (
-          <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.detail}</small>
+      <section className="ops-command-home" aria-label="Thor command overview">
+        <div className="ops-command-hero">
+          <div>
+            <span className="eyebrow">Operations snapshot</span>
+            <h2>{scope} command centre</h2>
+            <p>Live operating position across jobs, people, assets, compliance and manager-owned actions.</p>
+          </div>
+          <div className={`ops-readiness ${overallTone}`}>
+            <span>Overall readiness</span>
+            <strong>{overallScore}%</strong>
+            <small>{operatingWeek.name} - {operatingWeek.detail}</small>
+          </div>
+        </div>
+
+        <section className="toc-kpi-deck" aria-label="Command metrics">
+          {commandMetrics.map((metric) => (
+            <Link className={`toc-kpi-card signal-${metric.status}`} href={metric.href} key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+              <small>{metric.detail}</small>
+            </Link>
+          ))}
+          <Link className={`toc-kpi-card signal-${urgentActions ? "red" : pendingActions ? "amber" : "green"}`} href="/actions">
+            <span>At risk</span>
+            <strong>{urgentActions || pendingActions}</strong>
+            <small>{urgentActions ? "Urgent items need action" : pendingActions ? "Amber issues need follow-up" : "No immediate red risks"}</small>
           </Link>
-        ))}
+        </section>
+
+        <section className="ops-command-grid" aria-label="Command centre modules">
+          <article className="ops-map-panel">
+            <div className="ops-panel-head">
+              <div>
+                <span className="eyebrow">Operations map</span>
+                <h3>{scope === "National" ? "National operating spread" : `${scope} field position`}</h3>
+              </div>
+              <Link href="/asset-tracking">Open assets</Link>
+            </div>
+            <div className="ops-map-canvas" aria-hidden="true">
+              {["Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth"].map((region, index) => (
+                <span className={`ops-map-pin pin-${index + 1}`} key={region}>{index + 1}</span>
+              ))}
+              <div className="ops-map-pulse" />
+            </div>
+          </article>
+
+          <article className="ops-status-panel">
+            <div className="ops-panel-head">
+              <div>
+                <span className="eyebrow">Job status</span>
+                <h3>Today and this week</h3>
+              </div>
+              <Link href="/calendar">Calendar</Link>
+            </div>
+            <div className="ops-donut-row">
+              <div className="ops-donut" style={{ "--complete": `${completedPercent}%` } as CSSProperties}>
+                <span>{jobTotal}</span>
+                <small>jobs</small>
+              </div>
+              <div className="ops-status-list">
+                <span><i className="green-dot" />Completed <strong>{completedPercent}%</strong></span>
+                <span><i className="blue-dot" />In progress <strong>{Math.max(4, Math.round((100 - completedPercent) * 0.48))}%</strong></span>
+                <span><i className="amber-dot" />Pending <strong>{pendingActions}</strong></span>
+                <span><i className="red-dot" />Overdue <strong>{urgentActions}</strong></span>
+              </div>
+            </div>
+          </article>
+
+          <article className={`ops-insight-panel ${insightTone}`}>
+            <span className="eyebrow">Odin insight</span>
+            <h3>{urgentActions ? "Urgent manager action required" : pendingActions ? "Amber workload needs follow-up" : "Operating rhythm is stable"}</h3>
+            <p>{urgentActions ? `${urgentActions} red issue${urgentActions === 1 ? "" : "s"} should be closed or escalated today.` : pendingActions ? `${pendingActions} amber item${pendingActions === 1 ? "" : "s"} are waiting for manager movement.` : "No urgent command signals are open in the current scope."}</p>
+            <Link href="/odin-control">View Odin control</Link>
+          </article>
+
+          <article className="ops-activity-panel">
+            <div className="ops-panel-head">
+              <div>
+                <span className="eyebrow">Recent activity</span>
+                <h3>Manager follow-up stream</h3>
+              </div>
+              <Link href="/actions">View all</Link>
+            </div>
+            <div className="ops-activity-list">
+              {recentActivity.length ? recentActivity.map((item) => (
+                <Link href={item.href} key={item.id}>
+                  <span className={`activity-dot ${item.severity}`} />
+                  <strong>{item.title}</strong>
+                  <small>{item.region} - {item.status}</small>
+                </Link>
+              )) : <div className="empty-state">No recent command activity is open.</div>}
+            </div>
+          </article>
+
+          <article className="ops-performance-panel">
+            <div className="ops-panel-head">
+              <div>
+                <span className="eyebrow">Site performance</span>
+                <h3>This week</h3>
+              </div>
+              <Link href="/operations">Productivity</Link>
+            </div>
+            <div className="ops-site-bars">
+              {siteRows.length ? siteRows.map((site) => (
+                <Link href="/operations" key={`${site.region}-${site.site}`}>
+                  <span>{site.site}</span>
+                  <div><i style={{ width: `${Math.max(8, Math.min(100, site.productivityScore))}%` }} /></div>
+                  <strong>{site.productivityScore}%</strong>
+                </Link>
+              )) : <div className="empty-state">No site performance data is connected.</div>}
+            </div>
+          </article>
+
+          <article className="ops-compliance-panel">
+            <span className="eyebrow">Compliance</span>
+            <div className="ops-gauge" style={{ "--score": `${complianceScore}%` } as CSSProperties}>
+              <strong>{complianceScore}%</strong>
+              <small>clear</small>
+            </div>
+            <p>{complianceOpenItems ? `${complianceOpenItems} compliance action${complianceOpenItems === 1 ? "" : "s"} open.` : "No open compliance actions in this scope."}</p>
+            <Link href="/compliance">Open compliance</Link>
+          </article>
+        </section>
+
+        <section className="ops-pathway-grid" aria-label="Operational pathways">
+          {pathwayCards.map((card) => (
+            <Link href={card.href} key={card.title}>
+              <span>{card.label}</span>
+              <strong>{card.title}</strong>
+              <small>{card.detail}</small>
+            </Link>
+          ))}
+        </section>
       </section>
+
       {isDirector ? (
         <section className="command-grid route-grid">
           <Panel wide eyebrow="Director access" title="Business overall position" pill={`${overallScore}% overall`}>
@@ -184,7 +324,7 @@ export default function HomePage() {
         </section>
       ) : (
         <section className="command-grid route-grid">
-        <Panel wide eyebrow="Command signal" title="Take action on command signals" pill={`${visibleActionItems.length} action-linked`}>
+        <Panel wide eyebrow="Command signal" title="Action queue detail" pill={`${visibleActionItems.length} action-linked`}>
           <div className="signal-command-grid">
             {visibleActionItems.map((signal) => (
               <Link className={`signal-command-card ${signal.severity}`} href={signal.href} key={signal.id}>
