@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { allRegions, defaultSession, navigationItems, sessionProfiles } from "@/lib/access";
 import type { AccessRole } from "@/lib/access";
@@ -78,6 +78,7 @@ const navBadgeRefreshMs = 60000;
 const operationsNewsRefreshMs = 120000;
 let shellSessionCache: StoredSession | null = null;
 let shellRestoreInFlight: Promise<StoredSession | null> | null = null;
+const TocShellContext = createContext(false);
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
@@ -138,6 +139,7 @@ function writeJsonCache<T>(key: string, value: T, ttlMs: number) {
 }
 
 export function TocShell({ children }: { children: ReactNode }) {
+  const isNestedShell = useContext(TocShellContext);
   const router = useRouter();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
@@ -448,10 +450,11 @@ export function TocShell({ children }: { children: ReactNode }) {
     window.dispatchEvent(new Event("toc.manualRefresh"));
   }
 
+  if (isNestedShell) return <>{children}</>;
   if (!session.role) return null;
 
   return (
-    <>
+    <TocShellContext.Provider value={true}>
     <div className="mobile-app-bar" aria-label="Mobile command navigation">
       <button className="mobile-menu-button" type="button" aria-label="Open navigation" aria-expanded={navOpen} onClick={() => setNavOpen(true)}>
         <span />
@@ -498,7 +501,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.433</em>
+              <em>Build 0.434</em>
             </div>
           </div>
           <div className="topbar-actions">
@@ -555,7 +558,7 @@ export function TocShell({ children }: { children: ReactNode }) {
         <div className="sequence-progress"><span /></div>
       </div>
     ) : null}
-    </>
+    </TocShellContext.Provider>
   );
 }
 
