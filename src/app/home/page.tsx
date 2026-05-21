@@ -167,8 +167,8 @@ export default function HomePage() {
         <div className="ops-command-hero">
           <div>
             <span className="eyebrow">Operations snapshot</span>
-            <h2>{scope} command centre</h2>
-            <p>Live operating position across jobs, people, assets, compliance and manager-owned actions.</p>
+            <h2>{scope === "National" ? "Thor Operating Command" : `${scope} Operating Command`}</h2>
+            <p>A live operating environment for jobs, people, assets, compliance, manager close-out and Odin oversight.</p>
           </div>
           <div className={`ops-readiness ${overallTone}`}>
             <span>Overall readiness</span>

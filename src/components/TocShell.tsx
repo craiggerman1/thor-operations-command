@@ -506,6 +506,7 @@ export function TocShell({ children }: { children: ReactNode }) {
                 const badge = navBadgeCounts[label];
                 return (
                   <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
+                    <span className="nav-glyph" aria-hidden="true">{label.slice(0, 1)}</span>
                     <span className="nav-link-label">{label}</span>
                     {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
                   </Link>
@@ -514,6 +515,11 @@ export function TocShell({ children }: { children: ReactNode }) {
             </section>
           ))}
         </nav>
+        <div className="command-ribbon-status" aria-label="Command session status">
+          <span>Live scope</span>
+          <strong>{currentScope}</strong>
+          <small>{activeProfile.label}</small>
+        </div>
       </aside>
 
       <main className="workspace">
@@ -529,7 +535,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.436</em>
+              <em>Build 0.437</em>
             </div>
           </div>
           <div className="topbar-actions">
