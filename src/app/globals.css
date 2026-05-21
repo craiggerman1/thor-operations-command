@@ -2636,3 +2636,556 @@ body.next-app .page-title-weather {
     grid-template-columns: 1fr;
   }
 }
+
+/* Build 0.435 - Meridian-inspired TOC preview visual system. */
+body.next-app {
+  --toc-ink: #0a1420;
+  --toc-ink-soft: #526273;
+  --toc-line: #e2e8f0;
+  --toc-card: #ffffff;
+  --toc-blue: #2563eb;
+  --toc-navy: #06111f;
+  --toc-green: #16a34a;
+  --toc-red: #ef4444;
+  --toc-amber: #d97706;
+  color: var(--toc-ink);
+  background:
+    radial-gradient(circle at 12% -8%, rgba(37, 99, 235, 0.14), transparent 26%),
+    linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+}
+
+body.next-app::before,
+body.next-app::after,
+body.next-app .topbar::before,
+body.next-app .title-block::before,
+body.next-app .panel::before,
+body.next-app .metric-card::before,
+body.next-app .metric-card::after,
+body.next-app .signal-command-card::before,
+body.next-app .signal-action-card::before {
+  display: none;
+}
+
+body.next-app .app-shell {
+  min-height: 100vh;
+  grid-template-columns: 212px minmax(0, 1fr);
+  background: transparent;
+}
+
+body.next-app .side-rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 18px 12px;
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  background:
+    linear-gradient(180deg, rgba(9, 24, 42, 0.97), rgba(4, 13, 24, 0.99)),
+    radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.22), transparent 42%);
+  box-shadow: 20px 0 48px rgba(15, 23, 42, 0.12);
+}
+
+body.next-app .brand-lockup {
+  min-height: 50px;
+  padding: 0 6px 18px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.1);
+}
+
+body.next-app .brand-logo {
+  width: 34px;
+  height: 34px;
+}
+
+body.next-app .brand-lockup strong {
+  color: #ffffff;
+  font-size: 0.92rem;
+  letter-spacing: 0.18em;
+}
+
+body.next-app .brand-lockup span {
+  color: rgba(226, 232, 240, 0.66);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+body.next-app .rail-nav {
+  gap: 3px;
+  padding-top: 14px;
+}
+
+body.next-app .rail-nav a {
+  min-height: 36px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+body.next-app .rail-nav a::before {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: rgba(148, 163, 184, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.08);
+}
+
+body.next-app .rail-nav a:hover,
+body.next-app .rail-nav a.active {
+  border-color: rgba(147, 197, 253, 0.18);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.28), rgba(37, 99, 235, 0.08));
+  color: #ffffff;
+}
+
+body.next-app .rail-nav a:hover::before,
+body.next-app .rail-nav a.active::before {
+  background: var(--toc-blue);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28);
+}
+
+body.next-app .workspace,
+body.todo-floating-disabled.next-app .workspace {
+  max-width: none;
+  padding: 20px 28px 44px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 56%, #f1f5f9 100%);
+}
+
+body.next-app .topbar {
+  align-items: start;
+  min-height: 72px;
+  margin: 0 0 16px;
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--toc-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.next-app .title-block {
+  gap: 4px;
+}
+
+body.next-app .topbar .title-block > .eyebrow {
+  color: var(--toc-ink-soft);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.next-app .title-line {
+  gap: 10px;
+}
+
+body.next-app .topbar h1 {
+  color: var(--toc-ink);
+  font-size: clamp(1.28rem, 1.9vw, 1.72rem);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+body.next-app .live-beacon {
+  width: 8px;
+  height: 8px;
+  background: var(--toc-green);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
+}
+
+body.next-app .live-label {
+  border: 1px solid var(--toc-line);
+  background: #ffffff;
+  color: var(--toc-blue);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+}
+
+body.next-app .build-notice {
+  gap: 6px;
+  margin-top: 1px;
+}
+
+body.next-app .build-notice strong,
+body.next-app .build-notice em {
+  min-height: 22px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.64rem;
+}
+
+body.next-app .topbar-actions {
+  justify-content: flex-end;
+  max-width: min(840px, 64%);
+  gap: 8px;
+}
+
+body.next-app .session-chip,
+body.next-app .select-wrap {
+  min-height: 42px;
+  border: 1px solid var(--toc-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
+body.next-app .session-chip span,
+body.next-app .select-wrap span {
+  color: #64748b;
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+}
+
+body.next-app .session-chip strong,
+body.next-app .session-chip small,
+body.next-app .topbar select {
+  color: var(--toc-ink);
+}
+
+body.next-app .manual-refresh-button,
+body.next-app .logout-button,
+body.next-app .text-button,
+body.next-app .node-action,
+body.next-app .page-hint button,
+body.next-app .admin-hint-controls button,
+body.next-app .setup-grid-form button,
+body.next-app .setup-source-row button,
+body.next-app .setup-client-board button,
+body.next-app .setup-table button,
+body.next-app .stock-form button,
+body.next-app .stock-card button,
+body.next-app .quick-action-controls button,
+body.next-app .action-lifecycle-buttons button,
+body.next-app .asset-tracking-actions button {
+  border-radius: 7px;
+  border: 1px solid var(--toc-line);
+  background: #ffffff;
+  color: var(--toc-ink);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+  text-transform: none;
+}
+
+body.next-app .manual-refresh-button,
+body.next-app button[type="submit"],
+body.next-app .login-card button,
+body.next-app .setup-guide-footer button:not(:disabled) {
+  border-color: transparent;
+  background: var(--toc-navy);
+  color: #ffffff;
+}
+
+body.next-app .logout-button:hover,
+body.next-app .manual-refresh-button:hover,
+body.next-app .node-action:hover,
+body.next-app button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+body.next-app .page-title-copy {
+  display: none;
+}
+
+body.next-app .page-title-news,
+body.next-app .page-title-weather,
+body.next-app .flow-heading {
+  border: 1px solid var(--toc-line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+body.next-app .flow-heading h2,
+body.next-app .panel-head h2 {
+  color: var(--toc-ink);
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+body.next-app .flow-heading .eyebrow,
+body.next-app .panel-head .eyebrow,
+body.next-app .metric-card span {
+  color: #64748b;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.next-app .status-strip {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+body.next-app .command-grid,
+body.next-app .command-grid.route-grid {
+  gap: 14px;
+  margin-top: 14px;
+}
+
+body.next-app .panel,
+body.next-app .metric-card,
+body.next-app .state-node,
+body.next-app .queue-card,
+body.next-app .asset-card,
+body.next-app .task-card,
+body.next-app .compliance-card,
+body.next-app .stock-card,
+body.next-app .brief-item,
+body.next-app .todo-item,
+body.next-app .wash-row,
+body.next-app .setup-table,
+body.next-app .setup-panel,
+body.next-app .setup-hero,
+body.next-app .setup-import-panel,
+body.next-app .setup-client-job-card,
+body.next-app .availability-summary-card,
+body.next-app .national-request-card,
+body.next-app .productivity-site-card,
+body.next-app .productivity-score-card,
+body.next-app .admin-config-card,
+body.next-app .admin-action-card,
+body.next-app .odin-simple-panels article,
+body.next-app .roster-gap-card,
+body.next-app .odin-rhythm-card,
+body.next-app .worker-induction-card {
+  border: 1px solid var(--toc-line);
+  border-radius: 8px;
+  background: var(--toc-card);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+body.next-app .metric-card {
+  min-height: 104px;
+  padding: 16px;
+  gap: 7px;
+  color: var(--toc-ink);
+}
+
+body.next-app .metric-card strong {
+  color: var(--toc-ink);
+  font-size: clamp(1.72rem, 3vw, 2.28rem);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+body.next-app .metric-card small {
+  color: var(--toc-ink-soft);
+  font-size: 0.78rem;
+}
+
+body.next-app .signal-green strong,
+body.next-app .tag.green {
+  color: var(--toc-green);
+}
+
+body.next-app .signal-red strong,
+body.next-app .tag.red {
+  color: var(--toc-red);
+}
+
+body.next-app .signal-amber strong,
+body.next-app .tag.amber {
+  color: var(--toc-amber);
+}
+
+body.next-app .panel {
+  padding: 16px;
+}
+
+body.next-app .panel-head {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--toc-line);
+}
+
+body.next-app .panel-head .pill,
+body.next-app .tag,
+body.next-app .nav-request-badge {
+  border-radius: 999px;
+  border: 1px solid var(--toc-line);
+  background: #f8fafc;
+  color: var(--toc-ink-soft);
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+body.next-app .tag.blue,
+body.next-app .panel-head .pill {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+body.next-app .tag.green {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+body.next-app .tag.red {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+body.next-app .tag.amber {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+body.next-app .signal-command-card,
+body.next-app .signal-action-card {
+  border: 1px solid var(--toc-line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--toc-ink);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+body.next-app .signal-command-card.red,
+body.next-app .signal-action-card.red {
+  border-left: 4px solid var(--toc-red);
+}
+
+body.next-app .signal-command-card.amber,
+body.next-app .signal-action-card.amber {
+  border-left: 4px solid var(--toc-amber);
+}
+
+body.next-app .signal-command-card.green,
+body.next-app .signal-action-card.green {
+  border-left: 4px solid var(--toc-green);
+}
+
+body.next-app .empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+body.next-app .setup-steps button.active,
+body.next-app .segmented-control button.active,
+body.next-app .action-filter-strip button.active {
+  background: var(--toc-blue);
+  color: #ffffff;
+}
+
+body.next-app input,
+body.next-app select,
+body.next-app textarea {
+  border-color: var(--toc-line);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+body.next-app .login-screen {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(37, 99, 235, 0.28), transparent 28%),
+    linear-gradient(135deg, #030b16 0%, #06111f 48%, #0b1b2d 100%);
+}
+
+body.next-app .login-screen::before {
+  opacity: 0.12;
+}
+
+body.next-app .login-brand span {
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.04;
+  text-transform: none;
+}
+
+body.next-app .login-card {
+  border: 1px solid rgba(226, 232, 240, 0.16);
+  border-top: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--toc-ink);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+}
+
+body.next-app .login-card h1 {
+  color: var(--toc-ink);
+  font-family: var(--font-sans);
+  font-weight: 900;
+}
+
+body.next-app .login-card p,
+body.next-app .login-card label span,
+body.next-app .login-note,
+body.next-app .login-title-row span {
+  color: var(--toc-ink-soft);
+}
+
+body.next-app .mobile-app-bar {
+  border-bottom: 1px solid var(--toc-line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+body.next-app .mobile-app-bar strong {
+  color: var(--toc-ink);
+  letter-spacing: 0.2em;
+}
+
+@media (max-width: 1180px) {
+  body.next-app .app-shell {
+    grid-template-columns: 188px minmax(0, 1fr);
+  }
+
+  body.next-app .workspace,
+  body.todo-floating-disabled.next-app .workspace {
+    padding-inline: 20px;
+  }
+
+  body.next-app .topbar-actions {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  body.next-app .app-shell {
+    display: block;
+  }
+
+  body.next-app .side-rail {
+    position: fixed;
+    height: 100vh;
+    padding-top: 18px;
+  }
+
+  body.next-app .workspace,
+  body.todo-floating-disabled.next-app .workspace {
+    padding: 72px 12px 28px;
+  }
+
+  body.next-app .topbar {
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  body.next-app .topbar-actions {
+    width: 100%;
+    justify-content: stretch;
+    background: transparent;
+  }
+
+  body.next-app .session-chip,
+  body.next-app .topbar-actions .select-wrap,
+  body.next-app .manual-refresh-button,
+  body.next-app .logout-button {
+    width: 100%;
+  }
+
+  body.next-app .status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.next-app .metric-card {
+    min-height: 92px;
+    padding: 12px;
+  }
+}

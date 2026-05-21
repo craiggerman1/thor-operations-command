@@ -116,6 +116,13 @@ function isRecentlyRestoredSession(storedSession: StoredSession | null) {
   return Date.now() - new Date(storedSession.restoredAt).getTime() < profileRevalidateMs;
 }
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 function readJsonCache<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
 
@@ -173,6 +180,8 @@ export function TocShell({ children }: { children: ReactNode }) {
     : "";
   const isDeveloperViewActive = Boolean(developerRole || developerScope);
   const currentScope = developerScope || accountScope;
+  const operatorName = session.label && !session.label.toLowerCase().includes("admin") ? session.label.split(" ")[0] : accountProfile.label;
+  const greeting = `${getGreeting()}, ${operatorName}`;
   const visibleNav = useMemo(
     () => navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National")),
     [activeProfile.role, currentScope]
@@ -471,8 +480,8 @@ export function TocShell({ children }: { children: ReactNode }) {
         <div className="brand-lockup">
           <img className="brand-logo" src="/assets/thor-logo-stacked-sidebar.png" alt="Thor Mobile Truck Wash" />
           <div>
-            <strong>Operations Command</strong>
-            <span>Admin access</span>
+            <strong>THOR</strong>
+            <span>Operations Command</span>
           </div>
         </div>
         <nav className="rail-nav" aria-label="Primary">
@@ -493,15 +502,15 @@ export function TocShell({ children }: { children: ReactNode }) {
         <DirectorBroadcastBanner />
         <header className="topbar">
           <div className="title-block">
-            <span className="eyebrow">Thor Mobile Truck Wash</span>
+            <span className="eyebrow">{currentScope} operations</span>
             <div className="title-line">
               <span className="live-beacon" aria-label="Live data feeds are offline" />
-              <h1>Thor Operations Command</h1>
-              <span className="live-label">OFFLINE</span>
+              <h1>{greeting}</h1>
+              <span className="live-label">TOC</span>
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.434</em>
+              <em>Build 0.435</em>
             </div>
           </div>
           <div className="topbar-actions">
