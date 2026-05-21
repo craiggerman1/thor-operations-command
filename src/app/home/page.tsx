@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { TocShell } from "@/components/TocShell";
-import { FlowHeading, Panel, Tag } from "@/components/TocCards";
 import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 import { getThorOperatingWeek } from "@/lib/operating-week";
 import { productivitySites } from "@/lib/toc-data";
@@ -95,6 +94,8 @@ export default function HomePage() {
   const completedPercent = Math.min(96, Math.max(58, Math.round(overallScore * 0.84 + 10)));
   const insightTone = urgentActions ? "red" : pendingActions ? "amber" : "green";
   const recentActivity = visibleActionItems.slice(0, 4);
+  const priorityActions = visibleActionItems.slice(0, 3);
+  const roadmapItems = homeSettings.roadmap.slice(0, 4);
   const siteRows = productivityBasis.slice(0, 5);
   const pathwayCards = [
     { title: "Plan jobs", detail: "Build recurring work and ABCD schedule coverage.", href: "/jobs", label: "Jobs" },
@@ -295,66 +296,79 @@ export default function HomePage() {
             </Link>
           ))}
         </section>
-      </section>
 
-      {isDirector ? (
-        <section className="command-grid route-grid">
-          <Panel wide eyebrow="Director access" title="Business overall position" pill={`${overallScore}% overall`}>
-            <div className="director-layout">
-              <Link className={`director-scorecard actionable-card ${overallTone}`} href="/actions">
-                <span>Overall position</span>
-                <strong>{overallScore}%</strong>
-                <small>Total nationwide position from open actions, site productivity and open manager To Do items.</small>
-              </Link>
-              <div className="director-signals">
-                <DirectorSignal label="Productivity" value={`${productivityScore}%`} tone={getTone(productivityScore)} href="/operations" />
-                <DirectorSignal label="Compliance" value={`${complianceScore}%`} tone={getTone(complianceScore)} href="/compliance" />
-                <DirectorSignal label="Manager To Do Items" value={openTodoCount.toString()} tone={openTodoCount ? "amber" : "green"} href="/actions" />
-                <DirectorSignal label="Manager Action Items" value={visibleActionItems.length.toString()} tone={visibleActionItems.length ? "amber" : "green"} href="/actions" />
+        <section className="ops-command-lower" aria-label="Command workflows">
+          <article className="ops-workflow-panel">
+            <div className="ops-panel-head">
+              <div>
+                <span className="eyebrow">Workflow control</span>
+                <h3>What needs to move next</h3>
               </div>
-              <div className="director-brief">
-                <div className="director-brief-item"><span className="brief-dot" /><strong>{visibleActionItems.length} national open action items currently influence the business overall position score.</strong></div>
-                <div className="director-brief-item"><span className="brief-dot" /><strong><Tag tone={complianceScore >= 90 ? "green" : "amber"}>{complianceScore >= 90 ? "Stable" : "Watch"}</Tag> Compliance score is driven by open compliance action load.</strong></div>
-              </div>
+              <Link href="/actions">Open Action Centre</Link>
             </div>
-          </Panel>
-          <Panel wide eyebrow="Director message" title="A Message From The Director" pill="All users">
+            <div className="ops-workflow-stack">
+              {priorityActions.length ? priorityActions.map((item, index) => (
+                <Link className={`ops-workflow-step ${item.severity}`} href={item.href} key={item.id}>
+                  <span>{index + 1}</span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <small>{item.directive} - {item.region}</small>
+                  </div>
+                  <em>{item.status}</em>
+                </Link>
+              )) : (
+                <div className="ops-workflow-empty">
+                  <strong>No manager close-out items are open.</strong>
+                  <small>The command queue is clear for this scope.</small>
+                </div>
+              )}
+            </div>
+          </article>
+
+          <article className="ops-system-panel">
+            <span className="eyebrow">Connected operating system</span>
+            <h3>Jobs, people, compliance and Odin in one flow</h3>
+            <div className="ops-system-orbit" aria-hidden="true">
+              <span className="orbit-core">TOC</span>
+              <span className="orbit-node node-jobs">Jobs</span>
+              <span className="orbit-node node-staff">Staff</span>
+              <span className="orbit-node node-odin">Odin</span>
+              <span className="orbit-node node-compliance">Compliance</span>
+              <span className="orbit-node node-assets">Assets</span>
+            </div>
+          </article>
+
+          <article className="ops-readiness-panel">
+            <div className="ops-panel-head">
+              <div>
+                <span className="eyebrow">Go-live readiness</span>
+                <h3>Build pathway</h3>
+              </div>
+              <Link href="/operations-setup">Setup</Link>
+            </div>
+            <div className="ops-roadmap-list">
+              {roadmapItems.map((item) => (
+                <div className={`ops-roadmap-item ${item.severity}`} key={item.step}>
+                  <span>{item.step}</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.status}</small>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        {isDirector ? (
+          <section className="ops-director-panel" aria-label="Director broadcast">
+            <div>
+              <span className="eyebrow">Director broadcast</span>
+              <h3>A Message From The Director</h3>
+              <p>Set the business-wide message managers see inside TOC.</p>
+            </div>
             <DirectorBroadcastControls />
-          </Panel>
-        </section>
-      ) : (
-        <section className="command-grid route-grid">
-        <Panel wide eyebrow="Command signal" title="Action queue detail" pill={`${visibleActionItems.length} action-linked`}>
-          <div className="signal-command-grid">
-            {visibleActionItems.map((signal) => (
-              <Link className={`signal-command-card ${signal.severity}`} href={signal.href} key={signal.id}>
-                <div>
-                  <span className="eyebrow">{signal.source} - {signal.region}</span>
-                  <h3>{signal.title}</h3>
-                  <p>{signal.detail}</p>
-                </div>
-                <div className="signal-command-footer">
-                  <div className="meta-row"><Tag tone={signal.severity}>{signal.status}</Tag><Tag>{signal.directive}</Tag></div>
-                  <span className="node-action">Open issue</span>
-                </div>
-              </Link>
-            ))}
-            {visibleActionItems.length ? null : <div className="empty-state">No command signals are currently open.</div>}
-          </div>
-        </Panel>
-        <Panel wide className="admin-only-panel" eyebrow="Admin roadmap" title="Go Live Pathway" pill="Field-use readiness">
-          <div className="go-live-pathway">
-            {homeSettings.roadmap.map((item) => (
-              <article className={`go-live-item ${item.severity}`} key={item.step}>
-                <span>{item.step}</span>
-                <strong>{item.title}</strong>
-                <Tag tone={item.severity}>{item.status}</Tag>
-              </article>
-            ))}
-          </div>
-        </Panel>
-        </section>
-      )}
+          </section>
+        ) : null}
+      </section>
     </TocShell>
   );
 }
@@ -385,8 +399,4 @@ function getTone(score: number) {
   if (score >= 90) return "green";
   if (score >= 75) return "amber";
   return "red";
-}
-
-function DirectorSignal({ label, value, href, tone = "green" }: { label: string; value: string; href: string; tone?: "green" | "amber" | "red" }) {
-  return <Link className={`director-signal actionable-card ${tone}`} href={href}><span>{label}</span><strong>{value}</strong><small>Open relevant view</small></Link>;
 }
