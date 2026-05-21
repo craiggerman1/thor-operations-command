@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { TocShell, PageIntro } from "@/components/TocShell";
-import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { TocShell } from "@/components/TocShell";
+import { Panel, Tag } from "@/components/TocCards";
 import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 import { getThorOperatingWeek } from "@/lib/operating-week";
 import { productivitySites } from "@/lib/toc-data";
@@ -50,6 +50,10 @@ export default function HomePage() {
   const isDirector = activeRole === "director";
   const isScopedRegion = !isNationalScope(scope);
   const jobsheetActions = visibleActionItems.filter((item) => item.source === "Thor Portal").length;
+  const urgentActions = visibleActionItems.filter((item) => item.severity === "red").length;
+  const pendingActions = visibleActionItems.filter((item) => item.severity === "amber").length;
+  const topSites = productivityBasis.slice(0, 4);
+  const priorityActions = visibleActionItems.slice(0, 3);
   const signalLabels = homeSettings.signals.reduce((labels, signal) => ({ ...labels, [signal.key]: signal.label }), {} as Record<HomeSignalKey, string>);
   const enabledSignals = new Set(homeSettings.signals.filter((signal) => signal.enabled).map((signal) => signal.key));
   const commandMetrics = [
@@ -146,17 +150,93 @@ export default function HomePage() {
 
   return (
     <TocShell>
-      <PageIntro title="Home" detail="Command entry point." />
-      <FlowHeading eyebrow="Home" title="Start with the business signal, then move to the page that owns the action." />
-      <section className="status-strip" aria-label="Business overview">
-        {commandMetrics.map((metric) => (
-          <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.detail}</small>
-          </Link>
-        ))}
+      <section className="premium-home" aria-label="Thor Operations Command overview">
+        <div className="premium-command-hero">
+          <div className="premium-hero-copy">
+            <span>Thor Mobile Truck Wash</span>
+            <h2>{isScopedRegion ? `${scope} command floor` : "National command floor"}</h2>
+            <p>One operating view for jobs, people, assets, compliance and manager close-out.</p>
+          </div>
+          <div className={`premium-readiness ${overallTone}`}>
+            <small>Business position</small>
+            <strong>{overallScore}%</strong>
+            <span>{operatingWeek.name} - {operatingWeek.detail}</span>
+          </div>
+        </div>
+
+        <section className="premium-metric-strip" aria-label="Business overview">
+          {commandMetrics.map((metric) => (
+            <Link className={`premium-metric signal-${metric.status}`} href={metric.href} key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+              <small>{metric.detail}</small>
+            </Link>
+          ))}
+        </section>
+
+        <section className="premium-command-console" aria-label="Operational console">
+          <article className="premium-map-console">
+            <div className="premium-panel-head">
+              <div>
+                <span>Live operating map</span>
+                <h3>{isScopedRegion ? `${scope} field position` : "National field position"}</h3>
+              </div>
+              <Link href="/asset-tracking">Asset view</Link>
+            </div>
+            <div className="premium-map-stage" aria-hidden="true">
+              <span className="map-node node-brisbane">BNE</span>
+              <span className="map-node node-sydney">SYD</span>
+              <span className="map-node node-melbourne">MEL</span>
+              <span className="map-node node-adelaide">ADL</span>
+              <span className="map-node node-perth">PER</span>
+              <div className="map-pulse-card">
+                <span>Focus</span>
+                <strong>{urgentActions ? "Escalation required" : pendingActions ? "Follow-up queue" : "Stable rhythm"}</strong>
+                <small>{urgentActions || pendingActions || visibleActionItems.length} open command signals</small>
+              </div>
+            </div>
+          </article>
+
+          <article className="premium-action-console">
+            <div className="premium-panel-head">
+              <div>
+                <span>Manager close-out</span>
+                <h3>Priority queue</h3>
+              </div>
+              <Link href="/actions">Open actions</Link>
+            </div>
+            <div className="premium-action-list">
+              {priorityActions.length ? priorityActions.map((item) => (
+                <Link className={`premium-action-row ${item.severity}`} href={item.href} key={item.id}>
+                  <span>{item.source}</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.region} - {item.directive}</small>
+                </Link>
+              )) : <div className="premium-empty">No priority action items are open.</div>}
+            </div>
+          </article>
+
+          <article className="premium-site-console">
+            <div className="premium-panel-head">
+              <div>
+                <span>Site performance</span>
+                <h3>This week</h3>
+              </div>
+              <Link href="/operations">Open productivity</Link>
+            </div>
+            <div className="premium-site-list">
+              {topSites.map((site) => (
+                <Link href="/operations" key={`${site.region}-${site.site}`}>
+                  <span>{site.site}</span>
+                  <i><b style={{ width: `${Math.max(8, Math.min(100, site.productivityScore))}%` }} /></i>
+                  <strong>{site.productivityScore}%</strong>
+                </Link>
+              ))}
+            </div>
+          </article>
+        </section>
       </section>
+
       {isDirector ? (
         <section className="command-grid route-grid">
           <Panel wide eyebrow="Director access" title="Business overall position" pill={`${overallScore}% overall`}>
