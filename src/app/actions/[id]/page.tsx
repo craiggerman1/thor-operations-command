@@ -25,7 +25,17 @@ type ActionDetailItem = EnhancedActionItem & {
     reviewedAt: string | null;
     updatedAt: string | null;
     href: string;
+    attachments?: EvidenceAttachment[];
   }[];
+};
+
+type EvidenceAttachment = {
+  id: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  url: string;
+  purpose: string;
 };
 
 export default function ActionDetailPage() {
@@ -34,10 +44,14 @@ export default function ActionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [managerResponse, setManagerResponse] = useState("");
   const [evidence, setEvidence] = useState("");
+  const [attachments, setAttachments] = useState<EvidenceAttachment[]>([]);
   const [lifecycleNote, setLifecycleNote] = useState("");
   const [lifecycleEvidence, setLifecycleEvidence] = useState("");
+  const [blockedAttachments, setBlockedAttachments] = useState<EvidenceAttachment[]>([]);
   const [message, setMessage] = useState("");
   const [isUpdatingLifecycle, setIsUpdatingLifecycle] = useState(false);
+  const [isUploadingEvidence, setIsUploadingEvidence] = useState(false);
+  const [isUploadingBlockedEvidence, setIsUploadingBlockedEvidence] = useState(false);
 
   useEffect(() => {
     async function loadAction() {
@@ -98,8 +112,8 @@ export default function ActionDetailPage() {
     currentAction.severity === "red" ||
     /compliance|equipment|stock|jobsheet|safety/i.test(`${currentAction.source} ${currentAction.title} ${currentAction.detail}`);
   const responseReady = managerResponse.trim().length >= (needsEvidence ? 20 : 10);
-  const evidenceReady = !needsEvidence || evidence.trim().length >= 8;
-  const closeoutReady = responseReady && evidenceReady && !isAwaitingNational && !isClosed;
+  const evidenceReady = !needsEvidence || evidence.trim().length >= 8 || attachments.length > 0;
+  const closeoutReady = responseReady && evidenceReady && !isAwaitingNational && !isClosed && !isUploadingEvidence;
   const reviewHistory = currentAction.reviewHistory || [];
 
   function saveDraft() {
@@ -117,7 +131,7 @@ export default function ActionDetailPage() {
       setMessage("Add a fuller close-out response for urgent, compliance, equipment, stock or jobsheet actions.");
       return;
     }
-    if (needsEvidence && evidence.trim().length < 8) {
+    if (needsEvidence && evidence.trim().length < 8 && !attachments.length) {
       setMessage("Add evidence or a reference before submitting this material action for National review.");
       return;
     }
@@ -127,7 +141,8 @@ export default function ActionDetailPage() {
         action: "create",
         actionId: currentAction.id,
         managerResponse: managerResponse.trim() || "Manager submitted close-out with no additional response.",
-        evidence: evidence.trim() || "No evidence or reference supplied."
+        evidence: evidence.trim() || (attachments.length ? "Photo evidence uploaded." : "No evidence or reference supplied."),
+        attachmentIds: attachments.map((item) => item.id)
       })
     }, true);
     const payload = await response.json();
@@ -142,6 +157,34 @@ export default function ActionDetailPage() {
     setMessage("Submitted to National Requests for approval.");
   }
 
+  async function uploadEvidenceFile(file: File, purpose: "closeout" | "blocked") {
+    const setter = purpose === "blocked" ? setIsUploadingBlockedEvidence : setIsUploadingEvidence;
+    setter(true);
+    setMessage("");
+    try {
+      const formData = new FormData();
+      formData.set("actionId", currentAction.id);
+      formData.set("purpose", purpose);
+      formData.set("file", file);
+      const response = await tocFetch("/api/action-evidence", { method: "POST", body: formData });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Evidence file could not be uploaded.");
+      const attachment = payload.attachment as EvidenceAttachment | null;
+      if (attachment) {
+        if (purpose === "blocked") {
+          setBlockedAttachments((current) => [...current.filter((item) => item.id !== attachment.id), attachment]);
+        } else {
+          setAttachments((current) => [...current.filter((item) => item.id !== attachment.id), attachment]);
+        }
+      }
+      setMessage("Evidence uploaded.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Evidence file could not be uploaded.");
+    } finally {
+      setter(false);
+    }
+  }
+
   async function updateLifecycle(status: "in_progress" | "blocked") {
     if (status === "blocked" && lifecycleNote.trim().length < 5) {
       setMessage("Add a short reason before marking this action blocked.");
@@ -152,7 +195,14 @@ export default function ActionDetailPage() {
     try {
       const response = await tocFetch("/api/actions", {
         method: "POST",
-        body: JSON.stringify({ action: "lifecycle", id: currentAction.id, status, note: lifecycleNote.trim(), evidence: lifecycleEvidence.trim() })
+        body: JSON.stringify({
+          action: "lifecycle",
+          id: currentAction.id,
+          status,
+          note: lifecycleNote.trim(),
+          evidence: lifecycleEvidence.trim() || (blockedAttachments.length ? "Photo evidence uploaded." : ""),
+          attachmentIds: blockedAttachments.map((item) => item.id)
+        })
       }, true);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Action lifecycle could not be updated.");
@@ -160,9 +210,10 @@ export default function ActionDetailPage() {
       if (nextAction) setAction(nextAction);
       setLifecycleNote("");
       setLifecycleEvidence("");
+      setBlockedAttachments([]);
       window.dispatchEvent(new Event("toc.actionState.updated"));
       window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
-      setMessage(status === "blocked" ? "Blocked update sent to National." : "Progress update saved.");
+      setMessage(status === "blocked" ? "Blocked item submitted to National for review." : "Progress update saved.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Action lifecycle could not be updated.");
     } finally {
@@ -232,9 +283,29 @@ export default function ActionDetailPage() {
                     <span>{needsEvidence ? "Evidence or reference required" : "Evidence or reference optional"}</span>
                     <input value={evidence} placeholder="Example: photo uploaded, stock order raised, checklist checked, manager confirmed" onChange={(event) => setEvidence(event.target.value)} />
                   </label>
+                  <label>
+                    <span>Upload photo or evidence</span>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={isUploadingEvidence || isAwaitingNational || isClosed}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void uploadEvidenceFile(file, "closeout");
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  {attachments.length ? (
+                    <div className="manager-evidence-list">
+                      {attachments.map((attachment) => (
+                        <a href={attachment.url} target="_blank" rel="noreferrer" key={attachment.id}>{attachment.fileName}</a>
+                      ))}
+                    </div>
+                  ) : null}
 
                   <div className="manager-action-buttons">
-                    <button type="submit" disabled={!closeoutReady}>{isAwaitingNational ? "Already Submitted" : isClosed ? "Closed" : "Submit close-out"}</button>
+                    <button type="submit" disabled={!closeoutReady}>{isUploadingEvidence ? "Uploading..." : isAwaitingNational ? "Already Submitted" : isClosed ? "Closed" : "Submit to National review"}</button>
                     <button type="button" onClick={saveDraft}>Save draft</button>
                   </div>
                   {message ? <small className="manager-action-message">{message}</small> : null}
@@ -251,8 +322,28 @@ export default function ActionDetailPage() {
                       <span>Reference if useful</span>
                       <input value={lifecycleEvidence} placeholder="Optional reference, photo note or order number" onChange={(event) => setLifecycleEvidence(event.target.value)} />
                     </label>
-                    <button type="button" disabled={isUpdatingLifecycle || isAwaitingNational || isClosed || lifecycleStatus === "blocked"} onClick={() => void updateLifecycle("blocked")}>
-                      {lifecycleStatus === "blocked" ? "Blocked update sent" : "Mark as blocked"}
+                    <label>
+                      <span>Upload blocked evidence</span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        disabled={isUploadingBlockedEvidence || isAwaitingNational || isClosed}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void uploadEvidenceFile(file, "blocked");
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    {blockedAttachments.length ? (
+                      <div className="manager-evidence-list">
+                        {blockedAttachments.map((attachment) => (
+                          <a href={attachment.url} target="_blank" rel="noreferrer" key={attachment.id}>{attachment.fileName}</a>
+                        ))}
+                      </div>
+                    ) : null}
+                    <button type="button" disabled={isUpdatingLifecycle || isUploadingBlockedEvidence || isAwaitingNational || isClosed} onClick={() => void updateLifecycle("blocked")}>
+                      {isUploadingBlockedEvidence ? "Uploading..." : "Submit blocked item to National"}
                     </button>
                   </div>
                 </details>
@@ -265,6 +356,13 @@ export default function ActionDetailPage() {
                       <small>{new Date(event.submittedAt).toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</small>
                       <p>{event.managerResponse}</p>
                       {event.evidence ? <small>Evidence: {event.evidence}</small> : null}
+                      {event.attachments?.length ? (
+                        <div className="manager-evidence-list">
+                          {event.attachments.map((attachment) => (
+                            <a href={attachment.url} target="_blank" rel="noreferrer" key={attachment.id}>{attachment.fileName}</a>
+                          ))}
+                        </div>
+                      ) : null}
                       {event.nationalResponse ? <small>National: {event.nationalResponse}</small> : null}
                     </article>
                   )) : <small>No National review has been submitted yet.</small>}

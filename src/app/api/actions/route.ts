@@ -6,6 +6,7 @@ import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { logTocAudit } from "@/lib/audit";
 import { ensureRecurringComplianceActions } from "@/lib/compliance-recurrence";
+import { linkEvidenceToNationalRequest, signedActionEvidenceFiles } from "@/lib/action-evidence";
 import type { Status } from "@/lib/toc-data";
 
 type ActionStatus = "open" | "acknowledged" | "in_progress" | "blocked" | "submitted_for_review" | "returned_to_manager" | "reopened" | "escalated" | "closed";
@@ -53,6 +54,10 @@ type OdinBacklogRow = {
   recommended_action: string | null;
   due_at: string | null;
   payload?: Record<string, unknown> | null;
+};
+
+type ReviewHistoryPayload = ReturnType<typeof mapReviewHistory> & {
+  attachments: Awaited<ReturnType<typeof signedActionEvidenceFiles>>;
 };
 
 type NationalRequestHistoryRow = {
@@ -309,6 +314,7 @@ async function upsertManagerUpdateRequest(input: {
   status: ActionStatus;
   note: string;
   evidence?: string;
+  attachmentIds?: string[];
 }) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return;
@@ -341,10 +347,16 @@ async function upsertManagerUpdateRequest(input: {
     updated_at: new Date().toISOString()
   };
 
+  let requestId = existingRequest?.id || "";
   if (existingRequest?.id) {
     await supabase.from("national_requests").update(requestPayload).eq("id", existingRequest.id);
   } else {
-    await supabase.from("national_requests").insert(requestPayload);
+    const { data: insertedRequest } = await supabase.from("national_requests").insert(requestPayload).select("id").single();
+    requestId = insertedRequest?.id || "";
+  }
+
+  if (requestId) {
+    await linkEvidenceToNationalRequest({ attachmentIds: input.attachmentIds || [], actionId: input.action.id, requestId });
   }
 }
 
@@ -510,6 +522,13 @@ function mapReviewHistory(row: NationalRequestHistoryRow) {
   };
 }
 
+async function mapReviewHistoryWithAttachments(row: NationalRequestHistoryRow): Promise<ReviewHistoryPayload> {
+  return {
+    ...mapReviewHistory(row),
+    attachments: await signedActionEvidenceFiles({ requestId: row.id })
+  };
+}
+
 function rosterGroupForGap(gap: RosterGap) {
   if (gap.gapType === "induction" || gap.gapType === "assigned-not-inducted") {
     return {
@@ -654,10 +673,10 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .limit(20);
 
-    actions = actions.map((action) => ({
+    actions = await Promise.all(actions.map(async (action) => ({
       ...action,
-      reviewHistory: ((reviewRows as NationalRequestHistoryRow[] | null) || []).map(mapReviewHistory)
-    }));
+      reviewHistory: await Promise.all(((reviewRows as NationalRequestHistoryRow[] | null) || []).map(mapReviewHistoryWithAttachments))
+    })));
   }
 
   return NextResponse.json({ actions, rosterGroups, connected: true });
@@ -683,6 +702,7 @@ export async function POST(request: Request) {
     const nextStatus = normaliseStatus(String(payload.status || ""));
     const lifecycleNote = String(payload.note || payload.blockedReason || payload.reason || "").trim();
     const lifecycleEvidence = String(payload.evidence || "").trim();
+    const attachmentIds = Array.isArray(payload.attachmentIds) ? (payload.attachmentIds as unknown[]).map((item) => String(item)).filter(Boolean) : [];
     if (nextStatus === "closed" || nextStatus === "submitted_for_review") {
       return NextResponse.json({ error: "Use the close-out or national approval flow for review and closure." }, { status: 400 });
     }
@@ -705,9 +725,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You do not have permission to update this action item." }, { status: 403 });
     }
 
+    const storageStatus = nextStatus === "blocked" || nextStatus === "escalated"
+      ? "submitted_for_review"
+      : nextStatus === "in_progress" || nextStatus === "acknowledged" || nextStatus === "reopened"
+        ? "open"
+        : nextStatus;
     const { error } = await supabase
       .from("action_items")
-      .update({ status: nextStatus, updated_at: new Date().toISOString(), closed_at: null })
+      .update({ status: storageStatus, updated_at: new Date().toISOString(), closed_at: null })
       .eq("id", payload.id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -717,7 +742,8 @@ export async function POST(request: Request) {
         action: existingRow,
         status: nextStatus,
         note: lifecycleNote,
-        evidence: lifecycleEvidence
+        evidence: lifecycleEvidence,
+        attachmentIds
       });
     }
     await logTocAudit({

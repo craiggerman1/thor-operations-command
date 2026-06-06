@@ -21,6 +21,14 @@ export type NationalActionRequest = {
   stale?: boolean;
   managerResponse: string;
   evidence: string;
+  attachments?: {
+    id: string;
+    fileName: string;
+    contentType: string;
+    fileSize: number;
+    url: string;
+    purpose: string;
+  }[];
   status: "Awaiting national review" | "Approved by national" | "Returned to manager";
 };
 
@@ -151,7 +159,17 @@ export function NationalActionRequests() {
             </div>
             <div className="national-request-body">
               <div><span>Manager response</span><p>{request.managerResponse}</p></div>
-              <div><span>Evidence / reference</span><p>{request.evidence}</p></div>
+              <div>
+                <span>Evidence / reference</span>
+                <p>{request.evidence}</p>
+                {request.attachments?.length ? (
+                  <div className="manager-evidence-list">
+                    {request.attachments.map((attachment) => (
+                      <a href={attachment.url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} key={attachment.id}>{attachment.fileName}</a>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="stock-actions">
               <Link className="node-action" href={`/national-requests/${encodeURIComponent(request.id)}`} onClick={(event) => event.stopPropagation()}>Open request</Link>

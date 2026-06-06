@@ -143,7 +143,17 @@ export default function NationalRequestDetailPage() {
             <div className="national-request-detail">
               <div className="national-request-body">
                 <div><span>Manager response</span><p>{actionRequest.managerResponse}</p></div>
-                <div><span>Evidence / reference</span><p>{actionRequest.evidence}</p></div>
+                <div>
+                  <span>Evidence / reference</span>
+                  <p>{actionRequest.evidence}</p>
+                  {actionRequest.attachments?.length ? (
+                    <div className="manager-evidence-list">
+                      {actionRequest.attachments.map((attachment) => (
+                        <a href={attachment.url} target="_blank" rel="noreferrer" key={attachment.id}>{attachment.fileName}</a>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <div className="meta-row">
                 <Tag>{actionRequest.directive}</Tag>

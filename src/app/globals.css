@@ -2560,6 +2560,27 @@ body.next-app .page-title-weather {
   text-align: right;
 }
 
+.manager-evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.manager-evidence-list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid rgba(37, 161, 189, 0.26);
+  border-radius: 6px;
+  background: rgba(238, 250, 252, 0.72);
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .manager-blocked-panel,
 .manager-history-panel {
   padding: 0;

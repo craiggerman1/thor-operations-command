@@ -3,6 +3,7 @@ import { markComplianceForClosedActions, reopenComplianceForReturnedActions } fr
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { canAccessScope, requireTocNationalAccess, requireTocUser } from "@/lib/toc-auth";
 import { logTocAudit } from "@/lib/audit";
+import { linkEvidenceToNationalRequest, signedActionEvidenceFiles } from "@/lib/action-evidence";
 
 type NationalRequestRow = {
   id: string;
@@ -19,6 +20,10 @@ type NationalRequestRow = {
   created_at: string;
   updated_at?: string | null;
   region?: { name: string } | { name: string }[] | null;
+};
+
+type NationalRequestPayload = ReturnType<typeof mapRequest> & {
+  attachments: Awaited<ReturnType<typeof signedActionEvidenceFiles>>;
 };
 
 function firstRelated<T>(value: T | T[] | null | undefined) {
@@ -105,6 +110,13 @@ function mapRequest(row: NationalRequestRow) {
   };
 }
 
+async function mapRequestWithAttachments(row: NationalRequestRow): Promise<NationalRequestPayload> {
+  return {
+    ...mapRequest(row),
+    attachments: await signedActionEvidenceFiles({ requestId: row.id })
+  };
+}
+
 export async function GET(request: Request) {
   const permission = await requireTocNationalAccess(request);
   if (permission.error) return permission.error;
@@ -126,7 +138,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ requests: [], connected: false, error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ requests: ((data as NationalRequestRow[] | null) || []).map(mapRequest), connected: true });
+  const requests = await Promise.all(((data as NationalRequestRow[] | null) || []).map(mapRequestWithAttachments));
+  return NextResponse.json({ requests, connected: true });
 }
 
 export async function POST(request: Request) {
@@ -168,9 +181,10 @@ export async function POST(request: Request) {
 
     const managerResponse = String(payload.managerResponse || "").trim();
     const evidence = String(payload.evidence || "").trim();
+    const attachmentIds = Array.isArray(payload.attachmentIds) ? (payload.attachmentIds as unknown[]).map((item) => String(item)).filter(Boolean) : [];
     const qualityError = closeoutQualityError({
       managerResponse,
-      evidence,
+      evidence: evidence || (attachmentIds.length ? "Photo evidence uploaded." : ""),
       directiveType: actionRow.directive_type,
       priority: actionRow.priority,
       sourcePage: actionRow.source_page
@@ -204,6 +218,7 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString()
     };
 
+    let requestId = existingRequest?.id || "";
     if (existingRequest?.id) {
       const { error: updateRequestError } = await supabase
         .from("national_requests")
@@ -212,9 +227,12 @@ export async function POST(request: Request) {
 
       if (updateRequestError) return NextResponse.json({ error: updateRequestError.message }, { status: 500 });
     } else {
-      const { error: insertError } = await supabase.from("national_requests").insert(requestPayload);
+      const { data: insertedRequest, error: insertError } = await supabase.from("national_requests").insert(requestPayload).select("id").single();
       if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+      requestId = insertedRequest.id;
     }
+
+    await linkEvidenceToNationalRequest({ attachmentIds, actionId, requestId });
 
     const { error: updateError } = await supabase
       .from("action_items")
