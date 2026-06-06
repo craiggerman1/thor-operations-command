@@ -5,6 +5,7 @@ import { canAccessScope, requireTocNationalAccess, requireTocScope, requireTocUs
 import { createOdinDirectActionItems } from "@/lib/odin-actions";
 import { buildOdinRosterGaps } from "@/lib/odin-roster-gaps";
 import { logTocAudit } from "@/lib/audit";
+import { ensureRecurringComplianceActions } from "@/lib/compliance-recurrence";
 import type { Status } from "@/lib/toc-data";
 
 type ActionStatus = "open" | "acknowledged" | "in_progress" | "blocked" | "submitted_for_review" | "returned_to_manager" | "reopened" | "escalated" | "closed";
@@ -619,7 +620,7 @@ export async function GET(request: Request) {
 
   const permittedScope = scopePermission.scope;
   if (!id) {
-    await Promise.all([ensureComplianceActions(), promoteActionableOdinItems()]);
+    await Promise.all([ensureRecurringComplianceActions(), ensureComplianceActions(), promoteActionableOdinItems()]);
   }
 
   let query = supabase

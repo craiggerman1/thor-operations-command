@@ -23,9 +23,26 @@ type ComplianceActionItem = {
   dueDate: string;
 };
 
+type ComplianceScheduleItem = {
+  id: string;
+  title: string;
+  detail: string;
+  region: string;
+  cadence: string;
+  nextDueDate: string;
+  lastGeneratedDate: string;
+  priority: string;
+};
+
 const regions = ["National", "Brisbane", "Sydney", "Melbourne", "Adelaide", "Perth", "Canberra", "Workshop"];
+const managerRegions = regions.filter((item) => item !== "National");
 const directiveTypes = ["National Ops Directive", "Scheduled Directive", "To Do"] as const;
 const priorities = ["urgent", "high", "normal", "low"] as const;
+const recurrenceCadences = [
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "annual", label: "Annual" }
+] as const;
 const statusOptions = [
   { value: "open", label: "Open" },
   { value: "in_progress", label: "In progress" },
@@ -45,7 +62,8 @@ async function fetchCompliance() {
   if (!response.ok) throw new Error(payload.error || "Compliance database read failed.");
   return {
     register: (payload.register || []) as ComplianceRegisterItem[],
-    actions: (payload.actions || []) as ComplianceActionItem[]
+    actions: (payload.actions || []) as ComplianceActionItem[],
+    schedules: (payload.schedules || []) as ComplianceScheduleItem[]
   };
 }
 
@@ -58,26 +76,33 @@ async function mutateCompliance(body: Record<string, unknown>) {
   if (!response.ok) throw new Error(payload.error || "Compliance update failed.");
   return {
     register: (payload.register || []) as ComplianceRegisterItem[],
-    actions: (payload.actions || []) as ComplianceActionItem[]
+    actions: (payload.actions || []) as ComplianceActionItem[],
+    schedules: (payload.schedules || []) as ComplianceScheduleItem[]
   };
 }
 
 export function AdminComplianceManager() {
   const [items, setItems] = useState<ComplianceRegisterItem[]>([]);
   const [actions, setActions] = useState<ComplianceActionItem[]>([]);
+  const [schedules, setSchedules] = useState<ComplianceScheduleItem[]>([]);
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
   const [region, setRegion] = useState("Brisbane");
+  const [targetRegions, setTargetRegions] = useState<string[]>(["Brisbane"]);
   const [directiveType, setDirectiveType] = useState<(typeof directiveTypes)[number]>("Scheduled Directive");
   const [priority, setPriority] = useState<(typeof priorities)[number]>("normal");
   const [status, setStatus] = useState("open");
   const [dueDate, setDueDate] = useState(defaultDueDate());
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [cadence, setCadence] = useState<(typeof recurrenceCadences)[number]["value"]>("monthly");
+  const [intervalMonths, setIntervalMonths] = useState(1);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  function applyPayload(payload: { register: ComplianceRegisterItem[]; actions: ComplianceActionItem[] }) {
+  function applyPayload(payload: { register: ComplianceRegisterItem[]; actions: ComplianceActionItem[]; schedules: ComplianceScheduleItem[] }) {
     setItems(payload.register);
     setActions(payload.actions);
+    setSchedules(payload.schedules);
   }
 
   useEffect(() => {
@@ -91,15 +116,33 @@ export function AdminComplianceManager() {
       setMessage("Add a compliance title first.");
       return;
     }
+    if (isRecurring && !targetRegions.length) {
+      setMessage("Choose at least one region for the recurring compliance action.");
+      return;
+    }
 
     setIsSaving(true);
     setMessage("");
     try {
-      const payload = await mutateCompliance({ action: "create", all: true, title, detail, region, directiveType, priority, status, dueDate });
+      const payload = await mutateCompliance({
+        action: "create",
+        all: true,
+        title,
+        detail,
+        region,
+        targetRegions: isRecurring ? targetRegions : [region],
+        recurring: isRecurring,
+        cadence,
+        intervalMonths,
+        directiveType,
+        priority,
+        status,
+        dueDate
+      });
       applyPayload(payload);
       setTitle("");
       setDetail("");
-      setMessage("Compliance item created and linked to Action Centre.");
+      setMessage(isRecurring ? "Recurring compliance actions created and linked to Action Centre." : "Compliance item created and linked to Action Centre.");
       window.dispatchEvent(new Event("toc.actionState.updated"));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not create compliance item.");
@@ -133,12 +176,18 @@ export function AdminComplianceManager() {
     }
   }
 
+  function toggleTargetRegion(nextRegion: string) {
+    setTargetRegions((current) => current.includes(nextRegion)
+      ? current.filter((item) => item !== nextRegion)
+      : [...current, nextRegion]);
+  }
+
   return (
     <div className="admin-action-console">
       <div className="admin-action-form">
         <div>
           <strong>Create compliance item</strong>
-          <small>Creates a compliance register item and linked Action Centre close-out for the assigned region.</small>
+          <small>Creates a compliance register item and linked Action Centre close-out for the assigned manager region.</small>
         </div>
         <label><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Compliance item" /></label>
         <label><span>Detail</span><textarea value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="What must be completed or verified" /></label>
@@ -148,6 +197,32 @@ export function AdminComplianceManager() {
           <label><span>Directive</span><select value={directiveType} onChange={(event) => setDirectiveType(event.target.value as (typeof directiveTypes)[number])}>{directiveTypes.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><span>Priority</span><select value={priority} onChange={(event) => setPriority(event.target.value as (typeof priorities)[number])}>{priorities.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><span>Due date</span><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
+        </div>
+        <div className="recurring-action-panel">
+          <label className="setup-check-row">
+            <input type="checkbox" checked={isRecurring} onChange={(event) => setIsRecurring(event.target.checked)} />
+            <span>Make this a recurring manager action</span>
+          </label>
+          {isRecurring ? (
+            <>
+              <div>
+                <strong>Target regions</strong>
+                <small>Each selected region receives its own Action Centre item on the schedule.</small>
+              </div>
+              <div className="region-check-grid">
+                {managerRegions.map((item) => (
+                  <label className="setup-check-row" key={item}>
+                    <input type="checkbox" checked={targetRegions.includes(item)} onChange={() => toggleTargetRegion(item)} />
+                    <span>{item}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="admin-action-grid">
+                <label><span>Schedule</span><select value={cadence} onChange={(event) => setCadence(event.target.value as (typeof recurrenceCadences)[number]["value"])}>{recurrenceCadences.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                {cadence === "monthly" ? <label><span>Every months</span><input type="number" min="1" max="24" value={intervalMonths} onChange={(event) => setIntervalMonths(Number(event.target.value) || 1)} /></label> : null}
+              </div>
+            </>
+          ) : null}
         </div>
         <button type="button" onClick={createItem} disabled={isSaving}>{isSaving ? "Creating..." : "Create Compliance Item"}</button>
         {message ? <small className="admin-hint-message">{message}</small> : null}
@@ -179,6 +254,23 @@ export function AdminComplianceManager() {
           </article>
         ))}
         {items.length ? null : <div className="empty-state">No compliance register items are currently loaded from the database.</div>}
+        {schedules.length ? (
+          <div className="recurring-action-list">
+            <strong>Recurring compliance schedules</strong>
+            {schedules.map((schedule) => (
+              <article className="admin-action-card" key={schedule.id}>
+                <div className="admin-action-card-head">
+                  <div>
+                    <strong>{schedule.title}</strong>
+                    <small>{schedule.region} - {schedule.cadence} - next due {schedule.nextDueDate}</small>
+                  </div>
+                  <Tag tone={schedule.priority === "urgent" || schedule.priority === "high" ? "red" : "blue"}>{schedule.priority}</Tag>
+                </div>
+                <p>{schedule.detail}</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

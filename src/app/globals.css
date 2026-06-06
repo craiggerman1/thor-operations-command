@@ -2954,6 +2954,40 @@ body.next-app .page-title-weather {
   outline: none;
 }
 
+.recurring-action-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(37, 161, 189, 0.2);
+  border-radius: 6px;
+  background: rgba(238, 250, 252, 0.54);
+}
+
+.setup-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 850;
+}
+
+.setup-check-row input {
+  width: auto;
+  min-height: auto;
+}
+
+.region-check-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.recurring-action-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .asset-tracking-row strong {
   color: var(--ink);
 }

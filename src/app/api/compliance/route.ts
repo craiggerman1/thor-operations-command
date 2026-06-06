@@ -1,4 +1,13 @@
 import { NextResponse } from "next/server";
+import {
+  addComplianceInterval,
+  createRecurringComplianceOccurrence,
+  dueToIso,
+  ensureRecurringComplianceActions,
+  getRegionId,
+  normaliseCadence,
+  normaliseIntervalMonths
+} from "@/lib/compliance-recurrence";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { requireTocNationalAccess, requireTocScope } from "@/lib/toc-auth";
 import type { Status } from "@/lib/toc-data";
@@ -24,9 +33,18 @@ type ActionRow = {
   region?: { name: string } | { name: string }[] | null;
 };
 
-type RegionRow = {
+type ComplianceScheduleRow = {
   id: string;
-  name: string;
+  title: string;
+  detail: string | null;
+  directive_type: string;
+  priority: string;
+  cadence: "weekly" | "monthly" | "annual";
+  interval_months: number | null;
+  next_due_at: string;
+  last_generated_at: string | null;
+  active: boolean;
+  region?: { name: string } | { name: string }[] | null;
 };
 
 function firstRelated<T>(value: T | T[] | null | undefined) {
@@ -71,21 +89,6 @@ function displayRegisterStatus(value: string) {
   return labels[value] || value;
 }
 
-async function getRegionId(regionName: string) {
-  if (!regionName || regionName === "National") return null;
-  const supabase = getSupabaseAdminClient();
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from("regions")
-    .select("id,name")
-    .eq("name", regionName)
-    .maybeSingle();
-
-  if (error) throw error;
-  return (data as RegionRow | null)?.id || null;
-}
-
 function scopedRequest(request: Request, payload: Record<string, unknown>) {
   const url = new URL(request.url);
   if (payload.all === true) {
@@ -95,10 +98,6 @@ function scopedRequest(request: Request, payload: Record<string, unknown>) {
   }
 
   return new Request(url, { method: "GET", headers: request.headers });
-}
-
-function dueToIso(value: string | null | undefined) {
-  return value ? new Date(`${value}T17:00:00+10:00`).toISOString() : null;
 }
 
 function mapAction(action: ActionRow) {
@@ -125,6 +124,50 @@ function mapAction(action: ActionRow) {
             ? "In progress"
             : "Open"
   };
+}
+
+function displaySchedule(row: ComplianceScheduleRow) {
+  const cadence = row.cadence === "weekly"
+    ? "Weekly"
+    : row.cadence === "annual"
+      ? "Annual"
+      : `Every ${row.interval_months || 1} month${(row.interval_months || 1) === 1 ? "" : "s"}`;
+  const region = firstRelated(row.region);
+
+  return {
+    id: row.id,
+    title: row.title,
+    detail: row.detail || "Recurring compliance action requires manager close-out.",
+    region: region?.name || "National",
+    cadence,
+    cadenceKey: row.cadence,
+    intervalMonths: row.interval_months || 1,
+    nextDueDate: displayDueDate(row.next_due_at),
+    lastGeneratedDate: displayDueDate(row.last_generated_at),
+    active: row.active,
+    directive: row.directive_type,
+    priority: row.priority
+  };
+}
+
+async function readSchedules(showAll: boolean, scope: string) {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from("compliance_action_schedules")
+      .select("id,title,detail,directive_type,priority,cadence,interval_months,next_due_at,last_generated_at,active,region:regions(name)")
+      .eq("active", true)
+      .order("next_due_at", { ascending: true });
+
+    if (error) throw error;
+    return ((data as ComplianceScheduleRow[] | null) || [])
+      .map(displaySchedule)
+      .filter((item) => showAll || item.region === scope);
+  } catch {
+    return [];
+  }
 }
 
 function mapRegisterItem(item: ComplianceRow) {
@@ -154,8 +197,9 @@ export async function GET(request: Request) {
 
   const scope = scopePermission.scope;
   const showAll = url.searchParams.get("all") === "true" || scope === "National";
+  await ensureRecurringComplianceActions();
 
-  const [{ data: actionData, error: actionError }, { data: registerData, error: registerError }] = await Promise.all([
+  const [{ data: actionData, error: actionError }, { data: registerData, error: registerError }, schedules] = await Promise.all([
     supabase
       .from("action_items")
       .select("id,title,detail,directive_type,priority,status,due_at,region:regions(name)")
@@ -166,7 +210,8 @@ export async function GET(request: Request) {
       .from("compliance_items")
       .select("id,title,detail,status,due_at,linked_action_id,region:regions(name)")
       .neq("status", "complete")
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    readSchedules(showAll, scope)
   ]);
 
   if (actionError || registerError) {
@@ -179,6 +224,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     actions,
     register,
+    schedules,
     connected: true
   });
 }
@@ -200,9 +246,56 @@ export async function POST(request: Request) {
     const title = String(payload.title || "").trim();
     if (!title) return NextResponse.json({ error: "Compliance title is required." }, { status: 400 });
 
-    const regionId = await getRegionId(payload.region || "National");
+    const recurring = payload.recurring === true;
+    const targetRegions = Array.isArray(payload.targetRegions)
+      ? (payload.targetRegions as unknown[]).map((item) => String(item)).filter(Boolean)
+      : [String(payload.region || "National")];
+    const selectedRegions = recurring ? Array.from(new Set(targetRegions)) : [String(payload.region || "National")];
+    const regionId = await getRegionId(selectedRegions[0] || "National");
     const dueAt = dueToIso(payload.dueDate);
     const detail = payload.detail || "Compliance action requires manager close-out.";
+
+    if (recurring) {
+      if (!dueAt) return NextResponse.json({ error: "Recurring compliance actions need a first due date." }, { status: 400 });
+
+      const cadence = normaliseCadence(String(payload.cadence || "monthly"));
+      const intervalMonths = cadence === "monthly" ? normaliseIntervalMonths(payload.intervalMonths) : 1;
+
+      for (const regionName of selectedRegions) {
+        const scheduleRegionId = await getRegionId(regionName);
+        const { data: schedule, error: scheduleError } = await supabase
+          .from("compliance_action_schedules")
+          .insert({
+            title,
+            detail,
+            region_id: scheduleRegionId,
+            directive_type: normaliseDirective(payload.directiveType || "Scheduled Directive"),
+            priority: normalisePriority(payload.priority || "normal"),
+            cadence,
+            interval_months: intervalMonths,
+            next_due_at: addComplianceInterval(dueAt, cadence, intervalMonths),
+            last_generated_at: dueAt,
+            active: true
+          })
+          .select("id,title,detail,directive_type,priority,cadence,interval_months,region_id,next_due_at")
+          .single();
+
+        if (scheduleError) return NextResponse.json({ error: scheduleError.message }, { status: 500 });
+        await createRecurringComplianceOccurrence({
+          id: String(schedule.id),
+          title,
+          detail,
+          directive_type: normaliseDirective(payload.directiveType || "Scheduled Directive"),
+          priority: normalisePriority(payload.priority || "normal"),
+          cadence,
+          interval_months: intervalMonths,
+          region_id: scheduleRegionId,
+          next_due_at: dueAt
+        }, dueAt);
+      }
+
+      return GET(scopedRequest(request, payload));
+    }
 
     const { data: registerItem, error: registerError } = await supabase
       .from("compliance_items")
