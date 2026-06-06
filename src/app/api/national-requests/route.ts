@@ -82,8 +82,8 @@ function closeoutQualityError(input: {
     input.priority === "high" ||
     /compliance|equipment|stock|jobsheet|safety/i.test(String(input.sourcePage || ""));
 
-  if (managerResponse.length < 10) return "Add a clear manager response before submitting this action for National review.";
-  if (materialAction && managerResponse.length < 20) return "For urgent, compliance, equipment, stock or jobsheet actions, add a fuller close-out response before National review.";
+  if (managerResponse.length < 5) return "Add a short clear manager response before submitting this action for National review.";
+  if (materialAction && managerResponse.length < 5) return "For urgent, compliance, equipment, stock or jobsheet actions, add a short close-out response before National review.";
   if (materialAction && evidence.length < 8) return "For urgent, compliance, equipment, stock or jobsheet actions, add evidence or a reference before National review.";
   return "";
 }

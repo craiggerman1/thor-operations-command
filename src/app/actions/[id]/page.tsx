@@ -111,7 +111,7 @@ export default function ActionDetailPage() {
   const needsEvidence = currentAction.directive === "National Ops Directive" ||
     currentAction.severity === "red" ||
     /compliance|equipment|stock|jobsheet|safety/i.test(`${currentAction.source} ${currentAction.title} ${currentAction.detail}`);
-  const responseReady = managerResponse.trim().length >= (needsEvidence ? 20 : 10);
+  const responseReady = managerResponse.trim().length >= 5;
   const evidenceReady = !needsEvidence || evidence.trim().length >= 8 || attachments.length > 0;
   const closeoutReady = responseReady && evidenceReady && !isAwaitingNational && !isClosed && !isUploadingEvidence;
   const reviewHistory = currentAction.reviewHistory || [];
@@ -123,12 +123,8 @@ export default function ActionDetailPage() {
 
   async function submitForNationalApproval(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (managerResponse.trim().length < 10) {
-      setMessage("Add a clear manager response before submitting for National approval.");
-      return;
-    }
-    if (needsEvidence && managerResponse.trim().length < 20) {
-      setMessage("Add a fuller close-out response for urgent, compliance, equipment, stock or jobsheet actions.");
+    if (managerResponse.trim().length < 5) {
+      setMessage("Add a short clear manager response before submitting for National approval.");
       return;
     }
     if (needsEvidence && evidence.trim().length < 8 && !attachments.length) {
