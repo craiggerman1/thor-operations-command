@@ -193,7 +193,7 @@ export function AssetTrackingClient() {
           center: [-25.2744, 133.7751],
           zoom: 4,
           zoomControl: true,
-          scrollWheelZoom: false
+          scrollWheelZoom: true
         });
         leaflet.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
           maxZoom: 19,
