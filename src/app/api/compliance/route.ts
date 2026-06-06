@@ -410,5 +410,17 @@ export async function POST(request: Request) {
     return GET(scopedRequest(request, payload));
   }
 
+  if (action === "deleteSchedule") {
+    if (!payload.id) return NextResponse.json({ error: "Recurring schedule id is required." }, { status: 400 });
+
+    const { error } = await supabase
+      .from("compliance_action_schedules")
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq("id", payload.id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return GET(scopedRequest(request, payload));
+  }
+
   return NextResponse.json({ error: "Unsupported compliance operation." }, { status: 400 });
 }

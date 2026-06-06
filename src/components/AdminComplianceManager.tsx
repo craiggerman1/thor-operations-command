@@ -176,6 +176,19 @@ export function AdminComplianceManager() {
     }
   }
 
+  async function deleteSchedule(id: string) {
+    if (!window.confirm("Stop this recurring compliance schedule? Existing action items stay visible until they are closed or deleted individually.")) return;
+    setMessage("");
+    try {
+      const payload = await mutateCompliance({ action: "deleteSchedule", all: true, id });
+      applyPayload(payload);
+      setMessage("Recurring compliance schedule stopped.");
+      window.dispatchEvent(new Event("toc.actionState.updated"));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not stop recurring compliance schedule.");
+    }
+  }
+
   function toggleTargetRegion(nextRegion: string) {
     setTargetRegions((current) => current.includes(nextRegion)
       ? current.filter((item) => item !== nextRegion)
@@ -267,6 +280,9 @@ export function AdminComplianceManager() {
                   <Tag tone={schedule.priority === "urgent" || schedule.priority === "high" ? "red" : "blue"}>{schedule.priority}</Tag>
                 </div>
                 <p>{schedule.detail}</p>
+                <div className="admin-action-controls">
+                  <button type="button" className="danger-button" onClick={() => void deleteSchedule(schedule.id)}>Stop Recurrence</button>
+                </div>
               </article>
             ))}
           </div>
