@@ -8,9 +8,12 @@ type RegionHealthConfig = {
   actionWeight: number;
   productivityWeight: number;
   openActionPenalty: number;
+  scheduledActionPenalty: number;
   urgentActionPenalty: number;
+  overdueActionPenalty: number;
   minimumActionScore: number;
   healthyTarget: number;
+  nationalDirectActionWeight: number;
 };
 
 type RegionHealth = {
@@ -29,9 +32,12 @@ const defaultConfig: RegionHealthConfig = {
   actionWeight: 58,
   productivityWeight: 42,
   openActionPenalty: 14,
+  scheduledActionPenalty: 5,
   urgentActionPenalty: 8,
+  overdueActionPenalty: 12,
   minimumActionScore: 10,
-  healthyTarget: 95
+  healthyTarget: 95,
+  nationalDirectActionWeight: 20
 };
 
 async function fetchRegionHealth() {
@@ -102,10 +108,13 @@ export function AdminRegionHealthManager() {
         <div className="admin-action-grid">
           <label><span>Action weight</span><input type="number" min="0" max="100" value={config.actionWeight} onChange={(event) => updateConfig("actionWeight", event.target.value)} /></label>
           <label><span>Productivity weight</span><input type="number" min="0" max="100" value={config.productivityWeight} onChange={(event) => updateConfig("productivityWeight", event.target.value)} /></label>
-          <label><span>Open action penalty</span><input type="number" min="1" max="50" value={config.openActionPenalty} onChange={(event) => updateConfig("openActionPenalty", event.target.value)} /></label>
-          <label><span>Urgent action penalty</span><input type="number" min="0" max="50" value={config.urgentActionPenalty} onChange={(event) => updateConfig("urgentActionPenalty", event.target.value)} /></label>
+          <label><span>Normal action penalty</span><input type="number" min="1" max="50" value={config.openActionPenalty} onChange={(event) => updateConfig("openActionPenalty", event.target.value)} /></label>
+          <label><span>Scheduled action penalty</span><input type="number" min="0" max="50" value={config.scheduledActionPenalty} onChange={(event) => updateConfig("scheduledActionPenalty", event.target.value)} /></label>
+          <label><span>Urgent extra penalty</span><input type="number" min="0" max="50" value={config.urgentActionPenalty} onChange={(event) => updateConfig("urgentActionPenalty", event.target.value)} /></label>
+          <label><span>Overdue extra penalty</span><input type="number" min="0" max="50" value={config.overdueActionPenalty} onChange={(event) => updateConfig("overdueActionPenalty", event.target.value)} /></label>
           <label><span>Minimum action score</span><input type="number" min="0" max="100" value={config.minimumActionScore} onChange={(event) => updateConfig("minimumActionScore", event.target.value)} /></label>
           <label><span>Healthy target</span><input type="number" min="50" max="100" value={config.healthyTarget} onChange={(event) => updateConfig("healthyTarget", event.target.value)} /></label>
+          <label><span>National direct action weight</span><input type="number" min="0" max="100" value={config.nationalDirectActionWeight} onChange={(event) => updateConfig("nationalDirectActionWeight", event.target.value)} /></label>
         </div>
         <div className="admin-action-controls">
           <button type="button" onClick={() => void saveConfig()} disabled={isSaving}>{isSaving ? "Saving..." : "Save Scoring Settings"}</button>

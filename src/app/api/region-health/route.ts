@@ -12,6 +12,7 @@ type ActionRow = {
   priority: string;
   directive_type: string;
   status: string;
+  due_at: string | null;
 };
 
 type ProductivityRow = {
@@ -23,9 +24,12 @@ type RegionHealthConfig = {
   actionWeight: number;
   productivityWeight: number;
   openActionPenalty: number;
+  scheduledActionPenalty: number;
   urgentActionPenalty: number;
+  overdueActionPenalty: number;
   minimumActionScore: number;
   healthyTarget: number;
+  nationalDirectActionWeight: number;
 };
 
 const settingsKey = "region_health_config";
@@ -33,9 +37,12 @@ const defaultConfig: RegionHealthConfig = {
   actionWeight: 58,
   productivityWeight: 42,
   openActionPenalty: 14,
+  scheduledActionPenalty: 5,
   urgentActionPenalty: 8,
+  overdueActionPenalty: 12,
   minimumActionScore: 10,
-  healthyTarget: 95
+  healthyTarget: 95,
+  nationalDirectActionWeight: 20
 };
 
 function clampNumber(value: unknown, fallback: number, min = 0, max = 100) {
@@ -53,9 +60,12 @@ function normaliseConfig(value: Partial<RegionHealthConfig> | null | undefined):
     actionWeight: Math.round((actionWeight / totalWeight) * 100),
     productivityWeight: Math.round((productivityWeight / totalWeight) * 100),
     openActionPenalty: clampNumber(value?.openActionPenalty, defaultConfig.openActionPenalty, 1, 50),
+    scheduledActionPenalty: clampNumber(value?.scheduledActionPenalty, defaultConfig.scheduledActionPenalty, 0, 50),
     urgentActionPenalty: clampNumber(value?.urgentActionPenalty, defaultConfig.urgentActionPenalty, 0, 50),
+    overdueActionPenalty: clampNumber(value?.overdueActionPenalty, defaultConfig.overdueActionPenalty, 0, 50),
     minimumActionScore: clampNumber(value?.minimumActionScore, defaultConfig.minimumActionScore, 0, 100),
-    healthyTarget: clampNumber(value?.healthyTarget, defaultConfig.healthyTarget, 50, 100)
+    healthyTarget: clampNumber(value?.healthyTarget, defaultConfig.healthyTarget, 50, 100),
+    nationalDirectActionWeight: clampNumber(value?.nationalDirectActionWeight, defaultConfig.nationalDirectActionWeight, 0, 100)
   };
 }
 
@@ -84,9 +94,26 @@ async function saveConfig(config: RegionHealthConfig) {
   if (error) throw error;
 }
 
-function getActionHealthScore(openActionCount: number, urgentActionCount: number, config: RegionHealthConfig) {
-  if (openActionCount <= 0) return 100;
-  return Math.max(config.minimumActionScore, 100 - openActionCount * config.openActionPenalty - urgentActionCount * config.urgentActionPenalty);
+function isOverdue(value: string | null | undefined, now = new Date()) {
+  if (!value) return false;
+  const dueDate = new Date(value);
+  return !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < now.getTime();
+}
+
+function actionPenalty(row: ActionRow, config: RegionHealthConfig, now = new Date()) {
+  const basePenalty = row.directive_type === "Scheduled Directive" ? config.scheduledActionPenalty : config.openActionPenalty;
+  const priorityPenalty = row.priority === "urgent" || row.priority === "high" || row.directive_type === "National Ops Directive"
+    ? config.urgentActionPenalty
+    : 0;
+  const overduePenalty = isOverdue(row.due_at, now) ? config.overdueActionPenalty : 0;
+
+  return basePenalty + priorityPenalty + overduePenalty;
+}
+
+function getActionHealthScore(actions: ActionRow[], config: RegionHealthConfig) {
+  if (actions.length <= 0) return 100;
+  const penalty = actions.reduce((total, row) => total + actionPenalty(row, config), 0);
+  return Math.max(config.minimumActionScore, 100 - penalty);
 }
 
 function getHealthTone(score: number) {
@@ -114,6 +141,12 @@ function averageProductivity(rows: ProductivityRow[]) {
   return Math.round(validRows.reduce((total, item) => total + Number(item.productivity_score || 0), 0) / validRows.length);
 }
 
+function averageScore(scores: number[]) {
+  const validScores = scores.filter((score) => Number.isFinite(score));
+  if (!validScores.length) return 100;
+  return Math.round(validScores.reduce((total, score) => total + score, 0) / validScores.length);
+}
+
 export async function GET(request: Request) {
   const permission = await requireTocUser(request);
   if (permission.error) return permission.error;
@@ -127,7 +160,7 @@ export async function GET(request: Request) {
   const config = await readConfig();
   const [{ data: regionsData, error: regionsError }, { data: actionsData, error: actionsError }, { data: productivityData, error: productivityError }] = await Promise.all([
     supabase.from("regions").select("id,name").eq("is_active", true).order("name", { ascending: true }),
-    supabase.from("action_items").select("assigned_region_id,priority,directive_type,status"),
+    supabase.from("action_items").select("assigned_region_id,priority,directive_type,status,due_at"),
     supabase.from("productivity_sites").select("region_id,productivity_score")
   ]);
 
@@ -137,27 +170,50 @@ export async function GET(request: Request) {
 
   const actionRows = ((actionsData as ActionRow[] | null) || []).filter((item) => isOpenHealthStatus(item.status));
   const productivityRows = (productivityData as ProductivityRow[] | null) || [];
-  const regions = ((regionsData as RegionRow[] | null) || []).map((region) => {
-    const isNational = region.name === "National";
-    const regionActions = isNational ? actionRows : actionRows.filter((item) => item.assigned_region_id === region.id);
-    const urgentActionCount = regionActions.filter((item) => item.priority === "urgent" || item.priority === "high" || item.directive_type === "National Ops Directive").length;
-    const regionProductivityRows = isNational ? productivityRows : productivityRows.filter((item) => item.region_id === region.id);
-    const productivityScore = averageProductivity(regionProductivityRows);
-    const actionHealthScore = getActionHealthScore(regionActions.length, urgentActionCount, config);
-    const healthScore = Math.round(actionHealthScore * (config.actionWeight / 100) + productivityScore * (config.productivityWeight / 100));
+  const sourceRegions = (regionsData as RegionRow[] | null) || [];
+  const regionalScores = sourceRegions
+    .filter((region) => region.name !== "National")
+    .map((region) => {
+      const regionActions = actionRows.filter((item) => item.assigned_region_id === region.id);
+      const urgentActionCount = regionActions.filter((item) => item.priority === "urgent" || item.priority === "high" || item.directive_type === "National Ops Directive").length;
+      const regionProductivityRows = productivityRows.filter((item) => item.region_id === region.id);
+      const productivityScore = averageProductivity(regionProductivityRows);
+      const actionHealthScore = getActionHealthScore(regionActions, config);
+      const healthScore = Math.round(actionHealthScore * (config.actionWeight / 100) + productivityScore * (config.productivityWeight / 100));
 
-    return {
-      id: region.id,
-      name: region.name,
-      healthScore,
-      tone: getHealthTone(healthScore),
-      healthText: getHealthText(healthScore),
-      openActions: regionActions.length,
-      urgentActions: urgentActionCount,
-      productivityScore,
-      actionHealthScore
-    };
-  });
+      return {
+        id: region.id,
+        name: region.name,
+        healthScore,
+        tone: getHealthTone(healthScore),
+        healthText: getHealthText(healthScore),
+        openActions: regionActions.length,
+        urgentActions: urgentActionCount,
+        productivityScore,
+        actionHealthScore
+      };
+    });
+
+  const nationalRegion = sourceRegions.find((region) => region.name === "National");
+  const nationalDirectActions = actionRows.filter((item) => item.assigned_region_id === null);
+  const nationalDirectProductivityRows = productivityRows.filter((item) => item.region_id === null);
+  const nationalDirectActionScore = getActionHealthScore(nationalDirectActions, config);
+  const nationalDirectProductivityScore = averageProductivity(nationalDirectProductivityRows);
+  const nationalDirectHealthScore = Math.round(nationalDirectActionScore * (config.actionWeight / 100) + nationalDirectProductivityScore * (config.productivityWeight / 100));
+  const regionalAverageHealthScore = averageScore(regionalScores.map((region) => region.healthScore));
+  const directWeight = nationalDirectActions.length ? config.nationalDirectActionWeight / 100 : 0;
+  const nationalHealthScore = Math.round(regionalAverageHealthScore * (1 - directWeight) + nationalDirectHealthScore * directWeight);
+  const regions = nationalRegion ? [{
+    id: nationalRegion.id,
+    name: nationalRegion.name,
+    healthScore: nationalHealthScore,
+    tone: getHealthTone(nationalHealthScore),
+    healthText: nationalDirectActions.length ? "Whole business average with direct National actions" : "Whole business regional average",
+    openActions: regionalScores.reduce((total, region) => total + region.openActions, 0) + nationalDirectActions.length,
+    urgentActions: regionalScores.reduce((total, region) => total + region.urgentActions, 0) + nationalDirectActions.filter((item) => item.priority === "urgent" || item.priority === "high" || item.directive_type === "National Ops Directive").length,
+    productivityScore: averageScore(regionalScores.map((region) => region.productivityScore)),
+    actionHealthScore: averageScore(regionalScores.map((region) => region.actionHealthScore))
+  }, ...regionalScores] : regionalScores;
 
   return NextResponse.json({ regions, config, connected: true });
 }
