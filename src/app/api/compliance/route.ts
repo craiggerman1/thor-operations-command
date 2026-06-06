@@ -411,12 +411,15 @@ export async function POST(request: Request) {
   }
 
   if (action === "deleteSchedule") {
-    if (!payload.id) return NextResponse.json({ error: "Recurring schedule id is required." }, { status: 400 });
+    const scheduleIds = Array.isArray(payload.ids)
+      ? (payload.ids as unknown[]).map((item) => String(item)).filter(Boolean)
+      : [String(payload.id || "")].filter(Boolean);
+    if (!scheduleIds.length) return NextResponse.json({ error: "Recurring schedule id is required." }, { status: 400 });
 
     const { error } = await supabase
       .from("compliance_action_schedules")
       .update({ active: false, updated_at: new Date().toISOString() })
-      .eq("id", payload.id);
+      .in("id", scheduleIds);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return GET(scopedRequest(request, payload));

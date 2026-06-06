@@ -3009,6 +3009,16 @@ body.next-app .page-title-weather {
   margin-top: 14px;
 }
 
+.recurring-region-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding: 10px;
+  border: 1px solid rgba(126, 150, 166, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
 .asset-tracking-row strong {
   color: var(--ink);
 }

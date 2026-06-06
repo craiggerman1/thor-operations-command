@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Tag } from "@/components/TocCards";
 import { tocFetch } from "@/lib/toc-client-auth";
 
@@ -98,11 +98,13 @@ export function AdminComplianceManager() {
   const [intervalMonths, setIntervalMonths] = useState(1);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
 
   function applyPayload(payload: { register: ComplianceRegisterItem[]; actions: ComplianceActionItem[]; schedules: ComplianceScheduleItem[] }) {
     setItems(payload.register);
     setActions(payload.actions);
     setSchedules(payload.schedules);
+    setSelectedScheduleIds((current) => current.filter((id) => payload.schedules.some((schedule) => schedule.id === id)));
   }
 
   useEffect(() => {
@@ -176,16 +178,51 @@ export function AdminComplianceManager() {
     }
   }
 
-  async function deleteSchedule(id: string) {
-    if (!window.confirm("Stop this recurring compliance schedule? Existing action items stay visible until they are closed or deleted individually.")) return;
+  const scheduleGroups = useMemo(() => {
+    const lookup = new Map<string, ComplianceScheduleItem[]>();
+    schedules.forEach((schedule) => {
+      const key = `${schedule.title}||${schedule.detail}||${schedule.cadence}||${schedule.nextDueDate}||${schedule.priority}`;
+      lookup.set(key, [...(lookup.get(key) || []), schedule]);
+    });
+
+    return Array.from(lookup.entries()).map(([key, groupSchedules]) => ({
+      key,
+      title: groupSchedules[0]?.title || "Recurring compliance schedule",
+      detail: groupSchedules[0]?.detail || "",
+      cadence: groupSchedules[0]?.cadence || "",
+      nextDueDate: groupSchedules[0]?.nextDueDate || "",
+      priority: groupSchedules[0]?.priority || "normal",
+      schedules: groupSchedules.sort((first, second) => first.region.localeCompare(second.region))
+    }));
+  }, [schedules]);
+
+  function toggleSchedule(id: string) {
+    setSelectedScheduleIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
+  function setGroupSelected(ids: string[], selected: boolean) {
+    setSelectedScheduleIds((current) => {
+      const existing = new Set(current);
+      ids.forEach((id) => selected ? existing.add(id) : existing.delete(id));
+      return Array.from(existing);
+    });
+  }
+
+  async function deleteSchedules(ids: string[], label = "selected recurring compliance schedules") {
+    const cleanIds = Array.from(new Set(ids)).filter(Boolean);
+    if (!cleanIds.length) {
+      setMessage("Select at least one recurring schedule first.");
+      return;
+    }
+    if (!window.confirm(`Stop ${cleanIds.length} ${label}? Existing action items stay visible until they are closed or deleted individually.`)) return;
     setMessage("");
     try {
-      const payload = await mutateCompliance({ action: "deleteSchedule", all: true, id });
+      const payload = await mutateCompliance({ action: "deleteSchedule", all: true, ids: cleanIds });
       applyPayload(payload);
-      setMessage("Recurring compliance schedule stopped.");
+      setMessage(`${cleanIds.length} recurring schedule${cleanIds.length === 1 ? "" : "s"} stopped.`);
       window.dispatchEvent(new Event("toc.actionState.updated"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not stop recurring compliance schedule.");
+      setMessage(error instanceof Error ? error.message : "Could not stop recurring compliance schedules.");
     }
   }
 
@@ -269,22 +306,46 @@ export function AdminComplianceManager() {
         {items.length ? null : <div className="empty-state">No compliance register items are currently loaded from the database.</div>}
         {schedules.length ? (
           <div className="recurring-action-list">
-            <strong>Recurring compliance schedules</strong>
-            {schedules.map((schedule) => (
-              <article className="admin-action-card" key={schedule.id}>
+            <div className="admin-list-head">
+              <div>
+                <strong>Recurring compliance schedules</strong>
+                <small>{scheduleGroups.length} grouped schedules. {selectedScheduleIds.length} selected.</small>
+              </div>
+              <div className="admin-action-controls">
+                <button type="button" onClick={() => setGroupSelected(schedules.map((schedule) => schedule.id), true)}>Select All</button>
+                <button type="button" onClick={() => setGroupSelected(schedules.map((schedule) => schedule.id), false)}>Clear</button>
+                <button type="button" className="danger-button" onClick={() => void deleteSchedules(selectedScheduleIds)}>Stop Selected</button>
+              </div>
+            </div>
+            {scheduleGroups.map((group) => {
+              const groupIds = group.schedules.map((schedule) => schedule.id);
+              const selectedCount = groupIds.filter((id) => selectedScheduleIds.includes(id)).length;
+
+              return (
+              <article className="admin-action-card" key={group.key}>
                 <div className="admin-action-card-head">
                   <div>
-                    <strong>{schedule.title}</strong>
-                    <small>{schedule.region} - {schedule.cadence} - next due {schedule.nextDueDate}</small>
+                    <strong>{group.title}</strong>
+                    <small>{group.schedules.length} regions - {group.cadence} - next due {group.nextDueDate}</small>
                   </div>
-                  <Tag tone={schedule.priority === "urgent" || schedule.priority === "high" ? "red" : "blue"}>{schedule.priority}</Tag>
+                  <Tag tone={group.priority === "urgent" || group.priority === "high" ? "red" : "blue"}>{group.priority}</Tag>
                 </div>
-                <p>{schedule.detail}</p>
+                <p>{group.detail}</p>
+                <div className="recurring-region-list">
+                  {group.schedules.map((schedule) => (
+                    <label className="setup-check-row" key={schedule.id}>
+                      <input type="checkbox" checked={selectedScheduleIds.includes(schedule.id)} onChange={() => toggleSchedule(schedule.id)} />
+                      <span>{schedule.region}</span>
+                    </label>
+                  ))}
+                </div>
                 <div className="admin-action-controls">
-                  <button type="button" className="danger-button" onClick={() => void deleteSchedule(schedule.id)}>Stop Recurrence</button>
+                  <button type="button" onClick={() => setGroupSelected(groupIds, selectedCount !== groupIds.length)}>{selectedCount === groupIds.length ? "Clear Group" : "Select Group"}</button>
+                  <button type="button" className="danger-button" onClick={() => void deleteSchedules(groupIds, `${group.title} schedules`)}>Stop Whole Group</button>
+                  <button type="button" className="danger-button" disabled={!selectedCount} onClick={() => void deleteSchedules(groupIds.filter((id) => selectedScheduleIds.includes(id)), `${group.title} selected schedules`)}>Stop Selected In Group</button>
                 </div>
               </article>
-            ))}
+            );})}
           </div>
         ) : null}
       </div>
