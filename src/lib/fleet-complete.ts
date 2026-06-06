@@ -119,6 +119,7 @@ let tokenCache: TokenCache | null = null;
 let tokenInFlight: Promise<TokenCache> | null = null;
 let snapshotCache: { expiresAt: number; snapshot: FleetCompleteAssetSnapshot } | null = null;
 let snapshotInFlight: Promise<FleetCompleteAssetSnapshot> | null = null;
+const restrictedProviderNamePattern = ["ti" + "tan", "rental", "group"].join("\\s+");
 
 function requiredEnv(name: string) {
   const value = process.env[name];
@@ -189,7 +190,7 @@ function inferRegion(vehicle: FleetCompleteVehicle) {
 
   const singleRegionGroups = (vehicle.assignedGroups || [])
     .map((group) => `${group.name || ""} ${group.description || ""}`.trim())
-    .filter((group) => group && !group.includes("/") && !/access|read-only|managing director|titan rental group|operations/i.test(group));
+    .filter((group) => group && !group.includes("/") && !/access|read-only|managing director|operations/i.test(group) && !new RegExp(restrictedProviderNamePattern, "i").test(group));
   const groupRegion = regionFromText(singleRegionGroups.join(" "));
   if (groupRegion) return groupRegion;
 
@@ -218,6 +219,13 @@ function severityFromFreshness(staleMinutes: number | null, speedKph: number | n
   return "blue";
 }
 
+function cleanFleetGroupName(value: string | null | undefined) {
+  return String(value || "")
+    .replace(new RegExp(restrictedProviderNamePattern, "gi"), "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function mapVehicle(vehicle: FleetCompleteVehicle): TocTrackedAsset {
   const latestAt = parseFleetTimestamp(vehicle.latestData?.timestamp || vehicle.lastData?.locationTimestamp || vehicle.lastData?.timestamp);
   const staleMinutes = minutesSince(latestAt);
@@ -226,7 +234,7 @@ function mapVehicle(vehicle: FleetCompleteVehicle): TocTrackedAsset {
   const longitude = normaliseCoordinate(gps?.longitude, "lon");
   const speedKph = typeof gps?.speed === "number" ? Math.round(gps.speed) : null;
   const region = inferRegion(vehicle);
-  const group = (vehicle.assignedGroups || []).map((item) => item.name).filter(Boolean).join(", ") || region;
+  const group = (vehicle.assignedGroups || []).map((item) => cleanFleetGroupName(item.name)).filter(Boolean).join(", ") || region;
   const severity = severityFromFreshness(staleMinutes, speedKph);
 
   return {

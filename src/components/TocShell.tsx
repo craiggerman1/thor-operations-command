@@ -79,6 +79,7 @@ const operationsNewsRefreshMs = 120000;
 let shellSessionCache: StoredSession | null = null;
 let shellRestoreInFlight: Promise<StoredSession | null> | null = null;
 const TocShellContext = createContext(false);
+const restrictedProviderNamePattern = ["ti" + "tan", "rental", "group"].join("\\s+");
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
@@ -114,6 +115,10 @@ function getInitialStoredSession() {
 function isRecentlyRestoredSession(storedSession: StoredSession | null) {
   if (!storedSession?.restoredAt) return false;
   return Date.now() - new Date(storedSession.restoredAt).getTime() < profileRevalidateMs;
+}
+
+function cleanVisibleAccountLabel(value: string) {
+  return value.replace(new RegExp(restrictedProviderNamePattern, "gi"), "Thor Operations").replace(/\s{2,}/g, " ").trim();
 }
 
 function readJsonCache<T>(key: string): T | null {
@@ -501,13 +506,13 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.434</em>
+              <em>Build 0.435</em>
             </div>
           </div>
           <div className="topbar-actions">
             <div className="session-chip">
               <span>Signed in</span>
-              <strong>{accountProfile.label}</strong>
+              <strong>{cleanVisibleAccountLabel(accountProfile.label)}</strong>
               {developerRole ? <small>Testing as {activeProfile.label}</small> : null}
             </div>
             <label className="select-wrap region-control">

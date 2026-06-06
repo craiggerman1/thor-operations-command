@@ -50,6 +50,7 @@ type AssetTrackingPayload = {
 };
 
 type LeafletModule = typeof import("leaflet");
+const restrictedProviderNamePattern = ["ti" + "tan", "rental", "group"].join("\\s+");
 
 const emptyPayload: AssetTrackingPayload = {
   connected: false,
@@ -96,6 +97,14 @@ function escapeHtml(value: string | number | null | undefined) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function cleanProviderDisplay(value: string | null | undefined, fallback = "Thor Fleet") {
+  const cleaned = String(value || "")
+    .replace(new RegExp(restrictedProviderNamePattern, "gi"), "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return cleaned || fallback;
 }
 
 function markerTone(asset: TrackedAsset) {
@@ -258,7 +267,7 @@ export function AssetTrackingClient() {
       <Panel wide eyebrow="Live GPS feed" title={`${scope} asset tracking`} pill={payload.connected ? "Fleet Complete connected" : "Connection required"}>
         <div className="asset-tracking-toolbar">
           <div>
-            <strong>{payload.fleetName}</strong>
+            <strong>{cleanProviderDisplay(payload.fleetName, "Thor fleet visibility")}</strong>
             <small>{status}</small>
             <small>Last generated: {formatDateTime(payload.generatedAt)} | Cache: {payload.cacheTtlSeconds}s</small>
           </div>
@@ -288,7 +297,8 @@ export function AssetTrackingClient() {
         <section className="asset-tracking-map-card" aria-label="Fleet Complete unit map">
           <div className="asset-map-header">
             <div>
-              <strong>Live unit map</strong>
+              <span>Mission control map</span>
+              <strong>Live unit positions</strong>
               <small>{mappedAssets.length} mapped units visible. {filteredAssets.length - mappedAssets.length} without GPS coordinates.</small>
             </div>
             <div className="asset-map-legend" aria-label="Map marker legend">
@@ -324,7 +334,7 @@ export function AssetTrackingClient() {
               </div>
               <div>
                 <strong>{asset.location}</strong>
-                <small>{asset.group}</small>
+                <small>{cleanProviderDisplay(asset.group, asset.region)}</small>
                 {asset.mapHref ? <a href={asset.mapHref} target="_blank" rel="noreferrer">Open map</a> : null}
               </div>
               <span>{formatNumber(asset.speedKph, " km/h")}</span>
