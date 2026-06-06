@@ -32,6 +32,7 @@ type FleetCompleteVehicle = {
   latestData?: {
     timestamp?: number | string | null;
     gps?: {
+      state?: string | null;
       latitude?: number | null;
       longitude?: number | null;
       speed?: number | null;
@@ -53,6 +54,7 @@ type FleetCompleteVehicle = {
     timestamp?: number | string | null;
     locationTimestamp?: number | string | null;
     gps?: {
+      state?: string | null;
       latitude?: number | null;
       longitude?: number | null;
       speed?: number | null;
@@ -211,10 +213,16 @@ function minutesSince(value: string | null) {
   return Math.max(0, Math.round((Date.now() - parsed) / 60000));
 }
 
-function severityFromFreshness(staleMinutes: number | null, speedKph: number | null): Status | "green" {
+function isFleetCompleteOffline(vehicle: FleetCompleteVehicle) {
+  const gpsState = `${vehicle.latestData?.gps?.state || ""} ${vehicle.lastData?.gps?.state || ""}`.toLowerCase();
+  const allDevicesDisabled = Boolean(vehicle.assignedDevices?.length) && Boolean(vehicle.assignedDevices?.every((device) => device.enabled === false));
+  return /\boffline\b/.test(gpsState) || allDevicesDisabled;
+}
+
+function severityFromFreshness(staleMinutes: number | null, speedKph: number | null, offline: boolean): Status | "green" {
+  if (offline) return "red";
   if (staleMinutes === null) return "amber";
-  if (staleMinutes > 360) return "red";
-  if (staleMinutes > 90) return "amber";
+  if (staleMinutes >= 2880) return "amber";
   if ((speedKph || 0) > 0) return "green";
   return "blue";
 }
@@ -235,14 +243,15 @@ function mapVehicle(vehicle: FleetCompleteVehicle): TocTrackedAsset {
   const speedKph = typeof gps?.speed === "number" ? Math.round(gps.speed) : null;
   const region = inferRegion(vehicle);
   const group = (vehicle.assignedGroups || []).map((item) => cleanFleetGroupName(item.name)).filter(Boolean).join(", ") || region;
-  const severity = severityFromFreshness(staleMinutes, speedKph);
+  const offline = isFleetCompleteOffline(vehicle);
+  const severity = severityFromFreshness(staleMinutes, speedKph, offline);
 
   return {
     id: vehicle.id,
     unit: vehicle.name || vehicle.licensePlate || vehicle.id,
     region,
     group,
-    status: staleMinutes === null ? "No GPS timestamp" : staleMinutes > 360 ? "Offline" : staleMinutes > 90 ? "Stale" : speedKph && speedKph > 0 ? "Moving" : "Stopped",
+    status: offline ? "Offline" : staleMinutes === null ? "No GPS timestamp" : staleMinutes >= 2880 ? "Stale" : speedKph && speedKph > 0 ? "Moving" : "Stopped",
     severity,
     location: formatAddress(vehicle.latestData?.address),
     latitude,
@@ -258,6 +267,27 @@ function mapVehicle(vehicle: FleetCompleteVehicle): TocTrackedAsset {
     staleMinutes,
     deviceSerial: (vehicle.assignedDevices || []).map((device) => device.serial).filter(Boolean).join(", ") || "Not supplied",
     mapHref: latitude !== null && longitude !== null ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}` : ""
+  };
+}
+
+function buildScopedSnapshot(snapshot: FleetCompleteAssetSnapshot, scope: string): FleetCompleteAssetSnapshot {
+  const scopedAssets = snapshot.assets.filter((asset) => scope === "National" || asset.region === scope || asset.region === "National");
+  const moving = scopedAssets.filter((asset) => asset.status === "Moving").length;
+  const stale = scopedAssets.filter((asset) => asset.status === "Stale").length;
+  const offline = scopedAssets.filter((asset) => asset.status === "Offline").length;
+
+  return {
+    ...snapshot,
+    scope,
+    totalAssets: scopedAssets.length,
+    assets: scopedAssets,
+    fleetName: cleanFleetGroupName(snapshot.fleetName) || "Fleet Complete",
+    summary: [
+      { label: "Units Available", value: String(scopedAssets.length), detail: scope === "National" ? "Visible Fleet Complete vehicles" : `${scope} visible vehicles`, severity: scopedAssets.length ? "green" : "amber" },
+      { label: "Moving", value: String(moving), detail: "Units currently moving", severity: moving ? "green" : "green" },
+      { label: "Stale", value: String(stale), detail: "GPS signal older than 48 hours", severity: stale ? "amber" : "green" },
+      { label: "Offline", value: String(offline), detail: "Fleet Complete offline status", severity: offline ? "red" : "green" }
+    ]
   };
 }
 
@@ -369,29 +399,17 @@ const activeVehiclesQuery = `
 
 export async function getFleetCompleteAssets(scope = "National", options: { force?: boolean } = {}): Promise<FleetCompleteAssetSnapshot> {
   if (!options.force && snapshotCache && snapshotCache.expiresAt > Date.now()) {
-    const cached = snapshotCache.snapshot;
-    return {
-      ...cached,
-      scope,
-      assets: cached.assets.filter((asset) => scope === "National" || asset.region === scope || asset.region === "National")
-    };
+    return buildScopedSnapshot(snapshotCache.snapshot, scope);
   }
 
   if (snapshotInFlight) {
     const current = await snapshotInFlight;
-    return {
-      ...current,
-      scope,
-      assets: current.assets.filter((asset) => scope === "National" || asset.region === scope || asset.region === "National")
-    };
+    return buildScopedSnapshot(current, scope);
   }
 
   snapshotInFlight = (async () => {
     const { data, token } = await fleetGraphql<{ getActiveVehicles: FleetCompleteVehicle[] }>(activeVehiclesQuery);
     const assets = (data.getActiveVehicles || []).map(mapVehicle).sort((a, b) => a.unit.localeCompare(b.unit));
-    const moving = assets.filter((asset) => asset.status === "Moving").length;
-    const stale = assets.filter((asset) => asset.severity === "amber").length;
-    const offline = assets.filter((asset) => asset.severity === "red").length;
 
     const snapshot: FleetCompleteAssetSnapshot = {
       connected: true,
@@ -399,15 +417,10 @@ export async function getFleetCompleteAssets(scope = "National", options: { forc
       generatedAt: new Date().toISOString(),
       cacheTtlSeconds: Math.round(cacheTtlMs / 1000),
       scope: "National",
-      fleetName: token.fleetName || "Fleet Complete",
+      fleetName: cleanFleetGroupName(token.fleetName) || "Fleet Complete",
       totalAssets: assets.length,
       assets,
-      summary: [
-        { label: "Units loaded", value: String(assets.length), detail: "Active Fleet Complete vehicles", severity: assets.length ? "blue" : "amber" },
-        { label: "Moving", value: String(moving), detail: "Units currently moving", severity: moving ? "green" : "blue" },
-        { label: "Stale", value: String(stale), detail: "GPS older than 90 minutes", severity: stale ? "amber" : "green" },
-        { label: "Offline", value: String(offline), detail: "GPS older than 6 hours", severity: offline ? "red" : "green" }
-      ]
+      summary: []
     };
     snapshotCache = { snapshot, expiresAt: Date.now() + cacheTtlMs };
     return snapshot;
@@ -415,11 +428,7 @@ export async function getFleetCompleteAssets(scope = "National", options: { forc
 
   try {
     const snapshot = await snapshotInFlight;
-    return {
-      ...snapshot,
-      scope,
-      assets: snapshot.assets.filter((asset) => scope === "National" || asset.region === scope || asset.region === "National")
-    };
+    return buildScopedSnapshot(snapshot, scope);
   } finally {
     snapshotInFlight = null;
   }

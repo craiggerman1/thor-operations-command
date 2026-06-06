@@ -2933,6 +2933,19 @@ body.next-app .page-title-weather {
   text-decoration: none;
 }
 
+.asset-tracking-row.is-map-selectable {
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.asset-tracking-row.is-map-selectable:hover,
+.asset-tracking-row.is-map-selectable:focus-visible {
+  border-color: rgba(37, 161, 189, 0.58);
+  box-shadow: 0 10px 24px rgba(6, 7, 9, 0.1);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 1180px) {
   .asset-tracking-toolbar,
   .asset-map-header {

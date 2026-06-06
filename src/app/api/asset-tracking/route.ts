@@ -24,8 +24,8 @@ export async function GET(request: Request) {
       totalAssets: 0,
       assets: [],
       summary: [
-        { label: "Units loaded", value: "0", detail: "Fleet Complete connection unavailable", severity: "amber" },
-        { label: "Moving", value: "0", detail: "No live GPS feed", severity: "blue" },
+        { label: "Units Available", value: "0", detail: "Fleet Complete connection unavailable", severity: "amber" },
+        { label: "Moving", value: "0", detail: "No live GPS feed", severity: "green" },
         { label: "Stale", value: "0", detail: "No stale units detected", severity: "green" },
         { label: "Offline", value: "0", detail: "No offline units detected", severity: "green" }
       ],

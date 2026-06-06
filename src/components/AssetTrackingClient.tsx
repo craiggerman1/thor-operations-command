@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Panel, Tag } from "@/components/TocCards";
 import { tocFetch } from "@/lib/toc-client-auth";
 import type { Status } from "@/lib/toc-data";
-import type { LayerGroup, Map as LeafletMap } from "leaflet";
+import type { LayerGroup, Map as LeafletMap, Marker } from "leaflet";
 
 type AssetSummary = {
   label: string;
@@ -120,6 +120,7 @@ export function AssetTrackingClient() {
   const mapNodeRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerLayerRef = useRef<LayerGroup | null>(null);
+  const markerRefs = useRef<Map<string, Marker>>(new Map());
   const leafletRef = useRef<LeafletModule | null>(null);
 
   useEffect(() => {
@@ -194,14 +195,19 @@ export function AssetTrackingClient() {
           zoomControl: true,
           scrollWheelZoom: false
         });
-        leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        leaflet.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
           maxZoom: 19,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+          attribution: "Tiles &copy; Esri"
+        }).addTo(mapRef.current);
+        leaflet.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+          maxZoom: 19,
+          attribution: ""
         }).addTo(mapRef.current);
         markerLayerRef.current = leaflet.layerGroup().addTo(mapRef.current);
       }
 
       markerLayerRef.current?.clearLayers();
+      markerRefs.current.clear();
 
       const bounds: [number, number][] = [];
       mappedAssets.forEach((asset) => {
@@ -233,6 +239,7 @@ export function AssetTrackingClient() {
           </div>
         `);
         marker.addTo(markerLayerRef.current!);
+        markerRefs.current.set(asset.id, marker);
         bounds.push([asset.latitude, asset.longitude]);
       });
 
@@ -262,6 +269,13 @@ export function AssetTrackingClient() {
     };
   }, []);
 
+  function focusAsset(asset: TrackedAsset) {
+    if (asset.latitude === null || asset.longitude === null || !mapRef.current) return;
+    mapRef.current.flyTo([asset.latitude, asset.longitude], Math.max(mapRef.current.getZoom(), 15), { duration: 0.8 });
+    window.setTimeout(() => markerRefs.current.get(asset.id)?.openPopup(), 850);
+    mapNodeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   return (
     <>
       <Panel wide eyebrow="Live GPS feed" title={`${scope} asset tracking`} pill={payload.connected ? "Fleet Complete connected" : "Connection required"}>
@@ -279,8 +293,8 @@ export function AssetTrackingClient() {
 
         <div className="status-strip equipment-summary" aria-label="Fleet Complete summary">
           {(payload.summary.length ? payload.summary : [
-            { label: "Units loaded", value: "0", detail: "Configure Fleet Complete env vars", severity: "amber" as const },
-            { label: "Moving", value: "0", detail: "Waiting for live feed", severity: "blue" as const },
+            { label: "Units Available", value: "0", detail: "Configure Fleet Complete env vars", severity: "amber" as const },
+            { label: "Moving", value: "0", detail: "Waiting for live feed", severity: "green" as const },
             { label: "Stale", value: "0", detail: "Waiting for live feed", severity: "green" as const },
             { label: "Offline", value: "0", detail: "Waiting for live feed", severity: "green" as const }
           ]).map((item) => (
@@ -322,7 +336,20 @@ export function AssetTrackingClient() {
             <span>Readings</span>
           </div>
           {filteredAssets.map((asset) => (
-            <article className={`asset-tracking-row ${asset.severity}`} role="row" key={asset.id}>
+            <article
+              className={`asset-tracking-row ${asset.severity} ${asset.latitude !== null && asset.longitude !== null ? "is-map-selectable" : ""}`}
+              role="row"
+              tabIndex={asset.latitude !== null && asset.longitude !== null ? 0 : undefined}
+              aria-label={`${asset.unit} ${asset.region} ${asset.status}${asset.latitude !== null && asset.longitude !== null ? ". Select to zoom to unit on map." : ""}`}
+              onClick={() => focusAsset(asset)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  focusAsset(asset);
+                }
+              }}
+              key={asset.id}
+            >
               <div>
                 <strong>{asset.unit}</strong>
                 <small>{asset.vehicleType} | Plate {asset.licensePlate}</small>
@@ -335,7 +362,7 @@ export function AssetTrackingClient() {
               <div>
                 <strong>{asset.location}</strong>
                 <small>{cleanProviderDisplay(asset.group, asset.region)}</small>
-                {asset.mapHref ? <a href={asset.mapHref} target="_blank" rel="noreferrer">Open map</a> : null}
+                {asset.mapHref ? <a href={asset.mapHref} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>Open map</a> : null}
               </div>
               <span>{formatNumber(asset.speedKph, " km/h")}</span>
               <div>
