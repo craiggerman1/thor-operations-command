@@ -50,6 +50,19 @@ type AssetTrackingPayload = {
 };
 
 type LeafletModule = typeof import("leaflet");
+type AssetSortKey = "unit" | "region" | "status" | "location" | "speed" | "latestAt" | "readings";
+type SortDirection = "asc" | "desc";
+
+const assetSortHeadings: { key: AssetSortKey; label: string }[] = [
+  { key: "unit", label: "Unit" },
+  { key: "region", label: "Region" },
+  { key: "status", label: "Status" },
+  { key: "location", label: "Location" },
+  { key: "speed", label: "Speed" },
+  { key: "latestAt", label: "Last GPS" },
+  { key: "readings", label: "Readings" }
+];
+
 const restrictedProviderNamePattern = ["ti" + "tan", "rental", "group"].join("\\s+");
 
 const emptyPayload: AssetTrackingPayload = {
@@ -111,12 +124,47 @@ function markerTone(asset: TrackedAsset) {
   return asset.severity === "green" ? "green" : asset.severity === "red" ? "red" : asset.severity === "amber" ? "amber" : "blue";
 }
 
+function getAssetSortValue(asset: TrackedAsset, key: AssetSortKey) {
+  switch (key) {
+    case "unit":
+      return asset.unit;
+    case "region":
+      return asset.region;
+    case "status":
+      return asset.status;
+    case "location":
+      return `${asset.location} ${asset.group}`;
+    case "speed":
+      return asset.speedKph ?? -1;
+    case "latestAt":
+      return asset.latestAt ? new Date(asset.latestAt).getTime() : 0;
+    case "readings":
+      return asset.odometer ?? asset.engineHours ?? 0;
+    default:
+      return "";
+  }
+}
+
+function compareAssetsByHeading(first: TrackedAsset, second: TrackedAsset, key: AssetSortKey) {
+  const firstValue = getAssetSortValue(first, key);
+  const secondValue = getAssetSortValue(second, key);
+
+  if (typeof firstValue === "number" && typeof secondValue === "number") {
+    return firstValue - secondValue || first.unit.localeCompare(second.unit, "en-AU", { numeric: true, sensitivity: "base" });
+  }
+
+  return String(firstValue).localeCompare(String(secondValue), "en-AU", { numeric: true, sensitivity: "base" })
+    || first.unit.localeCompare(second.unit, "en-AU", { numeric: true, sensitivity: "base" });
+}
+
 export function AssetTrackingClient() {
   const [scope, setScope] = useState("National");
   const [payload, setPayload] = useState<AssetTrackingPayload>(emptyPayload);
   const [status, setStatus] = useState("Loading Fleet Complete assets...");
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<AssetSortKey>("unit");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const mapNodeRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerLayerRef = useRef<LayerGroup | null>(null);
@@ -161,8 +209,7 @@ export function AssetTrackingClient() {
 
   const filteredAssets = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return payload.assets;
-    return payload.assets.filter((asset) => [
+    const matchingAssets = needle ? payload.assets.filter((asset) => [
       asset.unit,
       asset.region,
       asset.group,
@@ -170,8 +217,13 @@ export function AssetTrackingClient() {
       asset.location,
       asset.licensePlate,
       asset.vehicleType
-    ].join(" ").toLowerCase().includes(needle));
-  }, [payload.assets, query]);
+    ].join(" ").toLowerCase().includes(needle)) : payload.assets;
+
+    return [...matchingAssets].sort((first, second) => {
+      const result = compareAssetsByHeading(first, second, sortKey);
+      return sortDirection === "asc" ? result : -result;
+    });
+  }, [payload.assets, query, sortDirection, sortKey]);
 
   const mappedAssets = useMemo(
     () => filteredAssets.filter((asset) => typeof asset.latitude === "number" && typeof asset.longitude === "number"),
@@ -276,6 +328,16 @@ export function AssetTrackingClient() {
     mapNodeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
+  function toggleSort(key: AssetSortKey) {
+    if (sortKey === key) {
+      setSortDirection((current) => current === "asc" ? "desc" : "asc");
+      return;
+    }
+
+    setSortKey(key);
+    setSortDirection("asc");
+  }
+
   return (
     <>
       <Panel wide eyebrow="Live GPS feed" title={`${scope} asset tracking`} pill={payload.connected ? "Fleet Complete connected" : "Connection required"}>
@@ -327,13 +389,19 @@ export function AssetTrackingClient() {
 
         <div className="asset-tracking-table" role="table" aria-label="Fleet Complete tracked units">
           <div className="asset-tracking-row header" role="row">
-            <span>Unit</span>
-            <span>Region</span>
-            <span>Status</span>
-            <span>Location</span>
-            <span>Speed</span>
-            <span>Last GPS</span>
-            <span>Readings</span>
+            {assetSortHeadings.map((heading) => (
+              <button
+                type="button"
+                className={`asset-sort-heading ${sortKey === heading.key ? "active" : ""}`}
+                role="columnheader"
+                aria-sort={sortKey === heading.key ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+                onClick={() => toggleSort(heading.key)}
+                key={heading.key}
+              >
+                <span>{heading.label}</span>
+                <b aria-hidden="true">{sortKey === heading.key ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}</b>
+              </button>
+            ))}
           </div>
           {filteredAssets.map((asset) => (
             <article

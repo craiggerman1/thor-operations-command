@@ -2916,6 +2916,44 @@ body.next-app .page-title-weather {
   text-transform: uppercase;
 }
 
+.asset-sort-heading {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 950;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.asset-sort-heading span {
+  color: inherit;
+}
+
+.asset-sort-heading b {
+  color: var(--blue);
+  font-size: 0.74rem;
+  line-height: 1;
+}
+
+.asset-sort-heading:not(.active) b {
+  opacity: 0.45;
+}
+
+.asset-sort-heading:hover,
+.asset-sort-heading:focus-visible {
+  color: var(--blue);
+  outline: none;
+}
+
 .asset-tracking-row strong {
   color: var(--ink);
 }
