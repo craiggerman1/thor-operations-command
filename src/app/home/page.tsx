@@ -86,6 +86,8 @@ export default function HomePage() {
       href: "/asset-tracking"
     }
   ].filter((metric) => enabledSignals.has(metric.key));
+  const blockedActionCount = visibleActionItems.filter((item) => item.severity === "red" || /blocked|waiting|cannot/i.test(`${item.status} ${item.detail}`)).length;
+  const newestSignal = visibleActionItems[0];
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -148,6 +150,39 @@ export default function HomePage() {
     <TocShell>
       <PageIntro title="Home" detail="Command entry point." />
       <FlowHeading eyebrow="Home" title="Start with the business signal, then move to the page that owns the action." />
+      <section className="toc-brief-card" aria-label="Morning operational brief">
+        <div className="toc-brief-header">
+          <strong>Morning Brief</strong>
+          <span>{operatingWeek.name}</span>
+        </div>
+        <div className="toc-timeline">
+          <div className="toc-timeline-row changed">
+            <span className="toc-timeline-label">What changed</span>
+            <span className="toc-timeline-dot">✓</span>
+            <div>
+              <strong>{overallScore}% overall operating position</strong>
+              <p>Business signal updated from productivity, compliance, actions and manager To Do load.</p>
+            </div>
+          </div>
+          <div className="toc-timeline-row blocked">
+            <span className="toc-timeline-label">What's blocked</span>
+            <span className="toc-timeline-dot">!</span>
+            <div>
+              <strong>{blockedActionCount} blocked or high-risk items</strong>
+              <p>{blockedActionCount ? "Open Action Centre to clear manager blockers and National review items." : "No blocked manager items are currently visible for this scope."}</p>
+            </div>
+          </div>
+          <div className="toc-timeline-row new">
+            <span className="toc-timeline-label">What's new</span>
+            <span className="toc-timeline-dot">i</span>
+            <div>
+              <strong>{newestSignal?.title || "No new command signal"}</strong>
+              <p>{newestSignal?.detail || "The visible command queue is clear for this scope."}</p>
+            </div>
+          </div>
+        </div>
+        <Link className="toc-brief-link" href="/actions">View full action timeline <span>→</span></Link>
+      </section>
       <section className="status-strip" aria-label="Business overview">
         {commandMetrics.map((metric) => (
           <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>

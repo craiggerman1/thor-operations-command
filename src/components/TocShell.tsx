@@ -80,6 +80,11 @@ let shellSessionCache: StoredSession | null = null;
 let shellRestoreInFlight: Promise<StoredSession | null> | null = null;
 const TocShellContext = createContext(false);
 const restrictedProviderNamePattern = ["ti" + "tan", "rental", "group"].join("\\s+");
+const navGroups = [
+  { title: "Command", labels: ["Home", "Region Health", "Action Centre", "National Requests", "Calendar"] },
+  { title: "Operations", labels: ["Productivity", "Jobsheets", "Staff Availability", "Asset Tracking", "Stock Orders", "Equipment Servicing"] },
+  { title: "Governance", labels: ["Compliance", "Inductions", "Operations Setup", "Odin Control", "To Do", "Chat", "Admin Settings"] }
+];
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
@@ -182,6 +187,20 @@ export function TocShell({ children }: { children: ReactNode }) {
     () => navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National")),
     [activeProfile.role, currentScope]
   );
+  const groupedNav = useMemo(() => {
+    const visibleByLabel = new Map(visibleNav.map((item) => [item.label, item]));
+    const renderedLabels = new Set<string>();
+    const groups = navGroups
+      .map((group) => {
+        const items = group.labels.map((label) => visibleByLabel.get(label)).filter(Boolean) as typeof visibleNav;
+        items.forEach((item) => renderedLabels.add(item.label));
+        return { title: group.title, items };
+      })
+      .filter((group) => group.items.length > 0);
+    const ungroupedItems = visibleNav.filter((item) => !renderedLabels.has(item.label));
+    return ungroupedItems.length ? [...groups, { title: "More", items: ungroupedItems }] : groups;
+  }, [visibleNav]);
+  const activeNavItem = visibleNav.find((item) => item.href === pathname);
 
   useEffect(() => {
     function applySession(nextSession: StoredSession | null) {
@@ -502,15 +521,21 @@ export function TocShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="rail-nav" aria-label="Primary">
-          {visibleNav.map(({ label, href }) => {
-            const badge = navBadgeCounts[label];
-            return (
-              <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
-                <span className="nav-link-label">{label}</span>
-                {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
-              </Link>
-            );
-          })}
+          {groupedNav.map((group) => (
+            <section className="rail-nav-group" key={group.title} aria-label={group.title}>
+              <span className="rail-nav-group-title">{group.title}</span>
+              {group.items.map(({ label, href }) => {
+                const badge = navBadgeCounts[label];
+                return (
+                  <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
+                    <span className="nav-link-icon" aria-hidden="true">{label.slice(0, 1)}</span>
+                    <span className="nav-link-label">{label}</span>
+                    {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
+                  </Link>
+                );
+              })}
+            </section>
+          ))}
         </nav>
       </aside>
 
@@ -519,10 +544,10 @@ export function TocShell({ children }: { children: ReactNode }) {
         <DirectorBroadcastBanner />
         <header className="topbar">
           <div className="title-block">
-            <span className="eyebrow">Thor Mobile Truck Wash</span>
+            <span className="eyebrow">Thor / {currentScope}</span>
             <div className="title-line">
               <span className="live-beacon" aria-label="Live data feeds are offline" />
-              <h1>Thor Operations Command</h1>
+              <h1>{activeNavItem?.label || "Operations Command"}</h1>
               <span className="live-label">OFFLINE</span>
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
