@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -80,11 +80,32 @@ let shellSessionCache: StoredSession | null = null;
 let shellRestoreInFlight: Promise<StoredSession | null> | null = null;
 const TocShellContext = createContext(false);
 const restrictedProviderNamePattern = ["ti" + "tan", "rental", "group"].join("\\s+");
+const utilityNavLabels = ["Home", "Action Centre", "To Do", "Chat"];
 const navGroups = [
-  { title: "Channels", labels: ["Home", "Action Centre", "National Requests", "Calendar", "Chat"] },
-  { title: "Operations", labels: ["Region Health", "Productivity", "Jobsheets", "Staff Availability", "Asset Tracking", "Stock Orders", "Equipment Servicing"] },
-  { title: "Apps", labels: ["Compliance", "Inductions", "Operations Setup", "Odin Control", "To Do", "Admin Settings"] }
+  { title: "Command", labels: ["Region Health", "Calendar", "National Requests", "Odin Control"] },
+  { title: "Field Ops", labels: ["Productivity", "Jobsheets", "Staff Availability", "Asset Tracking", "Equipment Servicing", "Stock Orders"] },
+  { title: "Governance", labels: ["Compliance", "Inductions", "Operations Setup", "Admin Settings"] }
 ];
+const navIcons: Record<string, string> = {
+  Home: "H",
+  "Action Centre": "@",
+  "To Do": "TD",
+  Chat: "...",
+  "Region Health": "RH",
+  Calendar: "CA",
+  "National Requests": "!",
+  "Odin Control": "OD",
+  Productivity: "PR",
+  Jobsheets: "JS",
+  "Staff Availability": "SA",
+  "Asset Tracking": "GPS",
+  "Equipment Servicing": "EQ",
+  "Stock Orders": "+",
+  Compliance: "C",
+  Inductions: "IN",
+  "Operations Setup": "OS",
+  "Admin Settings": "AD"
+};
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
   if (firstItems.length !== secondItems.length) return false;
@@ -187,9 +208,14 @@ export function TocShell({ children }: { children: ReactNode }) {
     () => navigationItems.filter((item) => item.roles.includes(activeProfile.role) && (!item.nationalOnly || (item.adminAlways && activeProfile.role === "admin") || currentScope === "National")),
     [activeProfile.role, currentScope]
   );
+  const utilityNav = useMemo(() => {
+    const visibleByLabel = new Map(visibleNav.map((item) => [item.label, item]));
+    return utilityNavLabels.map((label) => visibleByLabel.get(label)).filter(Boolean) as typeof visibleNav;
+  }, [visibleNav]);
   const groupedNav = useMemo(() => {
     const visibleByLabel = new Map(visibleNav.map((item) => [item.label, item]));
     const renderedLabels = new Set<string>();
+    utilityNavLabels.forEach((label) => renderedLabels.add(label));
     const groups = navGroups
       .map((group) => {
         const items = group.labels.map((label) => visibleByLabel.get(label)).filter(Boolean) as typeof visibleNav;
@@ -490,32 +516,27 @@ export function TocShell({ children }: { children: ReactNode }) {
     </div>
     <div className={`mobile-nav-backdrop ${navOpen ? "active" : ""}`} aria-hidden="true" onClick={() => setNavOpen(false)} />
     <div className={`app-shell ${navOpen ? "nav-open" : ""}`}>
-      <div className="shell-window-chrome" aria-hidden="true">
+      <div className="shell-window-chrome" aria-label="Application controls">
         <div className="shell-window-dots">
           <span />
           <span />
           <span />
         </div>
         <div className="shell-window-tools">
-          <span className="shell-arrow">‹</span>
-          <span className="shell-arrow">›</span>
+          <button className="shell-arrow" type="button" aria-label="Back" onClick={() => router.back()}>{"<"}</button>
+          <button className="shell-arrow" type="button" aria-label="Forward" onClick={() => router.forward()}>{">"}</button>
           <span className="shell-clock" />
         </div>
         <div className="shell-command-search">
-          <span />
-        </div>
-        <div className="shell-team-stack">
-          <span />
-          <span />
-          <span />
-          <strong>{currentScope === "National" ? "All" : currentScope.slice(0, 3)}</strong>
+          <span aria-hidden="true" />
+          <strong>Search Thor Command</strong>
         </div>
       </div>
       <aside className="side-rail" aria-label="Thor Operations navigation">
         <button className="mobile-nav-close" type="button" aria-label="Close navigation" onClick={() => setNavOpen(false)}>Close</button>
         <div className="rail-team-header">
           <strong>Your team</strong>
-          <span aria-hidden="true">+</span>
+          <span aria-hidden="true">Edit</span>
         </div>
         <div className="brand-lockup">
           <img className="brand-logo" src="/assets/thor-logo-stacked-sidebar.png" alt="Thor Mobile Truck Wash" />
@@ -524,21 +545,35 @@ export function TocShell({ children }: { children: ReactNode }) {
             <span>{currentScope}</span>
           </div>
         </div>
+        <nav className="rail-utility" aria-label="Workspace shortcuts">
+          {utilityNav.map(({ label, href }) => {
+            const badge = navBadgeCounts[label];
+            return (
+              <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
+                <span className="nav-link-icon" aria-hidden="true">{navIcons[label] || label.slice(0, 1)}</span>
+                <span className="nav-link-label">{label}</span>
+                {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
+              </Link>
+            );
+          })}
+        </nav>
         <nav className="rail-nav" aria-label="Primary">
           {groupedNav.map((group) => (
-            <section className="rail-nav-group" key={group.title} aria-label={group.title}>
-              <span className="rail-nav-group-title"><i aria-hidden="true" />{group.title}</span>
-              {group.items.map(({ label, href }) => {
-                const badge = navBadgeCounts[label];
-                return (
-                  <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
-                    <span className="nav-link-icon" aria-hidden="true">{label.slice(0, 1)}</span>
-                    <span className="nav-link-label">{label}</span>
-                    {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
-                  </Link>
-                );
-              })}
-            </section>
+            <details className="rail-nav-group" key={group.title} open>
+              <summary className="rail-nav-group-title">{group.title}</summary>
+              <div className="rail-nav-items">
+                {group.items.map(({ label, href }) => {
+                  const badge = navBadgeCounts[label];
+                  return (
+                    <Link key={href} href={href} className={pathname === href ? "active" : ""} onClick={() => setNavOpen(false)} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)}>
+                      <span className="nav-link-icon" aria-hidden="true">{navIcons[label] || label.slice(0, 1)}</span>
+                      <span className="nav-link-label">{label}</span>
+                      {badge?.count > 0 ? <span className={`nav-request-badge ${badge.tone}`}>{badge.count}</span> : null}
+                    </Link>
+                  );
+                })}
+              </div>
+            </details>
           ))}
         </nav>
       </aside>
@@ -546,54 +581,65 @@ export function TocShell({ children }: { children: ReactNode }) {
       <main className="workspace">
         <UrgentBroadcastBanner />
         <DirectorBroadcastBanner />
-        <header className="topbar">
-          <div className="title-block">
-            <span className="eyebrow">Thor / {currentScope}</span>
-            <div className="title-line">
-              <span className="live-beacon" aria-label="Live data feeds are offline" />
-              <h1>Thor</h1>
-              <span className="live-label">OFFLINE</span>
-            </div>
-            <div className="build-notice" aria-label="Beta testing and build version">
-              <strong>BETA</strong>
-              <em>{activeNavItem?.label || "Operations Command"} - Build 0.446 Preview</em>
+        <header className="topbar room-header">
+          <div className="room-title-block">
+            <span className="room-icon" aria-hidden="true">T</span>
+            <div>
+              <div className="room-title-line">
+                <h1>Thor</h1>
+                <span aria-hidden="true">v</span>
+              </div>
+              <p>{activeNavItem?.label || "Operations Command"} - {currentScope} - Build 0.447 Preview</p>
             </div>
           </div>
-          <div className="topbar-actions">
-            <div className="session-chip">
-              <span>Signed in</span>
-              <strong>{cleanVisibleAccountLabel(accountProfile.label)}</strong>
-              {developerRole ? <small>Testing as {activeProfile.label}</small> : null}
+          <div className="room-actions">
+            <div className="shell-team-stack" aria-label="Visible scope">
+              <span />
+              <span />
+              <span />
+              <strong>{currentScope === "National" ? "All" : currentScope.slice(0, 3)}</strong>
             </div>
-            <label className="select-wrap region-control">
-              <span>Account Region</span>
-              <select value={accountScope} onChange={(event) => updateScope(event.target.value)}>
-                {accountRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
-              </select>
-            </label>
-            {developerRegionOverrideEnabled ? (
-              <>
-                <label className="select-wrap developer-region-control">
-                  <span>Developer Role</span>
-                  <select value={developerRole} onChange={(event) => updateDeveloperRole(event.target.value)}>
-                    <option value="">Real account</option>
-                    {developerRoleOptions.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
+            <details className="session-menu">
+              <summary>
+                <span>{cleanVisibleAccountLabel(accountProfile.label)}</span>
+                <strong>{currentScope}</strong>
+              </summary>
+              <div className="topbar-actions">
+                <div className="session-chip">
+                  <span>Signed in</span>
+                  <strong>{cleanVisibleAccountLabel(accountProfile.label)}</strong>
+                  {developerRole ? <small>Testing as {activeProfile.label}</small> : null}
+                </div>
+                <label className="select-wrap region-control">
+                  <span>Account Region</span>
+                  <select value={accountScope} onChange={(event) => updateScope(event.target.value)}>
+                    {accountRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
                   </select>
                 </label>
-                <label className="select-wrap developer-region-control">
-                  <span>Developer Region</span>
-                  <select value={developerScope} onChange={(event) => updateDeveloperScope(event.target.value)}>
-                    <option value="">Off</option>
-                    {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
-                  </select>
-                </label>
-              </>
-            ) : null}
-            <button className="manual-refresh-button" type="button" onClick={manualRefresh}>Manual Refresh</button>
-            <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
+                {developerRegionOverrideEnabled ? (
+                  <>
+                    <label className="select-wrap developer-region-control">
+                      <span>Developer Role</span>
+                      <select value={developerRole} onChange={(event) => updateDeveloperRole(event.target.value)}>
+                        <option value="">Real account</option>
+                        {developerRoleOptions.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
+                      </select>
+                    </label>
+                    <label className="select-wrap developer-region-control">
+                      <span>Developer Region</span>
+                      <select value={developerScope} onChange={(event) => updateDeveloperScope(event.target.value)}>
+                        <option value="">Off</option>
+                        {allRegions.map((region) => <option key={region} value={region}>{region}</option>)}
+                      </select>
+                    </label>
+                  </>
+                ) : null}
+                <button className="manual-refresh-button" type="button" onClick={manualRefresh}>Refresh data</button>
+                <button className="logout-button" type="button" onClick={signOut} disabled={signingOut}>Log out</button>
+              </div>
+            </details>
           </div>
         </header>
-
         {children}
 
         <TodoManager />
@@ -767,3 +813,4 @@ export function PageIntro({ eyebrow, title, detail }: { eyebrow?: string; title:
     </section>
   );
 }
+
