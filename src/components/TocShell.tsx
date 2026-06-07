@@ -471,6 +471,27 @@ export function TocShell({ children }: { children: ReactNode }) {
     </div>
     <div className={`mobile-nav-backdrop ${navOpen ? "active" : ""}`} aria-hidden="true" onClick={() => setNavOpen(false)} />
     <div className={`app-shell ${navOpen ? "nav-open" : ""}`}>
+      <div className="shell-window-chrome" aria-hidden="true">
+        <div className="shell-window-dots">
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="shell-window-tools">
+          <span className="shell-arrow">‹</span>
+          <span className="shell-arrow">›</span>
+          <span className="shell-clock" />
+        </div>
+        <div className="shell-command-search">
+          <span />
+        </div>
+        <div className="shell-team-stack">
+          <span />
+          <span />
+          <span />
+          <strong>{currentScope === "National" ? "All" : currentScope.slice(0, 3)}</strong>
+        </div>
+      </div>
       <aside className="side-rail" aria-label="Thor Operations navigation">
         <button className="mobile-nav-close" type="button" aria-label="Close navigation" onClick={() => setNavOpen(false)}>Close</button>
         <div className="brand-lockup">
@@ -506,7 +527,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.444</em>
+              <em>Build 0.445 Preview</em>
             </div>
           </div>
           <div className="topbar-actions">

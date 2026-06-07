@@ -2022,15 +2022,15 @@ body.next-app .rail-nav {
   }
 }
 
-/* Build 0.422 - restore the older TOC command-centre visual language.
-   This intentionally rolls back the overly pale portal-style pass and keeps
-   the interface high-contrast, compact, and operational. */
+/* Preview glass shell - premium translucent command-centre direction. */
 body.next-app {
   color: var(--ink);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(237, 242, 245, 0.84) 42%, rgba(214, 226, 234, 0.72)),
-    linear-gradient(rgba(10, 49, 82, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(10, 49, 82, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.92), transparent 34%),
+    radial-gradient(circle at 88% 12%, rgba(179, 213, 226, 0.48), transparent 38%),
+    linear-gradient(135deg, rgba(246, 250, 252, 0.96), rgba(226, 235, 239, 0.84) 48%, rgba(205, 220, 228, 0.76)),
+    linear-gradient(rgba(10, 49, 82, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 49, 82, 0.025) 1px, transparent 1px),
     var(--bg);
   background-size: auto, 34px 34px, 34px 34px, auto;
 }
@@ -2041,73 +2041,223 @@ body.next-app::before {
 }
 
 body.next-app .app-shell {
-  grid-template-columns: 292px minmax(0, 1fr);
-  background: transparent;
+  grid-template-columns: 304px minmax(0, 1fr);
+  grid-template-rows: 56px minmax(0, 1fr);
+  min-height: calc(100vh - 18px);
+  margin: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 34px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.68), rgba(231, 241, 246, 0.44)),
+    rgba(232, 241, 245, 0.42);
+  box-shadow:
+    0 30px 86px rgba(27, 58, 74, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(92, 129, 145, 0.14);
+  backdrop-filter: blur(24px) saturate(1.12);
+}
+
+body.next-app .shell-window-chrome {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 304px auto minmax(220px, 360px) 1fr auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 56px;
+  padding: 0 22px;
+  border-bottom: 1px solid rgba(90, 117, 132, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(246, 250, 252, 0.44));
+  color: rgba(18, 40, 58, 0.72);
+}
+
+body.next-app .shell-window-dots,
+body.next-app .shell-window-tools,
+body.next-app .shell-team-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+body.next-app .shell-window-dots {
+  gap: 10px;
+}
+
+body.next-app .shell-window-dots span {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+body.next-app .shell-window-dots span:nth-child(1) { background: #ef5f56; }
+body.next-app .shell-window-dots span:nth-child(2) { background: #f1b843; }
+body.next-app .shell-window-dots span:nth-child(3) { background: #58bd5a; }
+
+body.next-app .shell-window-tools {
+  gap: 18px;
+  justify-self: end;
+  color: rgba(18, 40, 58, 0.72);
+}
+
+body.next-app .shell-arrow {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+body.next-app .shell-clock {
+  width: 23px;
+  height: 23px;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  position: relative;
+}
+
+body.next-app .shell-clock::before,
+body.next-app .shell-clock::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: bottom center;
+}
+
+body.next-app .shell-clock::before {
+  height: 7px;
+  transform: translate(-50%, -100%) rotate(0deg);
+}
+
+body.next-app .shell-clock::after {
+  height: 6px;
+  transform: translate(-50%, -100%) rotate(92deg);
+}
+
+body.next-app .shell-command-search {
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+  border: 1px solid rgba(126, 150, 166, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 1px rgba(6, 7, 9, 0.04);
+}
+
+body.next-app .shell-command-search span {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(18, 40, 58, 0.7);
+  border-radius: 999px;
+  position: relative;
+}
+
+body.next-app .shell-command-search span::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 7px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(18, 40, 58, 0.7);
+  transform: rotate(45deg);
+}
+
+body.next-app .shell-team-stack {
+  gap: 0;
+  justify-self: end;
+  padding: 3px 6px;
+  border: 1px solid rgba(126, 150, 166, 0.24);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+body.next-app .shell-team-stack span {
+  width: 24px;
+  height: 24px;
+  margin-left: -7px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0a3152, #25a1bd);
+  box-shadow: 0 2px 8px rgba(12, 57, 84, 0.16);
+}
+
+body.next-app .shell-team-stack span:first-child {
+  margin-left: 0;
+}
+
+body.next-app .shell-team-stack strong {
+  min-width: 31px;
+  padding-left: 7px;
+  color: #12283a;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-align: center;
 }
 
 body.next-app .side-rail {
-  padding: 22px 18px;
-  gap: 18px;
-  color: #eef5fb;
+  grid-column: 1;
+  grid-row: 2;
+  padding: 22px 12px 24px 20px;
+  gap: 15px;
+  color: #26384a;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 210px),
-    linear-gradient(135deg, rgba(37, 161, 189, 0.16), transparent 48%),
-    linear-gradient(155deg, rgba(6, 7, 9, 0.54), rgba(10, 49, 82, 0.58)),
-    rgba(8, 36, 61, 0.92);
-  border-right: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 18px 0 54px rgba(6, 7, 9, 0.22), inset -1px 0 0 rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(18px) saturate(1.12);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(218, 231, 237, 0.48)),
+    rgba(225, 235, 239, 0.58);
+  border-right: 1px solid rgba(90, 117, 132, 0.14);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(22px) saturate(1.08);
 }
 
 body.next-app .brand-lockup {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  display: flex;
+  gap: 12px;
   align-items: center;
-  padding: 0 0 6px;
-  text-align: center;
-  border-bottom: 0;
+  padding: 0 8px 15px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(90, 117, 132, 0.13);
 }
 
 body.next-app .brand-logo {
-  width: 100%;
-  max-width: 176px;
-  max-height: 110px;
-  justify-self: center;
+  width: 52px;
+  max-width: 52px;
+  max-height: 52px;
   object-fit: contain;
   filter: none;
 }
 
 body.next-app .brand-lockup strong {
-  color: #f6fbfd;
-  font-size: 1rem;
+  color: #101820;
+  font-size: 1.02rem;
   font-weight: 900;
   line-height: 1.08;
 }
 
 body.next-app .brand-lockup span {
-  color: #b9c9d6;
-  font-size: 0.74rem;
+  color: #5d6d79;
+  font-size: 0.72rem;
   font-weight: 800;
 }
 
 body.next-app .rail-nav {
-  gap: 6px;
-  padding-right: 3px;
-  scrollbar-color: rgba(37, 161, 189, 0.72) rgba(255, 255, 255, 0.08);
+  gap: 5px;
+  padding: 0 8px 0 0;
+  scrollbar-color: rgba(12, 57, 84, 0.42) rgba(255, 255, 255, 0.18);
 }
 
 body.next-app .rail-nav a {
   position: relative;
   justify-content: flex-start;
-  min-height: 39px;
-  padding: 9px 12px 9px 16px;
-  color: #e6eff5;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.055);
-  border-radius: 6px;
-  font-size: 0.88rem;
-  font-weight: 700;
+  min-height: 38px;
+  padding: 9px 12px;
+  color: #334454;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 0.92rem;
+  font-weight: 760;
   box-shadow: none;
 }
 
@@ -2125,14 +2275,15 @@ body.next-app .rail-nav a::before {
 body.next-app .rail-nav a:hover,
 body.next-app .rail-nav a.active {
   color: #ffffff;
-  background: linear-gradient(135deg, rgba(37, 161, 189, 0.24), rgba(255, 255, 255, 0.08));
-  border-color: rgba(183, 220, 238, 0.36);
+  background: linear-gradient(135deg, #102e52, #173a63);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 24px rgba(16, 46, 82, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.16);
   transform: translateX(2px);
 }
 
 body.next-app .rail-nav a:hover::before,
 body.next-app .rail-nav a.active::before {
-  background: var(--teal);
+  background: rgba(195, 235, 248, 0.95);
 }
 
 body.next-app .nav-link-label {
@@ -2144,11 +2295,15 @@ body.next-app .nav-link-label {
 }
 
 body.next-app .workspace {
-  padding: 24px;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  padding: 20px 22px 24px;
   padding-right: 384px;
   background:
-    linear-gradient(180deg, rgba(10, 49, 82, 0.12), transparent 420px),
-    transparent;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12) 280px, transparent),
+    rgba(255, 255, 255, 0.24);
+  overflow-x: hidden;
 }
 
 body.todo-floating-disabled.next-app .workspace {
@@ -2156,18 +2311,17 @@ body.todo-floating-disabled.next-app .workspace {
 }
 
 body.next-app .topbar {
-  min-height: 132px;
+  min-height: 110px;
   margin-bottom: 16px;
-  padding: 17px 19px;
-  color: #eef5fb;
-  border: 1px solid rgba(37, 161, 189, 0.32);
-  border-radius: 6px;
+  padding: 16px 18px;
+  color: #12283a;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 15px;
   background:
-    linear-gradient(115deg, rgba(6, 7, 9, 0.9), rgba(6, 7, 9, 0.76) 48%, rgba(10, 49, 82, 0.62)),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent 45%),
-    linear-gradient(90deg, rgba(37, 161, 189, 0.16), transparent 65%);
-  box-shadow: 0 22px 50px rgba(6, 7, 9, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(18px) saturate(1.12);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(240, 247, 250, 0.58)),
+    rgba(255, 255, 255, 0.56);
+  box-shadow: 0 18px 44px rgba(46, 78, 94, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px) saturate(1.08);
 }
 
 body.next-app .topbar::before {
@@ -2184,20 +2338,20 @@ body.next-app .title-block::before {
 
 body.next-app .topbar .title-block > .eyebrow {
   display: block;
-  margin-bottom: 10px;
-  color: #d4e1e8;
-  font-size: 0.76rem;
+  margin-bottom: 8px;
+  color: #647585;
+  font-size: 0.72rem;
   font-weight: 900;
 }
 
 body.next-app .topbar h1 {
-  color: #f7fbfd;
+  color: #101820;
   font-family: var(--font-display);
-  font-size: clamp(2rem, 2.9vw, 2.7rem);
-  font-weight: 400;
-  line-height: 0.92;
-  letter-spacing: 0.01em;
-  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.32);
+  font-size: clamp(1.58rem, 2.2vw, 2.25rem);
+  font-weight: 520;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: none;
 }
 
 body.next-app .live-beacon {
@@ -2214,17 +2368,17 @@ body.next-app .live-label {
 }
 
 body.next-app .build-notice {
-  color: #d4e1e8;
+  color: #657687;
 }
 
 body.next-app .build-notice strong {
-  color: #ffe9e6;
-  background: rgba(191, 62, 57, 0.26);
-  border-color: rgba(255, 214, 211, 0.55);
+  color: #102e52;
+  background: rgba(16, 46, 82, 0.08);
+  border-color: rgba(16, 46, 82, 0.18);
 }
 
 body.next-app .build-notice em {
-  color: #b9c9d6;
+  color: #657687;
 }
 
 body.next-app .topbar-actions {
@@ -2236,38 +2390,39 @@ body.next-app .topbar-actions {
   align-self: center;
   margin-left: auto;
   padding: 9px;
-  border: 1px solid rgba(183, 220, 238, 0.22);
-  border-radius: 6px;
-  background: rgba(6, 7, 9, 0.38);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(126, 150, 166, 0.18);
+  border-radius: 12px;
+  background: rgba(248, 252, 253, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 body.next-app .session-chip,
 body.next-app .select-wrap {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(183, 220, 238, 0.18);
-  color: #eef5fb;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(126, 150, 166, 0.2);
+  color: #12283a;
 }
 
 body.next-app .session-chip span,
 body.next-app .select-wrap span {
-  color: #b9c9d6;
+  color: #657687;
 }
 
 body.next-app .session-chip strong,
 body.next-app .session-chip small {
-  color: #ffffff;
+  color: #12283a;
 }
 
 body.next-app .topbar select {
-  border-color: #38536d;
-  background: rgba(6, 7, 9, 0.72);
-  color: #eef5fb;
+  border-color: rgba(126, 150, 166, 0.24);
+  background: rgba(255, 255, 255, 0.86);
+  color: #12283a;
 }
 
 body.next-app .manual-refresh-button {
-  background: #eef5fb;
-  color: #0a3152;
+  background: #102e52;
+  color: #ffffff;
+  border-color: rgba(16, 46, 82, 0.24);
 }
 
 body.next-app .logout-button {
@@ -2291,12 +2446,13 @@ body.next-app .wash-row,
 body.next-app .setup-table,
 body.next-app .setup-panel,
 body.next-app .setup-import-panel {
-  border-radius: 6px;
-  border-color: var(--aero-border);
+  border-radius: 13px;
+  border-color: rgba(255, 255, 255, 0.62);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(238, 246, 249, 0.68)),
-    var(--glass);
-  box-shadow: var(--aero-shadow);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(241, 248, 250, 0.64)),
+    rgba(255, 255, 255, 0.58);
+  box-shadow: 0 18px 44px rgba(46, 78, 94, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px) saturate(1.04);
 }
 
 body.next-app .metric-card {
@@ -2305,7 +2461,7 @@ body.next-app .metric-card {
 
 body.next-app .panel-head,
 body.next-app .setup-table th {
-  background: linear-gradient(180deg, rgba(248, 252, 253, 0.92), rgba(229, 241, 247, 0.76));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(236, 245, 248, 0.62));
 }
 
 body.next-app .page-title-copy {
@@ -2617,6 +2773,19 @@ body.next-app .page-title-weather {
 @media (max-width: 1180px) {
   body.next-app .app-shell {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 0 minmax(0, 1fr);
+    margin: 0;
+    border-radius: 0;
+  }
+
+  body.next-app .shell-window-chrome {
+    display: none;
+  }
+
+  body.next-app .side-rail,
+  body.next-app .workspace {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   body.next-app .topbar-actions {
@@ -2640,7 +2809,7 @@ body.next-app .page-title-weather {
   }
 
   body.next-app .topbar-actions {
-    background: rgba(6, 7, 9, 0.28);
+    background: rgba(248, 252, 253, 0.72);
   }
 
   .manager-action-hero,
