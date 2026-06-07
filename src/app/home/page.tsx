@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { Panel, Tag } from "@/components/TocCards";
 import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 import { getThorOperatingWeek } from "@/lib/operating-week";
 import { productivitySites } from "@/lib/toc-data";
@@ -149,7 +149,51 @@ export default function HomePage() {
   return (
     <TocShell>
       <PageIntro title="Home" detail="Command entry point." />
-      <FlowHeading eyebrow="Home" title="Start with the business signal, then move to the page that owns the action." />
+      <section className="toc-command-feed" aria-label="Thor command feed">
+        <article className="toc-feed-row system">
+          <span className="toc-feed-avatar shield">T</span>
+          <div>
+            <div className="toc-feed-meta"><strong>System</strong><time>{operatingWeek.name}</time></div>
+            <p>Daily operations digest is ready. <Link href="/actions">{visibleActionItems.length} action updates</Link> are visible for {scope}.</p>
+          </div>
+        </article>
+        <div className="toc-feed-divider"><span>Today</span></div>
+        <article className="toc-feed-row ai">
+          <span className="toc-feed-avatar">T</span>
+          <div>
+            <div className="toc-feed-meta"><strong>Thor AI</strong><em>APP</em><time>Live</time></div>
+            <p>Here's a quick recap of the current operating position.</p>
+            <ul>
+              <li><strong>Overall:</strong> {overallScore}% business health from productivity, compliance, actions and To Do load.</li>
+              <li><strong>Blocked:</strong> {blockedActionCount} high-risk or blocked items need manager or National movement.</li>
+              <li><strong>Compliance:</strong> {complianceOpenItems} visible compliance actions are open in this scope.</li>
+              <li><strong>Assets:</strong> {isScopedRegion ? `${scope} asset view is ready.` : "National Fleet Complete signal is ready."}</li>
+            </ul>
+            <Link className="toc-feed-link" href="/actions">View full brief <span>-&gt;</span></Link>
+          </div>
+        </article>
+        <article className="toc-feed-row manager">
+          <span className="toc-feed-avatar person">CG</span>
+          <div>
+            <div className="toc-feed-meta"><strong>Craig</strong><time>Manager view</time></div>
+            <p>Focus the team on blockers first, then move through the route tiles below.</p>
+          </div>
+        </article>
+        <article className="toc-feed-row ai compact">
+          <span className="toc-feed-avatar">T</span>
+          <div>
+            <div className="toc-feed-meta"><strong>Thor AI</strong><em>APP</em><time>Now</time></div>
+            <p>{newestSignal ? `Latest signal: ${newestSignal.title}.` : "No new command signal is currently visible for this scope."}</p>
+          </div>
+        </article>
+        <div className="toc-feed-composer" aria-hidden="true">
+          <span>Message Thor Command</span>
+          <b>+</b>
+          <b>Aa</b>
+          <b>@</b>
+          <strong>-&gt;</strong>
+        </div>
+      </section>
       <section className="toc-brief-card" aria-label="Morning operational brief">
         <div className="toc-brief-header">
           <strong>Morning Brief</strong>

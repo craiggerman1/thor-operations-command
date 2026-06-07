@@ -81,9 +81,9 @@ let shellRestoreInFlight: Promise<StoredSession | null> | null = null;
 const TocShellContext = createContext(false);
 const restrictedProviderNamePattern = ["ti" + "tan", "rental", "group"].join("\\s+");
 const navGroups = [
-  { title: "Command", labels: ["Home", "Region Health", "Action Centre", "National Requests", "Calendar"] },
-  { title: "Operations", labels: ["Productivity", "Jobsheets", "Staff Availability", "Asset Tracking", "Stock Orders", "Equipment Servicing"] },
-  { title: "Governance", labels: ["Compliance", "Inductions", "Operations Setup", "Odin Control", "To Do", "Chat", "Admin Settings"] }
+  { title: "Channels", labels: ["Home", "Action Centre", "National Requests", "Calendar", "Chat"] },
+  { title: "Operations", labels: ["Region Health", "Productivity", "Jobsheets", "Staff Availability", "Asset Tracking", "Stock Orders", "Equipment Servicing"] },
+  { title: "Apps", labels: ["Compliance", "Inductions", "Operations Setup", "Odin Control", "To Do", "Admin Settings"] }
 ];
 
 function sameNewsItems(firstItems: string[], secondItems: string[]) {
@@ -513,17 +513,21 @@ export function TocShell({ children }: { children: ReactNode }) {
       </div>
       <aside className="side-rail" aria-label="Thor Operations navigation">
         <button className="mobile-nav-close" type="button" aria-label="Close navigation" onClick={() => setNavOpen(false)}>Close</button>
+        <div className="rail-team-header">
+          <strong>Your team</strong>
+          <span aria-hidden="true">+</span>
+        </div>
         <div className="brand-lockup">
           <img className="brand-logo" src="/assets/thor-logo-stacked-sidebar.png" alt="Thor Mobile Truck Wash" />
           <div>
-            <strong>Operations Command</strong>
-            <span>Admin access</span>
+            <strong>Thor Command</strong>
+            <span>{currentScope}</span>
           </div>
         </div>
         <nav className="rail-nav" aria-label="Primary">
           {groupedNav.map((group) => (
             <section className="rail-nav-group" key={group.title} aria-label={group.title}>
-              <span className="rail-nav-group-title">{group.title}</span>
+              <span className="rail-nav-group-title"><i aria-hidden="true" />{group.title}</span>
               {group.items.map(({ label, href }) => {
                 const badge = navBadgeCounts[label];
                 return (
@@ -547,12 +551,12 @@ export function TocShell({ children }: { children: ReactNode }) {
             <span className="eyebrow">Thor / {currentScope}</span>
             <div className="title-line">
               <span className="live-beacon" aria-label="Live data feeds are offline" />
-              <h1>{activeNavItem?.label || "Operations Command"}</h1>
+              <h1>Thor</h1>
               <span className="live-label">OFFLINE</span>
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.445 Preview</em>
+              <em>{activeNavItem?.label || "Operations Command"} - Build 0.446 Preview</em>
             </div>
           </div>
           <div className="topbar-actions">
