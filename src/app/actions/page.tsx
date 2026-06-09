@@ -115,7 +115,6 @@ export default function ActionsPage() {
   const filteredActions = scopedActions.filter((action) => actionMatchesQueueFilter(action, queueFilter));
   const sortedActions = [...filteredActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
   const canQuickManage = role === "admin" || (role === "manager" && scope === "National");
-  const canQuickProgress = role === "admin" || role === "manager";
   const closureSummary = buildClosureSummary(scopedActions);
   const systemDataActions = scopedActions.filter(isSystemDataAction);
   const operationalActions = scopedActions.filter((action) => !isSystemDataAction(action));
@@ -400,14 +399,14 @@ export default function ActionsPage() {
       <section className="command-grid route-grid">
         <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} shown / ${scopedActions.length} open`}>
           {message ? <div className="admin-hint-message">{message}</div> : null}
-          <div className="action-command-strip">
+          {canQuickManage ? <div className="action-command-strip">
             <div>
               <strong>{closureSummary.review} waiting National review</strong>
-              <small>{closureSummary.blocked} blocked, {closureSummary.overdue} overdue, {closureSummary.carryover} carryover. Normal queue reads are fast; generated checks run only when requested.</small>
+              <small>{closureSummary.blocked} blocked, {closureSummary.overdue} overdue, {closureSummary.carryover} carryover.</small>
             </div>
             <button type="button" onClick={() => void syncGeneratedItems()} disabled={isSyncingGenerated}>{isSyncingGenerated ? "Syncing..." : "Sync generated checks"}</button>
-          </div>
-          <div className="action-filter-strip" aria-label="Action queue filters">
+          </div> : null}
+          {canQuickManage || scopedActions.length > 3 ? <div className="action-filter-strip" aria-label="Action queue filters">
             {queueFilters.map((filter) => (
               <button
                 type="button"
@@ -419,7 +418,7 @@ export default function ActionsPage() {
                 <strong>{filter.count}</strong>
               </button>
             ))}
-          </div>
+          </div> : null}
           {rosterGroups.length ? (
             <div className="roster-action-group-list" aria-label="Grouped roster risk actions">
               {rosterGroups.map((group) => {
@@ -546,25 +545,22 @@ export default function ActionsPage() {
           <span className="eyebrow">{signal.source} - {signal.region}</span>
           <strong>{signal.title}</strong>
           <small>{signal.detail}</small>
-          <span className="action-due-date">Due: {signal.dueDate}</span>
-          <div className="action-closure-meta">
+          <div className="action-row-meta">
+            <span>Due {signal.dueDate}</span>
+            <span>{signal.lifecycleLabel || signal.status}</span>
+            {signal.isOverdue ? <span>Overdue</span> : null}
+          </div>
+          {canQuickManage ? <div className="action-closure-meta">
             <Tag tone={signal.lifecycleTone || "blue"}>{signal.lifecycleLabel || signal.status}</Tag>
             <Tag tone={signal.isOverdue ? "red" : signal.isStale || signal.isDueSoon ? "amber" : "green"}>{signal.ageLabel || "New"}</Tag>
             <Tag tone={signal.escalationLevel === "craig" ? "red" : signal.escalationLevel === "national" ? "amber" : "blue"}>{signal.escalationLabel || "On track"}</Tag>
-          </div>
+          </div> : null}
         </div>
         <div className="signal-action-controls">
-          <Tag tone={signal.severity}>{signal.directive}</Tag>
           <button className="node-action" type="button" onClick={(event) => { event.stopPropagation(); setExpandedActionId((current) => current === signal.id ? null : signal.id); }}>
             {isExpanded ? "Collapse" : "Work"}
           </button>
           <Link className="node-action" href={signal.href} onClick={stopCardOpen}>History</Link>
-          {canQuickProgress ? (
-            <div className="quick-action-controls" onClick={stopCardOpen}>
-              <button type="button" onClick={(event) => { event.stopPropagation(); void updateActionLifecycle(signal.id, "acknowledged"); }} disabled={rowBusy || signal.lifecycleStatus === "acknowledged" || awaitingReview}>Seen</button>
-              <button type="button" onClick={(event) => { event.stopPropagation(); void updateActionLifecycle(signal.id, "in_progress"); }} disabled={rowBusy || signal.lifecycleStatus === "in_progress" || awaitingReview}>Start</button>
-            </div>
-          ) : null}
           {canQuickManage ? (
             <div className="quick-action-controls" onClick={stopCardOpen}>
               <button type="button" onClick={(event) => { event.stopPropagation(); void mutateActionItem(signal.id, "clear"); }} disabled={rowBusy}>Clear</button>
@@ -576,8 +572,8 @@ export default function ActionsPage() {
           <div className="inline-action-workbench" onClick={stopCardOpen}>
             <form className="inline-closeout-form" onSubmit={(event) => void submitInlineCloseout(event, signal)}>
               <div>
-                <strong>{awaitingReview ? "Already with National" : "Fast close-out"}</strong>
-                <small>{materialAction ? "Add the result plus evidence/reference, then send it to National." : "Add a short result and send it for review."}</small>
+                <strong>{awaitingReview ? "Already with National" : "Close out"}</strong>
+                <small>{materialAction ? "Result and evidence/reference required." : "Short result required."}</small>
               </div>
               <textarea value={draft.response} placeholder="What was done?" disabled={awaitingReview || closed} onChange={(event) => patchDraft(signal.id, { response: event.target.value })} />
               <div className="inline-evidence-row">
