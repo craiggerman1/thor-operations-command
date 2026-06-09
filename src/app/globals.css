@@ -63,6 +63,180 @@ body.next-app .rail-nav {
   grid-column: 1 / -1;
 }
 
+.home-action-command {
+  display: grid;
+  gap: 10px;
+}
+
+.home-action-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) repeat(4, minmax(132px, 0.7fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.home-action-toolbar > div,
+.home-action-toolbar label {
+  display: grid;
+  gap: 4px;
+}
+
+.home-action-toolbar strong {
+  color: var(--ink);
+  font-size: 0.98rem;
+}
+
+.home-action-toolbar span,
+.home-action-toolbar label span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.home-action-toolbar select {
+  min-height: 34px;
+  border: 1px solid rgba(12, 57, 84, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-weight: 850;
+  padding: 6px 9px;
+}
+
+.home-action-groups {
+  display: grid;
+  gap: 7px;
+}
+
+.home-action-group {
+  overflow: hidden;
+  border: 1px solid rgba(12, 57, 84, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.home-action-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 9px 12px;
+  cursor: pointer;
+  list-style: none;
+  background: linear-gradient(180deg, rgba(248, 252, 253, 0.94), rgba(232, 243, 248, 0.72));
+}
+
+.home-action-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-action-group summary::before {
+  content: "+";
+  color: var(--blue);
+  font-size: 0.8rem;
+  font-weight: 950;
+}
+
+.home-action-group[open] summary::before {
+  content: "-";
+}
+
+.home-action-group summary span {
+  flex: 1;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.home-action-group summary strong {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.home-action-table {
+  display: grid;
+}
+
+.home-action-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.7fr) minmax(92px, 0.45fr) minmax(82px, 0.4fr) minmax(92px, 0.45fr) minmax(54px, 0.28fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  border-top: 1px solid rgba(12, 57, 84, 0.08);
+  color: var(--ink);
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.home-action-row:not(.home-action-row-head) {
+  border-left: 3px solid rgba(12, 57, 84, 0.12);
+}
+
+.home-action-row.red {
+  border-left-color: var(--red);
+}
+
+.home-action-row.amber {
+  border-left-color: var(--amber);
+}
+
+.home-action-row.green {
+  border-left-color: var(--green);
+}
+
+.home-action-row.blue {
+  border-left-color: var(--aero);
+}
+
+.home-action-row:hover {
+  background: rgba(238, 250, 252, 0.78);
+}
+
+.home-action-row-head {
+  min-height: 32px;
+  background: rgba(246, 250, 252, 0.82);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.home-action-row span {
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.home-action-row strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-action-row small {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-action-row span:last-child {
+  color: var(--blue);
+  font-weight: 950;
+  text-align: right;
+}
+
 .login-card a {
   display: inline-flex;
   align-items: center;
@@ -368,6 +542,14 @@ body.next-app .rail-nav {
     grid-template-columns: 1fr;
   }
 
+  .home-action-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-action-toolbar > div {
+    grid-column: 1 / -1;
+  }
+
   .master-row-head,
   .master-table-head {
     display: none;
@@ -394,6 +576,19 @@ body.next-app .rail-nav {
   .command-grid.route-grid > .panel,
   .command-grid.route-grid > .wide-panel {
     grid-column: 1 / -1;
+  }
+
+  .home-action-toolbar,
+  .home-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .home-action-row-head {
+    display: none;
+  }
+
+  .home-action-row span:last-child {
+    text-align: left;
   }
 }
 

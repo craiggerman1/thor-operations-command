@@ -7,7 +7,7 @@ import { DirectorBroadcastControls } from "@/components/UrgentBroadcast";
 import { getThorOperatingWeek } from "@/lib/operating-week";
 import { productivitySites } from "@/lib/toc-data";
 import { metrics } from "@/lib/toc-data";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AccessRole } from "@/lib/access";
 import type { ActionItem } from "@/lib/action-state";
 import { getScopedActionItems, isNationalScope } from "@/lib/scope-utils";
@@ -36,8 +36,22 @@ export default function HomePage() {
   const [openTodoCount, setOpenTodoCount] = useState(0);
   const [openActionItems, setOpenActionItems] = useState<ActionItem[]>([]);
   const [homeSettings, setHomeSettings] = useState<HomeSettingsConfig>(defaultHomeSettings);
+  const [actionRegionFilter, setActionRegionFilter] = useState("All");
+  const [actionSourceFilter, setActionSourceFilter] = useState("All");
+  const [actionPriorityFilter, setActionPriorityFilter] = useState("All");
+  const [actionGroupBy, setActionGroupBy] = useState<"region" | "source" | "priority">("region");
   const operatingWeek = getThorOperatingWeek();
   const visibleActionItems = getScopedActionItems(openActionItems, scope, activeRole);
+  const actionRegions = useMemo(() => uniqueSorted(visibleActionItems.map((item) => item.region)), [visibleActionItems]);
+  const actionSources = useMemo(() => uniqueSorted(visibleActionItems.map((item) => item.source)), [visibleActionItems]);
+  const filteredActionItems = useMemo(() => {
+    return visibleActionItems
+      .filter((item) => actionRegionFilter === "All" || item.region === actionRegionFilter)
+      .filter((item) => actionSourceFilter === "All" || item.source === actionSourceFilter)
+      .filter((item) => actionPriorityFilter === "All" || item.severity === actionPriorityFilter)
+      .sort(sortActionItems);
+  }, [actionPriorityFilter, actionRegionFilter, actionSourceFilter, visibleActionItems]);
+  const groupedActionItems = useMemo(() => groupActionItems(filteredActionItems, actionGroupBy), [actionGroupBy, filteredActionItems]);
   const visibleProductivitySites = isNationalScope(scope) ? productivitySites : productivitySites.filter((site) => site.region === scope);
   const productivityBasis = visibleProductivitySites.length ? visibleProductivitySites : productivitySites;
   const productivityScore = productivityBasis.length ? Math.round(productivityBasis.reduce((total, site) => total + site.productivityScore, 0) / productivityBasis.length) : 100;
@@ -184,22 +198,79 @@ export default function HomePage() {
         </section>
       ) : (
         <section className="command-grid route-grid">
-        <Panel wide eyebrow="Command signal" title="Take action on command signals" pill={`${visibleActionItems.length} action-linked`}>
-          <div className="signal-command-grid">
-            {visibleActionItems.map((signal) => (
-              <Link className={`signal-command-card ${signal.severity}`} href={signal.href} key={signal.id}>
-                <div>
-                  <span className="eyebrow">{signal.source} - {signal.region}</span>
-                  <h3>{signal.title}</h3>
-                  <p>{signal.detail}</p>
-                </div>
-                <div className="signal-command-footer">
-                  <div className="meta-row"><Tag tone={signal.severity}>{signal.status}</Tag><Tag>{signal.directive}</Tag></div>
-                  <span className="node-action">Open issue</span>
-                </div>
-              </Link>
-            ))}
-            {visibleActionItems.length ? null : <div className="empty-state">No command signals are currently open.</div>}
+        <Panel wide eyebrow="Command signal" title="Action command table">
+          <div className="home-action-command">
+            <div className="home-action-toolbar">
+              <div>
+                <strong>{filteredActionItems.length} shown</strong>
+                <span>{visibleActionItems.length} open command signal{visibleActionItems.length === 1 ? "" : "s"}</span>
+              </div>
+              <label>
+                <span>Region</span>
+                <select value={actionRegionFilter} onChange={(event) => setActionRegionFilter(event.target.value)}>
+                  <option value="All">All regions</option>
+                  {actionRegions.map((region) => <option value={region} key={region}>{region}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Item type</span>
+                <select value={actionSourceFilter} onChange={(event) => setActionSourceFilter(event.target.value)}>
+                  <option value="All">All items</option>
+                  {actionSources.map((source) => <option value={source} key={source}>{source}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Priority</span>
+                <select value={actionPriorityFilter} onChange={(event) => setActionPriorityFilter(event.target.value)}>
+                  <option value="All">All priorities</option>
+                  <option value="red">Red</option>
+                  <option value="amber">Amber</option>
+                  <option value="green">Green</option>
+                  <option value="blue">Blue</option>
+                </select>
+              </label>
+              <label>
+                <span>Group</span>
+                <select value={actionGroupBy} onChange={(event) => setActionGroupBy(event.target.value as "region" | "source" | "priority")}>
+                  <option value="region">By region</option>
+                  <option value="source">By item type</option>
+                  <option value="priority">By priority</option>
+                </select>
+              </label>
+            </div>
+            <div className="home-action-groups">
+              {groupedActionItems.map((group) => (
+                <details className="home-action-group" open key={group.label}>
+                  <summary>
+                    <span>{group.label}</span>
+                    <strong>{group.items.length}</strong>
+                  </summary>
+                  <div className="home-action-table" role="table" aria-label={`${group.label} action items`}>
+                    <div className="home-action-row home-action-row-head" role="row">
+                      <span>Item</span>
+                      <span>Region</span>
+                      <span>Priority</span>
+                      <span>Status</span>
+                      <span />
+                    </div>
+                    {group.items.map((signal) => (
+                      <Link className={`home-action-row ${signal.severity}`} href={signal.href} key={signal.id} role="row">
+                        <span>
+                          <strong>{signal.title}</strong>
+                          <small>{signal.detail}</small>
+                        </span>
+                        <span>{signal.region}</span>
+                        <span>{priorityLabel(signal.severity)}</span>
+                        <span>{signal.status}</span>
+                        <span>Open</span>
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+              ))}
+              {visibleActionItems.length && !filteredActionItems.length ? <div className="empty-state">No action items match those filters.</div> : null}
+              {visibleActionItems.length ? null : <div className="empty-state">No command signals are currently open.</div>}
+            </div>
           </div>
         </Panel>
         <Panel wide className="admin-only-panel" eyebrow="Admin roadmap" title="Go Live Pathway" pill="Field-use readiness">
@@ -245,6 +316,52 @@ function getTone(score: number) {
   if (score >= 90) return "green";
   if (score >= 75) return "amber";
   return "red";
+}
+
+function uniqueSorted(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
+
+function priorityRank(severity: string) {
+  if (severity === "red") return 0;
+  if (severity === "amber") return 1;
+  if (severity === "blue") return 2;
+  if (severity === "green") return 3;
+  return 4;
+}
+
+function priorityLabel(severity: string) {
+  if (severity === "red") return "High";
+  if (severity === "amber") return "Watch";
+  if (severity === "green") return "Normal";
+  if (severity === "blue") return "Info";
+  return "Open";
+}
+
+function sortActionItems(a: ActionItem, b: ActionItem) {
+  return priorityRank(a.severity) - priorityRank(b.severity) ||
+    a.region.localeCompare(b.region) ||
+    a.source.localeCompare(b.source) ||
+    a.title.localeCompare(b.title);
+}
+
+function groupActionItems(items: ActionItem[], groupBy: "region" | "source" | "priority") {
+  const groups = new Map<string, ActionItem[]>();
+  items.forEach((item) => {
+    const label = groupBy === "region"
+      ? item.region
+      : groupBy === "source"
+        ? item.source
+        : priorityLabel(item.severity);
+    groups.set(label, [...(groups.get(label) || []), item]);
+  });
+
+  return Array.from(groups.entries())
+    .map(([label, groupItems]) => ({ label, items: groupItems.sort(sortActionItems) }))
+    .sort((a, b) => {
+      if (groupBy === "priority") return priorityRank(a.items[0]?.severity || "") - priorityRank(b.items[0]?.severity || "");
+      return a.label.localeCompare(b.label);
+    });
 }
 
 function DirectorSignal({ label, value, href, tone = "green" }: { label: string; value: string; href: string; tone?: "green" | "amber" | "red" }) {
