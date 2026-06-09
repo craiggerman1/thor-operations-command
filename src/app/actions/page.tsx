@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel, Tag } from "@/components/TocCards";
@@ -17,6 +17,7 @@ const directivePriority = {
 };
 
 type QueueFilter = "operational" | "all" | "overdue" | "blocked" | "review" | "carryover" | "system";
+type ActionGroupBy = "queue" | "region" | "source" | "priority";
 
 type EvidenceAttachment = {
   id: string;
@@ -106,13 +107,23 @@ export default function ActionsPage() {
   const [scope, setScope] = useState("National");
   const [role, setRole] = useState<AccessRole>("manager");
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("operational");
+  const [actionRegionFilter, setActionRegionFilter] = useState("All");
+  const [actionSourceFilter, setActionSourceFilter] = useState("All");
+  const [actionPriorityFilter, setActionPriorityFilter] = useState("All");
+  const [actionGroupBy, setActionGroupBy] = useState<ActionGroupBy>("queue");
   const [rosterGroups, setRosterGroups] = useState<RosterActionGroup[]>([]);
   const [expandedRosterGroupId, setExpandedRosterGroupId] = useState<string | null>(null);
   const [expandedActionId, setExpandedActionId] = useState<string | null>(null);
   const [actionDrafts, setActionDrafts] = useState<Record<string, ActionDraft>>({});
   const [isSyncingGenerated, setIsSyncingGenerated] = useState(false);
   const scopedActions = getScopedActionItems(openActions, scope, role);
-  const filteredActions = scopedActions.filter((action) => actionMatchesQueueFilter(action, queueFilter));
+  const actionRegions = useMemo(() => uniqueSorted(scopedActions.map((item) => item.region)), [scopedActions]);
+  const actionSources = useMemo(() => uniqueSorted(scopedActions.map((item) => item.source)), [scopedActions]);
+  const filteredActions = scopedActions
+    .filter((action) => actionMatchesQueueFilter(action, queueFilter))
+    .filter((action) => actionRegionFilter === "All" || action.region === actionRegionFilter)
+    .filter((action) => actionSourceFilter === "All" || action.source === actionSourceFilter)
+    .filter((action) => actionPriorityFilter === "All" || action.severity === actionPriorityFilter);
   const sortedActions = [...filteredActions].sort((a, b) => (directivePriority[a.directive as keyof typeof directivePriority] || 9) - (directivePriority[b.directive as keyof typeof directivePriority] || 9));
   const canQuickManage = role === "admin" || (role === "manager" && scope === "National");
   const closureSummary = buildClosureSummary(scopedActions);
@@ -127,7 +138,7 @@ export default function ActionsPage() {
     { value: "carryover", label: "Carryover", count: closureSummary.carryover },
     { value: "system", label: "System/Data", count: systemDataActions.length }
   ];
-  const queueGroups = useMemo(() => buildActionQueueGroups(sortedActions), [sortedActions]);
+  const queueGroups = useMemo(() => buildActionQueueGroups(sortedActions, actionGroupBy), [actionGroupBy, sortedActions]);
 
   useEffect(() => {
     function syncSession(event?: Event) {
@@ -397,7 +408,7 @@ export default function ActionsPage() {
       <PageIntro title="Action Centre" detail="Ensure all items are actioned and then cleared." />
       <FlowHeading eyebrow="Action Centre" title="Ensure all items are actioned, owned, escalated where needed, and then cleared from the queue." />
       <section className="command-grid route-grid">
-        <Panel wide eyebrow="Priority command queue" title="Action Centre command queue" pill={`${sortedActions.length} shown / ${scopedActions.length} open`}>
+        <Panel wide eyebrow="Priority command queue" title="Action Centre command table">
           {message ? <div className="admin-hint-message">{message}</div> : null}
           {canQuickManage ? <div className="action-command-strip">
             <div>
@@ -406,19 +417,51 @@ export default function ActionsPage() {
             </div>
             <button type="button" onClick={() => void syncGeneratedItems()} disabled={isSyncingGenerated}>{isSyncingGenerated ? "Syncing..." : "Sync generated checks"}</button>
           </div> : null}
-          {canQuickManage || scopedActions.length > 3 ? <div className="action-filter-strip" aria-label="Action queue filters">
-            {queueFilters.map((filter) => (
-              <button
-                type="button"
-                key={filter.value}
-                className={queueFilter === filter.value ? "active" : ""}
-                onClick={() => setQueueFilter(filter.value)}
-              >
-                <span>{filter.label}</span>
-                <strong>{filter.count}</strong>
-              </button>
-            ))}
-          </div> : null}
+          <div className="home-action-toolbar action-centre-toolbar" aria-label="Action queue filters">
+            <div>
+              <strong>{sortedActions.length} shown</strong>
+              <span>{scopedActions.length} open action item{scopedActions.length === 1 ? "" : "s"}</span>
+            </div>
+            <label>
+              <span>Queue</span>
+              <select value={queueFilter} onChange={(event) => setQueueFilter(event.target.value as QueueFilter)}>
+                {queueFilters.map((filter) => <option value={filter.value} key={filter.value}>{filter.label} ({filter.count})</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Region</span>
+              <select value={actionRegionFilter} onChange={(event) => setActionRegionFilter(event.target.value)}>
+                <option value="All">All regions</option>
+                {actionRegions.map((region) => <option value={region} key={region}>{region}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Item type</span>
+              <select value={actionSourceFilter} onChange={(event) => setActionSourceFilter(event.target.value)}>
+                <option value="All">All items</option>
+                {actionSources.map((source) => <option value={source} key={source}>{source}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Priority</span>
+              <select value={actionPriorityFilter} onChange={(event) => setActionPriorityFilter(event.target.value)}>
+                <option value="All">All priorities</option>
+                <option value="red">High</option>
+                <option value="amber">Watch</option>
+                <option value="green">Normal</option>
+                <option value="blue">Info</option>
+              </select>
+            </label>
+            <label>
+              <span>Group</span>
+              <select value={actionGroupBy} onChange={(event) => setActionGroupBy(event.target.value as ActionGroupBy)}>
+                <option value="queue">By workflow</option>
+                <option value="region">By region</option>
+                <option value="source">By item type</option>
+                <option value="priority">By priority</option>
+              </select>
+            </label>
+          </div>
           {rosterGroups.length ? (
             <div className="roster-action-group-list" aria-label="Grouped roster risk actions">
               {rosterGroups.map((group) => {
@@ -499,15 +542,22 @@ export default function ActionsPage() {
               })}
             </div>
           ) : null}
-          <div className="signal-action-list action-queue-stack">
+          <div className="home-action-groups action-centre-groups">
             {queueGroups.map((group) => (
-              <details className={`action-queue-group ${group.tone}`} key={group.id} open={group.id !== "monitoring"}>
+              <details className={`home-action-group action-centre-group ${group.tone}`} key={group.id} open>
                 <summary>
                   <span>{group.title}</span>
                   <small>{group.detail}</small>
                   <strong>{group.actions.length}</strong>
                 </summary>
-                <div className="action-queue-group-body">
+                <div className="home-action-table action-centre-table" role="table" aria-label={`${group.title} action items`}>
+                  <div className="home-action-row action-centre-row action-centre-row-head" role="row">
+                    <span>Item</span>
+                    <span>Region</span>
+                    <span>Priority</span>
+                    <span>Status</span>
+                    <span>Action</span>
+                  </div>
                   {group.actions.map((signal) => renderActionRow(signal))}
                 </div>
               </details>
@@ -530,10 +580,10 @@ export default function ActionsPage() {
       /compliance|equipment|stock|jobsheet|safety/i.test(`${signal.source} ${signal.title} ${signal.detail}`);
 
     return (
-      <article
+      <Fragment key={signal.id}>
+      <div
         id={signal.id}
-        className={`signal-action-card action-card-clickable action-work-row ${signal.severity} ${isExpanded ? "is-expanded" : ""}`}
-        key={signal.id}
+        className={`home-action-row action-centre-row action-centre-action-row ${signal.severity} ${isExpanded ? "is-expanded" : ""}`}
         role="button"
         tabIndex={0}
         title="Expand action work panel"
@@ -541,17 +591,15 @@ export default function ActionsPage() {
         onKeyDown={(event) => expandActionWithKeyboard(event, signal.id)}
         aria-expanded={isExpanded}
       >
-        <div>
-          <span className="eyebrow">{signal.source} - {signal.region}</span>
+        <span>
           <strong>{signal.title}</strong>
           <small>{signal.detail}</small>
-          <div className="action-row-meta">
-            <span>Due {signal.dueDate}</span>
-            <span>{signal.lifecycleLabel || signal.status}</span>
-            {signal.isOverdue ? <span>Overdue</span> : null}
-          </div>
-        </div>
-        <div className="signal-action-controls">
+          <small>{signal.source} - due {signal.dueDate}{signal.isOverdue ? " - overdue" : ""}</small>
+        </span>
+        <span>{signal.region}</span>
+        <span>{priorityLabel(signal.severity)}</span>
+        <span>{signal.lifecycleLabel || signal.status}</span>
+        <span className="action-centre-row-actions">
           <button className="node-action" type="button" onClick={(event) => { event.stopPropagation(); setExpandedActionId((current) => current === signal.id ? null : signal.id); }}>
             {isExpanded ? "Collapse" : "Work"}
           </button>
@@ -562,9 +610,11 @@ export default function ActionsPage() {
               <button className="danger-button" type="button" onClick={(event) => { event.stopPropagation(); void mutateActionItem(signal.id, "delete"); }} disabled={rowBusy}>Delete</button>
             </div>
           ) : null}
-        </div>
+        </span>
+      </div>
         {isExpanded ? (
-          <div className="inline-action-workbench" onClick={stopCardOpen}>
+          <div className="action-centre-workbench-row" onClick={stopCardOpen}>
+          <div className="inline-action-workbench">
             <form className="inline-closeout-form" onSubmit={(event) => void submitInlineCloseout(event, signal)}>
               <div>
                 <strong>{awaitingReview ? "Already with National" : "Close out"}</strong>
@@ -606,8 +656,9 @@ export default function ActionsPage() {
             </details>
             {draft.message ? <small className="manager-action-message">{draft.message}</small> : null}
           </div>
+          </div>
         ) : null}
-      </article>
+      </Fragment>
     );
   }
 }
@@ -641,7 +692,56 @@ function actionMatchesQueueFilter(action: EnhancedActionItem, filter: QueueFilte
   return true;
 }
 
-function buildActionQueueGroups(actions: EnhancedActionItem[]): ActionQueueGroup[] {
+function uniqueSorted(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
+
+function priorityRank(severity: string) {
+  if (severity === "red") return 0;
+  if (severity === "amber") return 1;
+  if (severity === "blue") return 2;
+  if (severity === "green") return 3;
+  return 4;
+}
+
+function priorityLabel(severity: string) {
+  if (severity === "red") return "High";
+  if (severity === "amber") return "Watch";
+  if (severity === "green") return "Normal";
+  if (severity === "blue") return "Info";
+  return "Open";
+}
+
+function sortActionRows(a: EnhancedActionItem, b: EnhancedActionItem) {
+  return priorityRank(a.severity) - priorityRank(b.severity) ||
+    a.region.localeCompare(b.region) ||
+    a.source.localeCompare(b.source) ||
+    a.title.localeCompare(b.title);
+}
+
+function buildActionQueueGroups(actions: EnhancedActionItem[], groupBy: ActionGroupBy): ActionQueueGroup[] {
+  if (groupBy !== "queue") {
+    const groups = new Map<string, EnhancedActionItem[]>();
+    actions.forEach((action) => {
+      const label = groupBy === "region"
+        ? action.region
+        : groupBy === "source"
+          ? action.source
+          : priorityLabel(action.severity);
+      groups.set(label, [...(groups.get(label) || []), action]);
+    });
+
+    return Array.from(groups.entries())
+      .map(([label, groupActions]) => ({
+        id: `${groupBy}-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        title: label,
+        detail: groupBy === "priority" ? "Grouped by priority." : `Grouped by ${groupBy}.`,
+        tone: groupBy === "priority" ? groupActions[0]?.severity || "blue" : "blue",
+        actions: groupActions.sort(sortActionRows)
+      }))
+      .sort((a, b) => groupBy === "priority" ? priorityRank(a.actions[0]?.severity || "") - priorityRank(b.actions[0]?.severity || "") : a.title.localeCompare(b.title));
+  }
+
   const groups: ActionQueueGroup[] = [
     {
       id: "manager-action",

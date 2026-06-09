@@ -284,6 +284,75 @@ body.next-app .rail-nav {
   text-align: right;
 }
 
+.action-centre-toolbar {
+  grid-template-columns: minmax(160px, 0.9fr) repeat(5, minmax(118px, 0.7fr));
+}
+
+.action-centre-group.red {
+  border-left: 3px solid var(--red);
+}
+
+.action-centre-group.amber {
+  border-left: 3px solid var(--amber);
+}
+
+.action-centre-group.blue {
+  border-left: 3px solid var(--aero);
+}
+
+.action-centre-group.green {
+  border-left: 3px solid var(--green);
+}
+
+.action-centre-row {
+  grid-template-columns: minmax(280px, 1.7fr) minmax(90px, 0.42fr) minmax(78px, 0.36fr) minmax(120px, 0.54fr) minmax(112px, 0.5fr);
+}
+
+.action-centre-action-row {
+  cursor: pointer;
+}
+
+.action-centre-action-row.is-expanded {
+  background: rgba(238, 250, 252, 0.82);
+}
+
+.action-centre-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-centre-row-actions .node-action,
+.action-centre-row-actions .quick-action-controls button {
+  min-height: 24px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 0.8rem;
+  font-weight: 950;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.action-centre-row-actions .quick-action-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-centre-row-actions .quick-action-controls button.danger-button {
+  color: var(--red);
+}
+
+.action-centre-workbench-row {
+  border-top: 1px solid rgba(12, 57, 84, 0.08);
+  background: linear-gradient(180deg, rgba(248, 252, 253, 0.88), rgba(255, 255, 255, 0.78));
+  padding: 10px 12px 12px;
+}
+
 .login-card a {
   display: inline-flex;
   align-items: center;
