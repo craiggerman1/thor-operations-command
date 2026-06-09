@@ -3043,6 +3043,108 @@ body.next-app .page-title-weather {
   justify-content: flex-start;
 }
 
+.national-command-hub {
+  display: grid;
+  gap: 10px;
+}
+
+.national-command-mode {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.national-command-mode button {
+  min-height: 30px;
+  border: 1px solid rgba(10, 49, 82, 0.14);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: rgba(238, 245, 248, 0.88);
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.national-command-mode button.active {
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.national-command-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 0.45fr) minmax(150px, 0.35fr) minmax(140px, 0.3fr);
+  gap: 9px;
+}
+
+.national-command-form.compact {
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+}
+
+.national-command-form label,
+.national-command-extra {
+  display: grid;
+  gap: 6px;
+}
+
+.national-command-form .wide {
+  grid-column: 1 / -1;
+}
+
+.national-command-form span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.national-command-form input,
+.national-command-form select,
+.national-command-form textarea {
+  width: 100%;
+  border: 1px solid rgba(126, 150, 166, 0.34);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  padding: 9px 10px;
+}
+
+.national-command-form textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.national-command-extra {
+  margin-top: 10px;
+}
+
+.national-command-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.national-command-footer button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 950;
+  padding: 0 14px;
+}
+
+.national-command-footer button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.national-command-footer small {
+  color: var(--blue);
+  font-weight: 900;
+}
+
 @media (max-width: 1180px) {
   body.next-app .app-shell {
     grid-template-columns: minmax(0, 1fr);

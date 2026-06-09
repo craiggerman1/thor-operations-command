@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
 import { FlowHeading, Panel } from "@/components/TocCards";
+import { NationalRequestCommandHub } from "@/components/NationalRequestCommandHub";
 import { NationalActionRequests } from "@/components/NationalActionRequests";
 import { StockOrderAdminReview } from "@/components/StockOrderAdminReview";
 
@@ -45,6 +46,9 @@ export default function NationalRequestsPage() {
         <>
           <FlowHeading eyebrow="National Requests" title="Review manager-submitted items, respond to stock requests and approve close-outs from one queue." />
           <section className="command-grid route-grid">
+            <Panel wide eyebrow="National command" title="Create compliance and action items">
+              <NationalRequestCommandHub />
+            </Panel>
             <Panel wide eyebrow="Manager requests" title="Action close-outs awaiting national review">
               <NationalActionRequests />
             </Panel>
