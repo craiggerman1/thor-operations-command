@@ -378,6 +378,8 @@ export default function ActionsPage() {
   }
 
   function expandActionWithKeyboard(event: KeyboardEvent<HTMLElement>, actionId: string) {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("input, textarea, select, button, a, summary, label")) return;
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     setExpandedActionId((current) => current === actionId ? null : actionId);
