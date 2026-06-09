@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Tag } from "@/components/TocCards";
 import { tocFetch } from "@/lib/toc-client-auth";
 
 type AdminActionItem = {
@@ -28,7 +27,7 @@ function toInputDate(value: string) {
 }
 
 async function fetchActions() {
-  const response = await tocFetch("/api/actions", { cache: "no-store" });
+  const response = await tocFetch("/api/actions?fast=true", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Action item database read failed.");
   return (payload.actions || []) as AdminActionItem[];
@@ -89,6 +88,7 @@ export function AdminActionManager() {
 
   async function updateAction(id: string, updates: Record<string, unknown>, successMessage: string) {
     setMessage("");
+    setActions((current) => current.map((item) => item.id === id ? { ...item, status: typeof updates.status === "string" ? updates.status : item.status } : item));
     try {
       const nextActions = await mutateAction({ action: "update", id, updates });
       setActions(nextActions);
@@ -103,6 +103,8 @@ export function AdminActionManager() {
   async function deleteAction(id: string) {
     if (!window.confirm("Are you sure you want to delete this action item?")) return;
     setMessage("");
+    const previousActions = actions;
+    setActions((current) => current.filter((item) => item.id !== id));
     try {
       const nextActions = await mutateAction({ action: "delete", id });
       setActions(nextActions);
@@ -110,26 +112,32 @@ export function AdminActionManager() {
       window.dispatchEvent(new Event("toc.actionState.updated"));
       window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
     } catch (error) {
+      setActions(previousActions);
       setMessage(error instanceof Error ? error.message : "Could not delete action item.");
     }
   }
 
   return (
-    <div className="admin-action-console">
+    <div className="admin-action-console lean-admin-action-console">
       <div className="admin-action-form">
         <div>
           <strong>Issue action item</strong>
-          <small>Create manager directives that feed into Action Centre, Region Health and page badges.</small>
+          <small>Send one clear task to the right manager region.</small>
         </div>
         <label><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Action required" /></label>
         <label><span>Detail</span><textarea value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="What the manager needs to do" /></label>
         <div className="admin-action-grid">
           <label><span>Target region</span><select value={region} onChange={(event) => setRegion(event.target.value)}>{regions.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label><span>Source page</span><select value={sourcePage} onChange={(event) => setSourcePage(event.target.value)}>{sourcePages.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label><span>Directive</span><select value={directiveType} onChange={(event) => setDirectiveType(event.target.value as (typeof directiveTypes)[number])}>{directiveTypes.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label><span>Priority</span><select value={priority} onChange={(event) => setPriority(event.target.value as (typeof priorities)[number])}>{priorities.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><span>Due date</span><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
         </div>
+        <details className="lean-advanced-action-options">
+          <summary>Advanced options</summary>
+          <div className="admin-action-grid">
+            <label><span>Source page</span><select value={sourcePage} onChange={(event) => setSourcePage(event.target.value)}>{sourcePages.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label><span>Directive</span><select value={directiveType} onChange={(event) => setDirectiveType(event.target.value as (typeof directiveTypes)[number])}>{directiveTypes.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label><span>Priority</span><select value={priority} onChange={(event) => setPriority(event.target.value as (typeof priorities)[number])}>{priorities.map((item) => <option key={item}>{item}</option>)}</select></label>
+          </div>
+        </details>
         <button type="button" onClick={createAction} disabled={isSaving}>{isSaving ? "Issuing..." : "Issue Action Item"}</button>
         {message ? <small className="admin-hint-message">{message}</small> : null}
       </div>
@@ -147,14 +155,9 @@ export function AdminActionManager() {
                 <strong>{item.title}</strong>
                 <small>{item.region} - Due {item.dueDate}</small>
               </div>
-              <Tag tone={item.severity}>{item.directive}</Tag>
             </div>
             <p>{item.detail}</p>
             <div className="admin-action-controls">
-              <select value={item.status === "Returned to manager" ? "returned_to_manager" : "open"} onChange={(event) => void updateAction(item.id, { status: event.target.value }, "Action status updated.")}>
-                <option value="open">Open</option>
-                <option value="returned_to_manager">Returned to manager</option>
-              </select>
               <button type="button" onClick={() => void updateAction(item.id, { status: "closed" }, "Action item closed.")}>Close</button>
               <button type="button" className="danger-button" onClick={() => void deleteAction(item.id)}>Delete</button>
             </div>

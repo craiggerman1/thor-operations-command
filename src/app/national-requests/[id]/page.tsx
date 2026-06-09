@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { TocShell, PageIntro } from "@/components/TocShell";
-import { FlowHeading, Panel, Tag } from "@/components/TocCards";
+import { FlowHeading, Panel } from "@/components/TocCards";
 import { nationalActionRequestsKey, type NationalActionRequest } from "@/components/NationalActionRequests";
 import { tocFetch } from "@/lib/toc-client-auth";
 
@@ -131,7 +131,7 @@ export default function NationalRequestDetailPage() {
   return (
     <TocShell>
       <PageIntro title="National Requests" detail="Review and close out the selected national request." />
-      <FlowHeading eyebrow="National Requests" title={isManagerUpdate ? "Review the manager update, acknowledge it, or return it if more detail is needed." : "Action the selected request, then close it out or return it to the manager."} />
+      <FlowHeading eyebrow="National Requests" title={isManagerUpdate ? "Review the manager update." : "Approve or return the manager close-out."} />
       <section className="command-grid route-grid">
         {scope !== "National" ? (
           <Panel wide eyebrow="Restricted scope" title="National Requests is only available in National scope">
@@ -139,12 +139,12 @@ export default function NationalRequestDetailPage() {
             <Link className="node-action" href="/home">Return Home</Link>
           </Panel>
         ) : actionRequest ? (
-          <Panel wide eyebrow={`${isManagerUpdate ? "Manager update" : actionRequest.source} - ${actionRequest.region}`} title={actionRequest.title} pill={actionRequest.status}>
-            <div className="national-request-detail">
+          <Panel wide eyebrow={`${actionRequest.region} / ${isManagerUpdate ? "Manager update" : actionRequest.source}`} title={actionRequest.title}>
+            <div className="national-request-detail lean-review-detail">
               <div className="national-request-body">
-                <div><span>Manager response</span><p>{actionRequest.managerResponse}</p></div>
+                <div><span>Response</span><p>{actionRequest.managerResponse}</p></div>
                 <div>
-                  <span>Evidence / reference</span>
+                  <span>Evidence</span>
                   <p>{actionRequest.evidence}</p>
                   {actionRequest.attachments?.length ? (
                     <div className="manager-evidence-list">
@@ -155,18 +155,14 @@ export default function NationalRequestDetailPage() {
                   ) : null}
                 </div>
               </div>
-              <div className="meta-row">
-                <Tag>{actionRequest.directive}</Tag>
-                <Tag tone={actionRequest.status === "Approved by national" ? "green" : actionRequest.status === "Returned to manager" ? "amber" : "blue"}>{actionRequest.status}</Tag>
-              </div>
               <label className="admin-tracking-field">
                 <span>National review note</span>
                 <textarea value={nationalResponse} onChange={(event) => setNationalResponse(event.target.value)} placeholder="Required when returning to manager. Optional for approval/acknowledgement." />
               </label>
               <div className="stock-actions">
-                <Link className="node-action" href={`/actions/${actionRequest.actionId}`}>Open source action</Link>
                 <button className="review-decision-button approve" type="button" onClick={() => void saveActionRequest("Approved by national")}>{isManagerUpdate ? "Acknowledge Update" : "Approve Close-Out"}</button>
                 <button className="review-decision-button return" type="button" onClick={() => void saveActionRequest("Returned to manager")}>Return To Manager</button>
+                <Link className="node-action" href={`/actions/${actionRequest.actionId}`}>Source action</Link>
               </div>
             </div>
           </Panel>

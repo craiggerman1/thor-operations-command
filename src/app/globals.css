@@ -2920,6 +2920,129 @@ body.next-app .page-title-weather {
   min-height: 28px;
 }
 
+.lean-action-flow {
+  gap: 8px;
+}
+
+.lean-flow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(126, 150, 166, 0.2);
+  border-radius: 6px;
+  background: rgba(248, 252, 253, 0.78);
+}
+
+.lean-flow-head strong,
+.lean-flow-head small {
+  display: block;
+}
+
+.lean-flow-head strong {
+  color: var(--blue);
+  font-size: 0.95rem;
+}
+
+.lean-flow-head small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.lean-review-list {
+  gap: 8px;
+}
+
+.lean-review-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  box-shadow: none;
+}
+
+.lean-review-head {
+  display: block;
+}
+
+.lean-review-head strong {
+  font-size: 1rem;
+}
+
+.lean-review-head small {
+  margin-top: 2px;
+}
+
+.lean-review-card .national-request-body,
+.lean-review-detail .national-request-body {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.8fr);
+  gap: 8px;
+}
+
+.lean-review-card .national-request-body div,
+.lean-review-detail .national-request-body div {
+  padding: 9px 10px;
+}
+
+.lean-review-card .national-request-body p,
+.lean-review-detail .national-request-body p {
+  margin: 3px 0 0;
+}
+
+.lean-review-actions,
+.lean-review-detail .stock-actions {
+  justify-content: flex-start;
+  gap: 7px;
+}
+
+.lean-review-actions .node-action,
+.lean-review-detail .node-action,
+.lean-review-actions .review-decision-button,
+.lean-review-detail .review-decision-button {
+  min-height: 32px;
+}
+
+.lean-admin-action-console .admin-action-form {
+  gap: 9px;
+}
+
+.lean-admin-action-console .admin-action-form textarea {
+  min-height: 86px;
+}
+
+.lean-advanced-action-options {
+  border: 1px solid rgba(126, 150, 166, 0.2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: rgba(248, 252, 253, 0.64);
+}
+
+.lean-advanced-action-options summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-size: 0.84rem;
+  font-weight: 950;
+}
+
+.lean-advanced-action-options > div {
+  margin-top: 10px;
+}
+
+.lean-admin-action-console .admin-action-card {
+  gap: 7px;
+  padding: 10px 12px;
+  box-shadow: none;
+}
+
+.lean-admin-action-console .admin-action-card p {
+  margin: 0;
+}
+
+.lean-admin-action-console .admin-action-controls {
+  justify-content: flex-start;
+}
+
 @media (max-width: 1180px) {
   body.next-app .app-shell {
     grid-template-columns: minmax(0, 1fr);

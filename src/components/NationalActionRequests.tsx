@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { KeyboardEvent } from "react";
-import { Tag } from "@/components/TocCards";
 import { tocFetch } from "@/lib/toc-client-auth";
 
 export type NationalActionRequest = {
@@ -44,9 +41,10 @@ function readRequests() {
 }
 
 export function NationalActionRequests() {
-  const router = useRouter();
   const [requests, setRequests] = useState<NationalActionRequest[]>([]);
   const [requestFilter, setRequestFilter] = useState<RequestFilter>("all");
+  const [busyId, setBusyId] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     function syncRequests() {
@@ -70,24 +68,25 @@ export function NationalActionRequests() {
       : "";
     if (status === "Returned to manager" && nationalResponse.length < 5) return;
 
+    const previousRequests = requests;
+    setBusyId(requestId);
+    setMessage("");
+    setRequests((current) => current.filter((request) => request.id !== requestId));
     const response = await tocFetch("/api/national-requests", {
       method: "POST",
       body: JSON.stringify({ action: "update", id: requestId, status, nationalResponse })
     }, true);
     const payload = await response.json();
-    if (response.ok) setRequests(payload.requests || []);
+    if (response.ok) {
+      setRequests(payload.requests || []);
+      setMessage(status === "Approved by national" ? "Approved." : "Returned to manager.");
+    } else {
+      setRequests(previousRequests);
+      setMessage(payload.error || "National request could not be updated.");
+    }
+    setBusyId("");
     window.dispatchEvent(new Event("toc.actionState.updated"));
     window.dispatchEvent(new Event("toc.nationalActionRequests.updated"));
-  }
-
-  function openRequest(requestId: string) {
-    router.push(`/national-requests/${encodeURIComponent(requestId)}`);
-  }
-
-  function openRequestFromKeyboard(event: KeyboardEvent<HTMLElement>, requestId: string) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    openRequest(requestId);
   }
 
   const pendingRequests = requests.filter((request) => request.status === "Awaiting national review");
@@ -111,19 +110,13 @@ export function NationalActionRequests() {
   ];
 
   return (
-    <div className="national-request-stack">
-      <div className="national-request-summary">
-        <article><span>Manager close-outs</span><strong>{requests.length}</strong></article>
-        <article><span>Awaiting review</span><strong>{pendingRequests.length}</strong></article>
-        <article><span>Manager updates</span><strong>{managerUpdates.length}</strong></article>
+    <div className="national-request-stack lean-action-flow">
+      <div className="lean-flow-head">
+        <strong>{pendingRequests.length} waiting for National</strong>
+        <small>{managerUpdates.length} manager update{managerUpdates.length === 1 ? "" : "s"} / {closeOuts.length} close-out{closeOuts.length === 1 ? "" : "s"}</small>
       </div>
-      <div className="request-lifecycle-strip" aria-label="National request lifecycle">
-        <span>Submitted</span>
-        <span>Under review</span>
-        <span>Approved or returned</span>
-        <span>Closed</span>
-      </div>
-      <div className="action-filter-strip" aria-label="National request filters">
+      {message ? <small className="admin-hint-message">{message}</small> : null}
+      {requests.length > 5 ? <div className="action-filter-strip" aria-label="National request filters">
         {filters.map((filter) => (
           <button
             type="button"
@@ -135,32 +128,21 @@ export function NationalActionRequests() {
             <strong>{filter.count}</strong>
           </button>
         ))}
-      </div>
-      <div className="national-request-list">
+      </div> : null}
+      <div className="national-request-list lean-review-list">
         {filteredRequests.length ? filteredRequests.map((request) => (
-          <article
-            className="national-request-card clickable-request-card"
-            key={request.id}
-            onClick={() => openRequest(request.id)}
-            onKeyDown={(event) => openRequestFromKeyboard(event, request.id)}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="national-request-head">
+          <article className="national-request-card lean-review-card" key={request.id}>
+            <div className="national-request-head lean-review-head">
               <div>
-                <span className="eyebrow">{request.requestType === "manager_update" ? "Manager update" : request.source} - {request.region}</span>
+                <span className="eyebrow">{request.region} / {request.requestType === "manager_update" ? "Manager update" : request.source}</span>
                 <strong>{request.title}</strong>
-                <small>Submitted {new Date(request.submittedAt).toLocaleString()} - {request.ageLabel || "Review waiting"}</small>
-              </div>
-              <div className="meta-row">
-                {request.stale ? <Tag tone="amber">Stale review</Tag> : null}
-                <Tag tone={request.status === "Approved by national" ? "green" : request.status === "Returned to manager" ? "amber" : "blue"}>{request.status}</Tag>
+                <small>{request.ageLabel || "Review waiting"}</small>
               </div>
             </div>
             <div className="national-request-body">
-              <div><span>Manager response</span><p>{request.managerResponse}</p></div>
+              <div><span>Response</span><p>{request.managerResponse}</p></div>
               <div>
-                <span>Evidence / reference</span>
+                <span>Evidence</span>
                 <p>{request.evidence}</p>
                 {request.attachments?.length ? (
                   <div className="manager-evidence-list">
@@ -171,11 +153,11 @@ export function NationalActionRequests() {
                 ) : null}
               </div>
             </div>
-            <div className="stock-actions">
-              <Link className="node-action" href={`/national-requests/${encodeURIComponent(request.id)}`} onClick={(event) => event.stopPropagation()}>Open request</Link>
-              <Link className="node-action" href={`/actions/${request.actionId}`} onClick={(event) => event.stopPropagation()}>Open action</Link>
-              <button className="review-decision-button approve" type="button" onClick={(event) => { event.stopPropagation(); void updateRequest(request.id, "Approved by national"); }}>{request.requestType === "manager_update" ? "Acknowledge Update" : "Approve Close-Out"}</button>
-              <button className="review-decision-button return" type="button" onClick={(event) => { event.stopPropagation(); void updateRequest(request.id, "Returned to manager"); }}>Return To Manager</button>
+            <div className="stock-actions lean-review-actions">
+              <button className="review-decision-button approve" type="button" disabled={busyId === request.id} onClick={() => void updateRequest(request.id, "Approved by national")}>{request.requestType === "manager_update" ? "Acknowledge" : "Approve"}</button>
+              <button className="review-decision-button return" type="button" disabled={busyId === request.id} onClick={() => void updateRequest(request.id, "Returned to manager")}>Return</button>
+              <Link className="node-action" href={`/actions/${request.actionId}`}>Source</Link>
+              <Link className="node-action" href={`/national-requests/${encodeURIComponent(request.id)}`}>Detail</Link>
             </div>
           </article>
         )) : (
