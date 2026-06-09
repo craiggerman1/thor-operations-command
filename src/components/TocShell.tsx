@@ -69,7 +69,7 @@ function getStoredScope() {
   }
 }
 
-const developerRoleOptions = [sessionProfiles.admin, sessionProfiles.manager];
+const developerRoleOptions = [sessionProfiles.admin, sessionProfiles.director, sessionProfiles.manager];
 const developmentToolsEnabled = process.env.NEXT_PUBLIC_TOC_ENABLE_VIEW_AS === "true";
 const profileRevalidateMs = 5 * 60 * 1000;
 const navBadgeCacheMs = 12000;
@@ -408,7 +408,7 @@ export function TocShell({ children }: { children: ReactNode }) {
   }
 
   function updateDeveloperRole(role: string) {
-    const nextDeveloperRole = role === "admin" || role === "manager" ? role as AccessRole : undefined;
+    const nextDeveloperRole = role === "admin" || role === "director" || role === "manager" ? role as AccessRole : undefined;
     const nextProfile = nextDeveloperRole ? sessionProfiles[nextDeveloperRole] : accountProfile;
     const nextDeveloperScope = developerToolsAllowed && session.developerScope && allRegions.includes(session.developerScope)
       ? session.developerScope
@@ -506,7 +506,7 @@ export function TocShell({ children }: { children: ReactNode }) {
             </div>
             <div className="build-notice" aria-label="Beta testing and build version">
               <strong>BETA</strong>
-              <em>Build 0.449</em>
+              <em>Build 0.450</em>
             </div>
           </div>
           <div className="topbar-actions">
