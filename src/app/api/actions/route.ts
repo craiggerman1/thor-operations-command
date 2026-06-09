@@ -628,6 +628,8 @@ function buildRosterActionGroups(gaps: RosterGap[], scope: string) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
+  const fastQueue = url.searchParams.get("fast") === "true";
+  const refreshGenerated = url.searchParams.get("refresh") === "true";
   const scopePermission = await requireTocScope(request, url.searchParams.get("scope") || (id ? null : "National"));
   if (scopePermission.error) return scopePermission.error;
 
@@ -638,7 +640,7 @@ export async function GET(request: Request) {
   }
 
   const permittedScope = scopePermission.scope;
-  if (!id) {
+  if (!id && (!fastQueue || refreshGenerated)) {
     await Promise.all([ensureRecurringComplianceActions(), ensureComplianceActions(), promoteActionableOdinItems()]);
   }
 
@@ -660,7 +662,7 @@ export async function GET(request: Request) {
     .filter((action) => permittedScope === "National" || action.region === permittedScope);
   let rosterGroups: ReturnType<typeof buildRosterActionGroups> = [];
 
-  if (!id) {
+  if (!id && (!fastQueue || refreshGenerated)) {
     const rosterGapResult = await buildOdinRosterGaps();
     rosterGroups = buildRosterActionGroups(rosterGapResult.gaps, permittedScope);
   }
@@ -726,7 +728,7 @@ export async function POST(request: Request) {
     }
 
     const storageStatus = nextStatus === "blocked" || nextStatus === "escalated"
-      ? "submitted_for_review"
+      ? nextStatus
       : nextStatus === "in_progress" || nextStatus === "acknowledged" || nextStatus === "reopened"
         ? "open"
         : nextStatus;
