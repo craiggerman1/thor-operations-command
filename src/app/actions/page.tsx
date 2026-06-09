@@ -550,18 +550,13 @@ export default function ActionsPage() {
             <span>{signal.lifecycleLabel || signal.status}</span>
             {signal.isOverdue ? <span>Overdue</span> : null}
           </div>
-          {canQuickManage ? <div className="action-closure-meta">
-            <Tag tone={signal.lifecycleTone || "blue"}>{signal.lifecycleLabel || signal.status}</Tag>
-            <Tag tone={signal.isOverdue ? "red" : signal.isStale || signal.isDueSoon ? "amber" : "green"}>{signal.ageLabel || "New"}</Tag>
-            <Tag tone={signal.escalationLevel === "craig" ? "red" : signal.escalationLevel === "national" ? "amber" : "blue"}>{signal.escalationLabel || "On track"}</Tag>
-          </div> : null}
         </div>
         <div className="signal-action-controls">
           <button className="node-action" type="button" onClick={(event) => { event.stopPropagation(); setExpandedActionId((current) => current === signal.id ? null : signal.id); }}>
             {isExpanded ? "Collapse" : "Work"}
           </button>
           <Link className="node-action" href={signal.href} onClick={stopCardOpen}>History</Link>
-          {canQuickManage ? (
+          {canQuickManage && scope === "National" ? (
             <div className="quick-action-controls" onClick={stopCardOpen}>
               <button type="button" onClick={(event) => { event.stopPropagation(); void mutateActionItem(signal.id, "clear"); }} disabled={rowBusy}>Clear</button>
               <button className="danger-button" type="button" onClick={(event) => { event.stopPropagation(); void mutateActionItem(signal.id, "delete"); }} disabled={rowBusy}>Delete</button>

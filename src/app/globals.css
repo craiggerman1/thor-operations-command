@@ -2741,13 +2741,12 @@ body.next-app .page-title-weather {
 }
 
 .action-queue-group > summary strong {
-  display: inline-grid;
-  place-items: center;
+  display: inline;
   min-width: 24px;
   min-height: 24px;
-  border-radius: 999px;
-  background: rgba(10, 49, 82, 0.08);
-  color: var(--blue);
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
   font-size: 0.82rem;
 }
 
@@ -2914,10 +2913,40 @@ body.next-app .page-title-weather {
 
 .action-work-row .signal-action-controls {
   gap: 6px;
+  align-content: start;
+  justify-items: end;
 }
 
 .action-work-row .node-action {
-  min-height: 28px;
+  min-height: 26px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.action-work-row .node-action:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
+.action-work-row .quick-action-controls button {
+  min-height: 24px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.action-work-row .quick-action-controls button.danger-button {
+  background: transparent;
+  color: var(--red);
 }
 
 .lean-action-flow {
