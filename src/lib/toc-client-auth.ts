@@ -52,12 +52,17 @@ export async function tocFetch(input: RequestInfo | URL, init: RequestInit = {},
   const method = String(init.method || "GET").toUpperCase();
   const bypassResponseCache = init.cache === "no-store" || init.cache === "reload";
   const canUseResponseCache = method === "GET" && !init.body && !bypassResponseCache;
+  const invalidatesResponseCache = method !== "GET" || Boolean(init.body);
   const cacheKey = canUseResponseCache ? String(input) : "";
-  if (!canUseResponseCache) responseCache.clear();
+  if (invalidatesResponseCache) responseCache.clear();
   const cached = cacheKey ? responseCache.get(cacheKey) : null;
   if (cached && cached.expiresAt > Date.now()) return cached.response.clone();
+  if (cacheKey && inFlightFetches.has(cacheKey)) {
+    const inFlightResponse = await inFlightFetches.get(cacheKey);
+    return inFlightResponse?.clone() || new Response(null, { status: 204 });
+  }
 
-  const response = await fetch(input, {
+  const request = fetch(input, {
     ...init,
     headers: {
       ...(await getTocRequestHeaders(includeJson)),
@@ -65,11 +70,17 @@ export async function tocFetch(input: RequestInfo | URL, init: RequestInit = {},
     }
   });
 
-  if (cacheKey && response.ok) {
-    responseCache.set(cacheKey, { response: response.clone(), expiresAt: Date.now() + responseCacheMs });
-  }
+  if (cacheKey) inFlightFetches.set(cacheKey, request);
 
-  return response;
+  try {
+    const response = await request;
+    if (cacheKey && response.ok) {
+      responseCache.set(cacheKey, { response: response.clone(), expiresAt: Date.now() + responseCacheMs });
+    }
+    return response;
+  } finally {
+    if (cacheKey) inFlightFetches.delete(cacheKey);
+  }
 }
 
 export async function tocJson<T = unknown>(input: RequestInfo | URL, init: RequestInit = {}, options: { includeJson?: boolean; dedupeKey?: string } = {}) {

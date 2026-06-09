@@ -40,6 +40,7 @@ export default function HomePage() {
   const [actionSourceFilter, setActionSourceFilter] = useState("All");
   const [actionPriorityFilter, setActionPriorityFilter] = useState("All");
   const [actionGroupBy, setActionGroupBy] = useState<"region" | "source" | "priority">("region");
+  const [homeLoading, setHomeLoading] = useState(true);
   const operatingWeek = getThorOperatingWeek();
   const visibleActionItems = getScopedActionItems(openActionItems, scope, activeRole);
   const actionRegions = useMemo(() => uniqueSorted(visibleActionItems.map((item) => item.region)), [visibleActionItems]);
@@ -112,30 +113,29 @@ export default function HomePage() {
     function syncTodos() {
       const storedSession = getStoredSession();
       const all = storedSession.role === "director" || storedSession.scope === "National";
-      tocFetch(`/api/todos?role=${encodeURIComponent(storedSession.role)}&scope=${encodeURIComponent(storedSession.scope)}${all ? "&all=true" : ""}`, { cache: "no-store" })
+      return tocFetch(`/api/todos?role=${encodeURIComponent(storedSession.role)}&scope=${encodeURIComponent(storedSession.scope)}${all ? "&all=true" : ""}`)
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("To Do unavailable")))
         .then((payload) => setOpenTodoCount(((payload.todos || []) as { done?: boolean }[]).filter((item) => !item.done).length))
         .catch(() => setOpenTodoCount(getOpenTodoCount()));
     }
 
     function syncActions() {
-      tocFetch(`/api/actions?scope=${encodeURIComponent(getStoredSession().scope)}`, { cache: "no-store" })
+      return tocFetch(`/api/actions?scope=${encodeURIComponent(getStoredSession().scope)}&fast=true`)
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Action Centre unavailable")))
         .then((payload) => setOpenActionItems(((payload.actions || []) as ActionItem[]).filter((item) => item.status !== "Closed")))
         .catch(() => setOpenActionItems([]));
     }
 
     function syncHomeSettings() {
-      tocFetch("/api/home-settings", { cache: "no-store" })
+      return tocFetch("/api/home-settings")
         .then((response) => response.ok ? response.json() : Promise.reject(new Error("Home settings unavailable")))
         .then((payload) => setHomeSettings((payload.config || defaultHomeSettings) as HomeSettingsConfig))
         .catch(() => setHomeSettings(defaultHomeSettings));
     }
 
     syncSession();
-    syncTodos();
-    syncActions();
-    syncHomeSettings();
+    setHomeLoading(true);
+    Promise.allSettled([syncTodos(), syncActions(), syncHomeSettings()]).finally(() => setHomeLoading(false));
     window.addEventListener("storage", syncSession);
     window.addEventListener("toc.scopechange", syncSession);
     window.addEventListener("storage", syncTodos);
@@ -162,6 +162,12 @@ export default function HomePage() {
     <TocShell>
       <PageIntro title="Home" detail="Command entry point." />
       <FlowHeading eyebrow="Home" title="Start with the business signal, then move to the page that owns the action." />
+      {homeLoading ? (
+        <div className="home-load-state" role="status" aria-live="polite">
+          <span><img src="/assets/thor-logo-stacked-sidebar.png" alt="" /></span>
+          <strong>Loading live command data</strong>
+        </div>
+      ) : null}
       <section className="status-strip" aria-label="Business overview">
         {commandMetrics.map((metric) => (
           <Link className={`metric-card signal-${metric.status}`} href={metric.href} key={metric.label}>
